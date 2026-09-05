@@ -9,3 +9,5 @@ Things to decide, chase, or find out. Move to a real page once resolved.
 | 3 | Answer the 10 Edge AI v2 build decisions | [platform/edge-ai-v2/07-open-decisions.md](platform/edge-ai-v2/07-open-decisions.md) | open | 2026-09-05 |
 | 4 | Ask Legal/DPO whether Edge AI v2 needs a DPIA + works council step | Long lead time, can block pilot | open | 2026-09-05 |
 | 5 | Verify the 5 console-dependent unknowns in the Edge AI v2 design | [platform/edge-ai-v2/07-open-decisions.md](platform/edge-ai-v2/07-open-decisions.md) | open | 2026-09-05 |
+| 6 | Create the Drive OAuth client and run the first `wiki_sync.py push` | [_sync/README.md](_sync/README.md) | open | 2026-09-05 |
+| 7 | Reconnect the Google Drive connector in Claude settings | Lets Claude read the published Docs directly | open | 2026-09-05 |

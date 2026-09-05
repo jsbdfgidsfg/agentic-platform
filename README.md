@@ -5,6 +5,9 @@ Scope: agentic platform on **GCP** + **Google Workspace**, Gemini Enterprise adm
 
 > Maintained with Claude. To add or update anything, just say what happened —
 > "note that X", "log the decision on Y", "update the Gemini Enterprise page".
+>
+> Published to Google Drive as native Google Docs: `python _sync/wiki_sync.py push`.
+> See [_sync/README.md](_sync/README.md).
 
 ## Map
 

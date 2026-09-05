@@ -28,3 +28,17 @@ and Gemini Enterprise admin, and owns several GCP projects.
 - Nothing the organisation-confidential that the platform owner hasn't explicitly said to write down.
 - Don't state facts about the organisation's environment that you haven't been told. If you infer
   something, mark it clearly as an assumption.
+
+## Drive sync
+
+The wiki is mirrored to Google Drive as native Google Docs via `_sync/wiki_sync.py`.
+Markdown here is the authoring surface; Drive is the reading and sharing surface.
+
+- After editing pages, remind the platform owner to run `python _sync/wiki_sync.py push`.
+- If he says he edited something in Google Docs, run `pull` **before** editing that
+  page locally, or his changes will be flagged as a conflict.
+- Do **not** use the Drive MCP connector to update wiki pages: its update operation
+  cannot change file content, only titles and parents. Replacing a Doc would destroy
+  its id, comments, revision history and every link pointing at it.
+- `_sync/manifest.json` is the path→doc-id mapping. Commit it. Losing it orphans every
+  Doc in Drive.
