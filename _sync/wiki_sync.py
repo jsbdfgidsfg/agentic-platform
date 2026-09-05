@@ -4,6 +4,7 @@
 Drive is the reading and sharing surface; the local markdown repo stays the
 authoring surface and keeps git history. Content moves both ways.
 
+    python wiki_sync.py auth      # one-time browser consent
     python wiki_sync.py push      # local markdown -> Google Docs
     python wiki_sync.py pull      # Google Docs -> local markdown
     python wiki_sync.py status    # what differs on each side
@@ -54,24 +55,55 @@ ROOT_FOLDER_NAME = "Digital Workplace Wiki"
 # auth
 # --------------------------------------------------------------------------
 
-def drive():
+def drive(interactive: bool = False):
+    """Build a Drive client from the cached token.
+
+    Only `auth` may open a browser. push/pull/status are non-interactive by design:
+    they are meant to be runnable unattended (by Claude, by cron), and a blocking
+    consent prompt in a headless context would hang instead of failing.
+    """
     TOKEN.parent.mkdir(parents=True, exist_ok=True)
     creds = None
     if TOKEN.exists():
         creds = Credentials.from_authorized_user_file(str(TOKEN), SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
+
+    if creds and creds.valid:
+        return build("drive", "v3", credentials=creds, cache_discovery=False)
+
+    if creds and creds.expired and creds.refresh_token:
+        try:
             creds.refresh(Request())
-        else:
-            if not CLIENT_SECRETS.exists():
-                sys.exit(f"Missing {CLIENT_SECRETS}.\n"
-                         "Create an OAuth client (Desktop app) in any GCP project with the\n"
-                         "Drive API enabled, download the JSON, and save it there.")
-            flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRETS), SCOPES)
-            creds = flow.run_local_server(port=0)
-        TOKEN.write_text(creds.to_json())
-        TOKEN.chmod(0o600)
+            TOKEN.write_text(creds.to_json())
+            TOKEN.chmod(0o600)
+            return build("drive", "v3", credentials=creds, cache_discovery=False)
+        except Exception as exc:
+            if not interactive:
+                sys.exit(f"Drive token could not be refreshed ({exc}).\n"
+                         "Re-authorise with: python wiki_sync.py auth")
+
+    if not interactive:
+        sys.exit("Not authorised yet. Run once, at a terminal:\n"
+                 "    python wiki_sync.py auth")
+
+    if not CLIENT_SECRETS.exists():
+        sys.exit(f"Missing {CLIENT_SECRETS}.\n"
+                 "Create an OAuth client (Desktop app) in any GCP project with the\n"
+                 "Drive API enabled, download the JSON, and save it there.")
+    flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRETS), SCOPES)
+    creds = flow.run_local_server(port=0)
+    TOKEN.write_text(creds.to_json())
+    TOKEN.chmod(0o600)
     return build("drive", "v3", credentials=creds, cache_discovery=False)
+
+
+def cmd_auth(args) -> int:
+    """One-time browser consent. Everything after this runs unattended."""
+    svc = drive(interactive=True)
+    about = svc.about().get(fields="user(emailAddress)").execute()
+    print(f"Authorised as {about['user']['emailAddress']}")
+    print(f"Token cached at {TOKEN}")
+    print("push / pull / status now run without a browser.")
+    return 0
 
 
 # --------------------------------------------------------------------------
@@ -359,7 +391,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name, fn in [("push", cmd_push), ("pull", cmd_pull),
+    for name, fn in [("auth", cmd_auth), ("push", cmd_push), ("pull", cmd_pull),
                      ("status", cmd_status), ("open", cmd_open)]:
         p = sub.add_parser(name)
         p.add_argument("--force", action="store_true",

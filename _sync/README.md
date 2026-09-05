@@ -11,7 +11,11 @@ committed to git, so the mapping survives and doc ids stay stable.
    **Desktop app**. Download the JSON.
 3. Save it as `client_secret.json` in this folder (git-ignored).
 4. `pip install -r requirements.txt`
-5. `python wiki_sync.py push` — a browser opens once for consent.
+5. `python wiki_sync.py auth` — a browser opens once for consent.
+
+That is the only step that needs you. `push`, `pull` and `status` never open a
+browser: they use the cached token and refresh it silently, so Claude can run them
+directly, and they exit with a clear message rather than hanging if the token dies.
 
 Scope is `drive.file`: this tool can only see and touch files it created itself.
 It has no visibility into the rest of your Drive.
@@ -19,6 +23,7 @@ It has no visibility into the rest of your Drive.
 ## Daily use
 
 ```
+python wiki_sync.py auth     # one-time, needs a browser
 python wiki_sync.py status   # what differs on each side
 python wiki_sync.py push     # local markdown -> Docs
 python wiki_sync.py pull     # Doc edits -> local markdown
