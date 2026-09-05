@@ -25,6 +25,7 @@ Scope: agentic platform on **GCP** + **Google Workspace**, Gemini Enterprise adm
 - **Google Workspace** → [platform/google-workspace.md](platform/google-workspace.md)
 - **Gemini Enterprise** → [platform/gemini-enterprise.md](platform/gemini-enterprise.md)
 - **Agents catalogue** → [platform/agents.md](platform/agents.md)
+- **Edge AI v2 (agentic Workspace ops)** → [platform/edge-ai-v2/](platform/edge-ai-v2/README.md)
 - **Open questions / backlog** → [backlog.md](backlog.md)
 
 ## Conventions

@@ -19,6 +19,7 @@ end-user surface.
 | Identity & collaboration | Google Workspace | [google-workspace.md](google-workspace.md) |
 | Compute / data / models | GCP | [gcp-projects.md](gcp-projects.md) |
 | The agents themselves | — | [agents.md](agents.md) |
+| First build | Edge AI v2 | [edge-ai-v2/](edge-ai-v2/README.md) |
 
 ## Architecture
 
