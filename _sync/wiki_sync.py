@@ -4,11 +4,11 @@
 Drive is the reading and sharing surface; the local markdown repo stays the
 authoring surface and keeps git history. Content moves both ways.
 
-    python wiki_sync.py auth      # one-time browser consent
-    python wiki_sync.py push      # local markdown -> Google Docs
-    python wiki_sync.py pull      # Google Docs -> local markdown
-    python wiki_sync.py status    # what differs on each side
-    python wiki_sync.py open      # print the Drive folder URL
+    ./wiki auth      # one-time browser consent
+    ./wiki push      # local markdown -> Google Docs
+    ./wiki pull      # Google Docs -> local markdown
+    ./wiki status    # what differs on each side
+    ./wiki open      # print the Drive folder URL
 
 Why not the Drive MCP connector: its update operation can only change a file's
 title and parent, not its content. Updating a page would mean replacing the
@@ -29,7 +29,14 @@ import os
 import re
 import sys
 import tempfile
+import warnings
 from pathlib import Path
+
+# The Google libraries emit four EOL/TLS warnings per run on this Mac's system
+# Python 3.9. They are real (see README: "Python version"), but repeating them on
+# every sync buries the actual output. Silence them here, not the underlying issue.
+warnings.filterwarnings("ignore", message=r".*Python version.*")
+warnings.filterwarnings("ignore", message=r".*OpenSSL.*")
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -79,11 +86,11 @@ def drive(interactive: bool = False):
         except Exception as exc:
             if not interactive:
                 sys.exit(f"Drive token could not be refreshed ({exc}).\n"
-                         "Re-authorise with: python wiki_sync.py auth")
+                         "Re-authorise with: cd wiki/_sync && ./wiki auth")
 
     if not interactive:
         sys.exit("Not authorised yet. Run once, at a terminal:\n"
-                 "    python wiki_sync.py auth")
+                 "    cd wiki/_sync && ./wiki auth")
 
     if not CLIENT_SECRETS.exists():
         sys.exit(f"Missing {CLIENT_SECRETS}.\n"

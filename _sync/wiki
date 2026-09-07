@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Wrapper so sync commands always use the right Python.
+#   ./wiki auth | push | pull | status | open
+set -euo pipefail
+here="$(cd "$(dirname "$0")" && pwd)"
+if [ ! -x "$here/.venv/bin/python" ]; then
+  echo "No venv. Create it with:" >&2
+  echo "  python3 -m venv $here/.venv && $here/.venv/bin/python -m pip install -r $here/requirements.txt" >&2
+  exit 1
+fi
+exec "$here/.venv/bin/python" "$here/wiki_sync.py" "$@"

@@ -34,9 +34,9 @@ and Gemini Enterprise admin, and owns several GCP projects.
 The wiki is mirrored to Google Drive as native Google Docs via `_sync/wiki_sync.py`.
 Markdown here is the authoring surface; Drive is the reading and sharing surface.
 
-- After editing pages, run `python _sync/wiki_sync.py push` yourself via Bash. It is
+- After editing pages, run `_sync/wiki push` yourself via Bash. It is
   non-interactive and safe to run unattended. If it reports it is not authorised,
-  ask the platform owner to run `python _sync/wiki_sync.py auth` once — that is the only step
+  ask the platform owner to run `cd _sync && ./wiki auth` once — that is the only step
   that needs him.
 - If he says he edited something in Google Docs, run `pull` **before** editing that
   page locally, or his changes will be flagged as a conflict.

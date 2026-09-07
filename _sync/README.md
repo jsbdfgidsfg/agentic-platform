@@ -10,8 +10,9 @@ committed to git, so the mapping survives and doc ids stay stable.
 2. APIs & Services → Credentials → Create credentials → **OAuth client ID** →
    **Desktop app**. Download the JSON.
 3. Save it as `client_secret.json` in this folder (git-ignored).
-4. `pip install -r requirements.txt`
-5. `python wiki_sync.py auth` — a browser opens once for consent.
+4. Dependencies are already installed in `.venv/` (created 2026-09-07).
+   To rebuild it: `python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt`
+5. `./wiki auth` — a browser opens once for consent.
 
 That is the only step that needs you. `push`, `pull` and `status` never open a
 browser: they use the cached token and refresh it silently, so Claude can run them
@@ -23,12 +24,22 @@ It has no visibility into the rest of your Drive.
 ## Daily use
 
 ```
-python wiki_sync.py auth     # one-time, needs a browser
-python wiki_sync.py status   # what differs on each side
-python wiki_sync.py push     # local markdown -> Docs
-python wiki_sync.py pull     # Doc edits -> local markdown
-python wiki_sync.py open     # print the Drive folder URL
+./wiki auth     # one-time, needs a browser
+./wiki status   # what differs on each side
+./wiki push     # local markdown -> Docs
+./wiki pull     # Doc edits -> local markdown
+./wiki open     # print the Drive folder URL
 ```
+
+`./wiki` is a wrapper that always uses `.venv/bin/python`, so these work from any
+shell without activating anything.
+
+## Python version
+
+This Mac has only Apple's Command Line Tools Python **3.9.6**, which is past end of
+life. The Google libraries work but warn about it on every import; those warnings are
+filtered in `wiki_sync.py` so they do not bury the output. Nothing here needs a newer
+Python, but if you install one (Homebrew, uv), rebuild `.venv` against it.
 
 `push` skips unchanged files and refuses to overwrite a Doc that changed in Drive
 since the last sync — pull first, or `--force` to overwrite deliberately.
