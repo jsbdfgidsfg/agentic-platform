@@ -39,7 +39,11 @@ Markdown here is the authoring surface; Drive is the reading and sharing surface
   ask the platform owner to run `cd _sync && ./wiki auth` once — that is the only step
   that needs him.
 - If he says he edited something in Google Docs, run `pull` **before** editing that
-  page locally, or his changes will be flagged as a conflict.
+  page locally, or his changes will be flagged as a conflict. `pull` reverses
+  everything `push` rewrote, and refuses to overwrite a page it cannot fully reverse
+  (it leaves a `.pulled.md` sidecar to merge by hand instead).
+- After changing `wiki_sync.py`, run `_sync/wiki selftest`. It checks offline that
+  every page survives a push/pull round trip unchanged.
 - Do **not** use the Drive MCP connector to update wiki pages: its update operation
   cannot change file content, only titles and parents. Replacing a Doc would destroy
   its id, comments, revision history and every link pointing at it.
