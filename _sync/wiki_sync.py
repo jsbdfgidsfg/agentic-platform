@@ -10,6 +10,7 @@ authoring surface and keeps git history. Content moves both ways.
     ./wiki status    # what differs on each side
     ./wiki open      # print the Drive folder URL
     ./wiki selftest  # prove push/pull is lossless, offline
+    ./wiki reconcile # baseline Docs whose sync point was lost
 
 Why not the Drive MCP connector: its update operation can only change a file's
 title and parent, not its content. Updating a page would mean replacing the
@@ -55,6 +56,7 @@ WIKI_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = Path(__file__).resolve().parent / "manifest.json"
 TOKEN = Path.home() / ".config" / "wiki-sync" / "token.json"
 CLIENT_SECRETS = Path(__file__).resolve().parent / "client_secret.json"
+SIDECAR_DIR = Path(__file__).resolve().parent / "pulled"   # withheld pulls, outside the synced tree
 
 EXCLUDE_FILES = {"CLAUDE.md"}   # maintenance instructions for Claude, not team content
 
@@ -66,6 +68,14 @@ ROOT_FOLDER_NAME = "Digital Workplace Wiki"
 # --------------------------------------------------------------------------
 # auth
 # --------------------------------------------------------------------------
+
+def _write_token(creds) -> None:
+    """0600 from creation. write_text() then chmod() leaves a window where the
+    refresh token is readable at the umask default."""
+    fd = os.open(str(TOKEN), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(creds.to_json())
+
 
 def _client(creds):
     """One place to build the Drive client, so the timeout is never forgotten.
@@ -94,8 +104,7 @@ def drive(interactive: bool = False):
     if creds and creds.expired and creds.refresh_token:
         try:
             creds.refresh(Request())
-            TOKEN.write_text(creds.to_json())
-            TOKEN.chmod(0o600)
+            _write_token(creds)
             return _client(creds)
         except Exception as exc:
             if not interactive:
@@ -112,8 +121,7 @@ def drive(interactive: bool = False):
                  "Drive API enabled, download the JSON, and save it there.")
     flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_SECRETS), SCOPES)
     creds = flow.run_local_server(port=0)
-    TOKEN.write_text(creds.to_json())
-    TOKEN.chmod(0o600)
+    _write_token(creds)
     return _client(creds)
 
 
@@ -133,7 +141,7 @@ def cmd_auth(args) -> int:
 
 def load_manifest() -> dict:
     if MANIFEST.exists():
-        return json.loads(MANIFEST.read_text())
+        return json.loads(MANIFEST.read_text(encoding="utf-8"))
     return {"root_folder_id": None, "folders": {}, "files": {}}
 
 
@@ -142,7 +150,7 @@ def save_manifest(m: dict) -> None:
     interrupted write is far likelier than it used to be — and a half-written
     manifest orphans every Doc it was supposed to record."""
     tmp = MANIFEST.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps(m, indent=2, sort_keys=True) + "\n")
+    tmp.write_text(json.dumps(m, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     os.replace(tmp, MANIFEST)
 
 
@@ -180,19 +188,25 @@ def _prettify(stem: str) -> str:
 
 
 def doc_title(rel: Path) -> str:
-    """README.md in a subfolder becomes '<Folder> — Overview' so titles stay unique
-    and readable in Drive search, which is flat."""
+    """Drive search is flat, so every page is prefixed with its section. Without that,
+    wall-e/01-hld.md and edge-ai-v2/01-hld.md were both plain '01. HLD'."""
     stem = rel.stem.lstrip("_")
     section = _prettify(rel.parent.name) if rel.parent != Path(".") else ""
-    if stem.lower() == "template" and section:
-        return f"{section} — Template"
     if stem.upper() == "README":
         return "Wiki — Home" if not section else f"{section} — Overview"
-    # Keep a numeric prefix as an ordering key: "01-hld" -> "01. HLD"
-    m = re.match(r"^(\d+)[-_](.*)$", stem)
-    if m:
-        return f"{m.group(1)}. {_prettify(m.group(2))}"
-    return _prettify(stem)
+    if stem.lower() == "template" and section:
+        return f"{section} — Template"
+
+    # A dated decision file keeps its date readable: the generic numeric rule below
+    # turned "2026-09-05-drop-vertex-search" into "2026. 09 05 Drop Vertex Search".
+    iso = re.match(r"^(\d{4}-\d{2}-\d{2})[-_](.*)$", stem)
+    if iso:
+        name = f"{iso.group(1)} — {_prettify(iso.group(2))}"
+    else:
+        # Keep a numeric prefix as an ordering key: "01-hld" -> "01. HLD"
+        num = re.match(r"^(\d+)[-_](.*)$", stem)
+        name = f"{num.group(1)}. {_prettify(num.group(2))}" if num else _prettify(stem)
+    return f"{section} — {name}" if section else name
 
 
 # --------------------------------------------------------------------------
@@ -209,7 +223,7 @@ MERMAID_NOTE = ("> **Diagram (Mermaid).** Renders in the markdown wiki. To view 
 MERMAID_BACK_RE = re.compile(
     r"> \*\*Diagram \(Mermaid\)\.\*\*[^\n]*\n> [^\n]*\n\n```\n(.*?)```", re.DOTALL)
 DOCLINK_RE = re.compile(
-    r"\[([^\]]+)\]\(https://docs\.google\.com/document/d/([A-Za-z0-9_-]+)/edit\)")
+    r"\[([^\]]+)\]\(https://docs\.google\.com/document/d/([A-Za-z0-9_-]+)/edit(#[^)]*)?\)")
 BANNER = ("*Synced from the markdown wiki. Edits made here are preserved — run "
           "`wiki_sync.py pull` to bring them back.*\n\n---\n\n")
 
@@ -226,11 +240,17 @@ def transform_for_docs(text: str, rel: Path, manifest: dict) -> str:
         resolved = os.path.normpath(str((rel.parent / target)))
         entry = manifest["files"].get(resolved)
         if entry and entry.get("file_id"):
-            return f"[{label}](https://docs.google.com/document/d/{entry['file_id']}/edit)"
+            # The anchor rides along, or pull cannot put it back and silently
+            # strips every deep link on the first round trip.
+            return (f"[{label}](https://docs.google.com/document/d/"
+                    f"{entry['file_id']}/edit{anchor})")
         # Unmapped target: keep the link intact rather than dissolving it to plain
         # words. Dropping it here made `pull` destroy the link permanently.
         return f"[{label}]({target}{anchor})"
 
+    # Strip any banner already present, so a pushed-pulled-pushed page does not
+    # accumulate one banner per cycle.
+    text = strip_banner(text)
     text = LINK_RE.sub(link_sub, text)
 
     # Google Docs cannot render Mermaid. Keep the source, and say so plainly rather
@@ -249,11 +269,11 @@ def transform_from_docs(text: str, rel: Path, manifest: dict) -> str:
     text = MERMAID_BACK_RE.sub(lambda m: "```mermaid\n" + m.group(1) + "```", text)
 
     def unlink_sub(m):
-        label, fid = m.group(1), m.group(2)
+        label, fid, anchor = m.group(1), m.group(2), m.group(3) or ""
         target = by_id.get(fid)
         if not target:
             return m.group(0)   # a genuine Docs link someone added by hand: leave it
-        return f"[{label}]({os.path.relpath(target, str(rel.parent))})"
+        return f"[{label}]({os.path.relpath(target, str(rel.parent))}{anchor})"
 
     return DOCLINK_RE.sub(unlink_sub, text)
 
@@ -276,26 +296,59 @@ def strip_banner(text: str) -> str:
 # drive helpers
 # --------------------------------------------------------------------------
 
+def _create(svc, body: dict, manifest: dict, remember) -> str:
+    """Create a Doc or folder with a pre-allocated id.
+
+    Retries on a create are dangerous: googleapiclient retries socket timeouts and
+    connection errors, which are exactly the cases where the server may already have
+    created the file. Retrying then makes a second one, and only the second id is
+    recorded — the same orphan class as the 2026-08 incident. So: reserve an id,
+    write it to the manifest BEFORE the call, and never retry the create itself. A
+    re-run adopts the reserved id instead of making a new file.
+    """
+    reserved = body.get("id")
+    if not reserved:
+        reserved = svc.files().generateIds(
+            count=1, type="files").execute(num_retries=NUM_RETRIES)["ids"][0]
+        body = dict(body, id=reserved)
+    remember(reserved)          # persisted before the create can possibly succeed
+    save_manifest(manifest)
+    try:
+        svc.files().create(body=body, fields="id").execute(num_retries=0)
+    except HttpError as exc:
+        if exc.resp.status != 409:      # 409 = we already created it on a prior try
+            raise
+    return reserved
+
+
 def ensure_folder(svc, name: str, parent: str | None, manifest: dict, key: str) -> str:
     existing = manifest["folders"].get(key)
     if existing:
         try:
-            svc.files().get(fileId=existing, fields="id,trashed").execute(num_retries=NUM_RETRIES)
-            return existing
-        except HttpError:
-            pass  # deleted upstream; recreate below
+            got = svc.files().get(fileId=existing,
+                                  fields="id,trashed").execute(num_retries=NUM_RETRIES)
+            # A trashed folder still returns 200. Reusing its id would file every new
+            # Doc inside the trash, invisible and auto-purged after 30 days.
+            if not got.get("trashed"):
+                return existing
+        except HttpError as exc:
+            if exc.resp.status != 404:
+                raise   # 403/401 is not "deleted upstream"; creating a duplicate
+                        # folder here would strand every Doc already inside the old one
     body = {"name": name, "mimeType": FOLDER_MIME}
     if parent:
         body["parents"] = [parent]
-    fid = svc.files().create(body=body, fields="id").execute(num_retries=NUM_RETRIES)["id"]
-    manifest["folders"][key] = fid
-    return fid
+    return _create(svc, body, manifest,
+                   lambda fid: manifest["folders"].__setitem__(key, fid))
 
 
 def ensure_tree(svc, manifest: dict) -> None:
     root = ensure_folder(svc, ROOT_FOLDER_NAME, None, manifest, ".")
     manifest["root_folder_id"] = root
-    for rel in {p.relative_to(WIKI_ROOT).parent for p in local_pages()}:
+    # sorted(): a set gives a different creation order every run, so an interrupted
+    # run leaves a different partial state each time and is harder to reason about.
+    for rel in sorted({p.relative_to(WIKI_ROOT).parent for p in local_pages()},
+                      key=str):
         if str(rel) == ".":
             continue
         parent = root
@@ -306,11 +359,17 @@ def ensure_tree(svc, manifest: dict) -> None:
                                    manifest, str(acc))
 
 
-def remote_modified(svc, file_id: str) -> str | None:
+UNKNOWN = "<unknown>"       # distinct from None: "we could not find out", not "absent"
+
+
+def remote_modified(svc, file_id: str):
+    """Returns the timestamp, None if the Doc is gone, or UNKNOWN on a transient
+    failure. Collapsing all three into None disabled the conflict guard silently."""
     try:
-        return svc.files().get(fileId=file_id, fields="modifiedTime").execute(num_retries=NUM_RETRIES)["modifiedTime"]
-    except HttpError:
-        return None
+        return svc.files().get(fileId=file_id,
+                               fields="modifiedTime").execute(num_retries=NUM_RETRIES)["modifiedTime"]
+    except HttpError as exc:
+        return None if exc.resp.status == 404 else UNKNOWN
 
 
 def upload_media(path: Path):
@@ -328,44 +387,74 @@ def cmd_push(args) -> int:
     pages = local_pages()
 
     # Pass 1 — every page must have an id before links can be rewritten.
+    live = {str(p.relative_to(WIKI_ROOT)) for p in pages}
     for path in pages:
         rel = str(path.relative_to(WIKI_ROOT))
         entry = manifest["files"].setdefault(rel, {})
         if entry.get("file_id"):
             continue
+
+        # A renamed page is the same document. Creating a new Doc for it would
+        # strand the original along with its comments, revision history and every
+        # link pointing at it — the things this tool exists to preserve.
+        local_hash = sha(path.read_text(encoding="utf-8"))
+        adopted = next((old for old, e in sorted(manifest["files"].items())
+                        if old not in live and e.get("file_id")
+                        and e.get("local_hash") == local_hash), None)
+        if adopted:
+            manifest["files"][rel] = manifest["files"].pop(adopted)
+            save_manifest(manifest)
+            print(f"renamed  {adopted} -> {rel}")
+            continue
+
         parent = manifest["folders"][str(path.relative_to(WIKI_ROOT).parent)]
-        created = svc.files().create(
-            body={"name": doc_title(path.relative_to(WIKI_ROOT)),
-                  "parents": [parent], "mimeType": DOC_MIME},
-            fields="id").execute(num_retries=NUM_RETRIES)
-        entry["file_id"] = created["id"]
-        # Save after EVERY create. Saving once at the end of the loop meant a crash
-        # or a network timeout mid-loop orphaned every Doc created so far, with no
+        # _create saves the manifest BEFORE the call. Saving once at the end of the
+        # loop meant a timeout mid-loop orphaned every Doc created so far, with no
         # local record of its id. That happened on 2026-09-08.
-        save_manifest(manifest)
+        _create(svc,
+                {"name": doc_title(path.relative_to(WIKI_ROOT)),
+                 "parents": [parent], "mimeType": DOC_MIME},
+                manifest,
+                lambda fid, e=entry: e.__setitem__("file_id", fid))
         print(f"created  {rel}")
 
     # Pass 2 — content, with links now resolvable.
-    changed = skipped = 0
+    changed = skipped = conflicts = 0
     for path in pages:
         rel = str(path.relative_to(WIKI_ROOT))
         entry = manifest["files"][rel]
-        raw = path.read_text()
+        raw = path.read_text(encoding="utf-8")
         local_hash = sha(raw)
 
         if entry.get("local_hash") == local_hash and not args.force:
             skipped += 1
             continue
 
+        # Fail closed. The old guard began `entry.get("remote_modified") and ...`,
+        # so a missing or unreadable timestamp read as "no conflict" and pushed over
+        # whatever was in Drive. Every entry in a hand-rebuilt manifest looks like
+        # that, which is exactly when you least want a silent overwrite.
         remote_ts = remote_modified(svc, entry["file_id"])
-        if (entry.get("remote_modified") and remote_ts
-                and remote_ts != entry["remote_modified"] and not args.force):
-            print(f"CONFLICT {rel}: changed in Drive since last sync. "
-                  f"Run 'pull' first, or push with --force to overwrite.")
-            continue
+        known = entry.get("remote_modified")
+        if not args.force:
+            if remote_ts is UNKNOWN:
+                print(f"CONFLICT {rel}: cannot read the Doc's state. Not overwriting.")
+                conflicts += 1
+                continue
+            if known is None and remote_ts is not None:
+                print(f"CONFLICT {rel}: no recorded sync point for this Doc. "
+                      f"Run 'pull' first, or push with --force to overwrite.")
+                conflicts += 1
+                continue
+            if known and remote_ts != known:
+                print(f"CONFLICT {rel}: changed in Drive since last sync. "
+                      f"Run 'pull' first, or push with --force to overwrite.")
+                conflicts += 1
+                continue
 
         body = transform_for_docs(raw, Path(rel), manifest)
-        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as fh:
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False,
+                                         encoding="utf-8") as fh:
             fh.write(body)
             tmp = Path(fh.name)
         try:
@@ -380,9 +469,11 @@ def cmd_push(args) -> int:
         print(f"pushed   {rel}")
 
     save_manifest(manifest)
-    print(f"\n{changed} pushed, {skipped} unchanged.")
+    print(f"\n{changed} pushed, {skipped} unchanged, {conflicts} conflicted.")
     print(f"Drive folder: https://drive.google.com/drive/folders/{manifest['root_folder_id']}")
-    return 0
+    # Non-zero on conflict: an agent running this unattended must not read "success"
+    # from a run that quietly skipped half the wiki.
+    return 1 if conflicts else 0
 
 
 def cmd_pull(args) -> int:
@@ -393,8 +484,31 @@ def cmd_pull(args) -> int:
         fid = entry.get("file_id")
         if not fid:
             continue
+        path = WIKI_ROOT / rel
+        # A page deleted locally, on purpose, must stay deleted. Recreating it from
+        # a Doc nobody touched turns `pull` into an undelete.
+        if not path.exists() and not args.force:
+            print(f"SKIPPED  {rel}: deleted locally. --force to restore it from Drive.")
+            withheld += 1
+            continue
+
         remote_ts = remote_modified(svc, fid)
+        if remote_ts is UNKNOWN:
+            print(f"SKIPPED  {rel}: cannot read the Doc's state.")
+            withheld += 1
+            continue
         if remote_ts == entry.get("remote_modified") and not args.force:
+            continue
+
+        # Never overwrite local edits that were never pushed. `pull` used to write
+        # unconditionally, so running it — which CLAUDE.md tells Claude to do before
+        # editing a page — destroyed uncommitted local work with no warning.
+        local_text = path.read_text(encoding="utf-8") if path.exists() else None
+        if (local_text is not None and entry.get("local_hash")
+                and sha(local_text) != entry["local_hash"] and not args.force):
+            print(f"WITHHELD {rel}: changed on BOTH sides. Merge by hand, "
+                  f"or --force to take the Drive copy.")
+            withheld += 1
             continue
 
         buf = io.BytesIO()
@@ -405,26 +519,30 @@ def cmd_pull(args) -> int:
             _, done = downloader.next_chunk()
         text = transform_from_docs(buf.getvalue().decode("utf-8"), Path(rel), manifest)
 
-        path = WIKI_ROOT / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-
         # Refuse to overwrite the authoring copy with something we could not fully
-        # reverse. Leftover Docs artefacts mean the inverse transform did not match,
-        # and writing anyway would destroy diagrams or links that only exist here.
+        # reverse. Counting fences rather than matching the note's exact wording
+        # matters: if Docs reformats the note, the wording check passes while the
+        # diagram is already flattened.
         residue = []
         if "docs.google.com/document/d/" in text:
             residue.append("unresolved Google Docs links")
-        if "**Diagram (Mermaid).**" in text:
-            residue.append("un-restored mermaid diagram")
+        if local_text is not None and text.count("```mermaid") < local_text.count("```mermaid"):
+            residue.append("lost a mermaid diagram")
+        if "Diagram (Mermaid)" in text:
+            residue.append("un-restored mermaid note")
+        if text.lstrip().startswith("*Synced from the markdown wiki"):
+            residue.append("banner not stripped")
         if residue:
-            sidecar = path.with_suffix(".pulled.md")
-            sidecar.write_text(text)
+            SIDECAR_DIR.mkdir(parents=True, exist_ok=True)
+            sidecar = SIDECAR_DIR / rel.replace(os.sep, "__")
+            sidecar.write_text(text, encoding="utf-8")
             print(f"WITHHELD {rel}: {', '.join(residue)}. "
-                  f"Wrote {sidecar.relative_to(WIKI_ROOT)} instead; merge it by hand.")
+                  f"Wrote _sync/pulled/{sidecar.name} instead; merge it by hand.")
             withheld += 1
             continue
 
-        path.write_text(text)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
         entry["local_hash"] = sha(text)
         entry["remote_modified"] = remote_ts
         pulled += 1
@@ -433,7 +551,7 @@ def cmd_pull(args) -> int:
     save_manifest(manifest)
     print(f"\n{pulled} pulled, {withheld} withheld. "
           f"Review with 'git diff' before committing.")
-    return 0
+    return 1 if withheld else 0
 
 
 def cmd_status(args) -> int:
@@ -446,17 +564,26 @@ def cmd_status(args) -> int:
         print(f"new locally      {rel}")
     for rel in sorted(tracked - local):
         print(f"gone locally     {rel}  (doc still in Drive)")
+    differing = 0
     for rel in sorted(local & tracked):
         entry = manifest["files"][rel]
-        local_changed = sha((WIKI_ROOT / rel).read_text()) != entry.get("local_hash")
-        remote_changed = remote_modified(svc, entry["file_id"]) != entry.get("remote_modified")
+        fid = entry.get("file_id")
+        if not fid:
+            print(f"untracked        {rel}  (manifest entry has no file id)")
+            differing += 1
+            continue
+        local_changed = sha((WIKI_ROOT / rel).read_text(encoding="utf-8")) != entry.get("local_hash")
+        remote_changed = remote_modified(svc, fid) != entry.get("remote_modified")
         if local_changed and remote_changed:
             print(f"BOTH changed     {rel}")
         elif local_changed:
             print(f"local changed    {rel}")
         elif remote_changed:
             print(f"Drive changed    {rel}")
-    print("\nnothing else differs.")
+        else:
+            continue
+        differing += 1
+    print(f"\n{differing} differ." if differing else "\nnothing differs.")
     return 0
 
 
@@ -471,13 +598,68 @@ def cmd_selftest(args) -> int:
     bad = []
     for path in pages:
         rel = path.relative_to(WIKI_ROOT)
-        text = path.read_text()
+        text = path.read_text(encoding="utf-8")
         if not round_trips(text, rel, manifest):
             bad.append(str(rel))
     for rel in bad:
         print(f"LOSSY    {rel}")
-    print(f"\n{len(pages) - len(bad)}/{len(pages)} pages round-trip losslessly.")
-    return 1 if bad else 0
+
+    # Drive search is flat, so two pages sharing a title are indistinguishable there.
+    seen = {}
+    dupes = []
+    for path in pages:
+        rel = path.relative_to(WIKI_ROOT)
+        title = doc_title(rel)
+        if title in seen:
+            dupes.append(f"{title!r}: {seen[title]} and {rel}")
+        seen[title] = rel
+    for d in dupes:
+        print(f"DUPLICATE TITLE  {d}")
+
+    print(f"\n{len(pages) - len(bad)}/{len(pages)} pages round-trip losslessly, "
+          f"{len(dupes)} duplicate titles.")
+    return 1 if (bad or dupes) else 0
+
+
+def cmd_reconcile(args) -> int:
+    """Establish a sync point for manifest entries that have none.
+
+    A hand-rebuilt manifest (or one recovered after a crash) knows a Doc's id but
+    not when it was last in sync. `push` now treats that as a conflict and refuses
+    to overwrite, which is right but leaves the wiki stuck. This records the current
+    Drive state as the baseline — declaring that the Doc holds nothing worth keeping.
+    It refuses to do that for a Doc that already has content, unless --force.
+    """
+    svc = drive()
+    manifest = load_manifest()
+    fixed = kept = 0
+    for rel, entry in sorted(manifest["files"].items()):
+        fid = entry.get("file_id")
+        if not fid or entry.get("remote_modified"):
+            continue
+        buf = io.BytesIO()
+        downloader = MediaIoBaseDownload(
+            buf, svc.files().export_media(fileId=fid, mimeType="text/markdown"))
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        body = strip_banner(buf.getvalue().decode("utf-8")).strip()
+        if body and not args.force:
+            print(f"HAS CONTENT {rel}: {len(body)} chars in Drive. "
+                  f"Run 'pull' to keep it, or 'reconcile --force' to discard it.")
+            kept += 1
+            continue
+        ts = remote_modified(svc, fid)
+        if ts is UNKNOWN or ts is None:
+            print(f"SKIPPED  {rel}: cannot read the Doc's state.")
+            continue
+        entry["remote_modified"] = ts
+        fixed += 1
+        save_manifest(manifest)
+        print(f"baseline {rel}")
+    save_manifest(manifest)
+    print(f"\n{fixed} baselined, {kept} left alone. 'push' will now fill them.")
+    return 1 if kept else 0
 
 
 def cmd_open(args) -> int:
@@ -492,13 +674,18 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    forceable = {
+        "push": "overwrite Docs that changed in Drive since the last sync",
+        "pull": "overwrite local pages, DISCARDING local edits and restoring deletions",
+        "reconcile": "accept a Doc as the sync point even if it already has content",
+    }
     for name, fn in [("auth", cmd_auth), ("push", cmd_push), ("pull", cmd_pull),
                      ("status", cmd_status), ("open", cmd_open),
-                     ("selftest", cmd_selftest)]:
+                     ("selftest", cmd_selftest), ("reconcile", cmd_reconcile)]:
         p = sub.add_parser(name)
-        p.add_argument("--force", action="store_true",
-                       help="ignore change detection and conflict guards")
-        p.set_defaults(fn=fn)
+        if name in forceable:
+            p.add_argument("--force", action="store_true", help=forceable[name])
+        p.set_defaults(fn=fn, force=False)
     args = ap.parse_args()
     return args.fn(args)
 
