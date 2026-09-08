@@ -1,0 +1,124 @@
+{
+  "files": {
+    "README.md": {
+      "file_id": "1IxmBIqkvTw37e5OqRfuJEmb823-vdz27gBPwYAeGsLE"
+    },
+    "backlog.md": {
+      "file_id": "1QfRnrCWrp0TOoH635DNpyzislk_QQbgjdouDl3UUR94"
+    },
+    "decisions/README.md": {
+      "file_id": "1IGdI--Wq4KtgqdA00jB5UIo2gubkycRbomUobLb9jow"
+    },
+    "decisions/_template.md": {
+      "file_id": "1wt1XOEEtHSgBxd3NX7osCvyz54OP3DVkC8FXqeDs9vE"
+    },
+    "inbox.md": {
+      "file_id": "1mhs7QKK6DJWRkepG02jy_AlsMOtfIU7wLL8q3x6H6T0"
+    },
+    "meetings/README.md": {
+      "file_id": "1swwxE9lNVi0XdxUECqU_t61EQVHPBlm2NwT3rXP6Jd8"
+    },
+    "meetings/_template.md": {
+      "file_id": "1jHNnEhdB4VVNPPFM--R3fjN1Ruoy967lxoKiDtiYgts"
+    },
+    "people/README.md": {
+      "file_id": "18ljNtRc4yJSxOZB9V-W1LAJvrhD8ksYQ54Tv8lhhhLM"
+    },
+    "platform/agents.md": {
+      "file_id": "1nR2mBKLjQHIksJWWjbAWv4f5S95ddhTsjLp7yQLdBE8"
+    },
+    "platform/edge-ai-v2/01-hld.md": {
+      "file_id": "1UwxEG46g4f9WB_jPoRwG9ZDISmMqG_sFNhS4NsxaP5w"
+    },
+    "platform/edge-ai-v2/02-identity-and-auth.md": {
+      "file_id": "1u4iYxmK-BYEZs4Az1kKYt9ubq9YYvb2_kwRJNbNFe4g"
+    },
+    "platform/edge-ai-v2/03-lld.md": {
+      "file_id": "1Ns0z_CcyTyJdB5cR4Q4GwmjcXDc9sicUpXY1GHmakDc"
+    },
+    "platform/edge-ai-v2/04-flows.md": {
+      "file_id": "1tnqBE7V0buzTSfG2kSzVjPWOm9aW7vpr7oP5hw68P7g"
+    },
+    "platform/edge-ai-v2/05-build-runbook.md": {
+      "file_id": "1qnWSRfie58R63fmisT-xbv38TmkAIN9V1ZXJGsehrcM"
+    },
+    "platform/edge-ai-v2/06-security-guardrails.md": {
+      "file_id": "10UWE03ARXVyzHL82WKY55TLWvdtDDyK-g5-xvy97o38"
+    },
+    "platform/edge-ai-v2/07-open-decisions.md": {
+      "file_id": "1NkET1t1tYYE0OAQ1Q1dAxMObfLRpcYhO-gr24703T68"
+    },
+    "platform/edge-ai-v2/README.md": {
+      "file_id": "10m70KLEew2-ywfD42dDX098Dqyi2SJH0x_FAvAfH-HA"
+    },
+    "platform/gcp-projects.md": {
+      "file_id": "1hwWL1dJQ18aZWiuWkKJDPKV5Ar9VS9H3eCQgT6Hkh0g"
+    },
+    "platform/gemini-enterprise.md": {
+      "file_id": "1F95ZKQjRxXdhswo_PuPUFSj5bkcS2hw0FgNBcf70JuU"
+    },
+    "platform/google-workspace.md": {
+      "file_id": "1p3GvJHq8Nl_4KAOUMDFxJJ74BNIP5fFZOsBlYTIMoYQ"
+    },
+    "platform/overview.md": {
+      "file_id": "1FflAsB8jAzm-CwktVkkYnPMKn2ETLJndGM0Esd7qZtA"
+    },
+    "platform/wall-e/01-hld.md": {
+      "file_id": "15Q1W5oHDTpAexZIRpiGYbIaFE7cOqRW6hljkIX1okrc"
+    },
+    "platform/wall-e/02-identity-and-auth.md": {
+      "file_id": "1Jg1guKxA6FzWj-asGuTp6-TcarfJ5KKeR9YxUnODEoM"
+    },
+    "platform/wall-e/03-lld.md": {
+      "file_id": "1SqfvQMgVJ3eGcB2ezX4LsfGCTXnfw1EvZ4_2QJuJW5w"
+    },
+    "platform/wall-e/04-flows.md": {
+      "file_id": "1BXr8_VyWQJMEinGC0yvc--uRxQ7bDoofEuhrg6viooI"
+    },
+    "platform/wall-e/05-autonomy-ladder.md": {
+      "file_id": "1AP3YyKIduYubcVRff9diNl-_kxXngRippFeR4oXjAZ8"
+    },
+    "platform/wall-e/06-security-guardrails.md": {
+      "file_id": "1wmzQtRlJgyTytH2B9vPmE4hSEbUJjc_V29ngGq_Sqfs"
+    },
+    "platform/wall-e/07-build-runbook.md": {
+      "file_id": "1iWtLbRtEGoWrS4njwyLfIUJF_SAyYemlfoDXNFhUWFA"
+    },
+    "platform/wall-e/08-team-eve-mo.md": {
+      "file_id": "1cNFsW6w6GgPnpZdbPbHcPtKwMQ7FU4H_ROGDeqrYy2s"
+    },
+    "platform/wall-e/09-open-decisions.md": {
+      "file_id": "1TstRo4QBPIlEoP3a5Or65y3FWMd09qai4aqJNtfKl_8"
+    },
+    "platform/wall-e/README.md": {
+      "file_id": "1t3jmMHGzFYUlAlPKh_9M2QpmPDxMrG7IMpj39vibr_4"
+    },
+    "reference/README.md": {
+      "file_id": "1fI0R77nE6UHxZqsWJ-JUEOTMjKaqVyBZPRUbFdlnylo"
+    },
+    "reference/glossary.md": {
+      "file_id": "19W5-62j94-6mSikVJzUKS3PJnOmFI7Vv4mA4vqXIOCY"
+    },
+    "reference/links.md": {
+      "file_id": "1TUb7MyRbnA7uwDFCPgkFJzSAQAfxCdSLLNZiqIRFlvo"
+    },
+    "runbooks/README.md": {
+      "file_id": "1YUsvzTzzW6b1pkJPUeoqKK2ucXmL3epsqKqXNH3mmQs"
+    },
+    "runbooks/_template.md": {
+      "file_id": "1exKPxDtMuu-7HlGTtNtDibw42NpRZ0PLjeBW_F9GkIE"
+    }
+  },
+  "folders": {
+    ".": "1-MHXy1wYZ81ofgCBgWObX4hmmqU_spoX",
+    "decisions": "13ZSUhButaxrE5kAGdr4QbCL-_8rZVc9y",
+    "meetings": "17uVUCSZjBi_E27dFWteFEOt1RC3TfTVZ",
+    "people": "1j7eE-g1TDSSXUTRnTzeDeRLhlTvv3God",
+    "platform": "10Tug5CiVs9mi5A2IZ444xmRy2N8bFOl4",
+    "platform/edge-ai-v2": "1Rxc6xAd39RI3NTfnzwC6wI1uaxqQlHkb",
+    "platform/wall-e": "18g19EaClaDRshve-F6B9hztVL3iiaYM1",
+    "reference": "1-8e7Q62acDQni50tn1Enc0tSFDU11y_a",
+    "runbooks": "1aFjQuSV-lFK1Im1-wGPn2hsWQL7YZUbo"
+  },
+  "root_folder_id": "1-MHXy1wYZ81ofgCBgWObX4hmmqU_spoX"
+}
