@@ -1,0 +1,12 @@
+# Exactly what walle_setup.py imports, plus the standard library.
+# GCP work shells out to gcloud and bq, which are installed separately and are
+# checked by `walle preflight`.
+
+# googleapiclient.discovery, googleapiclient.errors — the Admin SDK and userinfo
+google-api-python-client~=2.0
+
+# google.auth.transport.requests, google.oauth2.credentials — token refresh
+google-auth~=2.0
+
+# google_auth_oauthlib.flow — the installed-app consent flows
+google-auth-oauthlib~=1.0

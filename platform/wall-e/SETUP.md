@@ -8,6 +8,7 @@
 |---|---|
 | Owner | the platform owner |
 | Written | 2026-09-08 |
+| Last reviewed | 2026-09-08 — Phase 10/11 `--set-env-vars` delimiter corrected from `^@^` to `^;^`, and Phase 16's notification-channel command from `gcloud monitoring channels` to `gcloud beta monitoring channels` |
 | Last executed | never |
 | Applies to | [platform/wall-e](README.md) design set, documents 01 to 10 |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), the standalone service view |
@@ -1075,10 +1076,12 @@ gcloud run deploy walle-actions \
   --ingress=all \
   --timeout=60s \
   --min-instances=0 --max-instances=4 --concurrency=8 \
-  --set-env-vars="^@^WORKSPACE_DOMAIN=${DOMAIN}@ROBOT_ACCOUNT=${ROBOT}@OPERATOR_GROUP=${OPERATORS}@READER_GROUP=${READERS}@PROTECTED_GROUP=${PROTECTED}@SECRET_LOCATION=${REGION}@REFRESH_TOKEN_SECRET=walle-refresh-token@REFRESH_TOKEN_VERSION=${REFRESH_TOKEN_VERSION}@OAUTH_CLIENT_SECRET=walle-oauth-client@CONFIRM_HMAC_SECRET=walle-confirm-hmac@EVE_KMS_KEY=projects/${PROJECT}/locations/${REGION}/keyRings/walle/cryptoKeys/eve-approval@AUDIT_DATASET=walle_audit@TASKS_QUEUE=projects/${PROJECT}/locations/${REGION}/queues/walle-plan-items@EXEC_CALLER_ALLOWLIST=${SA_AGENT}@CONTROL_CALLER_ALLOWLIST=${SA_EVE},${OPERATORS}@INTERNAL_CALLER_ALLOWLIST=${SA_DISPATCH}@AUDIENCE=${ACTIONS_URL}"
+  --set-env-vars="^;^WORKSPACE_DOMAIN=${DOMAIN};ROBOT_ACCOUNT=${ROBOT};OPERATOR_GROUP=${OPERATORS};READER_GROUP=${READERS};PROTECTED_GROUP=${PROTECTED};SECRET_LOCATION=${REGION};REFRESH_TOKEN_SECRET=walle-refresh-token;REFRESH_TOKEN_VERSION=${REFRESH_TOKEN_VERSION};OAUTH_CLIENT_SECRET=walle-oauth-client;CONFIRM_HMAC_SECRET=walle-confirm-hmac;EVE_KMS_KEY=projects/${PROJECT}/locations/${REGION}/keyRings/walle/cryptoKeys/eve-approval;AUDIT_DATASET=walle_audit;TASKS_QUEUE=projects/${PROJECT}/locations/${REGION}/queues/walle-plan-items;EXEC_CALLER_ALLOWLIST=${SA_AGENT};CONTROL_CALLER_ALLOWLIST=${SA_EVE},${OPERATORS};INTERNAL_CALLER_ALLOWLIST=${SA_DISPATCH};AUDIENCE=${ACTIONS_URL}"
 ```
 
-> **One `--set-env-vars` flag, not sixteen.** gcloud treats it as a dictionary flag: repeating it does **not** merge, the last occurrence wins, and every earlier one is discarded silently. A deploy written as sixteen repeated flags produces a service with `AUDIENCE` set and nothing else, which shows up later as a crash loop or, worse, as a service quietly falling back to defaults. The `^@^` prefix sets `@` as the delimiter, which is needed because several values contain commas.
+> **One `--set-env-vars` flag, not sixteen.** gcloud treats it as a dictionary flag: repeating it does **not** merge, the last occurrence wins, and every earlier one is discarded silently. A deploy written as sixteen repeated flags produces a service with `AUDIENCE` set and nothing else, which shows up later as a crash loop or, worse, as a service quietly falling back to defaults.
+>
+> **The delimiter is `;`, and it may not be `@`.** The `^;^` prefix sets `;` as the delimiter, which is needed because several values contain commas. An earlier revision of this runbook used `^@^`, and that cannot work: `gcloud topic escaping` requires the delimiter to appear in **no value in the list**, and eight of these seventeen values are email addresses. gcloud splits `ROBOT_ACCOUNT=walle-bot@example.com` into `ROBOT_ACCOUNT=walle-bot` and `org.com`; the second has no `=` and the command aborts with `argument --set-env-vars: Bad syntax for dict arg: [org.com]`. No name and no value here contains a `;`. `walle_setup.py` uses the same delimiter and refuses to build the flag if any name or value ever acquires one.
 
 `AUDIENCE` expands to an empty string on the first deploy, because the URL does not exist until the service does. The `gcloud run services update` immediately after the URL capture below sets it for real. Do not skip it: the smoke test presents a token whose audience is the URL, and a service expecting an empty audience answers `401 bad_audience`.
 
@@ -1206,7 +1209,7 @@ gcloud run deploy walle-dispatcher \
   --no-allow-unauthenticated \
   --ingress=all \
   --timeout=60s --min-instances=0 --max-instances=2 \
-  --set-env-vars="ACTIONS_URL=${ACTIONS_URL},ROBOT_ACCOUNT=${ROBOT},REGION=${REGION}"
+  --set-env-vars="^;^ACTIONS_URL=${ACTIONS_URL};ROBOT_ACCOUNT=${ROBOT};REGION=${REGION}"
 
 export DISPATCHER_URL="$(gcloud run services describe walle-dispatcher --region="$REGION" \
   --format='value(status.url)')"
@@ -1851,7 +1854,7 @@ Alert on the watch going stale. This is the control, not the renewal job.
 Get the notification channel first, and paste its resource name into the policy before creating it. An alert policy with no channel is a dashboard, not an alert:
 
 ```bash
-gcloud monitoring channels list --format='value(name,displayName)'
+gcloud beta monitoring channels list --format='value(name,displayName)'
 ```
 
 ```bash

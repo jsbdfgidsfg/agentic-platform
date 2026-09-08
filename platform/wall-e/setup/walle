@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Wrapper so the setup commands always use the right Python.
+#   ./walle preflight | workspace | gcp | consent | deploy | register
+#          | triggers | verify | denials | stage0 | status | rollback | teardown
+# Global flags pass straight through: --dry-run --yes --config PATH --verbose,
+# and they work before OR after the subcommand.
+set -euo pipefail
+here="$(cd "$(dirname "$0")" && pwd)"
+if [ ! -x "$here/.venv/bin/python" ]; then
+  echo "No venv. Creating one at $here/.venv ..." >&2
+  python3 -m venv "$here/.venv"
+  "$here/.venv/bin/python" -m pip install --quiet --upgrade pip
+  "$here/.venv/bin/python" -m pip install --quiet -r "$here/requirements.txt"
+fi
+exec "$here/.venv/bin/python" "$here/walle_setup.py" "$@"
