@@ -9,6 +9,7 @@ authoring surface and keeps git history. Content moves both ways.
     ./wiki pull      # Google Docs -> local markdown
     ./wiki status    # what differs on each side
     ./wiki open      # print the Drive folder URL
+    ./wiki selftest  # prove push/pull is lossless, offline
 
 Why not the Drive MCP connector: its update operation can only change a file's
 title and parent, not its content. Updating a page would mean replacing the
@@ -38,6 +39,8 @@ from pathlib import Path
 warnings.filterwarnings("ignore", message=r".*Python version.*")
 warnings.filterwarnings("ignore", message=r".*OpenSSL.*")
 
+import httplib2
+import google_auth_httplib2
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -46,6 +49,8 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+HTTP_TIMEOUT = 120      # seconds; the default is the OS default, which hung a push
+NUM_RETRIES = 5         # googleapiclient retries 5xx/429 with exponential backoff
 WIKI_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = Path(__file__).resolve().parent / "manifest.json"
 TOKEN = Path.home() / ".config" / "wiki-sync" / "token.json"
@@ -62,6 +67,15 @@ ROOT_FOLDER_NAME = "Digital Workplace Wiki"
 # auth
 # --------------------------------------------------------------------------
 
+def _client(creds):
+    """One place to build the Drive client, so the timeout is never forgotten.
+    Without an explicit timeout a stalled socket hangs the whole sync; that is how
+    the first push died partway through creating documents."""
+    return build("drive", "v3", cache_discovery=False,
+                 http=google_auth_httplib2.AuthorizedHttp(
+                     creds, http=httplib2.Http(timeout=HTTP_TIMEOUT)))
+
+
 def drive(interactive: bool = False):
     """Build a Drive client from the cached token.
 
@@ -75,14 +89,14 @@ def drive(interactive: bool = False):
         creds = Credentials.from_authorized_user_file(str(TOKEN), SCOPES)
 
     if creds and creds.valid:
-        return build("drive", "v3", credentials=creds, cache_discovery=False)
+        return _client(creds)
 
     if creds and creds.expired and creds.refresh_token:
         try:
             creds.refresh(Request())
             TOKEN.write_text(creds.to_json())
             TOKEN.chmod(0o600)
-            return build("drive", "v3", credentials=creds, cache_discovery=False)
+            return _client(creds)
         except Exception as exc:
             if not interactive:
                 sys.exit(f"Drive token could not be refreshed ({exc}).\n"
@@ -100,13 +114,13 @@ def drive(interactive: bool = False):
     creds = flow.run_local_server(port=0)
     TOKEN.write_text(creds.to_json())
     TOKEN.chmod(0o600)
-    return build("drive", "v3", credentials=creds, cache_discovery=False)
+    return _client(creds)
 
 
 def cmd_auth(args) -> int:
     """One-time browser consent. Everything after this runs unattended."""
     svc = drive(interactive=True)
-    about = svc.about().get(fields="user(emailAddress)").execute()
+    about = svc.about().get(fields="user(emailAddress)").execute(num_retries=NUM_RETRIES)
     print(f"Authorised as {about['user']['emailAddress']}")
     print(f"Token cached at {TOKEN}")
     print("push / pull / status now run without a browser.")
@@ -124,7 +138,12 @@ def load_manifest() -> dict:
 
 
 def save_manifest(m: dict) -> None:
-    MANIFEST.write_text(json.dumps(m, indent=2, sort_keys=True) + "\n")
+    """Write atomically. The manifest is now saved after every created Doc, so an
+    interrupted write is far likelier than it used to be — and a half-written
+    manifest orphans every Doc it was supposed to record."""
+    tmp = MANIFEST.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(m, indent=2, sort_keys=True) + "\n")
+    os.replace(tmp, MANIFEST)
 
 
 def sha(text: str) -> str:
@@ -183,32 +202,65 @@ def doc_title(rel: Path) -> str:
 MERMAID_RE = re.compile(r"```mermaid\n(.*?)```", re.DOTALL)
 LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+\.md)(#[^)]*)?\)")
 
+# Every push transform must have an inverse below, or `pull` silently destroys the
+# authoring copy. The markers exist so the inverse can find its own output again.
+MERMAID_NOTE = ("> **Diagram (Mermaid).** Renders in the markdown wiki. To view it here,\n"
+                "> paste the source below into https://mermaid.live\n\n")
+MERMAID_BACK_RE = re.compile(
+    r"> \*\*Diagram \(Mermaid\)\.\*\*[^\n]*\n> [^\n]*\n\n```\n(.*?)```", re.DOTALL)
+DOCLINK_RE = re.compile(
+    r"\[([^\]]+)\]\(https://docs\.google\.com/document/d/([A-Za-z0-9_-]+)/edit\)")
+BANNER = ("*Synced from the markdown wiki. Edits made here are preserved — run "
+          "`wiki_sync.py pull` to bring them back.*\n\n---\n\n")
+
 
 def transform_for_docs(text: str, rel: Path, manifest: dict) -> str:
-    """Rewrite what does not survive the trip into Google Docs."""
+    """Rewrite what does not survive the trip into Google Docs.
+
+    Every change here is undone by transform_from_docs(); see round_trips() and the
+    self-test in `./wiki selftest`.
+    """
 
     def link_sub(m):
-        label, target = m.group(1), m.group(2)
+        label, target, anchor = m.group(1), m.group(2), m.group(3) or ""
         resolved = os.path.normpath(str((rel.parent / target)))
         entry = manifest["files"].get(resolved)
         if entry and entry.get("file_id"):
             return f"[{label}](https://docs.google.com/document/d/{entry['file_id']}/edit)"
-        return label  # unmapped target: keep the words, drop the dead link
+        # Unmapped target: keep the link intact rather than dissolving it to plain
+        # words. Dropping it here made `pull` destroy the link permanently.
+        return f"[{label}]({target}{anchor})"
 
     text = LINK_RE.sub(link_sub, text)
 
     # Google Docs cannot render Mermaid. Keep the source, and say so plainly rather
     # than silently shipping a broken diagram.
-    def mermaid_sub(m):
-        return ("> **Diagram (Mermaid).** Renders in the markdown wiki. To view it here,\n"
-                "> paste the source below into https://mermaid.live\n\n"
-                "```\n" + m.group(1) + "```")
+    text = MERMAID_RE.sub(lambda m: MERMAID_NOTE + "```\n" + m.group(1) + "```", text)
+    return BANNER + text
 
-    text = MERMAID_RE.sub(mermaid_sub, text)
 
-    banner = ("*Synced from the markdown wiki. Edits made here are preserved — run "
-              "`wiki_sync.py pull` to bring them back.*\n\n---\n\n")
-    return banner + text
+def transform_from_docs(text: str, rel: Path, manifest: dict) -> str:
+    """Inverse of transform_for_docs. Without this, `pull` overwrites the local
+    markdown with the Docs-flavoured copy: mermaid diagrams become inert code blocks
+    and every relative wiki link becomes a docs.google.com URL."""
+    by_id = {e["file_id"]: p for p, e in manifest["files"].items() if e.get("file_id")}
+
+    text = strip_banner(text)
+    text = MERMAID_BACK_RE.sub(lambda m: "```mermaid\n" + m.group(1) + "```", text)
+
+    def unlink_sub(m):
+        label, fid = m.group(1), m.group(2)
+        target = by_id.get(fid)
+        if not target:
+            return m.group(0)   # a genuine Docs link someone added by hand: leave it
+        return f"[{label}]({os.path.relpath(target, str(rel.parent))})"
+
+    return DOCLINK_RE.sub(unlink_sub, text)
+
+
+def round_trips(text: str, rel: Path, manifest: dict) -> bool:
+    """True when a push followed by a pull returns the original bytes."""
+    return transform_from_docs(transform_for_docs(text, rel, manifest), rel, manifest) == text
 
 
 def strip_banner(text: str) -> str:
@@ -228,14 +280,14 @@ def ensure_folder(svc, name: str, parent: str | None, manifest: dict, key: str) 
     existing = manifest["folders"].get(key)
     if existing:
         try:
-            svc.files().get(fileId=existing, fields="id,trashed").execute()
+            svc.files().get(fileId=existing, fields="id,trashed").execute(num_retries=NUM_RETRIES)
             return existing
         except HttpError:
             pass  # deleted upstream; recreate below
     body = {"name": name, "mimeType": FOLDER_MIME}
     if parent:
         body["parents"] = [parent]
-    fid = svc.files().create(body=body, fields="id").execute()["id"]
+    fid = svc.files().create(body=body, fields="id").execute(num_retries=NUM_RETRIES)["id"]
     manifest["folders"][key] = fid
     return fid
 
@@ -256,7 +308,7 @@ def ensure_tree(svc, manifest: dict) -> None:
 
 def remote_modified(svc, file_id: str) -> str | None:
     try:
-        return svc.files().get(fileId=file_id, fields="modifiedTime").execute()["modifiedTime"]
+        return svc.files().get(fileId=file_id, fields="modifiedTime").execute(num_retries=NUM_RETRIES)["modifiedTime"]
     except HttpError:
         return None
 
@@ -285,10 +337,13 @@ def cmd_push(args) -> int:
         created = svc.files().create(
             body={"name": doc_title(path.relative_to(WIKI_ROOT)),
                   "parents": [parent], "mimeType": DOC_MIME},
-            fields="id").execute()
+            fields="id").execute(num_retries=NUM_RETRIES)
         entry["file_id"] = created["id"]
+        # Save after EVERY create. Saving once at the end of the loop meant a crash
+        # or a network timeout mid-loop orphaned every Doc created so far, with no
+        # local record of its id. That happened on 2026-09-08.
+        save_manifest(manifest)
         print(f"created  {rel}")
-    save_manifest(manifest)
 
     # Pass 2 — content, with links now resolvable.
     changed = skipped = 0
@@ -315,7 +370,7 @@ def cmd_push(args) -> int:
             tmp = Path(fh.name)
         try:
             svc.files().update(fileId=entry["file_id"], media_body=upload_media(tmp),
-                               body={"name": doc_title(Path(rel))}).execute()
+                               body={"name": doc_title(Path(rel))}).execute(num_retries=NUM_RETRIES)
         finally:
             tmp.unlink(missing_ok=True)
 
@@ -333,7 +388,7 @@ def cmd_push(args) -> int:
 def cmd_pull(args) -> int:
     svc = drive()
     manifest = load_manifest()
-    pulled = 0
+    pulled = withheld = 0
     for rel, entry in sorted(manifest["files"].items()):
         fid = entry.get("file_id")
         if not fid:
@@ -348,17 +403,36 @@ def cmd_pull(args) -> int:
         done = False
         while not done:
             _, done = downloader.next_chunk()
-        text = strip_banner(buf.getvalue().decode("utf-8"))
+        text = transform_from_docs(buf.getvalue().decode("utf-8"), Path(rel), manifest)
 
         path = WIKI_ROOT / rel
         path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Refuse to overwrite the authoring copy with something we could not fully
+        # reverse. Leftover Docs artefacts mean the inverse transform did not match,
+        # and writing anyway would destroy diagrams or links that only exist here.
+        residue = []
+        if "docs.google.com/document/d/" in text:
+            residue.append("unresolved Google Docs links")
+        if "**Diagram (Mermaid).**" in text:
+            residue.append("un-restored mermaid diagram")
+        if residue:
+            sidecar = path.with_suffix(".pulled.md")
+            sidecar.write_text(text)
+            print(f"WITHHELD {rel}: {', '.join(residue)}. "
+                  f"Wrote {sidecar.relative_to(WIKI_ROOT)} instead; merge it by hand.")
+            withheld += 1
+            continue
+
         path.write_text(text)
         entry["local_hash"] = sha(text)
         entry["remote_modified"] = remote_ts
         pulled += 1
         print(f"pulled   {rel}")
+        save_manifest(manifest)
     save_manifest(manifest)
-    print(f"\n{pulled} pulled. Review with 'git diff' before committing.")
+    print(f"\n{pulled} pulled, {withheld} withheld. "
+          f"Review with 'git diff' before committing.")
     return 0
 
 
@@ -386,6 +460,26 @@ def cmd_status(args) -> int:
     return 0
 
 
+def cmd_selftest(args) -> int:
+    """Prove push/pull is lossless, without touching the network.
+
+    This is the regression guard for the bug that made `pull` rewrite every wiki
+    link as a docs.google.com URL and flatten every mermaid diagram.
+    """
+    manifest = load_manifest()
+    pages = local_pages()
+    bad = []
+    for path in pages:
+        rel = path.relative_to(WIKI_ROOT)
+        text = path.read_text()
+        if not round_trips(text, rel, manifest):
+            bad.append(str(rel))
+    for rel in bad:
+        print(f"LOSSY    {rel}")
+    print(f"\n{len(pages) - len(bad)}/{len(pages)} pages round-trip losslessly.")
+    return 1 if bad else 0
+
+
 def cmd_open(args) -> int:
     manifest = load_manifest()
     if not manifest.get("root_folder_id"):
@@ -399,7 +493,8 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name, fn in [("auth", cmd_auth), ("push", cmd_push), ("pull", cmd_pull),
-                     ("status", cmd_status), ("open", cmd_open)]:
+                     ("status", cmd_status), ("open", cmd_open),
+                     ("selftest", cmd_selftest)]:
         p = sub.add_parser(name)
         p.add_argument("--force", action="store_true",
                        help="ignore change detection and conflict guards")

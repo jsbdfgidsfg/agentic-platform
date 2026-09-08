@@ -50,7 +50,29 @@ since the last sync — pull first, or `--force` to overwrite deliberately.
 |---|---|
 | Headings, bold/italic, lists, tables, code blocks, links | Clean both ways |
 | Cross-page links | Rewritten to Drive doc URLs on push |
-| Mermaid diagrams | **Not rendered in Docs.** Source is kept with a note pointing to mermaid.live |
+| Mermaid diagrams | **Not rendered in Docs.** Source is kept with a note pointing to mermaid.live, and `pull` restores the original ```mermaid fence |
 | Comments, suggestions, revision history in Docs | Preserved — push updates content in place, it never replaces the file |
 
 Not synced: `CLAUDE.md`, anything under `_`- or `.`-prefixed directories.
+
+## Round-trip safety
+
+`push` rewrites two things that Google Docs cannot carry: mermaid diagrams become a
+note plus a plain code block, and relative `.md` links become Doc URLs. **`pull`
+reverses both**, so the markdown you get back is byte-identical to what you pushed.
+
+`./wiki selftest` proves it offline, over every page, with no network and no Drive
+access. Run it after touching `transform_for_docs` or `transform_from_docs`; they are
+inverses and must stay that way.
+
+If `pull` cannot fully reverse a document — because someone reformatted the mermaid
+note in Docs, for example — it **refuses to overwrite your markdown**. It writes
+`<page>.pulled.md` next to it and tells you to merge by hand. Losing a diagram or a
+whole page of links to an automated pull is worse than a manual merge.
+
+## Crash safety
+
+The manifest is written after **every** document created, and written atomically. It
+used to be saved once at the end of the creation pass, so the timeout on 2026-09-08
+orphaned 36 freshly created Docs with no record of their ids. Recovery was possible
+only because the `drive.file` scope can list the files the tool itself created.
