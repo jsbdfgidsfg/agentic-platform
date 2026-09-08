@@ -3,7 +3,8 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-05
-- Maturity: design — not yet built
+- Maturity: **superseded 2026-09-08 by [Wall-E](../wall-e/README.md)** — never built
+- Why: Wall-E keeps this design's identity model, trust boundaries and policy engine, and adds the autonomy ladder, the controller/improver team, and a set of corrections listed in [Wall-E 01-hld](../wall-e/01-hld.md)
 - Codename: `edge-ai-v2` (rename before rollout)
 
 ## One-line summary

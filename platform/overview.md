@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-05
+- Last reviewed: 2026-09-08
 - Maturity: skeleton — to be filled
 
 ## What this is
@@ -19,7 +19,8 @@ end-user surface.
 | Identity & collaboration | Google Workspace | [google-workspace.md](google-workspace.md) |
 | Compute / data / models | GCP | [gcp-projects.md](gcp-projects.md) |
 | The agents themselves | — | [agents.md](agents.md) |
-| First build | Edge AI v2 | [edge-ai-v2/](edge-ai-v2/README.md) |
+| First build | **Wall-E** (+ Eve, Mo) | [wall-e/](wall-e/README.md) |
+| Superseded | Edge AI v2 | [edge-ai-v2/](edge-ai-v2/README.md) |
 
 ## Architecture
 
