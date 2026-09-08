@@ -257,3 +257,18 @@ with the previous stage's exit evidence attached.
 A generated page, `platform/wall-e/ladder-state.md`, shows the current matrix, active
 overrides, config version and last drill date. Mo owns regenerating it once Mo exists;
 until then it is a scheduled query pasted in weekly.
+
+## 11. Assumptions in this document
+
+Everything here about the organisation was inferred, not told. Each one is a
+[decision](09-open-decisions.md) and each changes numbers in the tables above.
+
+| Assumption | Where it bites | Decision |
+|---|---|---|
+| A sandbox OU with synthetic accounts can be created, plus one small real pilot OU | Every stage's scope limit, and S1 in particular — without a sandbox the first real writes land on real users | 5 |
+| Business hours are Europe/Paris, Mon–Fri, last write 16:00 | Every autonomous gate, hold windows, the weekend suspension block | 15 |
+| At least one more DWP admin joins `walle-operators@` by S1, and a second approver is named by S3 | S3 and every L4/L5 promotion. A one-person rota also makes approval latency the binding constraint | 11 |
+| Google Chat is available as the approval and digest surface | The proposal queue and hold-window veto | 14 |
+| The example playbooks reflect real toil | S0's shadow evidence is only useful if it shadows work you actually want done | 12 |
+| The Workspace edition supports sharing the audit events the event trigger needs | S2's event trigger class | verify in console |
+| An HR system of record exists and is reachable | S5's autonomous suspension. If not, F5 stops at L3 permanently, which is acceptable | 13 |
