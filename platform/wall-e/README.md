@@ -48,8 +48,16 @@ contracts Wall-E owes them.
 
 ## Documents
 
-**Start here:** [05-autonomy-ladder.md](05-autonomy-ladder.md) is the step-by-step
-enablement plan you asked for. Everything else exists to make it enforceable.
+**Two standalone documents.** Both are self-contained, and both are the ones to hand to
+someone else.
+
+| Document | For |
+|---|---|
+| [**SETUP.md**](SETUP.md) | The procedure to stand Wall-E up from nothing, executable by a Workspace super admin who owns a GCP project. Ends at Stage 0: it can read the tenant, and no autonomous write is possible. |
+| [**ARCHITECTURE.md**](ARCHITECTURE.md) | The service architecture with diagrams. Written for a security reviewer deciding on a pilot, and for whoever builds Eve or Mo. |
+
+**Then:** [05-autonomy-ladder.md](05-autonomy-ladder.md) is the step-by-step enablement
+plan. Everything else exists to make it enforceable.
 
 | # | Document | What it answers |
 |---|---|---|

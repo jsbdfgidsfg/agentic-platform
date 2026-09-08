@@ -5,6 +5,12 @@
 - Last reviewed: 2026-09-08
 - Last executed: **never**
 
+> **To actually build it, use [SETUP.md](SETUP.md).** That is the standalone, executable
+> procedure, and it carries the corrections two review passes found in this one: the
+> service-account roles, the deploy flag that silently discards its own variables, the
+> scheduler flag that does not exist, the staging bucket, and the rest. This document
+> stays as the design-set member that explains the phases and their rationale.
+
 ## When to use this
 To stand Wall-E up from nothing, to Stage 0 of the ladder. Executing every phase leaves a
 system that can read the tenant, answer questions in chat, and run write playbooks in
