@@ -92,12 +92,12 @@ Verified against Google's OAuth documentation, and each one is an operational ru
 
 | Cause | Rule it imposes |
 |---|---|
-| App in "Testing" publishing status gets 7-day tokens | The consent screen must be **Internal** and **In production**. Never Testing. |
+| Refresh tokens expire after 7 days | The documented rule applies to **external** user type in Testing. An Internal app is exempt either way — but set Internal **and** In production, because the cost of being wrong is a dead agent every week. |
+| More than 100 live tokens for the client | The oldest is invalidated **silently, with no warning**. One client, one token; never reuse this client. |
 | Not used for six months | The action service refreshes at least monthly even when idle, and alerts on failure. |
 | Password change, when Gmail scopes are granted | Password rotation on the robot **invalidates the token**. Re-bootstrap is part of the rotation runbook, not a surprise. |
 | Admin sets a requested service to "Restricted" in API controls | Mark the client **Trusted** in Admin console → API controls, in the same sitting as the consent. |
 | GCP session-control length exceeded, for cloud-platform scopes | **Never request the `cloud-platform` scope** for the robot. It would bind the Workspace credential to the organisation's GCP session policy. |
-| More than 100 live refresh tokens per client | One client, one token. Not a practical risk, but do not reuse this client for anything else. |
 | User revocation | This is the kill switch, K5. |
 
 The action service must treat `invalid_grant` as a **paging incident**, not a retryable
@@ -111,7 +111,7 @@ Once the refresh token exists, the account should be hostile to interactive use.
 |---|---|---|
 | Own OU | `/Automation/Service Identities` (`Assumption:` creatable) | Lets every setting below apply without touching real users |
 | 2-step verification | Admin console → Security | Enforced, hardware key only, key in a safe |
-| Password | Corporate vault | Long, random, never in the wiki. Changing it breaks the token — see above |
+| Password | `Assumption:` a corporate password vault exists | Long, random, never in the wiki. Changing it breaks the token — see above |
 | Recovery options | None | Removes a social-engineering path |
 | Less secure app access | Off | — |
 | Session length | Short, no "remember device" | — |
@@ -129,32 +129,55 @@ read-only at Stage 0 and gains a privilege only when the stage that needs it is 
 That is a control, not bureaucracy — an operation cannot be executed by accident if the
 role cannot perform it.
 
-| Privilege | Stage it is granted | Note |
+| Privilege | Stage | Note |
 |---|---|---|
 | Users → Read | S0 | |
 | Groups → Read | S0 | |
 | Organisational units → Read | S0 | |
 | Reports → Audit read, Usage read | S0 | Drives every report Wall-E produces |
-| Licence management → Read | S0 | Verify the exact privilege name in console |
+| Admin roles → Read | S0 | Needed to classify which groups carry an admin role |
 | Groups → Update (members) | S1 | The first write privilege |
-| Users → Update | S1 | Bounded further by `SAFE_USER_FIELDS` in code |
-| Users → Suspend | S1 | Suspend and restore |
-| Licence management → Update | S1 | Reclaim and assign |
+| **Users → Update** | S1 | **Indivisible.** See below |
+| **License Management** | S1 | **Indivisible.** See below |
 | Users → Create / Delete | **never** | Deletion is irreversible after 20 days |
 | Security settings, domain settings | **never** | |
-| Admin role management | **never** | Prevents self-escalation |
+| Admin role management (assign) | **never** | Prevents self-escalation |
 | Vault / eDiscovery | **never** | Would grant read access to all retained content |
 
-### Scope the role to an organisational unit
+**Two privileges cannot be sliced, and an earlier draft pretended otherwise.**
 
-Verified: `roleAssignments` support `scopeType=ORG_UNIT`. Assign the role scoped to the
-pilot OU rather than the whole customer. This means **Workspace itself refuses** an
-operation outside the pilot scope, independently of the action service's own OU allowlist.
-Two enforcement points, one of which is outside the code we write.
+- There is **no standalone suspend privilege**. Suspending is a sub-action of
+  *Users → Update*, alongside rename, move, password reset and aliases. So granting the
+  profile-editing family at S1 unavoidably grants suspension at the Workspace layer.
+  Separation between them exists **only** in `SAFE_USER_FIELDS` and the ladder levels —
+  which means those two are load-bearing rather than defence in depth.
+- **License Management is a single undivided privilege.** There is no read-only half. A
+  first draft granted "licence read" at S0, which would have handed Wall-E assign and
+  revoke during the stage whose entire premise is that it cannot write. It moves to S1.
 
-`Assumption:` group-management privileges may not honour OU scope — the design assumes
-they do not, which is why group classification exists as a separate control in
-[06-security-guardrails.md](06-security-guardrails.md). Verify in console at build.
+Enumerate the real privilege names against the tenant with `privileges.list`; Google
+publishes no complete catalogue, so do not trust the labels above to match the console.
+
+### Two role assignments, not one
+
+`roleAssignments` support `scopeType=ORG_UNIT`, so Workspace itself can refuse an
+operation outside the pilot scope — a second enforcement point outside our own code, and
+worth having. But a single OU-scoped assignment does not work, for two reasons an earlier
+draft missed:
+
+1. **Several privileges cannot be OU-scoped at all** — Groups, Reports, Security
+   settings, Domain settings, Billing, Data Transfer and Support are customer-scoped only.
+   The Stage 0 role is mostly Reports privileges.
+2. **Stage 0's whole value is tenant-wide reads.** Sign-in inactivity by organisational
+   unit, licences by SKU, admin-role holders against a signed list — none of that is
+   answerable inside one pilot OU. Nor is `directory.admins.list`, which feeds the
+   protected-principal cache that the "never touch an admin" control depends on.
+
+So: a **customer-scoped read-only role** granted at S0, and a **separate OU-scoped write
+role** granted at S1. Group-management privileges do **not** honour OU scope — this is a
+fact, not the assumption an earlier draft called it — which is exactly why group
+classification exists as its own control in
+[06-security-guardrails.md](06-security-guardrails.md).
 
 ## OAuth client configuration
 
@@ -175,23 +198,31 @@ So the full set for the whole ladder has to be decided before the first consent 
 https://www.googleapis.com/auth/admin.directory.user
 https://www.googleapis.com/auth/admin.directory.group
 https://www.googleapis.com/auth/admin.directory.orgunit.readonly
+https://www.googleapis.com/auth/admin.directory.rolemanagement.readonly
 https://www.googleapis.com/auth/admin.reports.audit.readonly
 https://www.googleapis.com/auth/admin.reports.usage.readonly
 https://www.googleapis.com/auth/apps.licensing
-https://www.googleapis.com/auth/gmail.modify
+https://www.googleapis.com/auth/gmail.readonly
+https://www.googleapis.com/auth/gmail.labels
 https://www.googleapis.com/auth/gmail.send
 https://www.googleapis.com/auth/chat.messages
-https://www.googleapis.com/auth/chat.spaces
-https://www.googleapis.com/auth/calendar
+https://www.googleapis.com/auth/calendar.events
 https://www.googleapis.com/auth/userinfo.email
 openid
 ```
 
 Notes on this list:
 
+- `admin.directory.rolemanagement.readonly` is **required, not optional**: without it the
+  service cannot learn which groups carry an admin role, and the group-classification
+  control that stops privilege escalation has nothing to read. An earlier draft omitted
+  it while depending on it.
 - `userinfo.email` and `openid` are needed by the bootstrap script to verify that the
   consenting account really is the robot. Edge AI v2's script omitted them and would have
   failed on that check.
+- The scopes above are **narrower than the first draft**, which asked for `gmail.modify`
+  (full mailbox write), `calendar` (full) and `chat.spaces` (space management) while the
+  catalogue needs none of them. Err wide on reads, narrow on writes — and these are writes.
 - `drive` is **not** requested. Without DWD the robot can only see its own Drive, so the
   scope buys nothing and widens the blast radius of a token leak.
 - `admin.directory.user.security` (sign-out, token revocation) is deliberately **not**
@@ -240,9 +271,17 @@ Values are never recorded here.
 | `walle-confirm-hmac` | Signs the service's own approval requests | `walle-actions@` only |
 | `walle-eve-approval-key` | Eve signs approvals with it | **`eve-controller@` only** |
 
-All four created with `--replication-policy=user-managed --locations=europe-west1`.
-Automatic replication stores payloads in multiple regions worldwide, which contradicts the
-EU residency requirement — Edge AI v2's bootstrap script got this wrong.
+Create these as **regional secrets** (`projects/*/locations/europe-west1/secrets/*`, via
+the regional endpoint), not global secrets with user-managed replication. Regional secrets
+keep the data in the location at rest, in use and in transit; user-managed replication
+pins only the payload at rest while the secret itself stays a global resource. Automatic
+replication — what the Edge AI v2 script used — stores payloads worldwide and plainly
+contradicts the residency requirement.
+
+**Pin the version number.** The service reads `.../versions/7`, never `.../versions/latest`.
+`latest` resolves to the newest *enabled* version, so disabling the newest silently falls
+back to the previous, still-valid token and the credential kill switch does nothing.
+Rotation is an explicit config change and a deploy.
 
 ## Rotation
 
@@ -262,4 +301,4 @@ EU residency requirement — Edge AI v2's bootstrap script got this wrong.
 | Vault API for retention or export | Reachable with the robot's user token if licensed, but that grants read access to all retained content in the tenant. Not worth it. Separate identity and separate ladder if ever needed. |
 | Gemini Enterprise "Authorizations" as the acting identity | Acts as the *requesting* user, so every operator's own privileges become the ceiling and every action is attributed to them. Wrong identity for admin operations. Useful only for the identity-binding hardening above. |
 | Chat app identity | Works for Chat only, no path to Admin SDK. A possible second front door later, not a substitute. |
-| Agent Identity (SPIFFE) instead of `walle-agent@` | Genuinely attractive — per-agent identity, no long-lived keys, mTLS-bound tokens. Not yet load-bearing here because it is unverified whether its credential satisfies Cloud Run IAM on the boundary-2 hop. Evaluate at build; adopt if it works. |
+| Agent Identity (SPIFFE) instead of `walle-agent@` | **Not rejected — deferred, and probably wrong to defer.** It went generally available on 2026-04-22, with the auth manager and its APIs GA on 2026-08-22 and VPC Service Controls integration on 2026-08-14. It is supported on Agent Runtime and Cloud Run, identities appear in IAM policies as `principal://…`, and credentials are auto-rotated 24-hour X.509 certificates over mTLS rather than a long-lived service-account identity. That is strictly better than what this design uses for boundary 2. Treat adopting it as a build decision with a published answer, not an unknown. |

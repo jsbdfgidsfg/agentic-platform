@@ -15,7 +15,7 @@ stage — but the *shape* is the design, and the shape is not negotiable without
 |---|---|---|
 | R1 | **Autonomy belongs to a pair, never to the agent.** A level attaches to (operation family, trigger class). | "Wall-E is autonomous" is never true. It is L5 for reading and L0 for suspending from mail, at the same moment. |
 | R2 | **Humans raise, machines lower.** Raising needs a pull request and a dated decision record. Lowering is one API call by any operator, Eve, or a breaker, and the paperwork follows. | The asymmetry is the safety story. |
-| R3 | **One notch, one family, on evidence.** No skipping levels. Minimum dwell at each. A new operation enters at L0 whatever stage the programme has reached. | "We are at Stage 4, so the new thing is autonomous" cannot happen. |
+| R3 | **One notch, one family, on evidence.** Above L3, no skipping and a minimum dwell at each level. At or below L3 a level may be skipped when evidence from another trigger class already covers it — L1 and L2 never execute, so skipping them risks nothing. A new operation enters at L0 whatever stage the programme has reached. | "We are at Stage 4, so the new thing is autonomous" cannot happen. The stage table skips only below L3, and CI enforces exactly this rule. |
 | R4 | **Reversibility outranks risk tier.** Only operations with an exact inverse can reach the top levels. | Sending mail is low-risk and irreversible, so it is capped. Suspending is high-risk and reversible, so it can climb. |
 | R5 | **Every level is enforced in the action service.** The agent is told `ok`, `shadow`, `proposal`, `approval_required` or `denied`, and never learns why. | Same argument as the approval token: nothing the model can set. |
 | R6 | **Verify every write by re-reading.** A write whose observed post-state does not match the plan is a `drift`, which demotes the family and opens an incident. | This is the signal Eve audits and Mo learns from. |
@@ -92,7 +92,10 @@ Three permanent statements, said plainly:
 | **F5 Suspend** | `directory.user.suspend(true)` | yes | **L4**, and not before Stage 5 | restore |
 | **F6 Restore** | `directory.user.suspend(false)` | — | **L3, permanently** | — |
 | **F7 Licences** | licence assignment delete / insert / patch | yes, same SKU | L4 for suspended targets, L3 for active | re-insert the recorded SKU |
-| **F8 Later** | data transfer, archive, group create, user create | mostly no | enters at L0, own mini-ladder | decide per operation |
+| **F4b OU move** | `directory.user.move_ou` | yes, if the destination is in scope | **L3** | move back, only if the destination stays inside the allowlist |
+| **F9 Own mailbox** | `gmail.label` | yes | L5 | inverse label |
+| **F10 Rollback** | `run.rollback` | — | **L3 permanently** | — |
+| **F8 Later** | data transfer, archive, group create | mostly no | enters at L0, own mini-ladder | decide per operation |
 
 **F6 deserves its explanation.** Restoring access is a security decision, not hygiene. It
 is the rollback path for F5, and a system that can suspend autonomously but needs a human
@@ -142,9 +145,10 @@ lags by two and stops at proposals.
 | | |
 |---|---|
 | **Purpose** | Deliver read-only value immediately, and start generating the evidence that every later promotion will be argued from. |
-| **Value on day one** | Weekly digests that today are a spreadsheet or nothing: admin changes last week, accounts with no sign-in for 90 days by OU, licences by SKU, suspended-but-still-licensed accounts, groups with external members or no owner, admin-role holders versus a signed list. Plus ad-hoc directory questions in chat. |
-| **Levels** | F1 L5 on chat and scheduled. Every write family L1 everywhere. `notify.operators` L5 to a fixed operator address. |
-| **Scope** | Reads: whole tenant, rate-limited. Shadow write plans: pilot OU only. Daily write budget: 0. |
+| **Value on day one** | Weekly digests. `Assumption:` these are produced by hand today, or not at all — admin changes last week, accounts with no sign-in for 90 days by OU, licences by SKU, suspended-but-still-licensed accounts, groups with external members or no owner, admin-role holders versus a signed list. Plus ad-hoc directory questions in chat. |
+| **Levels** | F1 at L5 on chat and scheduled. Every write family at L1 on every trigger. |
+| **The reporting channel is not on the ladder** | `notify.operators`, sending a templated message to a config-fixed operator address, is how a run reports at all — including a shadow run. Putting it inside F2 and then setting F2 to L1 would have meant Stage 0 could not tell anyone what it had shadowed. It is therefore **outside the ladder and outside the write budget**, and its recipients are config, never model output. Stage 2's "first autonomous write" is F2 to a *space or list*, which is a different thing. |
+| **Scope** | Reads: whole tenant, rate-limited. Shadow write plans: pilot OU only. Daily write budget: 0 — and shadow items **evaluate** that cap without consuming it, or every shadow item would be denied for budget before its level could force a dry run, and Stage 0 would generate no evidence at all. |
 | **Operators** | the platform owner alone. |
 | **Controls that must be live first** | Custom role, read-only privileges only, OU-scoped · robot account hardened, interactive-login alert firing · action service with catalogue, policy chain, durable budgets, write-ahead audit · ladder config v1 with everything at L1 · halt flags and the K0–K5 chain, drilled once with times recorded · dispatcher with per-job enable and budget · shadow grading sheet. |
 | **Exit criteria** | ≥ 20 shadow runs covering every write family, each item graded, **≥ 95 % graded correct** · **zero** hard-invariant denials from autonomous runs (`protected_principal`, `operation_not_allowed`, bad approval) · zero requests without an audit row, verified by reconciling Cloud Logging against BigQuery · injection regression suite passes · K0 measured under 60 s, K5 measured · DPO or works-council question formally asked · decision record for S1 signed. |
@@ -156,7 +160,7 @@ lags by two and stops at proposals.
 | **Purpose** | Real writes, every one confirmed by a human in chat. Prove the write path, the pre-state capture, the verification and the inverses before anything unattended touches Workspace. |
 | **Value** | Leaver and joiner actions from chat with pre-state shown. Licence reclaim on suspended accounts, on request — the first measurable saving. |
 | **Levels** | F3, F4, F5, F7 at **L3 on chat**; the same families stay L1 on scheduled. |
-| **Scope** | Writes only inside the pilot OU allowlist. Max 20 objects per request. Business hours. Daily write budget 50. |
+| **Scope** | Writes only inside the pilot OU allowlist. Max 10 objects per request. Business hours. Daily write budget 10. |
 | **Operators** | the platform owner plus one or two named DWP admins. |
 | **Controls first** | Pre-state capture on every write · the inverse table implemented and **every inverse exercised on test accounts in a game day** · verification by re-read · group classification list published · role extended with update privileges only. |
 | **Exit criteria** | ≥ 50 executions across ≥ 3 families by ≥ 2 operators · **zero unintended changes**, defined as a change reverted within 7 days and attributed to Wall-E error rather than changed intent · zero executions against a protected principal (denials are fine, executions are not) · a rollback deliberately exercised end to end · for each family to be promoted, shadow precision ≥ 95 % over four consecutive weekly runs · decision record. |
@@ -167,7 +171,7 @@ lags by two and stops at proposals.
 |---|---|
 | **Purpose** | Let scheduled runs execute reads and templated notifications unattended, and put the writes that matter in front of humans as proposals so precision can be measured before anyone lets them execute. |
 | **Levels** | Scheduled: F1 L5, F2 L4 (templated notification is the first autonomous write in the whole programme), write families L2. Event trigger opens at L1 shadow. |
-| **Scope** | Proposals capped at 20 objects per run, pilot OU. Daily write budget 10, and templated notifications only. |
+| **Scope** | Proposals capped at 20 objects per run, pilot OU. Daily write budget 10, and templated notifications only. (Budgets rise monotonically across stages: 10, 10, 25, 50, then reviewed quarterly. An earlier draft ran 50 then 10 then 25, which would have tightened a cap while widening autonomy.) |
 | **Controls first** | Run and plan tables · proposal queue with verdict reason codes · plan freeze and hash · Workspace audit-log sharing enabled and the Cloud Logging sink to Pub/Sub working · dead-letter topic · event dedup store. |
 | **Exit criteria** | ≥ 30 proposals graded per family to be promoted, **precision ≥ 95 %**, drawn from at least three distinct runs · median time-to-verdict under one business day · ≥ 50 events processed in shadow with zero denials · zero drift on the F2 notifications actually executed · decision record. |
 
@@ -178,7 +182,9 @@ lags by two and stops at proposals.
 | **Purpose** | The first autonomous `WRITE_HIGH` — with a human approving the batch. This is where the toil genuinely goes away, and it is the stage to sit in longest. |
 | **Levels** | Scheduled write families at **L3 batch**: the run plans, freezes, and waits; one operator approves the whole plan; each item is re-read before it executes. Event: F1 L5, F2 L2. Inbox opens at L1 for reads. |
 | **Scope** | Max 10 objects per run rising to 25 after 20 clean runs · OU allowlist · group class `low` only · business hours, last write at 16:00 · daily write budget 25 · canary: a new family applies to 20 % of targets for its first 10 runs. |
-| **Controls first** | Batch approval bound to the plan hash · per-item re-read and skip-on-change · rollback plan generated at plan time and covered by the same approval for 7 days · **Eve running in observe mode**, producing verdicts that are logged and graded but not enforced. This is Eve's own shadow stage. |
+| **Controls first** | Batch approval bound to the plan hash · per-item re-read and skip-on-change · rollback plan generated at plan time, but executed only on a **fresh** human approval
+against **fresh** pre-state — a week-old approval is bound to a pre-state hash that is
+stale by definition · **Eve running in observe mode**, producing verdicts that are logged and graded but not enforced. This is Eve's own shadow stage. |
 | **Exit criteria** | ≥ 50 approved `WRITE_HIGH` items, ≤ 2 % rejected for Wall-E error, verification ≥ 99.5 % with **zero drift** · **Eve acceptance test passed**: Eve observed ≥ 30 days, agreed with human verdicts ≥ 95 %, and caught ≥ 95 % of deliberately seeded faults in a chaos exercise · approval SLA met ≥ 80 % of the time, otherwise the rota is not ready and S4 would just build a queue · kill-switch drill within 30 days · decision record signed by **two humans**. |
 
 ### S4 — Eve gates
@@ -205,9 +211,10 @@ queries — call that Eve v0 and do not skip it.
 
 | Metric | Definition | Target | Breach → |
 |---|---|---|---|
-| **Hard-invariant denials** | `protected_principal`, `operation_not_allowed`, bad approval, level bypass, from autonomous runs | **0** | Any one: family → L0 synchronously, incident |
+| **Hard-invariant denials** | The reason codes marked as invariants in [03](03-lld.md), arising from **autonomous** runs | **0** | Any one: family → L0 synchronously, incident |
 | **Plan precision** | items accepted ÷ items graded | ≥ 95 % | < 95 % over 20 graded: one level down. < 90 %: L1 |
 | **Verification success** | `verified` ÷ executed writes | ≥ 99.5 % | Any `drift`: one level down plus incident. `unverifiable` > 2 %: one level down |
+| **Breaker trips** | Distinct `error_class` values in a run, **excluding no-ops** | — | ≥ 2 distinct classes aborts the run. An operation whose desired state already held — removing an absent member, deleting an absent licence — is a **no-op**, recorded and excluded. Counting consecutive failures instead let anyone suspend and restore a test account twice to force a family off for a week, then permanently. More than 3 automatic demotions in an hour is itself severity 2 |
 | **Invalid parameters** | share of autonomous steps denied for bad parameters | < 1 % | > 1 %: promotions frozen. > 5 %: one level down |
 | **Run reliability** | runs reaching a terminal state within budget | ≥ 99 % | < 97 %: `no_autonomous` for that playbook |
 | **Eve post-hoc latency** | time to independent verification of an L5 write | ≤ 60 min p99 | Breach: promotions frozen. > 4 h: L5 cells drop to L4 |
@@ -225,7 +232,8 @@ same family in 90 days force a redesign of the playbook before re-entry.
 
 | Sev | Definition | Automatic | Human follow-up |
 |---|---|---|---|
-| **1** | Any effect on a protected principal, a security-class group, or a target outside the OU allowlist. Any interactive login to the robot. Any forged or invalid approval. Any operation executed that was not in the frozen plan. | **Halt writes**, all autonomous triggers off, every write family to L0 | Root cause in 5 working days; promotions frozen 30 days; decision record to resume |
+| **1** | Any **effect** on a protected principal, a security-class group, or a target outside the allowlist. Any interactive login to the robot. Any forged approval, or one posted by the agent. Any operation executed that was not in the frozen plan. | **Halt writes**, all autonomous triggers off, every write family to L0 | Root cause in 5 working days; promotions frozen 30 days; decision record to resume |
+| — | **Not severity 1:** a protected-principal *denial* on a human chat request. An operator asking about someone who turns out to be a delegated admin is the control working. It is an audit row and nothing else. | none | none |
 | **2** | Verification drift on a write. A budget cap hit. An Eve approval later overturned. A run executed outside its window. | Family to L0; the trigger class that produced it paused | Root cause in 10 days; promotions frozen 14 days |
 | **3** | A proposal rejected for a policy reason. An unexplained run failure. An audit gap. | Family down one level | Noted on the ladder-state page, reviewed weekly |
 
@@ -234,8 +242,17 @@ same family in 90 days force a redesign of the playbook before re-entry.
 Config lives in `walle/config/ladder.yaml`. CI refuses the merge if a level went up
 without a link to an `accepted` decision file, if the level exceeds a ceiling, if a
 WRITE_HIGH promotion lacks a second named approver, if an override for that cell exists
-and the pull request does not reference its incident, or if the last drill is older than
-30 days.
+and the pull request does not reference its incident, if the dwell rule in §6 is not
+satisfied, or if the last drill recorded in Firestore is older than 30 days.
+
+**The gate cannot be part of what it gates.** One pull request could otherwise change the
+ladder, the ceiling module and the validator together, and CI would happily check the new
+ladder against the new ceilings. So: separate code ownership requiring a security approver
+on the ceiling module, the policy chain, the catalogue's risk tiers and the validator; the
+validator runs as a required check owned outside the repository; and the running service
+publishes `ceilings_sha` on its ladder endpoint and stamps it on every audit row, with the
+deploy tool refusing a config whose declared hash does not match what is running. A ceiling
+change then costs a deploy, and the deploy is separately approved.
 
 One file per promotion, using the wiki decision template plus five mandatory lines:
 
@@ -262,6 +279,11 @@ until then it is a scheduled query pasted in weekly.
 
 Everything here about the organisation was inferred, not told. Each one is a
 [decision](09-open-decisions.md) and each changes numbers in the tables above.
+
+**User creation is not on this list and not in F8.** [02](02-identity-and-auth.md) puts
+Users → Create and Delete at "never", and an earlier draft of this table contradicted that
+by listing user create as a future family. The role does not carry the privilege; adding
+it is a design change, not a promotion.
 
 | Assumption | Where it bites | Decision |
 |---|---|---|

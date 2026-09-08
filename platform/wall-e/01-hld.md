@@ -123,10 +123,17 @@ ceremony:
 - **Run identity has to exist before the agent speaks.** `run_id`, playbook version,
   config version and budget are facts about the run, not outputs of it. The LLM must not
   be the thing that invents them.
-- **Scheduler cannot call the agent directly anyway.** Cloud Scheduler needs an OAuth
-  access token for `*.googleapis.com` targets; Pub/Sub and Eventarc deliver OIDC tokens
-  only. The dispatcher is where that translation happens, and it is a natural place to
-  enable and disable individual jobs per ladder stage.
+- **A trigger must be acknowledged in a second; an agent turn takes minutes.** Cloud
+  Scheduler's attempt deadline defaults to three minutes and caps at thirty, and a
+  Pub/Sub push subscription's ack deadline is far shorter. A synchronous call to the
+  agent blows through both, so the trigger is recorded as failed and **retried**, and
+  the same run happens twice. The dispatcher acks immediately and hands the work to a
+  queue, with a deterministic trigger id — the job name plus its scheduled time, or the
+  Pub/Sub message id — written transactionally so a duplicate delivery is a no-op.
+
+  (Cloud Scheduler *can* call the agent directly: it supports OAuth tokens precisely for
+  `*.googleapis.com` targets. An earlier draft claimed it could not. That was wrong, and
+  it was the weakest of the three reasons for having a dispatcher. The two above stand.)
 
 ## Why the action service stays separate from the agent
 
@@ -168,7 +175,7 @@ These change things Edge AI v2 asserted. Sources are listed in
 | End-user identity | "unverified, treat `actor` as untrusted" | Gemini Enterprise passes the **user's email as `user_id`**. It is asserted by the Discovery Engine service agent, not cryptographically bound to the user, so the action service still re-checks group membership. Lock `aiplatform.reasoningEngines.query` down to three principals. |
 | Chat API | "may need an app identity" | The robot's **user token is sufficient** to post messages and manage spaces it belongs to. A branded Chat app is optional UX, not a requirement. |
 | Alert Center as an event source | not considered | **Requires domain-wide delegation.** Out of scope. Use Workspace audit-log sharing into Cloud Logging instead, which needs no credential at all and gives Eve an independent view. |
-| Cloud Run ingress | "internal only" | Agent Runtime egresses from a Google-managed network, so internal-only ingress may block it. **IAM is the real boundary**; network isolation needs a PSC interface. Verify at build — [decision 9](09-open-decisions.md). |
+| Cloud Run ingress | "internal only" | Agent Runtime egresses from a Google-managed tenant project, which Cloud Run treats as **external** — internal-only ingress blocks it. The fixes are a shared VPC Service Controls perimeter, an internal load balancer in front of Cloud Run, or a Private Service Connect endpoint. A PSC **interface** alone does not help, because `run.app` traffic still bypasses the VPC without private DNS peering, and it also disables the agent's internet egress. **IAM is the enforced boundary** — [decision 9](09-open-decisions.md). |
 
 ## Non-goals
 

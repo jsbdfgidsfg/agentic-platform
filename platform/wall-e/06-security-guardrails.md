@@ -35,10 +35,10 @@ mechanism in [03-lld.md](03-lld.md).
 | **N2** | **Permanent data loss** — a deleted user, group or mailbox | Restore is possible for 20 days only, and needs a spare licence. Rollback does not exist. | Not in the catalogue, not in the role | Same |
 | **N3** | **Privilege escalation through a group** — adding anyone to a group that grants admin rights, GCP IAM, or control of Wall-E, Eve or Mo | The quiet path to N1 | Security-class groups blocked; unclassified groups treated as security | `_check_target` on `group_key`, group classification, fail closed |
 | **N4** | **Mass action** — the same operation looped across an OU | The realistic shape of both an injection and a bug | Explicit enumerated targets only; per-run object cap; daily budget; novelty cap | Catalogue parameter models, durable Firestore counters |
-| **N5** | **Acting on instructions found in content** — mail, Chat, documents, audit rows | The one attack that will actually be attempted | T3 writes capped at proposals, permanently; playbook `uses` allowlist; content tagged untrusted | Ceilings in code, playbook validator |
-| **N6** | **Outbound communication chosen by the model, unattended** | An admin account is trusted by every employee; a phishing mail from it is not recoverable | Autonomous notifications are templated with recipients from config; free-text send is chat-only; external recipients always need approval | Catalogue split (`notify.operators` vs `gmail.send`), recipient domain check |
+| **N5** | **Acting on instructions found in content** — mail, Chat, documents, audit rows, **display names, group names, error text** | The one attack that will actually be attempted | The **taint bit**: any attacker-writable field reaching the model forces the inbox ceiling for that run, whatever the trigger. Plus the playbook `uses` allowlist, the pinned selection query, a closed error enum that never echoes upstream text, and canonicalisation of every attacker-writable string | Taint evaluation in the policy chain, ceilings in code, playbook validator ([03](03-lld.md)) |
+| **N6** | **Outbound communication chosen by the model, unattended** | An admin account is trusted by every employee; a phishing mail from it is not recoverable | Templated notification (`notify.operators`, family F2) and free text (`gmail.send`, `chat.message.send`, family **F2b**) are different families with different ceilings. An earlier draft put them in one family, which would have made free-text mail autonomous at L4 on a schedule — the exact thing this row forbids | Family split in the catalogue; recipient domain check as an explicit policy step |
 | **N7** | **Touching a protected principal** — super admins, delegated admins, itself, its own OU | Self-modification and lateral movement | Protected-principal check, fails closed | `_check_target`, background-refreshed admin cache |
-| **N8** | **An action nobody can see** | Undetected drift is worse than a visible failure | Write-ahead audit; writes refused when the audit sink is down; independent reconciliation against Workspace audit logs | Audit module, Eve's completeness metric |
+| **N8** | **An action nobody can see** | Undetected drift is worse than a visible failure | Write-ahead audit; writes refused when the audit sink is down; reconciliation against Workspace audit logs. That reconciliation needs an **organisation-level aggregated log sink into BigQuery** — an earlier draft routed those logs only to Pub/Sub, so the completeness metric had nothing to query. It also needs org-level permission to create the sink | Audit module, aggregated sink, Eve's completeness metric |
 | **N9** | **Acting as a person** | Impossible by construction, and must stay impossible | No DWD, no user write tokens ever accepted by the action service | Architecture |
 
 If you disagree with any row, say so before build — every one of them has cost the design
@@ -62,7 +62,9 @@ Rows marked **new** did not exist for Edge AI v2 because it had no autonomous pa
 | **new** Eve unavailable | L4 items **wait**; over four hours sets `no_autonomous`; L5 without post-hoc verification within SLA demotes to L4 | Work stalls. Correct outcome. |
 | **new** Eve compromised or rubber-stamping | Eve can only lower and approve, never raise; sampled human review of Eve verdicts; an overturned Eve approval demotes both the family and Eve's authority; Eve's key is separate and rotates independently | Eve could approve within the current level's blast radius until the next sample. Mitigated by hold windows and vetoes. |
 | **new** Mo proposes a harmful change | Mo has no write path; its output is a pull request needing a human approver, CI validation and a decision record | A rubber-stamped pull request. Mitigated by the two-person rule on L4/L5. |
-| **new** Ladder config tampering | Config in git with CODEOWNERS; deployed by CI; every audit row carries `config_version`; Eve compares rows against the file and alerts on drift | Detected within one verification cycle |
+| **new** Ladder config tampering | Config in git with code ownership; **the ceiling module, policy chain and validator are owned separately and the check runs outside the repository**, so one pull request cannot move the ladder and the gate together; `config_version` and `ceilings_sha` on every row | Detected within one verification cycle |
+| **new** The action service itself is compromised or buggy | Eve's asymmetric key means the service cannot mint an Eve approval; plans are create-only so a signed plan cannot be rewritten; the Workspace audit log is written by Google, not by us | **Real and only partly mitigated.** Every control still runs in one process. See [10](10-adversarial-review.md) and [decision 18](09-open-decisions.md) |
+| **new** Operators cannot reach the control plane | `run.invoker` bound to the operator group, plus an out-of-band approval surface | If neither exists, every kill switch is theoretical. This was true of the first draft |
 | **new** Quota exhaustion locking out human admins | Per-operation ceilings well below Google's limits; backoff; quota errors as a distinct outcome class | Wall-E throttles itself before the tenant does |
 | **new** Credential revoked mid-run | `invalid_grant` treated as a paging incident, not a retry; run aborts at the current item | Partial run, reported |
 | **new** Wrong-homonym targeting | Plans carry pre-state including OU and manager; proposals show it; explicit targets only | Human or Eve sees the wrong context before approving |
@@ -92,8 +94,9 @@ That is worth having and it will sometimes fail. Design accordingly:
 
 - Never promote an operation because "the prompt handles it".
 - Never let an autonomous run choose a message recipient. This is why `notify.operators`
-  exists as a separate operation with config-fixed recipients, and it is the single
-  highest-value difference from Edge AI v2's threat posture.
+  exists as a separate operation, in its own family, with config-fixed recipients.
+- Never let content decide a ceiling. The taint bit is the mechanism; the system
+  instruction is the courtesy.
 - Treat every ceiling in [05](05-autonomy-ladder.md) §4 as compensating for a prompt that
   has already failed. If a control only works when the prompt works, it is not a control.
 
@@ -118,15 +121,18 @@ Alert on, at minimum:
 
 ## Compliance
 
-- **Works council and GDPR.** Wall-E reads directory data, usage reports and audit logs
+- **Data protection, and `Assumption:` a works council with a say here.** Wall-E reads directory data, usage reports and audit logs
   about employees, and acts on their accounts. Autonomous action is a **different
   processing activity** from human-requested action, so the assessment needs redoing at
   the stage where writes stop having a human in the path — realistically before Stage 3,
   and the question should be asked in week one because it has the longest lead time of
   anything in this plan.
 - **Data residency.** Project, Agent Runtime, Cloud Run, Firestore, Pub/Sub and BigQuery
-  all in `europe-west1` or EU. Secret Manager with user-managed replication in
-  `europe-west1`, not automatic. Confirm the Gemini Enterprise app is in the `eu`
+  all in `europe-west1` or EU. Secret Manager **regional secrets**, not global secrets
+  with user-managed replication. Two limits to record rather than discover: Agent Runtime
+  **Code Execution has no EU at-rest residency** (do not enable it — Wall-E must not run
+  arbitrary code anyway), and **CMEK is unavailable** when the runtime uses a
+  multi-regional endpoint or sessions use the global one. Confirm the Gemini Enterprise app is in the `eu`
   multi-region and pin a model that has EU residency — not every current model does. One
   exception to accept knowingly: **Workspace audit logs land in Cloud Logging at
   organisation level and their storage region is not selectable.**

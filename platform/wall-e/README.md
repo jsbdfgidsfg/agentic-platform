@@ -62,9 +62,23 @@ enablement plan you asked for. Everything else exists to make it enforceable.
 | 7 | [Build runbook](07-build-runbook.md) | Every command in order, with verification and rollback per phase |
 | 8 | [The team: Eve & Mo](08-team-eve-mo.md) | Shared responsibilities and the interfaces Wall-E must expose |
 | 9 | [Decisions to make](09-open-decisions.md) | What you must choose before build starts |
+| 10 | [**Adversarial review**](10-adversarial-review.md) | What was attacked, what changed, what is knowingly accepted |
 
 Code scaffold to be built at `~/Claude/wall-e/`, starting from the
 Edge AI v2 scaffold at `~/Claude/edge-ai-v2/` (which has never been run).
+
+## This design has been attacked
+
+Two independent reviews went over it before anything was built: an adversarial pass that
+produced seventeen attacks, and a consistency pass that checked every claim against
+Google's current documentation and against the other documents. Both found things that
+would have broken the safety model if built as first written — including an approval path
+that still ran through the model, an Eve signing key that could not be verified without
+destroying its own purpose, a Stage 0 budget that would have denied every shadow item and
+produced no evidence, and an admin role sliced in ways Workspace does not allow.
+
+Those are fixed in the documents. [10-adversarial-review.md](10-adversarial-review.md)
+records what was found, so nobody assumes a control works because an earlier draft said so.
 
 ## What is assumed rather than known
 

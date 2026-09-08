@@ -28,13 +28,30 @@ v2 scaffold, this document wins and the reason is stated.
 | Log sink | Workspace audit logs → `walle-triggers` | Needs "Share data with Google Cloud services" enabled once by a super admin |
 | Artifact Registry | `walle` | Container images |
 
-**Ingress note.** Edge AI v2 specified internal-only ingress on the action service. Agent
-Runtime egresses from a Google-managed network, so internal-only may block the agent
-entirely. **IAM is the real boundary**: require authentication, grant `run.invoker` only
-to `walle-agent@`, `walle-dispatcher@` and `eve-controller@`, and verify the caller's ID
-token audience. If the organisation requires network-level isolation as well, that is a PSC interface
-on the Agent Runtime deployment, not an ingress setting. Verify at build —
-[decision 9](09-open-decisions.md).
+**Ingress note.** Edge AI v2 specified internal-only ingress. Agent Runtime egresses from
+a Google-managed tenant project, and Cloud Run counts that as **external**, so
+internal-only ingress blocks the agent. Making it work needs one of: a shared VPC Service
+Controls perimeter covering both, an internal Application Load Balancer in front of Cloud
+Run, or a Private Service Connect endpoint. A PSC *interface* on the agent is not the
+answer on its own — `run.app` traffic keeps taking the Google network path unless you add
+private DNS peering, and enabling it also removes the agent's internet egress.
+
+**So IAM is the enforced boundary**, and it has to do more work than an earlier draft
+assumed. `run.invoker` is granted **per service, not per path**, so granting it to the
+agent, the dispatcher and Eve gives all three the right to call *every* endpoint,
+including `/v1/control/demote`. The claim that the agent "has no IAM on the control
+endpoints" was therefore false as built. Two mechanisms, both required:
+
+1. **A per-endpoint caller allowlist inside the service**, keyed on the verified `email`
+   claim of the caller's ID token. Execute and plan endpoints: `walle-agent@` only.
+   Control and approval endpoints: `eve-controller@` and members of `walle-operators@`,
+   never the agent.
+2. **Operators need a binding at all.** Grant `roles/run.invoker` to `walle-operators@`
+   so a human can present `gcloud auth print-identity-token`, or the andon cord has no
+   handle.
+
+Splitting the control plane onto a second Cloud Run service with its own IAM is the
+stronger version of the same idea, and is [decision 18](09-open-decisions.md).
 
 ### APIs to enable
 
@@ -59,7 +76,7 @@ a small set of plan, control and read endpoints.
 |---|---|---|---|
 | POST | `/v1/execute` | agent | Execute one operation |
 | POST | `/v1/plans` | agent | Freeze a multi-item plan and get per-item verdicts |
-| POST | `/v1/plans/{id}/approve` | **human via Gemini Enterprise, or Eve** | Release a frozen plan |
+| POST | `/v1/plans/{id}/approve` | **out-of-band human surface, or Eve. Never the agent** | Release a frozen plan; returns 202, executes asynchronously |
 | POST | `/v1/plans/{id}/veto` | operator, Eve | Cancel during a hold window |
 | GET | `/v1/plans/{id}`, `/v1/runs/{id}` | Eve, Mo | Read a plan or run with pre-state |
 | POST | `/v1/control/halt` | operator, Eve | Set or clear a halt mode |
@@ -73,10 +90,10 @@ a small set of plan, control and read endpoints.
 ```jsonc
 {
   "operation": "directory.user.suspend",
-  "params": { "user_key": "jdoe@example.com", "suspended": true },
+  "params": { "user_key": "<user>@<domain>", "suspended": true },
   "principal": {
     "type": "human",              // human | scheduler | event | inbox | eve
-    "id": "owner@example.com",  // asserted email, or "job:leaver-checklist"
+    "id": "<operator email>",     // asserted by the front door, re-checked here
     "on_behalf_of": null          // the owning human, for machine principals
   },
   "run_id": "r-2026-09-08-0007",
@@ -95,8 +112,8 @@ Success:
   "status": "ok",
   "operation": "directory.user.suspend",
   "level": "L3",
-  "result": { "user_key": "jdoe@example.com", "suspended": true },
-  "pre_state": { "suspended": false, "orgUnitPath": "/Engineering" },
+  "result": { "user_key": "<user>@<domain>", "suspended": true },
+  "pre_state": { "suspended": false, "orgUnitPath": "<pilot OU>" },
   "verification": "verified",
   "audit_id": "a7c3..."
 }
@@ -109,31 +126,60 @@ Approval required:
   "status": "approval_required",
   "approval_id": "ap-9f21...",
   "required_from": "human",        // human | eve
-  "plan": "Suspend jdoe@example.com (active, /Engineering, not an admin, 3 groups).",
+  "plan": "Suspend <user> (active, <pilot OU>, not an admin, 3 groups).",
   "expires_at": "2026-09-08T14:32:00Z"
 }
 ```
 
 Refused: `{ "status": "denied", "reason": "level_off", "detail": "...", "audit_id": "..." }`
 
-### Why an approval id and not a token handed to the model
+### Why an approval id, and why the agent can never carry it
 
 Edge AI v2 returned an HMAC token **to the agent**, which then decided whether the human
-had said yes. That means the control was "the model asserts a human approved", which is
-exactly the class of thing an injection can produce. Wall-E changes the ownership:
+had said yes. The control was therefore "the model asserts a human approved", which is
+exactly what an injection produces. An earlier draft of this document fixed half of it —
+the service mints the approval — and left the other half broken, because the agent still
+posted the approval and named the approver. The service could verify that the named person
+was an operator. It had no way to verify that they had said anything.
 
-- The service mints the approval request, stores it in Firestore with a **nonce**, and
-  returns only an opaque `approval_id`.
-- The approval itself arrives on `/v1/plans/{id}/approve` from an authenticated principal:
-  either a human whose identity the front door asserts and the service re-checks against
-  the operators group, or Eve with a signature made using **Eve's own key**.
-- The approval binds `(operation, canonical params, principal, plan_hash, pre_state_hash,
-  expiry, nonce)` and is **marked consumed in the same transaction as the execution**.
+Three rules, and the first is the one that matters:
 
-Consequences, all deliberate: an approval cannot be replayed, cannot be moved to different
-parameters, cannot be used after the target's state changed, and cannot be produced by the
-model at all. The agent's only role is to show the plan and relay that an approval is
-needed.
+1. **`walle-agent@` is refused on the approval endpoints, by caller identity.** Not by
+   convention, not by prompt: a caller allowlist that contains the human approval surface
+   and Eve, and does not contain the agent. Denial reason `approver_is_agent`, a hard
+   invariant that trips the breaker. If the agent can reach the approval endpoint at all,
+   every other control in this document is decoration.
+2. **Human approval arrives out of band**, on a surface that authenticates the human
+   itself: a Google Chat card whose interaction event carries a Chat-verified identity, or
+   a one-time approval URL behind Identity-Aware Proxy, bound to `plan_hash`. The model is
+   not in the path and never sees the approval.
+3. **Eve approves with its own key**, and the service verifies with the public half — see
+   below.
+
+The approval binds `(operation, canonical params, principal, plan_hash, pre_state_hash,
+expiry, nonce)`. The nonce is **consumed before the Workspace call**, not after and not
+"in the same transaction" — no transaction spans Firestore and an Admin SDK call, and
+claiming one was unbuildable. Consuming first means a crash can leave an operation whose
+outcome is unknown, so the service writes an `in_flight` record before the call and a
+reconciler resolves any orphan against the **Workspace audit log**, which is Google's
+independent record of whether the call landed.
+
+### Eve's signature must be asymmetric
+
+Eve signs with a **Cloud KMS asymmetric key** (`EC_SIGN_P256_SHA256`). `eve-controller@`
+holds `roles/cloudkms.signer`; `walle-actions@` holds only `publicKeyViewer` and verifies
+locally.
+
+This is not a preference. A shared symmetric secret cannot express "Eve approved this":
+either the action service cannot verify Eve's signature, or it can also mint one. An
+earlier draft specified a random symmetric secret readable only by Eve, which makes the
+Eve-gated level unbuildable, and the obvious fix at build time would have quietly
+destroyed the property the whole controller role rests on.
+
+Eve signs over a `plan_hash` **it computed itself** from the plan body and its own
+Workspace reads — never over a hash the action service reported to it. Frozen plans live
+in a Firestore collection where the action service can create but not update, so a signed
+plan cannot be rewritten between signature and execution.
 
 ## The autonomy config
 
@@ -152,7 +198,7 @@ defaults:
   daily_write_budget: 0
 families:
   F3-membership:
-    levels:   { chat: L3, scheduled: L1, event: L0, inbox: L0 }
+    levels:   { chat: L1, scheduled: L1, event: L0, inbox: L0 }   # stage 0: nothing executes
     max_objects_per_run: 10
     ou_allowlist: ["tbd"]
     group_classes_allowed: ["low"]
@@ -163,13 +209,52 @@ families:
 The effective level for one item is:
 
 ```
-effective = min( ceiling[risk_tier][trigger],     # code, cannot be raised by config
-                 config.families[f].levels[t],    # the ladder
-                 playbook.level,                  # a playbook may cap itself lower
-                 override[f][t] )                 # demotions, live, demote-only
+trigger_for_ceiling = "inbox" if run.tainted else trigger
+
+effective = min( ceiling[risk_tier][trigger_for_ceiling],   # code, never raised by config
+                 config.families[f].levels[t],              # the ladder
+                 playbook.level,                            # a playbook may cap itself
+                 override[f][t] )                           # live, demote-only
 ```
 
-evaluated **after** `policy.evaluate()` and before execution, logged on every row.
+evaluated **after** the policy chain and before execution, logged on every row along with
+`tainted`, `config_version` and `ceilings_sha`.
+
+### The taint bit, and why trigger class is not enough
+
+An earlier draft attached trust to *how a run started*. Injection arrives with *what a run
+reads*. Those are independent axes, and conflating them left the largest hole in the
+design: a **scheduled** run that reads a hostile group name, display name or audit-log
+parameter had a WRITE_HIGH ceiling of L4, while the same text arriving by mail was capped
+at L0.
+
+So every catalogue operation declares which of its returned fields are **attacker
+writable**: user `name.*`, `organizations`, `locations`, `relations`; group `name` and
+`description`; organisational-unit `description`; calendar `summary`, `description`,
+`location`; Chat `text`; mail headers and bodies; the `parameters` values of audit rows;
+and every upstream error string. When any such field is non-empty and reaches the model,
+the run is marked `tainted` and **takes the inbox ceiling for the rest of its life**.
+
+A playbook that must show names to a human declares `taints: true` and is permanently
+capped at proposals, by construction rather than by care.
+
+### The control plane fails closed, including the parts that used to fail open
+
+Halt flags, overrides, counters, nonces, idempotency and dedup all live in Firestore.
+An earlier draft specified fail-closed behaviour for the audit sink and the
+protected-principal cache and said nothing about the rest, which in practice means
+fail-open:
+
+- **Any** Firestore read or write error anywhere in the chain denies with
+  `control_plane_unavailable`, and that is a hard invariant.
+- The sentinel for "no override" is **L0, not L5**. A failed read of the overrides
+  collection must not silently restore every demoted family to its configured level. The
+  andon cord cannot un-pull itself during an outage.
+- Halt and override reads are strongly consistent and never cached. Monotone
+  `halt_epoch` and `override_epoch` counters are stamped on every audit row, so a later
+  query can prove no decision used a stale view.
+- If Firestore has been unreachable for more than 30 seconds, the process self-halts
+  writes without waiting to be told.
 
 ## Operation catalogue
 
@@ -186,22 +271,37 @@ reader**, an **expected post-state predicate**, and an **inverse** where one exi
 | `reports.activities.list` | READ | — | F1 | Admin, login, groups, token, saml |
 | `reports.usage.users` | READ | — | F1 | `accounts:last_login_time`, drives inactivity reports |
 | `licensing.assignments.list` | READ | — | F1 | |
-| `notify.operators` | WRITE_LOW | no | F2 | **Recipients come from config, never from the model.** Template id plus typed params. |
-| `chat.message.send` | WRITE_LOW | no | F2 | Free text. Chat only. |
-| `gmail.send` | WRITE_LOW | no | F2 | Free text. External recipients force approval, always. |
-| `calendar.event.create` / `.list` | WRITE_LOW / READ | yes | F2 | |
-| `gmail.list` / `.get` / `.label` | READ / WRITE_LOW | yes | F1 / F2 | Robot's own mailbox only |
-| `directory.group.member.add` / `.remove` | WRITE_HIGH | yes | F3 | Inverse is exact. Group class checked. |
-| `directory.user.update` | WRITE_HIGH | yes | F4 | Bounded by `SAFE_USER_FIELDS` |
+| `notify.operators` | WRITE_LOW | no | **F2** | **Recipients come from config, never from the model.** Template id plus typed params |
+| `chat.message.send` | WRITE_LOW | no | **F2b** | Free text |
+| `gmail.send` | WRITE_LOW | no | **F2b** | Free text. External recipients force approval, always |
+| `calendar.event.create` | WRITE_LOW | no | **F2b** | Treated as irreversible: an invite that was seen cannot be unseen |
+| `calendar.events.list`, `gmail.list`, `gmail.get` | READ | — | F1 | Robot's own mailbox and calendar only |
+| `gmail.label` | WRITE_LOW | yes | **F9** | The robot's own mailbox. Its own resource, so its own family |
+| `directory.group.member.add` / `.remove` | WRITE_HIGH | yes | **F3** (class `low`) / **F3b** (class `access`) | Inverse is exact. The family follows the group's class |
+| `directory.user.update` | WRITE_HIGH | yes | F4 | Bounded by `SAFE_USER_FIELDS`, which no longer contains `orgUnitPath` |
+| `directory.user.move_ou` | WRITE_HIGH | yes | **F4b** | Its own operation, with its own destination allowlist. See below |
 | `directory.user.suspend` (true) | WRITE_HIGH | yes | F5 | |
 | `directory.user.suspend` (false) | WRITE_HIGH | yes | **F6** | Restoring access is its own family, capped lower |
 | `licensing.assignment.delete` / `.insert` / `.patch` | WRITE_HIGH | yes | F7 | Pre-state records the SKU so re-insert is exact |
-| `run.rollback` | WRITE_HIGH | — | — | Always requires a human approval, at every stage |
+| `run.rollback` | WRITE_HIGH | — | **F10** | Always a **fresh** human approval against **fresh** pre-state, at every stage. A whole run's inverse is released by one approval, so recovery is not slower than the failure |
 
 `SAFE_USER_FIELDS` is a hard allowlist in code: name, organizations, phones, locations,
-relations, orgUnitPath. It can never touch password, `isAdmin`, 2SV, aliases,
-`recoveryEmail` or `recoveryPhone`. Recovery fields are account-takeover vectors and are
-excluded even though they look like profile data.
+relations. It can never touch password, `isAdmin`, 2SV, aliases, `recoveryEmail` or
+`recoveryPhone`. Recovery fields are account-takeover vectors and are excluded even though
+they look like profile data.
+
+**`orgUnitPath` was removed from that list.** In Workspace the organisational unit *is*
+the carrier of policy — 2-step verification, context-aware access, sharing, app access,
+Gemini availability. Moving a user between units changes their security posture without
+touching a single security setting, which walks straight through the rule that Wall-E may
+never alter posture. Worse, the policy chain only ever checked the target's **current**
+unit, so a move could land someone outside Wall-E's own allowlist, where even the inverse
+could not reach them: a "reversible" operation that moves its own target beyond its reach.
+
+So `directory.user.move_ou` is its own operation, with typed `from_ou` and `to_ou`, a
+pre-state assertion that `from_ou` matches what is observed, and a **separate**
+`ou_destination_allowlist`. A destination outside it is a hard invariant, not a refusal.
+CI asserts `ou_destination_allowlist` is a subset of every family's `ou_allowlist`.
 
 Risk tiers are static properties of an operation. Rate limits per tier: READ 120/min,
 WRITE_LOW 20/min, WRITE_HIGH 5/min, **enforced durably** (see below).
@@ -213,22 +313,28 @@ A playbook is what an autonomous run executes. It is not a prompt.
 ```yaml
 leaver-checklist:
   version: 4
-  owner: owner@example.com          # must be in walle-operators@ at run time
+  owner: <named operator>             # must be in walle-operators@ at run time
   trigger: { event: "admin.USER_SUSPENDED" }
   selection: directory.user.list      # deterministic query, not model-chosen
   uses: [directory.user.get, directory.group.members.list,
          directory.group.member.remove, notify.operators]
   level: L2                            # a playbook may cap itself below the family level
   max_objects_per_run: 10
-  expects: "user is in no group except tbd-baseline; user in /Leavers"
+  expects: "user is in no group except the baseline; user in the leavers OU (tbd)"
 ```
 
 Rules the service enforces, not the prompt:
 
 - An operation the agent names that is **not in `playbook.uses`** aborts the whole run
   with `playbook_violation`. The model plans within the playbook, never outside it.
-- Targets are **explicit and enumerated**. There is no query-shaped write. "Everyone in
-  /Finance" is not expressible.
+- Targets are **explicit and enumerated**. There is no query-shaped write.
+- **The selection query is pinned too**, and hashed into the playbook version. Pinning
+  only the selection *operation* was not enough: `directory.user.list` takes a free-form
+  query string, so a model steered by injected text could select an entire organisational
+  unit and emit explicit per-target writes for all of it. Caps then turn a mass action
+  into a drip of 25 a day rather than a refusal. Any read in an autonomous run whose
+  parameters do not match the playbook's declared selection is denied with
+  `selection_not_declared`.
 - The plan is frozen and hashed before any approval; approving binds the hash.
 - Each item is **re-read immediately before execution**. If the pre-state changed since
   planning, the item is skipped and reported, never executed on stale assumptions.
@@ -242,13 +348,24 @@ is treated as a hard invariant breach that trips the breaker.
 2. **Catalogue lookup.** Unknown operation → denied.
 3. **Parameter validation.** Pydantic, `extra="forbid"`.
 4. **Protected principals.** See below.
-5. **Principal check.** Humans must be in the operators group (readers group for READ),
-   verified through the Directory API, failing closed. Machine principals must match the
+5. **Principal check.** Humans must be in the operators group, or in `walle-readers@` for
+   READ operations, verified through the Directory API, failing closed. The readers group
+   exists so that reporting can be widened — someone who may ask "what changed last week"
+   without being able to cause any write. Note that widening it means also sharing the
+   agent with it in Gemini Enterprise, which is a separate act; membership alone grants
+   nothing if the person cannot reach the agent. Machine principals must match the
    trigger class the request claims.
 6. **Scope.** Target's `orgUnitPath` must be in the family's OU allowlist. Group targets
    must be in an allowed class.
 7. **Budgets.** Per-run object cap, per-family daily write budget, tenant-wide daily cap,
-   novelty cap (distinct targets per hour). Durable counters.
+   and novelty caps over rolling **7-day and 30-day** windows, not just per hour — a
+   per-hour cap does nothing against a slow drip. Durable counters.
+
+   **Shadow items evaluate budgets but never consume them.** At the shadow level the
+   cap is checked and the would-be verdict recorded, and the counter is left alone.
+   Otherwise Stage 0, whose daily write budget is zero, denies every shadow item with
+   `budget_exceeded` before the level can force a dry run — and the evidence engine the
+   entire ladder is argued from produces nothing.
 8. **Business hours and freeze windows**, for machine principals.
 9. **Rate limit**, per principal per tier, durable.
 10. **Effective level** → execute, shadow, propose, or require an approval.
@@ -256,6 +373,22 @@ is treated as a hard invariant breach that trips the breaker.
     yet consumed.
 12. **Idempotency**, on the caller-supplied key.
 13. Execute → **verify by re-reading** → audit.
+
+Steps 1 to 4 are hard invariants: failing one is not a refusal, it is a breaker trip.
+
+**Execution never happens inside the approve request.** Approving marks the plan
+`released` and returns immediately; a Cloud Tasks worker executes one item at a time, each
+as its own durable unit with its own halt check and its own full pass through this chain.
+An earlier draft ran the item loop inside the request, which at 25 items and a five-per-
+minute rate limit exceeds Cloud Run's default 300-second timeout — leaving a half-applied
+plan, a consumed nonce, and no terminal state. Deploy the service with an explicit
+`--timeout=60s` so that shape becomes impossible rather than merely unlikely.
+
+**Re-run the chain, do not compare fields.** Before each item the worker repeats the whole
+policy chain, including a forced protected-principal refresh. Comparing a stored pre-state
+hash is not enough: a human restoring a suspended user between plan and execution leaves
+the *membership* pre-state untouched, so group removals execute on an active account and
+then verify perfectly clean. The write was correct; the premise was stale.
 
 ### Protected principals
 
@@ -274,14 +407,37 @@ Fixes to the Edge AI v2 implementation, all of which matter:
   gated only by a model-mediated confirmation.
 - It made two uncached Admin SDK calls on every directory operation. Cache with a short
   TTL, refreshed in the background, and fail closed if the cache cannot be filled.
+- It resolved group members **non-transitively**, so adding `super-admins@` to the
+  protected group protected that group's address and not one actual admin. Expand with
+  `includeDerivedMembership`, paginate explicitly, and deny on truncation.
+- It ran the admin enumeration under an **organisational-unit-scoped role**, which
+  returns only admins inside the pilot unit — often none — and an empty result read as
+  success. The read must be customer-scoped.
+
+**The floor assertion.** A static list of known super-admin addresses is committed to git.
+The computed protected set must be a **superset** of it, or every directory write is
+denied with `protection_incomplete`, as a hard invariant. This is what turns a silent
+truncation into a loud refusal, and it is the difference between a control and a hope. A
+daily job reconciles the computed set against the floor list and alerts on divergence.
 
 ### Group classification
 
 Every group is `low` (distribution, collaboration), `access` (grants Drive, app, licence
-or GCP access) or `security` (grants an admin role, or controls Wall-E/Eve/Mo).
+or GCP access) or `security` (grants an admin role, or controls Wall-E, Eve or Mo).
 **Unclassified is treated as `security`** — fail closed. Membership writes are allowed on
-`low` at higher levels, `access` only at lower ones, and `security` never. The list is
-owned by security, lives in config, and is a Stage 1 deliverable.
+`low` at higher levels, `access` only at lower ones, and `security` never.
+
+**The classification is computed, not declared.** A hand-maintained file cannot be trusted
+here, because nesting is invisible in the console: a small team distribution list that
+happens to be a member of `walle-operators@` looks like an ordinary `low` group, and one
+membership write into it would grant an attacker approval authority. A job resolves every
+group's transitive ancestors and every admin role attached to them; any group whose
+closure reaches a security-class group or an admin role is marked `security`
+automatically. CI fails if the human file contradicts the computed closure. A group write
+resolves ancestors **live** and fails closed on a lookup error.
+
+That check needs `admin.directory.rolemanagement.readonly`, which is why it appears in the
+scope list that freezes at consent — [02](02-identity-and-auth.md).
 
 ### Durable counters, not in-memory
 
@@ -306,7 +462,7 @@ minutes would break post-execution verification), and keys on the caller's expli
 | `verifications` | Post-execution comparison | `verified` / `drift` / `unverifiable` |
 | `config_versions` | Every ladder change | version, sha, decision file, deployer, origin `human`/`eve`/`breaker` |
 
-Retention: 400 days by default, subject to the organisation policy — [decision 8](09-open-decisions.md).
+Retention: 400 days by default, subject to the organisation policy — [decision 17](09-open-decisions.md).
 
 Three rules about the audit trail:
 
@@ -321,8 +477,71 @@ Three rules about the audit trail:
 
 ### Firestore
 
-`control/mode`, `control/freeze`, `overrides/{family}/{trigger}`, `ladder/current`,
-`approvals/{id}`, `counters/{scope}/{window}`, `idempotency/{key}`, `dedup/{event_id}`.
+| Collection | Holds |
+|---|---|
+| `control/mode`, `control/freeze` | Halt state, with `halt_epoch` |
+| `overrides/{family}/{trigger}` | Live demotions, with `override_epoch`. Absent reads as **L0** |
+| `ladder/current` | Deployed config, its version and `ceilings_sha` |
+| `plans/{id}` | **Frozen plan and its lifecycle**: `pending_human`, `pending_eve`, `held_until`, `released`, `vetoed`, `expired`, `done`. Create-only for the action service, so a signed plan cannot be rewritten |
+| `approvals/{id}` | Nonce, binding, consumer, timestamps |
+| `in_flight/{run_id}#{item}` | Written before a Workspace call, resolved after. The reconciler's input |
+| `proposals/{id}` | Proposal queue with **verdict and reason code**, and the operator's grade |
+| `grades/{run_id}#{item}` | Shadow gradings — the input to the precision metric every promotion cites |
+| `leases/{principal}` | One active run per target, plan freeze to terminal state |
+| `cooldown/{principal}` | No autonomous write to a principal written to in the last 24 h |
+| `counters/{scope}/{window}` | Budgets, rate limits, novelty |
+| `idempotency/{key}`, `dedup/{trigger_id}` | Replay suppression |
+| `drills/{date}` | Kill-switch drill results and measured times — what CI reads to refuse a stale promotion |
+| `canary/{family}/{trigger}` | Run counter and target sample for a newly promoted cell |
+
+An earlier draft listed only the first, second, fifth and last few. Everything else was a
+control named in the enablement plan with nowhere to live: plan states, proposal verdicts,
+shadow grades, drill dates, leases and the canary sampler all had no storage, which meant
+the metrics that gate every promotion had nothing to read.
+
+## Denial reasons
+
+Metrics, alerts, breakers and CI gates all key on these strings, so they are a closed
+vocabulary defined here and nowhere else.
+
+| Reason | Hard invariant | Meaning |
+|---|---|---|
+| `operation_not_allowed` | yes | Not in the catalogue |
+| `protected_principal` | yes (autonomous only) | Target is an admin, the robot, a control group |
+| `protection_incomplete` | yes | The protected set failed its floor assertion |
+| `bad_approval`, `approval_already_used`, `approver_is_agent` | yes | Approval forged, replayed, or posted by the model |
+| `level_bypass` | yes | A request tried to act above its effective level |
+| `control_plane_unavailable` | yes | Firestore unreadable — fail closed |
+| `selection_not_declared` | yes | An autonomous read outside the playbook's pinned query |
+| `ou_destination_not_allowed` | yes | An organisational-unit move to an unlisted destination |
+| `level_off`, `level_no_execute` | no | The level forbids execution |
+| `invalid_parameters`, `playbook_violation` | no | Malformed or out-of-playbook request |
+| `actor_not_authorised`, `foreign_actor` | no | Caller is not an operator |
+| `halted`, `budget_exceeded`, `rate_limited`, `outside_window` | no | A gate did its job |
+| `state_changed`, `lease_held` | no | Someone else got there first |
+| `audit_unavailable` | no | No evidence, no action |
+
+A hard invariant denies, writes an audit row, **and trips the breaker** for that family —
+except `protected_principal` arising from a **human chat request**, which is an ordinary,
+correct refusal. An operator asking about someone who turns out to be a delegated admin
+must not halt the programme.
+
+## Errors never carry upstream text
+
+The service returns `{error_class, audit_id}` from a closed set: `not_found`, `conflict`,
+`quota`, `forbidden`, `invalid`, `backend`. Full detail goes to Cloud Logging.
+
+This is not tidiness. Google's error bodies echo the request, so a failed membership call
+echoes an address and a failed update can echo submitted field values — and an attacker
+who sets their own display name to instruction-shaped text gets that text delivered into
+the model's context as a **tool error**, which reads as the system speaking rather than as
+content. Denial details are service-authored sentences with no parameters interpolated.
+
+Every attacker-writable string is canonicalised before it reaches a model **or an approval
+card**: strip control characters, bidirectional overrides and zero-width characters,
+collapse whitespace, cap the length, escape markdown. The approval card matters as much as
+the model, because a hostile display name could otherwise make one item of a batch render
+as though it were something else.
 
 ## The agent
 
@@ -341,8 +560,15 @@ Three rules about the audit trail:
   `before_tool`, injects `run_id` and principal into every call, and emits structured
   events. It is **defence in depth, not the trust boundary** — a code change can bypass a
   plugin, and nothing in the model's process is authoritative.
-- Model Armor must be configured **in agent code**; the Gemini Enterprise console setting
-  does not cover ADK agents.
+- The Gemini Enterprise console's Model Armor setting does **not** cover custom ADK
+  agents — that part is documented and true. But it does not follow that screening has to
+  live in agent code, as an earlier draft said. Prefer the two that Wall-E's own code
+  cannot switch off: **Model Armor on Agent Gateway**, generally available since
+  2026-06-24 and covering ADK-on-Agent-Runtime ingress, and project-level **floor
+  settings**, which apply to the agent's model calls with no code change. The first-party
+  `ModelArmorPlugin` in `google-adk` 2.8 is a third option, weakest of the three because
+  it is in the process it protects. Note the fail-open caveat: on a Model Armor error the
+  platform skips sanitisation and continues.
 - Do not use ADK tool-confirmation for approvals: it is documented as unsupported with the
   managed session service, and approvals must survive a runtime change anyway.
 - System instruction states plainly that Workspace content is data and never instruction,

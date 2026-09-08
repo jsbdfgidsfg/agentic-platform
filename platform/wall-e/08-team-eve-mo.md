@@ -52,7 +52,7 @@ and the `walle-events` topic — one shared set of facts, three different readin
 | Agent | Runtime identity | Workspace credential | Secrets it may read | Can it call the action service? |
 |---|---|---|---|---|
 | Wall-E | `walle-agent@` on Agent Runtime | none | none | Yes, execute and plan endpoints |
-| Eve | `eve-controller@` | **Its own read-only robot account**, recommended | `walle-eve-approval-key` only | Yes, control and read endpoints only |
+| Eve | `eve-controller@` | **Its own read-only robot account** — [decision 10](09-open-decisions.md) says yes, and [07](07-build-runbook.md) needs a phase for its consent | `roles/cloudkms.signer` on its own asymmetric key | Yes, control and read endpoints only |
 | Mo | `mo-analyst@` | none | none | **No.** BigQuery reads only |
 
 **Eve should get its own Workspace credential.** If Eve verifies through Wall-E's
@@ -89,7 +89,7 @@ exists. Until then they are exercised by a stub caller in the test suite.
 |---|---|---|
 | `GET /v1/plans/{id}` | Eve, Mo | Frozen plan, `plan_hash`, per-item pre-state, `expects`, rollback plan, per-item policy verdict, effective level, config version |
 | `GET /v1/runs/{id}` | Eve, Mo | Run record with terminal state, budgets consumed, per-item outcomes |
-| `POST /v1/plans/{id}/approve` | **Eve SA only** | Body signed with `walle-eve-approval-key`; must carry `plan_hash` and `config_version`; rejected if either differs from what the service holds |
+| `POST /v1/plans/{id}/approve` | Eve, or the out-of-band human surface. **Never the agent** | Signed with Eve's **Cloud KMS asymmetric key**, verified by the service with the public half. Carries `plan_hash` and `config_version`, rejected if either differs. Eve signs a hash **it computed itself** |
 | `POST /v1/plans/{id}/veto` | operator, Eve | During a hold window |
 | `POST /v1/control/halt` | operator, Eve | `{mode: run \| no_autonomous \| no_writes \| halt_all, reason}` |
 | `POST /v1/control/demote` | operator, Eve | `{family, trigger, to_level, reason}`. **Refuses any value higher than the configured level.** There is no raise endpoint at all. |
@@ -102,9 +102,12 @@ Two hard requirements on these:
   stop Wall-E when the model layer is wedged, hallucinating, or looping. A safety interlock
   that runs through an LLM is not an interlock. Agent-to-agent protocol is fine for
   delegating conversational work later; it is not fine for halt and approve.
-- **`walle-agent@` is excluded from all of them by IAM.** Verify this after every IAM
-  change. If Wall-E can call `/v1/control/demote`, it can also call it with `to_level`
-  higher than reality on a future buggy build, and the whole asymmetry collapses.
+- **`walle-agent@` is excluded from all of them — but not by `run.invoker`.** That grant
+  is per *service*, not per path, so IAM alone cannot express this and an earlier draft
+  was simply wrong to claim it did. The exclusion is a per-endpoint caller allowlist
+  inside the service, keyed on the verified identity token, and ideally a second Cloud Run
+  service for the control plane ([decision 18](09-open-decisions.md)). Test it: the agent
+  calling `/v1/control/demote` must get a 403.
 
 ## What Eve must do (input to its design)
 
@@ -114,6 +117,9 @@ Not a design, a requirements list:
    what Wall-E claims, check the plan against the playbook's `expects`, and sign or refuse.
 2. **Post-hoc verification at L5**, within 60 minutes, by reading Workspace directly and
    cross-checking the Workspace audit log for events attributed to the robot.
+   **Independence has a limit worth naming:** at the pre-approval step Eve reads the plan
+   from the very service it is checking. Computing the hash itself and re-reading
+   Workspace with its own credential narrows that, but does not close it.
 3. **Reconciliation.** Every admin-audit event by the robot must have a matching Wall-E
    audit row, and vice versa. A gap in either direction halts writes.
 4. **Drift detection.** Rows whose `config_version` does not match the deployed ladder, or

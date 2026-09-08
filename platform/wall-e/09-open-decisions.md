@@ -35,10 +35,13 @@ Wall-E starts by closing the ones it inherits.
 | # | Decision | Why | Recommendation |
 |---|---|---|---|
 | **13** | **Is there an HR system of record** reachable as an event source? | Autonomous suspension at Stage 5 is only acceptable when the trigger is authoritative, never free text. | If there is none, F5 suspend stops at L3 permanently. That is an acceptable outcome. |
-| **14** | **Approval and notification surface** | Operators need somewhere to approve and read digests. The approver's identity must be verifiable by the service. | Google Chat if Chat is in use; otherwise Gemini Enterprise messages. A branded Chat app is nice-to-have, not v1. |
+| **14** | **Approval and notification surface** | Operators need somewhere to approve, veto and grade, and the surface must authenticate the human itself — the agent must never carry consent. **Promoted from a later decision to a Stage 1 blocker.** | Google Chat, **and it needs a Chat app**: under user authentication the Chat API can send text only, so the one-click veto and approval cards this design assumes require app authentication. Budget for that, or use an Identity-Aware-Proxy-fronted approval page instead. |
 | **15** | **Business hours, timezone, freeze windows** | Hard-coded into every autonomous run's gate. | `Assumption:` Europe/Paris, Mon–Fri, last write 16:00. Correct me. |
 | **16** | **Budgets and caps** | The numbers in [05](05-autonomy-ladder.md) are defaults I chose. | Revisit at each stage decision rather than now. |
 | **17** | **Audit retention** | 400 days is my default. | Align with the organisation policy. |
+| **18** | **Split the control plane onto its own service?** | Today every control — credential, policy, approval minting *and* verification, execution, audit — runs in one Cloud Run process, and `run.invoker` is granted per service rather than per path. An in-app allowlist works; a second service is stronger. | Do it before Stage 4. Until then, the per-endpoint allowlist plus Eve's asymmetric key is the minimum. |
+| **19** | **Adopt Agent Identity now?** | It is generally available, gives the agent a per-agent SPIFFE identity with 24-hour certificates instead of a long-lived service account, and removes a standing credential. | Yes, unless the build finds it cannot satisfy the Cloud Run hop. This was wrongly listed as unverified. |
+| **20** | **How do operators authenticate to the control plane?** | Without an answer there is no kill switch, no approval and no veto — the entire enablement plan is unexecutable. | Bind `run.invoker` to the operator group for day one, and build the approval surface before Stage 1's first real write. |
 
 ## Verified since Edge AI v2 — these are now closed
 
@@ -49,7 +52,7 @@ Recorded here so nobody re-opens them.
 | Agent Engine in europe-west1? | **Yes.** Agent Runtime, Sessions and Memory Bank are GA there, with EU at-rest residency. |
 | How does Gemini Enterprise pass the end-user identity? | As `user_id` = the user's **email**, surfacing as the ADK session user id. Asserted by the caller, so lock down `reasoningEngines.query` and re-check group membership server-side. |
 | Registration flow for a custom agent? | Console: Agents → Add agent → Custom agent via Agent Runtime, with the `reasoningEngines` resource path. Sharing is per-agent, and supports Google Groups. |
-| Do Chat methods need an app identity? | **No.** The robot's user token can post and manage spaces it belongs to. A Chat app is optional UX. |
+| Do Chat methods need an app identity? | **Partly — and the earlier "no" was misleading.** The robot's user token can post **text** messages. Cards, buttons and interactive widgets require app authentication, so the one-click approval and veto surface does need a Chat app. |
 | Current deployment SDK? | `vertexai.Client(project, location).agent_engines.create(...)`. The old module API is deprecated. |
 | Can the Alert Center API be used? | **No** — it requires domain-wide delegation. Replaced by Workspace audit-log sharing into Cloud Logging, which needs no credential and gives Eve an independent view. |
 | Are there Workspace Events for directory changes? | No. The Events API covers Chat, Meet and Drive. Use the Cloud Logging route. |
@@ -60,12 +63,16 @@ Recorded here so nobody re-opens them.
 
 1. The exact custom-role privilege names covering licence read and assignment.
 2. Whether the organisation's Gemini Enterprise app is in the `eu` multi-region, `us`, or `global`.
+   An `eu` app can front a `europe-west1` agent; a `global` app can front any region.
 3. the organisation's Workspace edition, which determines whether OAuth and SAML audit events can be
-   shared to Cloud Logging.
+   shared to Cloud Logging — and therefore whether the event trigger class is viable at
+   all. Note **Drive audit events are not among the shareable types** in any edition.
+   Also confirm the edition supports the login reporting rule in Phase 1.
 4. Whether the organisation's GCP session-control policy would affect the robot's token — it will not
    if `cloud-platform` is never requested, which is the rule.
-5. Whether Agent Identity's SPIFFE credential satisfies Cloud Run IAM on the agent-to-action
-   hop. If it does, adopt it and drop the long-lived service-account path.
+5. Whether Agent Identity satisfies the Cloud Run hop in practice. It is generally
+   available and supported on both ends, so this is a build check, not an unknown —
+   [decision 19](#).
 6. Whether group-management privileges honour OU scoping.
 7. Current Agent Runtime and Sessions unit prices — the pricing page did not render for
    automated reading.

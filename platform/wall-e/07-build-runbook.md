@@ -14,10 +14,12 @@ Stage 1 decision record.
 ## Prerequisites
 
 - Workspace super admin, GCP project creator, billing account.
-- [Decision 3](09-open-decisions.md) closed: the **complete scope list**. Scopes freeze at
-  consent, and changing them means re-running Phase 3.
-- [Decision 2](09-open-decisions.md) closed: names. The OAuth consent screen shows the app
-  name to the robot at consent time and it is awkward to change later.
+- **All five blocking decisions closed** ([09](09-open-decisions.md) 1 to 5), not just
+  naming and scopes. In particular decision 5 — the organisational units — because Phase 1
+  assigns a role scoped to a pilot unit that may not exist yet.
+- The **complete scope list** (decision 3). Scopes freeze at consent, and changing them
+  means re-running Phase 3 and the trusted-client step with it.
+- Names (decision 2). The consent screen shows the app name to the robot.
 - A clean browser profile for the one-time consent.
 - `gcloud`, `python 3.12`, `bq`.
 
@@ -36,18 +38,23 @@ export ROBOT=walle@$DOMAIN            # tbd
 
 1. Create OU `/Automation/Service Identities` (Admin console → Directory → Organisational
    units).
-2. Create the robot user `$ROBOT` in that OU. Long random password into the corporate
-   vault. No recovery email, no recovery phone.
+2. Create the robot user `$ROBOT` in that OU. Long random password into a password
+   vault (`Assumption:` one exists). No recovery email, no recovery phone.
 3. Enforce 2SV, hardware key only. Put the key in a safe.
 4. Create groups: `walle-operators@`, `walle-readers@`, `walle-protected@`.
    Add yourself to the first two. Add every super admin to `walle-protected@`.
-5. Create the custom admin role `Wall-E — Workspace Operator` with **read privileges
-   only** at this stage: Users read, Groups read, OU read, Reports audit and usage read,
-   licence read. No write privileges. No security, no domain, no role management.
-6. Assign the role to `$ROBOT`, **scoped to the pilot OU** (`scopeType=ORG_UNIT`), not to
-   the whole customer.
-7. Admin console → Alert center: create an alert on **any login** to `$ROBOT`. Route it to
-   your own mailbox and to `walle-operators@`.
+5. Create the custom admin role `Wall-E — Reader` with **read privileges only**: Users
+   read, Groups read, OU read, Reports audit and usage read, Admin roles read. No
+   licence management — it is a single indivisible privilege with no read-only half, so
+   granting it now would hand Wall-E assign and revoke during the stage whose premise is
+   that it cannot write.
+6. Assign that role **customer-scoped**, not scoped to a unit. Stage 0's value is
+   tenant-wide reporting, and Groups and Reports privileges cannot be unit-scoped anyway.
+   The **write** role comes at Stage 1 and *is* unit-scoped. Two assignments, not one.
+7. Admin console → **Rules** (not Alert Center, which is where alerts are read): create a
+   reporting rule on **any login** to `$ROBOT`, routed to you and to `walle-operators@`.
+   Availability depends on the Workspace edition — confirm it, because this is the single
+   highest-value control in the design.
 8. Admin console → Account settings → **enable "Share data with Google Cloud services"**
    so Workspace audit logs reach Cloud Logging. This is what replaces the Alert Center API
    and it needs no credential.
@@ -98,13 +105,27 @@ Secrets, **user-managed replication in europe-west1** — automatic replication 
 payloads worldwide and break EU residency:
 
 ```bash
-for S in walle-oauth-client walle-refresh-token walle-confirm-hmac walle-eve-approval-key; do
-  gcloud secrets create $S --replication-policy=user-managed --locations=$REGION
+# Regional secrets: the data stays in the location at rest, in use and in transit.
+# User-managed replication pins only the payload; the secret stays a global resource.
+for S in walle-oauth-client walle-refresh-token walle-confirm-hmac; do
+  gcloud secrets create $S --location=$REGION
 done
 
-# HMAC keys generated server-side and never displayed
+# Wall-E's own signing secret, generated server-side and never displayed
 openssl rand -base64 48 | gcloud secrets versions add walle-confirm-hmac --data-file=-
-openssl rand -base64 48 | gcloud secrets versions add walle-eve-approval-key --data-file=-
+
+# Eve's key is ASYMMETRIC and lives in KMS, not Secret Manager. A shared symmetric
+# secret cannot express "Eve approved this": either the action service cannot verify
+# it, or it can also forge it.
+gcloud kms keyrings create walle --location=$REGION
+gcloud kms keys create eve-approval --keyring=walle --location=$REGION \
+  --purpose=asymmetric-signing --default-algorithm=ec-sign-p256-sha256
+gcloud kms keys add-iam-policy-binding eve-approval --keyring=walle --location=$REGION \
+  --member=serviceAccount:eve-controller@$PROJECT.iam.gserviceaccount.com \
+  --role=roles/cloudkms.signer
+gcloud kms keys add-iam-policy-binding eve-approval --keyring=walle --location=$REGION \
+  --member=serviceAccount:walle-actions@$PROJECT.iam.gserviceaccount.com \
+  --role=roles/cloudkms.publicKeyViewer
 ```
 
 IAM — the point of this block is what is *absent*:
@@ -112,18 +133,17 @@ IAM — the point of this block is what is *absent*:
 ```bash
 # only the action service reads the credential secrets
 for S in walle-oauth-client walle-refresh-token walle-confirm-hmac; do
-  gcloud secrets add-iam-policy-binding $S \
+  gcloud secrets add-iam-policy-binding $S --location=$REGION \
     --member=serviceAccount:walle-actions@$PROJECT.iam.gserviceaccount.com \
     --role=roles/secretmanager.secretAccessor
 done
-# Eve's key is readable ONLY by Eve
-gcloud secrets add-iam-policy-binding walle-eve-approval-key \
-  --member=serviceAccount:eve-controller@$PROJECT.iam.gserviceaccount.com \
-  --role=roles/secretmanager.secretAccessor
 
-# audit is insert-only for the action service
+# Audit must be insert-only. roles/bigquery.dataEditor includes tables.deleteData,
+# so it would let the service destroy its own evidence — the opposite of the control.
+gcloud iam roles create walleAuditWriter --project=$PROJECT \
+  --permissions=bigquery.tables.updateData,bigquery.tables.get,bigquery.datasets.get
 bq add-iam-policy-binding --member=serviceAccount:walle-actions@$PROJECT.iam.gserviceaccount.com \
-  --role=roles/bigquery.dataEditor $PROJECT:walle_audit
+  --role=projects/$PROJECT/roles/walleAuditWriter $PROJECT:walle_audit
 ```
 
 **Verify.**
@@ -201,7 +221,16 @@ for SA in walle-agent walle-dispatcher eve-controller; do
   gcloud run services add-iam-policy-binding walle-actions --region=$REGION \
     --member=serviceAccount:$SA@$PROJECT.iam.gserviceaccount.com --role=roles/run.invoker
 done
+
+# Operators need a way in, or the andon cord has no handle. run.invoker is granted per
+# SERVICE, not per path, so this alone would also let them call /v1/execute — the
+# per-endpoint allowlist inside the service is what separates them.
+gcloud run services add-iam-policy-binding walle-actions --region=$REGION \
+  --member=group:walle-operators@$DOMAIN --role=roles/run.invoker
 ```
+
+Deploy with `--timeout=60s`. Without it Cloud Run's 300-second default lets a long item
+loop die mid-plan, leaving a consumed approval and no terminal state.
 
 **Verify.** Run the denial suite — these are the tests that must keep passing at every
 future promotion:
@@ -224,6 +253,15 @@ python tests/denials.py
 | 10 | Write while `no_writes` halt is set | `denied: halted` |
 | 11 | Write with the audit sink unreachable | `denied: audit_unavailable` |
 | 12 | 6 WRITE_HIGH in one minute **across two instances** | the 6th is rate-limited |
+| 13 | `walle-agent@` posts an approval | `denied: approver_is_agent` |
+| 14 | `walle-agent@` calls `/v1/control/demote` | 403 |
+| 15 | Firestore unreachable | `denied: control_plane_unavailable`, **not** allowed |
+| 16 | Overrides collection unreadable | denied — the demotion must **not** lift |
+| 17 | A read returns a display name containing instruction text | run marked `tainted`, ceiling drops to inbox |
+| 18 | An autonomous read whose query differs from the playbook's | `denied: selection_not_declared` |
+| 19 | An OU move to an unlisted destination | `denied: ou_destination_not_allowed` |
+| 20 | `walle-actions@` attempts a BigQuery delete | 403 |
+| 21 | Any response body echoes an upstream error string | fails — errors are a closed enum |
 
 Test 12 is the one that proves budgets are durable rather than per-process. Run it with
 `--min-instances=2`.
@@ -242,14 +280,30 @@ gcloud run deploy walle-dispatcher \
   --no-allow-unauthenticated --min-instances=0
 ```
 
-Route Workspace audit logs to the trigger topic:
+Route Workspace audit logs to the trigger topic. **The actor exclusion is not optional**:
+without it every write Wall-E makes matches the filter, triggers a run, and that run
+writes again. Two documents claimed a run may not trigger another run; this filter is
+what makes it true.
 
 ```bash
 gcloud logging sinks create walle-workspace-audit \
   pubsub.googleapis.com/projects/$PROJECT/topics/walle-triggers \
   --organization=<ORG_ID> \
+  --log-filter='protoPayload.serviceName="admin.googleapis.com"
+                AND protoPayload.authenticationInfo.principalEmail!="'$ROBOT'"'
+
+# Second sink: the same logs into BigQuery, so audit completeness can be reconciled.
+# Routing them only to Pub/Sub left that metric with nothing to query.
+gcloud logging sinks create walle-audit-bq \
+  bigquery.googleapis.com/projects/$PROJECT/datasets/walle_audit \
+  --organization=<ORG_ID> \
   --log-filter='protoPayload.serviceName="admin.googleapis.com"'
 ```
+
+Both need organisation-level `roles/logging.configWriter`. Actor exclusion still leaves a
+second hop — Wall-E moves a user, Google's own licensing engine reacts, and that event is
+attributed to the system rather than to the robot — so the dispatcher also enforces a
+**per-principal 24-hour cooldown** and a causation depth limit.
 
 Grant the sink's writer identity `pubsub.publisher`, then subscribe the dispatcher with a
 dead-letter policy.
@@ -303,8 +357,8 @@ Two things to get right:
   only. Do not attach any data store.
 
 App location must be compatible with the agent's region: an `eu` app can use
-`europe-*` agents. Confirm which location the organisation's app is in —
-[decision 5](09-open-decisions.md).
+`europe-*` agents, a `global` app can use any. Confirm which location the organisation's app is in —
+"still to verify in console", item 2 of [09](09-open-decisions.md).
 
 **Verify.** Ask a directory question in Gemini Enterprise and confirm the audit row
 records **your** email as the principal. Ask a colleague outside the group to open the
@@ -328,9 +382,16 @@ Create one Cloud Scheduler job per shadow playbook, all **paused**:
 
 ```bash
 gcloud scheduler jobs create http walle-licence-reclaim --schedule="0 7 * * MON" \
-  --uri=https://walle-dispatcher-.../run --oidc-service-account-email=walle-dispatcher@$PROJECT.iam.gserviceaccount.com \
-  --location=$REGION --paused
+  --uri=https://walle-dispatcher-.../run \
+  --oidc-service-account-email=walle-dispatcher@$PROJECT.iam.gserviceaccount.com \
+  --location=$REGION --paused \
+  --attempt-deadline=30s --max-retry-attempts=0
 ```
+
+The deadline covers acknowledgement, never the run. The dispatcher records a deterministic
+trigger id and returns immediately; a synchronous call would outlive the deadline, be
+recorded as failed, and be retried into a duplicate run — and it would poison the
+"scheduled run missing" alert, because every success would look like a failure.
 
 **Verify.** `GET /v1/ladder` returns config version, stage 0 and the full matrix. Resume
 one job manually; a shadow run completes and its report shows would-be verdicts. Confirm
@@ -339,6 +400,27 @@ no Workspace write appears in the admin audit log for that window.
 **Rollback.** Pause every job; redeploy the previous config version.
 
 ---
+
+## Phase 8b — Eve's own credential, and the inbox trigger
+
+Both are on the critical path and neither existed in the first draft of this runbook.
+
+**Eve's read-only Workspace identity.** Eve must verify against Workspace, not against
+Wall-E's word. Repeat Phase 1 and Phase 3 for a second robot account, `eve@<domain>`, with
+a **read-only** custom role, its own OAuth client and its own consent. Without it, Eve
+reads the world through the thing it is checking.
+
+**The inbox trigger.** The design's highest-risk input has no plumbing until this exists:
+`users.watch` on the robot's mailbox, publishing to a second Pub/Sub topic the dispatcher
+subscribes to. A Gmail watch **expires after seven days, silently**, so a daily renewal
+job is mandatory and a missed renewal must alert — a dead trigger looks exactly like a
+quiet week.
+
+Until this phase is done, Phase 10's injection test cannot be run at all, because nothing
+carries a mail to the agent.
+
+**Verify.** Send a mail to the robot; a T3 run appears with a read-only operation set.
+Kill the renewal job, expire the watch, and confirm the alert fires.
 
 ## Phase 9 — Kill-switch drill
 
@@ -351,10 +433,15 @@ promotions when the last recorded drill is older than 30 days.
 | K1 | Demote a family to L0 | seconds to effect |
 | K2 | Pause a Scheduler job, confirm no run starts | — |
 | K3 | Remove `run.invoker` from `walle-agent@`, confirm chat fails | — |
-| K4 | Disable the refresh-token secret version | **measure honestly.** If a running instance keeps working, the credential cache is not honouring its TTL — that is a bug to fix before Stage 1, and until it is fixed the runbook says K4 does not stop a running instance. |
+| K4 | The service revokes its own refresh token at Google | seconds. **Measure honestly, and do not accept a pass by luck:** disabling a secret version proves nothing, because `versions/latest` falls back to the previous still-valid version, and an access token already issued stays valid for up to an hour regardless. Revocation is the only thing that stops a running instance now. |
 | K5 | Revoke the OAuth grant as `$ROBOT` | seconds; then re-run Phase 3 |
 
-Write the measured times into `platform/wall-e/ladder-state.md`.
+Write the measured times into the `drills` collection — not only into a wiki page. CI
+refuses a promotion when the last drill is older than 30 days, so it needs somewhere to
+read the date.
+
+Create the two pages the design refers to and that do not exist yet:
+`platform/wall-e/ladder-state.md` (generated) and `platform/wall-e/incidents/`.
 
 ---
 
