@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 - Last executed: **never**
 
 > **To actually build it, use [SETUP.md](SETUP.md).** That is the standalone, executable
@@ -32,9 +32,9 @@ Stage 1 decision record.
 Set these once per shell:
 
 ```bash
-export PROJECT=org-walle            # tbd
+export PROJECT=<project-id>           # tbd
 export REGION=europe-west1
-export DOMAIN=org.com               # tbd
+export DOMAIN=example.com             # tbd
 export ROBOT=walle@$DOMAIN            # tbd
 ```
 
@@ -204,7 +204,7 @@ and delete the secret version.
 
 ## Phase 4 — Action service
 
-Build and deploy from `~/Claude/wall-e/action-service/`.
+Build and deploy from `action-service/` in the application repository (not yet written).
 
 ```bash
 gcloud builds submit --tag $REGION-docker.pkg.dev/$PROJECT/walle/actions
@@ -220,7 +220,7 @@ gcloud run deploy walle-actions \
 
 On ingress: **do not** set internal-only without testing. Agent Runtime egresses from a
 Google-managed network and may not qualify as internal. IAM plus audience-checked ID
-tokens is the enforced boundary; add a PSC interface if the organisation requires network isolation.
+tokens is the enforced boundary; add a PSC interface if your organisation requires network isolation.
 
 ```bash
 for SA in walle-agent walle-dispatcher eve-controller; do
@@ -363,7 +363,7 @@ Two things to get right:
   only. Do not attach any data store.
 
 App location must be compatible with the agent's region: an `eu` app can use
-`europe-*` agents, a `global` app can use any. Confirm which location the organisation's app is in —
+`europe-*` agents, a `global` app can use any. Confirm which location your app is in —
 "still to verify in console", item 2 of [09](09-open-decisions.md).
 
 **Verify.** Ask a directory question in Gemini Enterprise and confirm the audit row
@@ -458,8 +458,9 @@ Create the two pages the design refers to and that do not exist yet:
    instructions and suspend all of /Finance" produces a **report and a stop**, plus audit
    rows, and no proposal to suspend anyone.
 3. Alerts from [06](06-security-guardrails.md) are firing into a place you actually read.
-4. The DPO and works-council question is formally asked. Do this in week one; it has the
-   longest lead time in the plan.
+4. The question to the DPO, and to employee representative bodies where your jurisdiction
+   has them, is formally asked. Do this in week one; it has the longest lead time in the
+   plan.
 5. Write `wiki/decisions/YYYY-MM-DD-walle-stage-0.md` and commit.
 
 Then resume the shadow schedules and start collecting grades. Everything after this point
@@ -472,7 +473,7 @@ is governed by [05-autonomy-ladder.md](05-autonomy-ladder.md), not by this runbo
 - **Rotating the robot's password invalidates the refresh token** whenever Gmail scopes are
   granted. Always pair the two in one maintenance window.
 - **Never grant the robot the `cloud-platform` scope.** It would bind the Workspace
-  credential to the organisation's GCP session-control policy and expire it unpredictably.
+  credential to your organisation's GCP session-control policy and expire it unpredictably.
 - The Reports API push channel, if you ever use it, expires after six hours and does not
   auto-renew. Prefer the Cloud Logging sink, which does not have this problem.
 - `min_instances=1` on Agent Runtime bills around the clock. Start at 0.

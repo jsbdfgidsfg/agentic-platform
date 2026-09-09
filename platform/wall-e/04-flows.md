@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 
 Seven journeys, each with its failure branch. Levels and stages are defined in
 [05-autonomy-ladder.md](05-autonomy-ladder.md).
@@ -13,7 +13,7 @@ Trigger class T0 (chat). Level L3. Available from Stage 1.
 
 ```mermaid
 sequenceDiagram
-    participant U as the platform owner
+    participant U as Operator
     participant GE as Gemini Enterprise
     participant AG as Wall-E (Agent Runtime)
     participant CR as walle-actions
@@ -50,7 +50,7 @@ sequenceDiagram
 
 | What goes wrong | What happens |
 |---|---|
-| The model calls approve without a human having confirmed | Denied with `approver_is_agent`, a hard invariant. An earlier draft had the **agent** posting the approval and naming the approver, which meant the service could confirm the named person was an operator but never that they had said anything. That was the Edge AI v2 defect wearing a new shape. |
+| The model calls approve without a human having confirmed | Denied with `approver_is_agent`, a hard invariant. An earlier draft had the **agent** posting the approval and naming the approver, which meant the service could confirm the named person was an operator but never that they had said anything. That was the "model asserts a human approved" defect wearing a new shape. |
 | The approval surface itself is spoofed | The surface authenticates the human, not the agent, and the service records which surface asserted the identity. This is why the surface must exist before the first real write — see [decision 14](09-open-decisions.md). |
 | The model reuses an approval from a different user's suspension | The binding covers canonical parameters. Signature mismatch, denied, alert. |
 | jdoe is suspended by a human between plan and approval | Pre-state hash differs at execution. Item skipped as `state_changed`, reported, not executed. |
@@ -219,9 +219,9 @@ Operator notices something wrong, or Eve does, or a breaker fires.
 
 **Two corrections, because this switch has now been wrong twice.**
 
-Edge AI v2 claimed that disabling the credential secret propagates in about fifteen
-minutes. It does not: the scaffold cached built API clients for the life of the container.
-Wall-E honours the cache TTL and rebuilds clients — but that is still not enough, for two
+A common assumption is that disabling the credential secret propagates in about fifteen
+minutes. It does not if the service caches built API clients for the life of the container,
+which a first implementation did. Wall-E honours the cache TTL and rebuilds clients — but that is still not enough, for two
 reasons an earlier draft of *this* document missed:
 
 - The secret was read from `versions/latest`, which resolves to the newest **enabled**

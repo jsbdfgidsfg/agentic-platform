@@ -101,7 +101,7 @@ EVE_SCOPES: Tuple[str, ...] = (
 
 # The operator's own consent, used by this script for phases 1, 2 and 15 and by
 # the Workspace half of verify. This is NOT the robot's grant and is not frozen:
-# it is the platform owner's own super-admin session, and it may be re-consented freely.
+# it is the operator's own super-admin session, and it may be re-consented freely.
 OPERATOR_SCOPES: Tuple[str, ...] = (
     "https://www.googleapis.com/auth/admin.directory.user",
     "https://www.googleapis.com/auth/admin.directory.group",
@@ -346,7 +346,7 @@ CONFIG_KEYS_FOR_SUBCOMMAND: Dict[str, Tuple[str, ...]] = {
 # that may not appear in any value in the list". SETUP.md said "^@^" and was
 # wrong — almost every value here is an email address, so gcloud split
 # ROBOT_ACCOUNT=walle-bot@example.com into two items and aborted with "Bad syntax
-# for dict arg: [org.com]". ";" appears in no name and no value: not in an
+# for dict arg: [example.com]". ";" appears in no name and no value: not in an
 # address, not in a comma-joined allowlist, not in an OU path or a URL. It is
 # validated against both names and values in env_flag_value, and against the
 # config in validate_config.
@@ -1023,7 +1023,7 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
             "Phase 9 step 4",
             "Mark the OAuth client Trusted, in the same sitting",
             "The Gmail scopes are 'restricted'. An Internal app needs no Google "
-            "verification, but the organisation's own API controls can still cut it off, and the "
+            "verification, but your tenant's own API controls can still cut it off, and the "
             "failure arrives weeks later looking nothing like the cause.",
             [
                 "Admin console -> Security -> Access and data control -> API controls",
@@ -2160,7 +2160,7 @@ def ensure_budget(ctx: Ctx) -> None:
             if expected not in filters:
                 die(
                     "budget walle-stage-0 is scoped to %s, not %s. As written it "
-                    "alerts on the organisation's entire spend." % (filters, expected)
+                    "alerts on your organisation's entire spend." % (filters, expected)
                 )
             return
     run(
@@ -2991,7 +2991,7 @@ def env_flag_value(pairs: Sequence[Tuple[str, str]]) -> str:
     SETUP.md said "^@^" and the script copied it, which cannot work: eight of
     the seventeen values are email addresses, so gcloud split
     ROBOT_ACCOUNT=walle-bot@example.com into "ROBOT_ACCOUNT=walle-bot" and
-    "org.com", and the second has no "=" — "Bad syntax for dict arg". Phase
+    "example.com", and the second has no "=" — "Bad syntax for dict arg". Phase
     10 and Phase 11 could not deploy at all. The old guard checked names only,
     and no name has ever contained an "@".
     """

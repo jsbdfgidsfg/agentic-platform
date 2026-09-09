@@ -2,11 +2,11 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 
 ## The honest risk statement
 
-You are giving an LLM a path to admin operations on the organisation's Workspace tenant, and then
+You are giving an LLM a path to admin operations on your organisation's Workspace tenant, and then
 removing the human from that path one step at a time. That is a legitimate thing to build
 and it is the highest-blast-radius system in your estate. Everything below exists so that
 the answer to "what happens when the model is wrong, or manipulated, or the trigger fires
@@ -46,7 +46,7 @@ something, and N6 in particular cost the convenience of a chatty autonomous agen
 
 ## Threat model
 
-Rows marked **new** did not exist for Edge AI v2 because it had no autonomous path.
+Rows marked **new** exist only because there is an autonomous path; a design with a human in every write path would not need them.
 
 | Threat | Control | Residual risk |
 |---|---|---|
@@ -68,7 +68,7 @@ Rows marked **new** did not exist for Edge AI v2 because it had no autonomous pa
 | **new** Quota exhaustion locking out human admins | Per-operation ceilings well below Google's limits; backoff; quota errors as a distinct outcome class | Wall-E throttles itself before the tenant does |
 | **new** Credential revoked mid-run | `invalid_grant` treated as a paging incident, not a retry; run aborts at the current item | Partial run, reported |
 | **new** Wrong-homonym targeting | Plans carry pre-state including OU and manager; proposals show it; explicit targets only | Human or Eve sees the wrong context before approving |
-| **new** Licence reclaim causing data loss | Reclaim restricted to suspended accounts first; the retention consequence of removing a licence on the organisation's plan must be confirmed with Google before active accounts are in scope | Unquantified until that answer exists — see [decision 7](09-open-decisions.md) |
+| **new** Licence reclaim causing data loss | Reclaim restricted to suspended accounts first; the retention consequence of removing a licence on your tenant's plan must be confirmed with Google before active accounts are in scope | Unquantified until that answer exists — see [decision 7](09-open-decisions.md) |
 | **new** Timezone or business-hours error | Business hours in config with an explicit timezone; last write at 16:00; holds do not span the boundary; weekend suspensions blocked | A run waits until morning |
 
 ## Never in the catalogue
@@ -121,7 +121,7 @@ Alert on, at minimum:
 
 ## Compliance
 
-- **Data protection, and `Assumption:` a works council with a say here.** Wall-E reads directory data, usage reports and audit logs
+- **Data protection, and `Assumption:` employee representative bodies with a say here, where your jurisdiction has them.** Wall-E reads directory data, usage reports and audit logs
   about employees, and acts on their accounts. Autonomous action is a **different
   processing activity** from human-requested action, so the assessment needs redoing at
   the stage where writes stop having a human in the path — realistically before Stage 3,
@@ -137,7 +137,7 @@ Alert on, at minimum:
   exception to accept knowingly: **Workspace audit logs land in Cloud Logging at
   organisation level and their storage region is not selectable.**
 - **Retention.** Set a table expiry on every audit table. 400 days is a reasonable default
-  pending the organisation policy.
+  pending your retention policy.
 - **Evidence.** The audit dataset is the answer to "what has the robot done", and it is
   the first thing an auditor will ask for. The action service holds insert-only rights on
   it, deliberately.

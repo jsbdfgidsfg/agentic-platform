@@ -2,10 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 - Maturity: **design — nothing built, nothing enabled**
 - Codename: `wall-e`. Resource prefix `walle-`. Final naming is [decision 2](09-open-decisions.md).
-- Supersedes: [Edge AI v2](../edge-ai-v2/README.md) (`Assumption:` you want Wall-E to replace it rather than run alongside it — [decision 1](09-open-decisions.md))
+- Other writers: `Assumption:` no other automation already writes to the same Workspace objects ([decision 1](09-open-decisions.md))
 
 ## One-line summary
 
@@ -73,8 +73,7 @@ plan. Everything else exists to make it enforceable.
 | 9 | [Decisions to make](09-open-decisions.md) | What you must choose before build starts |
 | 10 | [**Adversarial review**](10-adversarial-review.md) | What was attacked, what changed, what is knowingly accepted |
 
-Code scaffold to be built at `~/Claude/wall-e/`, starting from the
-Edge AI v2 scaffold at `~/Claude/edge-ai-v2/` (which has never been run).
+Code scaffold to be built in the application repository (not yet written).
 
 ## This design has been attacked
 
@@ -91,7 +90,7 @@ records what was found, so nobody assumes a control works because an earlier dra
 
 ## What is assumed rather than known
 
-This design was written without access to the organisation's tenant. Every statement about the organisation
+This design was written without access to your tenant. Every statement about your tenant
 is marked `Assumption:` where it appears. The big ones, all in
 [09-open-decisions.md](09-open-decisions.md): the OU structure and whether a sandbox OU
 can be created, the domain list, who else can be an operator, whether an HR feed exists,

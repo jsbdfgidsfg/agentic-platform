@@ -8,7 +8,7 @@
 |---|---|
 | Owner | the platform owner |
 | Written | 2026-09-08 |
-| Last reviewed | 2026-09-08 — Phase 10/11 `--set-env-vars` delimiter corrected from `^@^` to `^;^`, and Phase 16's notification-channel command from `gcloud monitoring channels` to `gcloud beta monitoring channels` |
+| Last reviewed | 2026-09-09 — reworded as a standalone guide usable by any organisation. 2026-09-08 — Phase 10/11 `--set-env-vars` delimiter corrected from `^@^` to `^;^`, and Phase 16's notification-channel command from `gcloud monitoring channels` to `gcloud beta monitoring channels` |
 | Last executed | never |
 | Applies to | [platform/wall-e](README.md) design set, documents 01 to 10 |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), the standalone service view |
@@ -43,7 +43,7 @@ Say this plainly to anyone who asks, because the gap between "we deployed Wall-E
 
 ### 0.3 What it costs
 
-`Assumption:` the organisation has an existing billing account and this project is a new cost centre on it. Nothing here needs a purchase order.
+`Assumption:` your organisation has an existing billing account and this project is a new cost centre on it. Nothing here needs a purchase order.
 
 Unit prices are deliberately not quoted. The Agent Runtime and Sessions pricing page did not render for automated reading during design ([09-open-decisions.md](09-open-decisions.md), "still to verify" item 7), and quoting a stale price into a runbook is worse than leaving a gap. Confirm each line before you present a number to anyone.
 
@@ -90,7 +90,7 @@ Unit prices are deliberately not quoted. The Agent Runtime and Sessions pricing 
 
 **Total hands-on for the infrastructure: about three working days.** Add the denial suite and the drill and it is closer to a working week.
 
-> **The long pole is not in this table.** This runbook deploys three code artefacts: the action service, the dispatcher, and the ADK agent. Building them is a separate engineering effort measured in weeks, not hours, and the design for them is [03-lld.md](03-lld.md). Phases 10, 11 and 12 assume container images and a deploy script already exist under `~/Claude/wall-e/`. If they do not, run phases 1 to 6 and 8 anyway. They are independent of the code and doing them early surfaces the tenant surprises while the code is being written. Phase 7 needs `schemas/*.json` and Phase 9 needs the three `bootstrap/` scripts, so those two phases wait for the repository. The three bootstrap scripts are small and worth writing first, ahead of the service itself, precisely so the consent can happen early.
+> **The long pole is not in this table.** This runbook deploys three code artefacts: the action service, the dispatcher, and the ADK agent. Building them is a separate engineering effort measured in weeks, not hours, and the design for them is [03-lld.md](03-lld.md). Phases 10, 11 and 12 assume container images and a deploy script already exist in the application repository (not yet written). If they do not, run phases 1 to 6 and 8 anyway. They are independent of the code and doing them early surfaces the tenant surprises while the code is being written. Phase 7 needs `schemas/*.json` and Phase 9 needs the three `bootstrap/` scripts, so those two phases wait for the repository. The three bootstrap scripts are small and worth writing first, ahead of the service itself, precisely so the consent can happen early.
 
 ---
 
@@ -106,10 +106,10 @@ Do not begin Phase 1 until every row below has an answer written down. Four of t
 | **D2** | **The complete OAuth scope list.** | **Scopes freeze permanently at consent.** See §1.2. | Take §1.3 as the proposal. Two live questions: do you want `admin.directory.user.security`, and do you confirm you do **not** want `drive`. |
 | **D3** | **Which organisational units.** A sandbox unit with synthetic accounts, plus one small real pilot unit. | Phase 2 creates a write role scoped to a unit that has to exist. Stage 0 shadow plans need somewhere safe to point. Without a sandbox, Stage 1's first real writes land on real employees. | Create a sandbox. If the tenant genuinely cannot have one, that is a finding to record before Stage 1, not a detail. [09](09-open-decisions.md) decision 5. |
 | **D4** | **Ratify the blast-radius ceiling.** The nine "must never happen" rows in [06-security-guardrails.md](06-security-guardrails.md). | Every other control is calibrated against that list. It was written without you. | Read the nine rows. Say which you disagree with, before build, not after. |
-| **D5** | **Who else is an operator, and who is the second approver.** | `walle-operators@` is the group that can halt, demote, veto and approve. A one-person group means every kill switch depends on you being reachable. Levels L4 and L5 need two named humans, and that is Stage 4, but the second person should be named now. | At least one more Digital Workplace admin in `walle-operators@`. Someone from IT security as the second approver. [09](09-open-decisions.md) decision 11. |
-| **D6** | **Wall-E replaces Edge AI v2, or coexists.** | The whole design assumes replacement. Coexistence means two systems sharing one robot account and contending on one policy engine. | **Replace.** Mark Edge AI v2 superseded. Its scaffold was never run, so nothing is lost. |
-| **D7** | **Ask the data-protection and works-council question.** | Not a blocker for Phase 1, but it has the **longest lead time in the entire plan** and it blocks Stage 3. Ask in week one, in parallel. | Frame it in two parts: reads now, autonomous writes before Stage 3. Autonomous action is a different processing activity from human-requested action. [09](09-open-decisions.md) decision 8. |
-| **D8** | **Confirm the Gemini Enterprise app's location.** Gemini Enterprise console → app → settings. | It is a five-minute console lookup and it is a precondition, not a verification. An `eu` app can front a `europe-west1` agent. A `global` app can front any region. A `us` app cannot, and if that is what the organisation has, either a new `eu` app is created or the whole region decision reopens. **Check this before Phase 6, because everything after it is regional.** | `Assumption:` the app's location is unknown to this document. Look it up, write the answer down, and only then start Phase 6. Phase 13 assumes the answer is `eu` or `global`. |
+| **D5** | **Who else is an operator, and who is the second approver.** | `walle-operators@` is the group that can halt, demote, veto and approve. A one-person group means every kill switch depends on you being reachable. Levels L4 and L5 need two named humans, and that is Stage 4, but the second person should be named now. | At least one more Workspace admin in `walle-operators@`. Someone from IT security as the second approver. [09](09-open-decisions.md) decision 11. |
+| **D6** | **Does any other automation already write to the same Workspace objects?** An HR-driven directory sync, a licence-management script, a joiner/leaver tool. | Two writers on one object is the collision this design's pre-state re-read exists to catch, but it is far better to know up front. | Inventory every existing writer before Stage 1 and give each a named owner. |
+| **D7** | **Ask the data-protection question, and put it to employee representative bodies where your jurisdiction has them.** | Not a blocker for Phase 1, but it has the **longest lead time in the entire plan** and it blocks Stage 3. Ask in week one, in parallel. | Frame it in two parts: reads now, autonomous writes before Stage 3. Autonomous action is a different processing activity from human-requested action. [09](09-open-decisions.md) decision 8. |
+| **D8** | **Confirm the Gemini Enterprise app's location.** Gemini Enterprise console → app → settings. | It is a five-minute console lookup and it is a precondition, not a verification. An `eu` app can front a `europe-west1` agent. A `global` app can front any region. A `us` app cannot, and if that is what your tenant has, either a new `eu` app is created or the whole region decision reopens. **Check this before Phase 6, because everything after it is regional.** | `Assumption:` the app's location is unknown to this document. Look it up, write the answer down, and only then start Phase 6. Phase 13 assumes the answer is `eu` or `global`. |
 
 Three more that are not blocking for Stage 0 but that you should have an opinion on before Phase 14: business hours and timezone (`Assumption:` Europe/Paris, Monday to Friday, last write 16:00), audit retention (`Assumption:` 400 days), and which three admin tasks waste the most of your time, because those are the playbooks Stage 0 should shadow.
 
@@ -161,9 +161,9 @@ openid
 | `chat.messages` | Narrower than `chat.spaces`, which is space administration. |
 | `drive` | **Deliberately absent.** Without domain-wide delegation the robot can only see its own Drive, so the scope buys nothing and widens the blast radius of a token leak. |
 | `admin.directory.user.security` | **Deliberately absent, pending D2.** It grants sign-out and token revocation for other users. Useful for leaver hygiene, and also a session-hijack tool. Decide it explicitly. |
-| `cloud-platform` | **Never request it for the robot.** It binds the Workspace credential to the organisation's GCP session-control policy, and the token then expires on a schedule you did not choose. |
+| `cloud-platform` | **Never request it for the robot.** It binds the Workspace credential to your organisation's GCP session-control policy, and the token then expires on a schedule you did not choose. |
 
-Note that the Gmail scopes are "restricted" in Google's classification. For an **Internal** consent screen this needs no Google verification, but the organisation's own API controls can still block them until the client is marked trusted. That is Phase 9 step 4 and it must happen in the same sitting as the consent.
+Note that the Gmail scopes are "restricted" in Google's classification. For an **Internal** consent screen this needs no Google verification, but your tenant's own API controls can still block them until the client is marked trusted. That is Phase 9 step 4 and it must happen in the same sitting as the consent.
 
 ### 1.4 Accounts and permissions you need
 
@@ -207,7 +207,7 @@ Every value below marked `<...>` is unknown to this document. Fill them in befor
 
 | Placeholder | What it is | What it depends on |
 |---|---|---|
-| `<primary-domain>` | the organisation's primary Workspace domain | The tenant. Not the vanity domain, the one users' addresses actually end in. |
+| `<primary-domain>` | Your organisation's primary Workspace domain | The tenant. Not the vanity domain, the one users' addresses actually end in. |
 | `<org-id>` | Numeric GCP organisation id | `gcloud organizations list` |
 | `<billing-account>` | Billing account id | `gcloud billing accounts list` |
 | `<customer-id>` | Workspace customer id | Admin console, Account settings. `my_customer` works in most API calls. |
@@ -218,7 +218,7 @@ Every value below marked `<...>` is unknown to this document. Fill them in befor
 | `<actions-url>` | Cloud Run URL of the action service | Available after Phase 10. Export it as `ACTIONS_URL`; Phases 11, 12, 14 and 16 need it. |
 | `<dispatcher-url>` | Cloud Run URL of the dispatcher | Available after Phase 11. Export it as `DISPATCHER_URL`; Phases 14 and 16 need it. |
 | `<refresh-token-version>` | The secret version number the Phase 9 bootstrap prints | Available after Phase 9. Export it as `REFRESH_TOKEN_VERSION`; Phase 10 pins it. It is `1` only on a first, clean bootstrap. |
-| `<second-operator>` | The other named Digital Workplace admin | D5 |
+| `<second-operator>` | The other named Workspace admin | D5 |
 
 The **committed floor list** is not a placeholder but it is an artefact this runbook produces: `~/Claude/wall-e/config/protected_floor.txt`, written in Phase 1 step 5 and read by the action service on every directory write.
 
@@ -229,7 +229,7 @@ Every command block in this document assumes this block has been run in the same
 ```bash
 # ---- identity and naming (decision D1) --------------------------------------
 export DOMAIN="<primary-domain>"
-export PROJECT="org-walle"                       # placeholder, decision D1
+export PROJECT="<project-id>"                      # placeholder, decision D1
 export REGION="europe-west1"                       # do not change: Agent Runtime GA + EU residency
 export BQ_LOCATION="EU"
 export ORG_ID="<org-id>"
@@ -462,7 +462,7 @@ Note also: the **Alert Center API is out of scope entirely**, because Google's d
 4. Actions: send an email notification to **you** and to `$OPERATORS`. `Assumption:` `$OPERATORS` is a group that can receive external-to-itself mail from the alerting system. If notifications to groups are not delivered, list the individual addresses.
 5. Severity: high. Name it `Wall-E robot interactive login`.
 
-`Assumption:` the organisation's Workspace edition supports reporting rules on the login audit log. Confirm this in the console. If it does not, the fallback is a log-based metric over the Cloud Logging data from Phase 5, with a Cloud Monitoring alert policy on it. The filter needs both predicates, because login events are written by a **different service** from admin events and neither Phase 11 sink matches them:
+`Assumption:` your Workspace edition supports reporting rules on the login audit log. Confirm this in the console. If it does not, the fallback is a log-based metric over the Cloud Logging data from Phase 5, with a Cloud Monitoring alert policy on it. The filter needs both predicates, because login events are written by a **different service** from admin events and neither Phase 11 sink matches them:
 
 ```
 protoPayload.serviceName="login.googleapis.com" AND
@@ -516,7 +516,7 @@ Expect your own recent sign-ins. If admin events appear and login events do not,
 
 ### Rollback
 
-Turn the setting off. This is a tenant-wide setting, so confirm nothing else in the organisation is already consuming those logs before you do.
+Turn the setting off. This is a tenant-wide setting, so confirm nothing else in your organisation is already consuming those logs before you do.
 
 ---
 
@@ -615,7 +615,7 @@ gcloud billing budgets create \
   --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0
 ```
 
-`--filter-projects` takes `projects/{project_id}`, not the project number. Get it wrong and the budget silently scopes to the **whole billing account**, which alerts on the organisation's entire spend and looks like it worked. This command also needs **Billing Account Costs Manager** on the billing account; Billing account user is enough to link the project and not enough to create a budget. See §1.4.
+`--filter-projects` takes `projects/{project_id}`, not the project number. Get it wrong and the budget silently scopes to the **whole billing account**, which alerts on your organisation's entire spend and looks like it worked. This command also needs **Billing Account Costs Manager** on the billing account; Billing account user is enough to link the project and not enough to create a budget. See §1.4.
 
 `Assumption:` 200 EUR per month is a sane Stage 0 ceiling. Adjust once the first cycle is measured.
 
@@ -640,7 +640,7 @@ gcloud storage buckets describe "gs://${PROJECT}-agent-staging" --format='value(
 
 gcloud billing budgets list --billing-account="$BILLING" \
   --format='value(displayName,amount.specifiedAmount.units,budgetFilter.projects)'
-# expect: walle-stage-0  200  ['projects/org-walle']
+# expect: walle-stage-0  200  ['projects/<project-id>']
 ```
 
 All five service accounts present and enabled. Every API in the list above enabled.
@@ -713,7 +713,7 @@ done
 
 Cluster each table only on a column its own schema actually has. Check `schemas/*.json` before changing this. If `runs` and `plans` carry `run_id`, add it as a clustering field on those two, because it is the column Eve and Mo actually join on.
 
-34560000 seconds is 400 days. `Assumption:` 400 days pending the organisation's retention policy. Partitioning is not cosmetic here: every ladder metric is a 30 day rolling window, and an unpartitioned `actions` table makes the hourly metric evaluation scan the whole history each time.
+34560000 seconds is 400 days. `Assumption:` 400 days pending your retention policy. Partitioning is not cosmetic here: every ladder metric is a 30 day rolling window, and an unpartitioned `actions` table makes the hourly metric evaluation scan the whole history each time.
 
 **Pub/Sub.** Four topics.
 
@@ -810,7 +810,7 @@ for S in walle-oauth-client walle-refresh-token walle-confirm-hmac; do
 done
 ```
 
-`--location` creates a **regional secret**. That is the current mechanism for residency: the data stays in the location at rest, **in use, and in transit**. A global secret with user-managed replication pins only the payload at rest, while the secret itself remains a global resource. Automatic replication, which the superseded Edge AI v2 scaffold used, stores payloads worldwide and plainly contradicts the residency requirement. If you find a `gcloud secrets create` in an older script without `--location`, it is wrong.
+`--location` creates a **regional secret**. That is the current mechanism for residency: the data stays in the location at rest, **in use, and in transit**. A global secret with user-managed replication pins only the payload at rest, while the secret itself remains a global resource. Automatic replication, which an earlier draft used, stores payloads worldwide and plainly contradicts the residency requirement. If you find a `gcloud secrets create` in an older script without `--location`, it is wrong.
 
 Wall-E's own confirmation HMAC, generated server-side and never displayed:
 
@@ -988,7 +988,7 @@ What that script must do, in this order, and why each step is there:
 | Read the client from Secret Manager | The client secret never sits on disk |
 | Request `access_type=offline` and `prompt=consent` | Without both, Google may return no refresh token at all on a repeat authorisation |
 | Request the full frozen scope list from §1.3 | Including `openid` and `userinfo.email` |
-| After the exchange, call `userinfo` and compare the returned email to `--expect-account` | **This is the check that stops you storing your own credentials.** It is the single most likely bootstrap mistake. Edge AI v2's script omitted `openid` and `userinfo.email` and could not perform it. |
+| After the exchange, call `userinfo` and compare the returned email to `--expect-account` | **This is the check that stops you storing your own credentials.** It is the single most likely bootstrap mistake. An earlier draft's bootstrap script omitted `openid` and `userinfo.email` and could not perform it. |
 | **Refuse to store and exit non-zero on mismatch** | A failure here must be loud |
 | Write the refresh token as a new version of the regional secret | |
 | Print the **version number** | Immediately run `export REFRESH_TOKEN_VERSION=<the number printed>` and write it into the build log. **It is `1` only on a first, clean bootstrap.** Any re-run, any rollback, any K4 or K5 drill produces a higher number, and a stale pin points the service at a destroyed version. |
@@ -1081,7 +1081,7 @@ gcloud run deploy walle-actions \
 
 > **One `--set-env-vars` flag, not sixteen.** gcloud treats it as a dictionary flag: repeating it does **not** merge, the last occurrence wins, and every earlier one is discarded silently. A deploy written as sixteen repeated flags produces a service with `AUDIENCE` set and nothing else, which shows up later as a crash loop or, worse, as a service quietly falling back to defaults.
 >
-> **The delimiter is `;`, and it may not be `@`.** The `^;^` prefix sets `;` as the delimiter, which is needed because several values contain commas. An earlier revision of this runbook used `^@^`, and that cannot work: `gcloud topic escaping` requires the delimiter to appear in **no value in the list**, and eight of these seventeen values are email addresses. gcloud splits `ROBOT_ACCOUNT=walle-bot@example.com` into `ROBOT_ACCOUNT=walle-bot` and `org.com`; the second has no `=` and the command aborts with `argument --set-env-vars: Bad syntax for dict arg: [org.com]`. No name and no value here contains a `;`. `walle_setup.py` uses the same delimiter and refuses to build the flag if any name or value ever acquires one.
+> **The delimiter is `;`, and it may not be `@`.** The `^;^` prefix sets `;` as the delimiter, which is needed because several values contain commas. An earlier revision of this runbook used `^@^`, and that cannot work: `gcloud topic escaping` requires the delimiter to appear in **no value in the list**, and eight of these seventeen values are email addresses. gcloud splits `ROBOT_ACCOUNT=walle-bot@example.com` into `ROBOT_ACCOUNT=walle-bot` and `example.com`; the second has no `=` and the command aborts with `argument --set-env-vars: Bad syntax for dict arg: [example.com]`. No name and no value here contains a `;`. `walle_setup.py` uses the same delimiter and refuses to build the flag if any name or value ever acquires one.
 
 `AUDIENCE` expands to an empty string on the first deploy, because the URL does not exist until the service does. The `gcloud run services update` immediately after the URL capture below sets it for real. Do not skip it: the smoke test presents a token whose audience is the URL, and a service expecting an empty audience answers `401 bad_audience`.
 
@@ -1089,7 +1089,7 @@ Three flags carry real weight.
 
 **`--ingress=all`, not `internal`.** This looks wrong and is right. Agent Runtime egresses from a **Google-managed tenant project**, which Cloud Run treats as external traffic. Internal-only ingress therefore **blocks the agent entirely**, and the failure mode is a timeout rather than a clear error. Making internal ingress work would need a shared VPC Service Controls perimeter, an internal Application Load Balancer, or a Private Service Connect endpoint. A PSC *interface* on the agent alone does not help, because `run.app` traffic still takes the Google network path without private DNS peering, and enabling it also removes the agent's internet egress.
 
-**IAM is therefore the enforced boundary**, and the service must verify ID tokens including the **audience**. Add a PSC endpoint later only if the organisation's network policy demands it, and test it before relying on it.
+**IAM is therefore the enforced boundary**, and the service must verify ID tokens including the **audience**. Add a PSC endpoint later only if your network policy demands it, and test it before relying on it.
 
 **`--timeout=60s`.** Cloud Run's default is 300 seconds. A 60 second timeout makes "loop over 25 items inside the approve request" structurally impossible rather than merely discouraged. Approving releases a plan and returns 202; a Cloud Tasks worker executes items one at a time.
 
@@ -1428,7 +1428,7 @@ Four properties this deployment must have.
 | Sessions | Managed, EU. **Memory Bank off.** | An admin agent should not accumulate long-term memories about employees, and it keeps the data-protection assessment simpler. |
 | Code Execution | **off** | It has no EU at-rest residency, and Wall-E must not run arbitrary code anyway. |
 
-**Tools are generated from `/v1/operations`, not hand-written.** Edge AI v2's agent exposed 12 of 16 catalogue operations and never sent `dry_run`, so a flow the design depended on could not happen. Generation makes that drift impossible.
+**Tools are generated from `/v1/operations`, not hand-written.** An earlier draft's hand-written agent exposed 12 of 16 catalogue operations and never sent `dry_run`, so a flow the design depended on could not happen. Generation makes that drift impossible.
 
 **Model Armor goes on the platform, not in the agent's own code.** The Gemini Enterprise console setting does not cover custom ADK agents, which is true, but it does not follow that screening must live in agent code. Prefer **Model Armor on Agent Gateway**, which covers ADK-on-Agent-Runtime ingress, and project-level **floor settings**, which apply to the agent's model calls with no code change. Both are better than the in-process `ModelArmorPlugin` for one reason: Wall-E's own code cannot switch them off. Note the fail-open caveat: on a Model Armor error the platform skips sanitisation and continues, so it is a mitigation and never a boundary.
 
@@ -2014,7 +2014,7 @@ gcloud run services update walle-actions --region="$REGION" --min-instances=0
 | 24 | An approval replayed a second time | `denied: approval_already_used`, hard invariant |
 | 25 | An approval reused with different canonical parameters | `denied: bad_approval`, hard invariant |
 | 26 | An approval presented after its TTL | `denied`, item marked `skipped`, never executed late |
-| 27 | Six `WRITE_HIGH` requests in one minute **across two instances** | The sixth is `rate_limited`. **This is the test that proves counters are durable rather than per-process.** Edge AI v2 kept them in a Python dict behind two uvicorn workers, so a documented "5 per minute" was really 10 times the instance count |
+| 27 | Six `WRITE_HIGH` requests in one minute **across two instances** | The sixth is `rate_limited`. **This is the test that proves counters are durable rather than per-process.** An earlier draft kept them in a Python dict behind two uvicorn workers, so a documented "5 per minute" was really 10 times the instance count |
 | 28 | A shadow (L1) item under a `daily_write_budget: 0` | **Allowed to proceed as a dry run.** It evaluates the budget and does not consume it. If this returns `budget_exceeded`, Stage 0 generates no evidence at all |
 | 29 | A plan released at L2 with a well-formed approval | `denied: level_no_execute`. L2 has no execution path |
 | 30 | A valid approval presented for a family at L1 | `denied`. L1 never executes, even with a valid approval |
@@ -2098,7 +2098,7 @@ So do not accept a pass by luck. When you drill K4, attempt a Workspace read fro
 python drills/record.py \
   --date="$(date -u +%Y-%m-%d)" \
   --k0-seconds=<n> --k1-seconds=<n> --k3-seconds=<n> --k4-seconds=<n> --k5-seconds=<n> \
-  --operator="the platform owner" \
+  --operator="<your name>" \
   --notes="<anything that surprised you>"
 ```
 
@@ -2183,7 +2183,7 @@ Every box must be ticked before you write the decision record. Half of them are 
 
 **Governance**
 
-- [ ] The data-protection and works-council question has been **formally asked**, with a date and a recipient.
+- [ ] The data-protection question has been **formally asked**, with a date and a recipient, and put to employee representative bodies where your jurisdiction has them.
 - [ ] `$OPERATORS` has at least one member other than you, or that gap is recorded as a known risk.
 - [ ] `wiki/decisions/2026-09-XX-walle-stage-0.md` is written, references this runbook, and is committed.
 
@@ -2203,7 +2203,7 @@ Everything after this point is governed by [05-autonomy-ladder.md](05-autonomy-l
 
 ### 6.2 What must NOT be done next without a decision record
 
-These are not cautions. Each one changes what Wall-E can do to the organisation's tenant, and each requires a dated, committed decision file before it happens.
+These are not cautions. Each one changes what Wall-E can do to your tenant, and each requires a dated, committed decision file before it happens.
 
 | Do not | Why | What it needs first |
 |---|---|---|
@@ -2255,7 +2255,7 @@ The failures below are the ones that will actually happen, roughly in order of l
 
 **Symptom.** Everything works for days or weeks, then Gmail or Admin SDK calls start failing with `403` and a message about the app being blocked, usually right after somebody changes an unrelated API control setting.
 
-**Cause.** Gmail scopes are "restricted" in Google's classification. An Internal app needs no Google verification, but the organisation's own API controls can still block it. If someone sets those services to "Restricted" org-wide, an untrusted client is cut off.
+**Cause.** Gmail scopes are "restricted" in Google's classification. An Internal app needs no Google verification, but your tenant's own API controls can still block it. If someone sets those services to "Restricted" org-wide, an untrusted client is cut off.
 
 **Fix.** Admin console → Security → Access and data control → API controls → App access control → Manage third-party app access → add the client ID → **Trusted**. The credential itself is fine; nothing needs re-consenting.
 
@@ -2278,7 +2278,7 @@ gcloud run services update walle-actions --region="$REGION" --ingress=all
 
 **Do not "fix" this by making the service unauthenticated.** IAM plus audience-checked ID tokens is the enforced boundary here, and it is doing real work.
 
-If the organisation's network policy genuinely requires isolation, the options are a shared VPC Service Controls perimeter covering both, an internal Application Load Balancer in front of Cloud Run, or a Private Service Connect endpoint. A PSC **interface** on the agent alone does **not** work: `run.app` traffic keeps taking the Google network path without private DNS peering, and enabling it also removes the agent's internet egress. Test any of these before relying on them.
+If your network policy genuinely requires isolation, the options are a shared VPC Service Controls perimeter covering both, an internal Application Load Balancer in front of Cloud Run, or a Private Service Connect endpoint. A PSC **interface** on the agent alone does **not** work: `run.app` traffic keeps taking the Google network path without private DNS peering, and enabling it also removes the agent's internet egress. Test any of these before relying on them.
 
 ### 7.4 The refresh token has died
 
@@ -2296,7 +2296,7 @@ If the organisation's network policy genuinely requires isolation, the options a
 | **More than 100 live tokens for this client** | The oldest is invalidated **silently, with no warning**. Likely if the client has been reused across bootstraps. | Create a **new** OAuth client and re-run Phase 9. One client, one token, forever. |
 | **Unused for six months** | Only possible if the service was idle | The service must refresh at least monthly even when idle, and alert on failure. Fix that, then re-bootstrap. |
 | **The client is no longer trusted** | See §7.2 | Re-trust it. No re-consent needed. |
-| **The `cloud-platform` scope was requested** | Check the scopes on the grant | Never request it. It binds the credential to the organisation's GCP session-control policy. Re-bootstrap without it. |
+| **The `cloud-platform` scope was requested** | Check the scopes on the grant | Never request it. It binds the credential to your organisation's GCP session-control policy. Re-bootstrap without it. |
 
 **A specific trap:** if the service reads `versions/latest` and you disabled the newest version, it has silently fallen back to the previous version and is **still working**, which looks like the kill switch failing. Check `REFRESH_TOKEN_VERSION` is set and that the config contains no `latest`.
 

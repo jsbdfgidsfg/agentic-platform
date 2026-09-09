@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 
 ## Design intent
 
@@ -25,7 +25,7 @@
 ```mermaid
 flowchart TB
     subgraph Humans["Human surface"]
-        OP["walle-operators@<br/>(the platform owner + tbd)"]
+        OP["walle-operators@<br/>(the ladder owner + tbd)"]
         GE["Gemini Enterprise app<br/>chat, agent shared to the group"]
     end
 
@@ -79,8 +79,8 @@ flowchart TB
 
 ## The five trust boundaries
 
-Edge AI v2 had four. Autonomy adds the fifth, and it is the one this whole design set
-exists to make real.
+There are five. The fifth exists because of autonomy, and it is the one this whole design
+set exists to make real.
 
 | # | Boundary | Enforced by | What it stops |
 |---|---|---|---|
@@ -90,7 +90,7 @@ exists to make real.
 | 4 | Requested action → executed action | Policy engine: catalogue allowlist, typed parameters, protected principals, scope, budgets | The model inventing a destructive call and it simply running |
 | 5 | **Permitted action → autonomously executed action** | **Autonomy ladder: per-(family, trigger) level, approval tokens the service mints and a human or Eve releases, hold windows, breakers** | **An operation that is legitimate on request being taken unattended before it has earned the right** |
 
-Boundary 5 is the new one. Boundaries 1–4 answer "may this action happen at all". Boundary
+Boundary 5 is the one autonomy adds. Boundaries 1–4 answer "may this action happen at all". Boundary
 5 answers "may it happen *without a human watching*, right now, at this level of proven
 reliability". They are separate questions and the design keeps them separate: risk tier is
 a static property of an operation, autonomy level is a mutable property of how it is being
@@ -114,8 +114,8 @@ proposal, human approval, Eve approval plus hold, or straight execution → exec
 
 ## Why a dispatcher in front of the agent
 
-Edge AI v2 had no autonomous path at all, so it had no dispatcher. Adding one is not
-ceremony:
+A purely on-request agent has no autonomous path, so it needs no dispatcher. Adding one is
+not ceremony:
 
 - **The kill switch must work before the model runs.** A halt that is only checked by the
   action service still lets every scheduled run spend tokens and produce a plan. The
@@ -137,7 +137,7 @@ ceremony:
 
 ## Why the action service stays separate from the agent
 
-Unchanged from Edge AI v2, and more true under autonomy:
+These reasons hold for a purely on-request agent, and are more true under autonomy:
 
 - The refresh token would otherwise sit in the same process as the LLM loop, so any tool
   that can read the environment becomes an exfiltration path.
@@ -164,10 +164,10 @@ tenant, that is not a trade worth reconsidering.
 
 ## Corrections carried in from research (2026-09-07/08)
 
-These change things Edge AI v2 asserted. Sources are listed in
-[09-open-decisions.md](09-open-decisions.md).
+Each row pairs a common assumption with the verified fact, as of September 2026. Sources are
+listed in [09-open-decisions.md](09-open-decisions.md).
 
-| Item | Edge AI v2 said | Verified now |
+| Item | Common assumption | Verified fact (September 2026) |
 |---|---|---|
 | Region | europe-west1 "subject to Agent Engine availability" | **Confirmed available.** Agent Runtime, Sessions and Memory Bank are GA in europe-west1 with EU at-rest residency. Decision closed. |
 | Product name | "Vertex AI Agent Engine" | Now **Agent Runtime**, part of Gemini Enterprise Agent Platform. API resource is still `reasoningEngines`. |

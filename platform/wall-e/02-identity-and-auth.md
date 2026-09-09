@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 
 This is the core of the design. Read it before anything else.
 
@@ -48,7 +48,7 @@ consented. It goes into Secret Manager and mints short-lived access tokens there
 
 ```mermaid
 sequenceDiagram
-    participant G as the platform owner (once only)
+    participant G as Operator (once only)
     participant B as Clean browser profile
     participant O as Google OAuth
     participant S as Secret Manager
@@ -97,7 +97,7 @@ Verified against Google's OAuth documentation, and each one is an operational ru
 | Not used for six months | The action service refreshes at least monthly even when idle, and alerts on failure. |
 | Password change, when Gmail scopes are granted | Password rotation on the robot **invalidates the token**. Re-bootstrap is part of the rotation runbook, not a surprise. |
 | Admin sets a requested service to "Restricted" in API controls | Mark the client **Trusted** in Admin console → API controls, in the same sitting as the consent. |
-| GCP session-control length exceeded, for cloud-platform scopes | **Never request the `cloud-platform` scope** for the robot. It would bind the Workspace credential to the organisation's GCP session policy. |
+| GCP session-control length exceeded, for cloud-platform scopes | **Never request the `cloud-platform` scope** for the robot. It would bind the Workspace credential to your organisation's GCP session policy. |
 | User revocation | This is the kill switch, K5. |
 
 The action service must treat `invalid_grant` as a **paging incident**, not a retryable
@@ -218,8 +218,8 @@ Notes on this list:
   control that stops privilege escalation has nothing to read. An earlier draft omitted
   it while depending on it.
 - `userinfo.email` and `openid` are needed by the bootstrap script to verify that the
-  consenting account really is the robot. Edge AI v2's script omitted them and would have
-  failed on that check.
+  consenting account really is the robot. An earlier draft of the bootstrap script omitted
+  them and would have failed on that check.
 - The scopes above are **narrower than the first draft**, which asked for `gmail.modify`
   (full mailbox write), `calendar` (full) and `chat.spaces` (space management) while the
   catalogue needs none of them. Err wide on reads, narrow on writes — and these are writes.
@@ -232,8 +232,8 @@ Notes on this list:
   nothing; a write scope you did not need is standing risk.
 
 Gmail scopes are "restricted" in Google's classification. For an **Internal** app this
-needs no Google verification, but the organisation's own API controls may block it until the client
-is marked trusted.
+needs no Google verification, but your tenant's own API controls may block it until the
+client is marked trusted.
 
 ## How the end user's identity reaches the policy engine
 
@@ -275,7 +275,7 @@ Create these as **regional secrets** (`projects/*/locations/europe-west1/secrets
 the regional endpoint), not global secrets with user-managed replication. Regional secrets
 keep the data in the location at rest, in use and in transit; user-managed replication
 pins only the payload at rest while the secret itself stays a global resource. Automatic
-replication — what the Edge AI v2 script used — stores payloads worldwide and plainly
+replication — what an earlier draft's script used — stores payloads worldwide and plainly
 contradicts the residency requirement.
 
 **Pin the version number.** The service reads `.../versions/7`, never `.../versions/latest`.

@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 - Two independent reviews of the design as written, 2026-09-08: an **adversarial pass**
   (17 attacks) and a **consistency and fact pass** (contradictions between documents,
   guardrails with no mechanism, and every Google Cloud and Workspace claim checked against
@@ -119,8 +119,9 @@ logs went only to a Pub/Sub topic; it needs a second sink into BigQuery.
 ## What was not attacked
 
 This pass covered the design as written. It did not cover: the implementation, which does
-not exist; Eve and Mo, which are not designed; the organisation's tenant configuration, which is
-unknown; and the works-council and data-protection position, which is a legal question
+not exist; Eve and Mo, which are not designed; your tenant configuration, which is
+unknown; and the data-protection position, including that of employee representative
+bodies where your jurisdiction has them, which is a legal question
 and is [decision 8](09-open-decisions.md).
 
 **The single structural weakness that remains.** Every control — the credential, the

@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 
 This is the step-by-step enablement plan and the control that goes with it. Every number
 here is an opinionated default meant to be tuned in the decision record that opens each
@@ -44,7 +44,7 @@ often the right one.
 
 | Class | Trigger | Principal recorded | Trust | Note |
 |---|---|---|---|---|
-| **T0 chat** | Operator in Gemini Enterprise | the human's email | High — an authenticated operator asked | The only class Edge AI v2 had |
+| **T0 chat** | Operator in Gemini Enterprise | the human's email | High — an authenticated operator asked | The only class an interactive-only agent has |
 | **T1 scheduled** | Cloud Scheduler → dispatcher | `job:<playbook>`, `on_behalf_of` = owner | Medium — input is Wall-E's own reads | Business hours enforced |
 | **T2 event** | Workspace audit log → Cloud Logging sink → Pub/Sub → dispatcher | `event:<rule>` | Medium-low — the payload is Google's, but the *cause* may be an attacker's action | A T2 run may not emit an event that starts another T2 run |
 | **T3 inbox** | The robot's own mailbox | `inbox` | **Low — attacker-controlled text** | Read-only operation set. Writes derived from it are **proposals only, permanently.** |
@@ -77,7 +77,7 @@ Three permanent statements, said plainly:
 - **Free-text outbound is never autonomous.** Autonomous runs may use `notify.operators`,
   whose recipients come from config and whose body is a template. `gmail.send` with a
   model-chosen recipient stays on the chat trigger. This closes the residual injection
-  risk Edge AI v2 accepted.
+  risk that a design allowing model-chosen recipients would accept.
 
 ## 5. Operation families
 
@@ -106,7 +106,7 @@ and restore repeatedly without anyone noticing.
 
 | Actor | Raise | Lower | Clear an override | Change a ceiling |
 |---|---|---|---|---|
-| Ladder owner (the platform owner) | Yes, one notch, with a decision record and a config version. **A second named human is required for any L4 or L5 promotion.** | Yes | Yes, in a new config version referencing the incident | No — code review, two humans, security sign-off |
+| Ladder owner | Yes, one notch, with a decision record and a config version. **A second named human is required for any L4 or L5 promotion.** | Yes | Yes, in a new config version referencing the incident | No — code review, two humans, security sign-off |
 | Any operator | No | **Yes, instantly, alone.** Anyone may pull the andon cord. | No | No |
 | Eve | **Never.** Eve *attests* that criteria are met; it cannot act on its own attestation. | Yes, to any level, including halt | No | No |
 | Breaker in the action service | No | Yes, to L0 for the family, synchronously | No | No |
@@ -149,9 +149,9 @@ lags by two and stops at proposals.
 | **Levels** | F1 at L5 on chat and scheduled. Every write family at L1 on every trigger. |
 | **The reporting channel is not on the ladder** | `notify.operators`, sending a templated message to a config-fixed operator address, is how a run reports at all — including a shadow run. Putting it inside F2 and then setting F2 to L1 would have meant Stage 0 could not tell anyone what it had shadowed. It is therefore **outside the ladder and outside the write budget**, and its recipients are config, never model output. Stage 2's "first autonomous write" is F2 to a *space or list*, which is a different thing. |
 | **Scope** | Reads: whole tenant, rate-limited. Shadow write plans: pilot OU only. Daily write budget: 0 — and shadow items **evaluate** that cap without consuming it, or every shadow item would be denied for budget before its level could force a dry run, and Stage 0 would generate no evidence at all. |
-| **Operators** | the platform owner alone. |
+| **Operators** | The ladder owner alone. |
 | **Controls that must be live first** | Custom role, read-only privileges only, OU-scoped · robot account hardened, interactive-login alert firing · action service with catalogue, policy chain, durable budgets, write-ahead audit · ladder config v1 with everything at L1 · halt flags and the K0–K5 chain, drilled once with times recorded · dispatcher with per-job enable and budget · shadow grading sheet. |
-| **Exit criteria** | ≥ 20 shadow runs covering every write family, each item graded, **≥ 95 % graded correct** · **zero** hard-invariant denials from autonomous runs (`protected_principal`, `operation_not_allowed`, bad approval) · zero requests without an audit row, verified by reconciling Cloud Logging against BigQuery · injection regression suite passes · K0 measured under 60 s, K5 measured · DPO or works-council question formally asked · decision record for S1 signed. |
+| **Exit criteria** | ≥ 20 shadow runs covering every write family, each item graded, **≥ 95 % graded correct** · **zero** hard-invariant denials from autonomous runs (`protected_principal`, `operation_not_allowed`, bad approval) · zero requests without an audit row, verified by reconciling Cloud Logging against BigQuery · injection regression suite passes · K0 measured under 60 s, K5 measured · question formally put to the DPO and to employee representative bodies, where your jurisdiction has them · decision record for S1 signed. |
 
 ### S1 — Hands held
 
@@ -161,7 +161,7 @@ lags by two and stops at proposals.
 | **Value** | Leaver and joiner actions from chat with pre-state shown. Licence reclaim on suspended accounts, on request — the first measurable saving. |
 | **Levels** | F3, F4, F5, F7 at **L3 on chat**; the same families stay L1 on scheduled. |
 | **Scope** | Writes only inside the pilot OU allowlist. Max 10 objects per request. Business hours. Daily write budget 10. |
-| **Operators** | the platform owner plus one or two named DWP admins. |
+| **Operators** | The ladder owner plus one or two named Workspace admins. |
 | **Controls first** | Pre-state capture on every write · the inverse table implemented and **every inverse exercised on test accounts in a game day** · verification by re-read · group classification list published · role extended with update privileges only. |
 | **Exit criteria** | ≥ 50 executions across ≥ 3 families by ≥ 2 operators · **zero unintended changes**, defined as a change reverted within 7 days and attributed to Wall-E error rather than changed intent · zero executions against a protected principal (denials are fine, executions are not) · a rollback deliberately exercised end to end · for each family to be promoted, shadow precision ≥ 95 % over four consecutive weekly runs · decision record. |
 
@@ -262,7 +262,7 @@ wiki/decisions/YYYY-MM-DD-walle-promote-<family>-<trigger>-L<n>.md
 - Config version: 2026.09.0-1 → 2026.10.0-1
 - Evidence: <metric values, the query used, the window>
 - Drill: <date of last kill-switch drill>
-- Approvers: the platform owner; <second human, required for L4/L5>
+- Approvers: <ladder owner>; <second human, required for L4/L5>
 - Demote if: <the thresholds from §8 that apply to this cell>
 ```
 
@@ -277,7 +277,7 @@ until then it is a scheduled query pasted in weekly.
 
 ## 11. Assumptions in this document
 
-Everything here about the organisation was inferred, not told. Each one is a
+Everything here about your organisation is assumed, not verified. Each one is a
 [decision](09-open-decisions.md) and each changes numbers in the tables above.
 
 **User creation is not on this list and not in F8.** [02](02-identity-and-auth.md) puts
@@ -289,7 +289,7 @@ it is a design change, not a promotion.
 |---|---|---|
 | A sandbox OU with synthetic accounts can be created, plus one small real pilot OU | Every stage's scope limit, and S1 in particular — without a sandbox the first real writes land on real users | 5 |
 | Business hours are Europe/Paris, Mon–Fri, last write 16:00 | Every autonomous gate, hold windows, the weekend suspension block | 15 |
-| At least one more DWP admin joins `walle-operators@` by S1, and a second approver is named by S3 | S3 and every L4/L5 promotion. A one-person rota also makes approval latency the binding constraint | 11 |
+| At least one more Workspace admin joins `walle-operators@` by S1, and a second approver is named by S3 | S3 and every L4/L5 promotion. A one-person rota also makes approval latency the binding constraint | 11 |
 | Google Chat is available as the approval and digest surface | The proposal queue and hold-window veto | 14 |
 | The example playbooks reflect real toil | S0's shadow evidence is only useful if it shadows work you actually want done | 12 |
 | The Workspace edition supports sharing the audit events the event trigger needs | S2's event trigger class | verify in console |

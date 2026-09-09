@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 - Maturity: **design. Nothing is built and nothing is enabled.**
 - Standalone: this document is self-contained. You do not need to read anything else first.
 
@@ -20,7 +20,7 @@ To build it, follow [SETUP.md](SETUP.md).
 Mo. It assumes no prior reading of the design set. Every product fact below was verified
 on 2026-09-07 or 2026-09-08.
 
-Anything about the organisation's own tenant that has not been confirmed is prefixed `Assumption:` or
+Anything about your own tenant that has not been confirmed is prefixed `Assumption:` or
 left as `tbd`. No credential value appears here. Where a credential exists, only its
 location is recorded.
 
@@ -40,15 +40,15 @@ This document describes an end state reached over roughly nine months of stages.
 | **Read scope** | The whole tenant, rate-limited at 120 reads per minute. This is not a pilot-sized read, and that matters for section 11 |
 | **Employee attributes the reads touch** | Name, primary address and aliases, organisational unit, manager and relations, group memberships, admin-role holding, licence assignment by SKU, last sign-in time, and admin, login, group, token and SAML audit events |
 | **Duration** | Floor of 3 to 4 weeks. Time alone promotes nothing. The exit criteria do |
-| **Operator rota** | `Assumption:` the platform owner alone at S0. A second named Digital Workplace admin is required before S1, and a second approver from IT security before any high-risk promotion |
+| **Operator rota** | `Assumption:` the ladder owner alone at S0. A second named Workspace admin is required before S1, and a second approver from IT security before any high-risk promotion |
 | **Autonomy ceiling for the pilot** | L3, and only from S1 onward. At S0 nothing executes |
 | **Explicitly not in scope** | Autonomous writes of any kind. Eve. Mo. The event trigger class. The inbox trigger class. Any write outside the pilot organisational unit allowlist. Any operation not in the catalogue |
 
 **What must be live before the pilot starts.** The custom read-only role and its two role assignments. The robot account hardened as listed in section 3. The action service with its catalogue, policy chain, durable counters and write-ahead audit. Ladder config v1 with every write family at L1. The halt flags and the K0 to K5 chain in section 4.6, drilled once with times recorded. The dispatcher with per-job enable and budget. The approval surface specified in section 3, because it must exist before the first real write rather than before the first execution. The data-protection question in section 11 formally asked.
 
-**Exit criteria that would open S1.** At least 20 shadow runs covering every write family, every item graded by an operator, at least 95 per cent graded correct. Zero hard-invariant denials arising from autonomous runs. Zero requests without an audit row, proved by reconciling Cloud Logging against BigQuery. The injection regression suite passes. K0 measured under 60 seconds and K5 measured at all. The data-protection and works-council position answered. A signed decision record for S1.
+**Exit criteria that would open S1.** At least 20 shadow runs covering every write family, every item graded by an operator, at least 95 per cent graded correct. Zero hard-invariant denials arising from autonomous runs. Zero requests without an audit row, proved by reconciling Cloud Logging against BigQuery. The injection regression suite passes. K0 measured under 60 seconds and K5 measured at all. The data-protection position answered, and the position of employee representative bodies where your jurisdiction has them. A signed decision record for S1.
 
-**Abort criteria.** Any of these stops the pilot rather than demoting one family. Any execution against Workspace during S0, because nothing at L1 may execute. Any severity-1 event: an effect on a protected principal, an operation executed that was not in the frozen plan, a forged or agent-posted approval, or any interactive login to the robot account. Audit completeness below 100 per cent that cannot be reconciled. An `invalid_grant` from Google not explained within one working day. K0 missing its 60-second target in a drill. A data-protection or works-council objection to the reads. Aborting means pulling K2 and K4 in section 4.6, not changing a level.
+**Abort criteria.** Any of these stops the pilot rather than demoting one family. Any execution against Workspace during S0, because nothing at L1 may execute. Any severity-1 event: an effect on a protected principal, an operation executed that was not in the frozen plan, a forged or agent-posted approval, or any interactive login to the robot account. Audit completeness below 100 per cent that cannot be reconciled. An `invalid_grant` from Google not explained within one working day. K0 missing its 60-second target in a drill. A data-protection objection to the reads, or an objection from employee representative bodies where your jurisdiction has them. Aborting means pulling K2 and K4 in section 4.6, not changing a level.
 
 ---
 
@@ -180,7 +180,7 @@ The actor exclusion still leaves a second hop: Wall-E moves a user, Google's own
 
 | Service | What it is | Why it exists | What breaks if merged into its neighbour | Runs as |
 |---|---|---|---|---|
-| **Gemini Enterprise app** | The human front door. A registered custom agent, shared on its User permissions tab with the operators group only. | Gives every human request an authenticated Workspace identity and a conversation surface the organisation already runs. | Exposing the agent directly loses per-agent sharing and the end-user identity, so trust boundary 1 disappears and any staff member with project access reaches Wall-E. | End user via Workspace SSO. The call to the agent arrives as the Discovery Engine service agent. |
+| **Gemini Enterprise app** | The human front door. A registered custom agent, shared on its User permissions tab with the operators group only. | Gives every human request an authenticated Workspace identity and a conversation surface your organisation already runs. | Exposing the agent directly loses per-agent sharing and the end-user identity, so trust boundary 1 disappears and any staff member with project access reaches Wall-E. | End user via Workspace SSO. The call to the agent arrives as the Discovery Engine service agent. |
 | **Approval surface** | An approval page behind Identity-Aware Proxy, bound to the plan hash. A Google Chat app with app authentication is the alternative, and it is a second identity with its own IAM and its own compromise story. | Human consent must arrive on a surface that authenticates the human itself **and passes a per-human assertion the action service verifies for itself**. Note that the robot's own user token can send **text only**, so one-click cards and buttons require a Chat app with app authentication. | Merging it into the agent means the model asserts that a human approved. That is exactly what a prompt injection produces, and it was the single worst defect found in review. | An IAP-authenticated human, whose assertion travels with the call. Never the agent's service account. |
 | **Cloud Scheduler** | One HTTP job per playbook, all created paused, enabled per ladder stage. | The T1 scheduled trigger class. | Scheduler *can* call a Google API target directly with an OAuth token, so this is not about capability. Its attempt deadline defaults to three minutes while an agent turn takes longer, so a direct synchronous call is recorded as failed and retried, and the same run happens twice. | OIDC token as the dispatcher service account. |
 | **Workspace audit log sinks, two of them** | Two organisation-level Cloud Logging sinks on the same admin-activity filter. The Pub/Sub sink **excludes** the robot's principal, or every write Wall-E makes starts another run. The BigQuery sink does **not** exclude it, because reconciling audit completeness needs Google's own record of what the robot itself did. | Sink one is the T2 event trigger class, with no credential at all, replacing the Alert Center API which requires domain-wide delegation. Sink two is the evidence copy Eve reconciles against. | Without the actor exclusion on sink one the system feeds itself. With the actor exclusion applied to sink two, the audit-completeness metric and Eve's independent record contain nothing about the robot, and the control is decoration. | Sink writer identities, one with publish rights on the topic and one with write rights on the dataset. Creating both needs organisation-level log configuration rights. |
@@ -294,7 +294,7 @@ Exactly one interactive sign-in is unavoidable. There is no way to obtain user c
 ```mermaid
 sequenceDiagram
     autonumber
-    participant G as the platform owner, once only
+    participant G as Operator, once only
     participant B as Clean browser profile
     participant O as Google OAuth
     participant S as Secret Manager, regional
@@ -344,7 +344,7 @@ The complete frozen list, one row per scope, with the catalogue operation that n
 
 Two live questions must be closed before consent, not after. First, whether `admin.directory.user.security` is included: it enables sign-out and token revocation for leaver hygiene, and it also enables session-hijack cleanup, so it is currently **excluded** and must be decided explicitly rather than inherited. Second, confirmation that `drive` is **not** requested: without domain-wide delegation the robot sees only its own Drive, so the scope buys nothing and widens the blast radius of a leak.
 
-`cloud-platform` is never requested, because it would bind the Workspace credential to the organisation's GCP session-control policy. The Gmail scopes are "restricted" in Google's classification; for an **Internal** app that needs no Google verification, but the organisation's own API controls block them until the client is marked trusted.
+`cloud-platform` is never requested, because it would bind the Workspace credential to your organisation's GCP session-control policy. The Gmail scopes are "restricted" in Google's classification; for an **Internal** app that needs no Google verification, but your tenant's own API controls block them until the client is marked trusted.
 
 ### 4.4 What makes the credential stop working
 
@@ -738,22 +738,22 @@ After any automatic demotion: a minimum five business days at the lower level, a
 | Component | Location | Residency | Retention |
 |---|---|---|---|
 | GCP project | Dedicated, never shared with another workload. Id `tbd`, `walle-` prefix proposed | — | — |
-| Agent Runtime `wall-e` | `europe-west1` | **EU at rest.** GA in this region, with Sessions and Memory Bank. Memory Bank is switched off by choice | Sessions `tbd`, pending the organisation policy. Memory Bank holds nothing, by choice |
+| Agent Runtime `wall-e` | `europe-west1` | **EU at rest.** GA in this region, with Sessions and Memory Bank. Memory Bank is switched off by choice | Sessions `tbd`, pending your retention policy. Memory Bank holds nothing, by choice |
 | Agent Runtime traces | `europe-west1`, tracing on | EU | `Assumption:` the platform default of 30 days. Traces carry prompt and tool-call content, so this figure is a data-protection input, not an operations detail. Confirm at build |
 | Cloud Run `walle-actions`, `walle-dispatcher` | `europe-west1` | EU | — |
-| **Cloud Logging, project logs** | `europe-west1` log bucket, regionalised explicitly at build | EU | `Assumption:` 30 days, pending the organisation policy. **This is where the full upstream error detail goes**, the detail the service deliberately never returns to the model. Google's error bodies echo the request, so these logs carry employee names, addresses and submitted field values. Treat this bucket as personal data, not as diagnostics |
+| **Cloud Logging, project logs** | `europe-west1` log bucket, regionalised explicitly at build | EU | `Assumption:` 30 days, pending your retention policy. **This is where the full upstream error detail goes**, the detail the service deliberately never returns to the model. Google's error bodies echo the request, so these logs carry employee names, addresses and submitted field values. Treat this bucket as personal data, not as diagnostics |
 | **Workspace audit sink, organisation level** | Cloud Logging at organisation level. **Region not selectable** | **Exception, see below** | Governed by the organisation's log retention, outside this project's control. `tbd` |
 | Firestore, native mode | `europe-west1` | EU | Plans, approvals and grades kept for the audit window. Counters and dedup expire on their own windows |
 | Secret Manager | **Regional secrets** at `projects/*/locations/europe-west1/secrets/*`, via the regional endpoint | EU at rest, in use and in transit. Global secrets with user-managed replication pin only the payload at rest, and automatic replication stores payloads worldwide | Versions kept until rotation, then disabled and destroyed on the rotation runbook |
 | Cloud KMS key ring | Must be created in `europe-west1` | EU | — |
-| BigQuery `walle_audit` | Dataset location `EU` | EU | **400 days**, set as a table expiry on every table, pending the organisation policy |
+| BigQuery `walle_audit` | Dataset location `EU` | EU | **400 days**, set as a table expiry on every table, pending your retention policy |
 | Pub/Sub topics | EU. Confirm the message storage policy at build | EU, subject to that build check | 7-day message retention, dead-letter topics included |
 | Cloud Scheduler, Cloud Tasks, Artifact Registry | `europe-west1` | EU | — |
 | Gemini Enterprise app | `Assumption:` `tbd`. An `eu` app can front a `europe-west1` agent, a `global` app can front any region. Confirm in console | tbd | **`tbd`, and it must be resolved before the pilot.** This is the front door, so it holds every operator conversation about named employees. An unresolved region and an unresolved retention on the conversation store is not a story that survives a data-protection review |
 | Model | Pinned by id, recorded in `config_versions`. **Not every current model has EU residency**, so check the per-model table before pinning | must be EU | No training on the data, no prompt retention beyond abuse monitoring. Confirm per model at build |
-| Workspace tenant data regions | Out of scope of this document. `Assumption:` governed by the organisation's existing policy | tbd | the organisation policy |
+| Workspace tenant data regions | Out of scope of this document. `Assumption:` governed by your organisation's existing policy | tbd | Your organisation's policy |
 
-Every figure marked `Assumption:` or `tbd` above is pending the organisation policy and must carry a number before the data-protection assessment closes.
+Every figure marked `Assumption:` or `tbd` above is pending your organisation's policy and must carry a number before the data-protection assessment closes.
 
 ### The two known residency exceptions
 
@@ -817,9 +817,9 @@ Stated plainly, because a design that quietly corrects itself teaches nothing. T
 
 **9. Several triggers fail silently by nature.** A Gmail watch expires after seven days without notice, so a daily renewal job is mandatory and a missed renewal must alert. A dead scheduled trigger looks exactly like a quiet week. Both are covered by a "missing two consecutive windows" alert, which is a detection rather than a prevention.
 
-**10. A one-person operator rota is the binding constraint on the whole plan.** `Assumption:` today that is the platform owner alone. Approval latency then gates every stage exit, high-risk promotions cannot get their second named approver, and every kill switch has exactly one pair of hands. This is an organisational weakness, not a technical one, and it is the one most likely to actually stop the programme.
+**10. A one-person operator rota is the binding constraint on the whole plan.** `Assumption:` today that is the ladder owner alone. Approval latency then gates every stage exit, high-risk promotions cannot get their second named approver, and every kill switch has exactly one pair of hands. This is an organisational weakness, not a technical one, and it is the one most likely to actually stop the programme.
 
-**11. The data-protection question starts now, not at Stage 3.** The read-only stage already processes personal data on every employee, including last sign-in, licence, group membership and admin activity, aggregated per organisational unit. That is a processing activity in its own right and needs its own assessment before the first report is produced, not before Stage 3. Autonomous action is then a second, different processing activity, assessed again before writes stop having a human in the path. Both questions are asked in week one because they have the longest lead time in the plan. `Assumption:` a works council with a say here, which in a French industrial context means the systematic-monitoring question is engaged by the reads alone. The organisation-level log sinks are a second external dependency: they need organisation-level log configuration rights, which is a separate approval from anything in the project.
+**11. The data-protection question starts now, not at Stage 3.** The read-only stage already processes personal data on every employee, including last sign-in, licence, group membership and admin activity, aggregated per organisational unit. That is a processing activity in its own right and needs its own assessment before the first report is produced, not before Stage 3. Autonomous action is then a second, different processing activity, assessed again before writes stop having a human in the path. Both questions are asked in week one because they have the longest lead time in the plan. `Assumption:` employee representative bodies with a say here, where your jurisdiction has them. In jurisdictions with strong rules on monitoring employees, the European Union for example, the systematic-monitoring question is engaged by the reads alone. The organisation-level log sinks are a second external dependency: they need organisation-level log configuration rights, which is a separate approval from anything in the project.
 
 **12. One deploy grant defeats every control in this document.** Anyone holding `run.developer` on `walle-actions` plus `iam.serviceAccountUser` on `walle-actions@` can ship a revision that keeps the service account, reads the pinned secret version and does anything at all with it. That bypasses the policy engine, the catalogue, the ladder, the in-app allowlist, the approval endpoints and the insert-only audit rights in one act, and weakness 1 understates the problem by describing the process without describing who can rewrite it. Section 4.2 states the mitigation: CI-only deploys from an identity no operator holds, a second reviewer on the ceiling module, the policy chain and the catalogue, no human holding `run.developer` in steady state, and a time-boxed, alerted break-glass grant. The residual is real. A compromised CI pipeline is a compromised action service, and the only evidence of it is the Workspace audit log, which Google writes rather than we do.
 

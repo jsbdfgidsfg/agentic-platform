@@ -2,16 +2,16 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 
-Written so that someone other than you could build it. Where this contradicts the Edge AI
-v2 scaffold, this document wins and the reason is stated.
+Written so that someone other than you could build it. Where this contradicts an earlier
+draft, this document wins and the reason is stated.
 
 ## GCP resource inventory
 
 | Resource | Name | Notes |
 |---|---|---|
-| Project | `org-walle` (tbd) | Dedicated. Never shared with another workload. |
+| Project | `<project-id>` (tbd) | Dedicated. Never shared with another workload. |
 | Region | `europe-west1` | **Verified**: Agent Runtime, Sessions and Memory Bank are GA there with EU at-rest residency. |
 | Service account | `walle-actions@` | Runs the action service. Only reader of the credential secrets. |
 | Service account | `walle-agent@` | Runs the agent. Reads no secret. |
@@ -28,7 +28,8 @@ v2 scaffold, this document wins and the reason is stated.
 | Log sink | Workspace audit logs → `walle-triggers` | Needs "Share data with Google Cloud services" enabled once by a super admin |
 | Artifact Registry | `walle` | Container images |
 
-**Ingress note.** Edge AI v2 specified internal-only ingress. Agent Runtime egresses from
+**Ingress note.** A common assumption is that the action service should use internal-only
+ingress. The verified fact, as of September 2026, is that Agent Runtime egresses from
 a Google-managed tenant project, and Cloud Run counts that as **external**, so
 internal-only ingress blocks the agent. Making it work needs one of: a shared VPC Service
 Controls perimeter covering both, an internal Application Load Balancer in front of Cloud
@@ -135,9 +136,9 @@ Refused: `{ "status": "denied", "reason": "level_off", "detail": "...", "audit_i
 
 ### Why an approval id, and why the agent can never carry it
 
-Edge AI v2 returned an HMAC token **to the agent**, which then decided whether the human
-had said yes. The control was therefore "the model asserts a human approved", which is
-exactly what an injection produces. An earlier draft of this document fixed half of it —
+A common first design returns an HMAC token **to the agent**, which then decides whether
+the human has said yes. The control is therefore "the model asserts a human approved", which
+is exactly what an injection produces. An earlier draft of this document fixed half of it —
 the service mints the approval — and left the other half broken, because the agent still
 posted the approval and named the approver. The service could verify that the named person
 was an operator. It had no way to verify that they had said anything.
@@ -396,7 +397,7 @@ Refuse any write whose target is a super admin, a delegated admin, the robot its
 robot's OU, a member of `walle-protected@`, or a **group** that grants an admin role or
 controls Wall-E, Eve or Mo.
 
-Fixes to the Edge AI v2 implementation, all of which matter:
+Defects seen in a first implementation of this check, all of which matter:
 
 - It ran on **reads** too, so "who is the super admin?" was denied. Apply to writes only.
 - It matched `isAdmin=true`, missing **delegated admins**. Include `isDelegatedAdmin`.
@@ -441,8 +442,8 @@ scope list that freezes at consent — [02](02-identity-and-auth.md).
 
 ### Durable counters, not in-memory
 
-Edge AI v2 kept rate limits and idempotency in a Python dict, while the Dockerfile ran two
-uvicorn workers and Cloud Run scales instances. The documented "5 WRITE_HIGH per minute"
+A first implementation kept rate limits and idempotency in a Python dict, while its
+Dockerfile ran two uvicorn workers and Cloud Run scales instances. The documented "5 WRITE_HIGH per minute"
 was therefore 10 × instance count, and budgets meant nothing. For an autonomous doer,
 every budget is a **transactional Firestore counter**, so the cap is global and honest.
 Idempotency also moves to Firestore, applies to **writes only** (a cached read for ten
@@ -462,14 +463,14 @@ minutes would break post-execution verification), and keys on the caller's expli
 | `verifications` | Post-execution comparison | `verified` / `drift` / `unverifiable` |
 | `config_versions` | Every ladder change | version, sha, decision file, deployer, origin `human`/`eve`/`breaker` |
 
-Retention: 400 days by default, subject to the organisation policy — [decision 17](09-open-decisions.md).
+Retention: 400 days by default, subject to your retention policy — [decision 17](09-open-decisions.md).
 
 Three rules about the audit trail:
 
-- **Write-ahead and fail-closed for writes.** Edge AI v2 logged insert failures and
-  carried on, so "audited before the response returns" was best-effort. If the audit sink
+- **Write-ahead and fail-closed for writes.** A first implementation logged insert failures
+  and carried on, so "audited before the response returns" was best-effort. If the audit sink
   is down, writes are refused. No evidence, no action.
-- **Never store payloads.** `result_summary` in the old scaffold was `str(result)[:500]`,
+- **Never store payloads.** `result_summary` in a first implementation was `str(result)[:500]`,
   which put email body excerpts into BigQuery. Store ids and counts. Redact query strings
   and the `fields` map of a user update.
 - The action service's service account gets **insert-only** rights on the dataset. It must
@@ -548,9 +549,9 @@ as though it were something else.
 - ADK 2.8.x on Agent Runtime, `google-adk~=2.8` with the `a2a`, `gcp` and `agent-identity`
   extras. Deployed with `vertexai.Client(...).agent_engines.create(...)`, service account
   `walle-agent@`, `min_instances=0`, tracing on.
-- **Tools are generated from `/v1/operations`**, not hand-written. Edge AI v2's agent
-  exposed 12 of 16 catalogue operations and never sent `dry_run`, so a flow the design
-  depended on could not happen. Generation makes drift impossible.
+- **Tools are generated from `/v1/operations`**, not hand-written. A hand-written tool set in a
+  first implementation exposed 12 of 16 catalogue operations and never sent `dry_run`, so a
+  flow the design depended on could not happen. Generation makes drift impossible.
 - Two entry modes in one deployment: interactive (`user_id` = the human's email) and job
   (`user_id` = `job:<playbook>`, message = a structured envelope carrying `run_id`,
   playbook version and budget).

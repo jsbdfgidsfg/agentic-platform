@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-08
+- Last reviewed: 2026-09-09
 
 Eve and Mo are designed separately, after this. This document exists so those two designs
 have a fixed contract to attach to, and so Wall-E is built with the right seams from the
