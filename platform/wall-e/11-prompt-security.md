@@ -39,7 +39,7 @@ five boundaries stay where [ARCHITECTURE.md](ARCHITECTURE.md) section 6 puts the
 | [07-build-runbook.md](07-build-runbook.md), Phase 6 | "Model Armor configured **in the agent code**" | Superseded by 03 and SETUP, which place it on the platform | **Applied 2026-09-11.** 07 now points at the ingress gateway plus floor settings. SETUP Phase 12c carries the commands |
 | [ARCHITECTURE.md](ARCHITECTURE.md) section 6, Model Armor row | Already carries the split: gateway fail-closed, floor fail-open | Nothing wrong. Recorded here so a reader knows which document is current | None |
 | [06-security-guardrails.md](06-security-guardrails.md), Monitoring table | Twelve signals, none from Model Armor, traces or the taint bit | The injection surface has no alert | Section 6 adds seven rows, each with a query or a log filter |
-| [03-lld.md](03-lld.md), audit schema and event list | `actions` has no trace id and no content-screen fields; `walle-events` has no content event | A Model Armor finding cannot be walked to the tool result that caused it | `runs` gains `trace_id`. `actions` gains `content_flags` and `screen_state`. Plan items carry `content_flags` to the approval surface. `walle-events` gains `content.flagged`. Sections 3 and 6 |
+| [03-lld.md](03-lld.md), audit schema and event list | `actions` has no trace id and no content-screen fields; `walle-events` has no content event | A Model Armor finding cannot be walked to the tool result that caused it | `runs` gains `trace_id`. `actions` gains `content_flags` and `screen_state`. Plan items carry `content_flags` to the approval surface. `walle-events` gains `content.flagged`, **applied 2026-09-11** in 03, 08 and ARCHITECTURE. Sections 3 and 6 |
 | [03-lld.md](03-lld.md), denial reasons | Closed vocabulary | Unchanged. This chapter adds **no** denial reason, deliberately. A content screen produces evidence and a taint, never a refusal. Section 3 says why | None |
 | [09-open-decisions.md](09-open-decisions.md), decision 19 | "Adopt Agent Identity now? Yes, unless the build finds it cannot satisfy the Cloud Run hop" | The decision has a deadline the document does not state | `identity_type` is immutable and is a hard prerequisite for Semantic Governance Policies. It must be decided before the first production engine is created. Section 7 |
 
@@ -64,7 +64,7 @@ rows and never replace one.
 | Upstream error text from Google | Anyone who set the field the failed request echoed | It does not. The action service returns `{error_class, audit_id}` from a closed enum. The full body goes to Cloud Logging | Attack A15. The closed enum is the whole defence and it is deterministic |
 | Other agents' replies | Eve or Mo, if either ever talks to Wall-E over A2A | `RemoteA2aAgent` replies and relayed sub-agent events | ADK 2.8.0 fences them with `quote_untrusted`. Not used in the pilot. Eve's control calls are plain REST, see [08-team-eve-mo.md](08-team-eve-mo.md) |
 | The operator's own prompt | A named operator in Gemini Enterprise, or a person who has taken over that operator's session, or an operator pasting a hostile document | The T0 message | Trusted by attribution, not by content. The T0 ceiling for `WRITE_HIGH` is L3 whatever the prompt says, and the approval surface shows the canonicalised plan and pre-state. This is the one channel the ingress gateway screens |
-| The session history | Every string above, from an earlier turn in the same managed session | Replayed by ADK on each turn | Taint is a property of the run, not the turn, so it persists. Memory Bank is off, so nothing crosses sessions |
+| The session history | Every string above, from an earlier turn in the same managed session | Replayed by ADK on each turn | For a chat request the **run is the managed session**: one `run_id` per session id, minted by the action service on first contact and stored in Firestore `runs` keyed on the session, so `tainted` is looked up by session on every request regardless of what the agent sends. A hostile display name read in turn one still caps turn two. This is stated in [03](03-lld.md) as of 2026-09-11; the two-turn case in the regression suite is the check. Memory Bank is off, so nothing crosses sessions |
 | Tool descriptions | The catalogue endpoint, which CI controls | Generated from `/v1/operations` | Trusted. A change is a reviewed deploy of the action service |
 
 **What the design already does, in one paragraph.** Every attacker-writable field is
@@ -139,7 +139,7 @@ That gap is the subject of section 3.
 | Layer | Traffic screened | Traffic NOT screened | Failure mode | Launch stage | Grade for Wall-E |
 |---|---|---|---|---|---|
 | **`walle-actions` itself**: canonicalisation, closed error enum, taint, field projection, fencing | Every attacker-writable string, before it reaches a model or a card | Nothing. It sees every tool result because it produces them | Fail-closed by our own code. A canonicalisation error denies the read with `backend` | Our code | **This is the enforcement.** Everything below is added on top |
-| **Model Armor on Agent Gateway, Client-to-Agent (ingress)** | `reasoningEngines.streamQuery` requests and responses, for ADK agents on Agent Runtime only. So: the operator's prompt, the dispatcher's job envelope, the final visible answer | `query`, `asyncQuery`, every other ReasoningEngine payload, ReasoningEngine error responses, non-ADK payloads. Nothing between the agent and Gemini. Nothing between the agent and its tools | **Fail-closed.** Authorization extension `failOpen` defaults `false`, Google's sample sets `false` with a 1 s timeout. A Model Armor error or timeout stops the request | GA, 2026-06-24. Agent Gateway itself GA 2026-06-18 | **Enforcement-grade on the streamQuery channel**, provided `failOpen` stays `false` and every caller uses `streamQuery`. Whether Gemini Enterprise uses `streamQuery` is **unverified**, so for the human front door the grade is unknown until measured |
+| **Model Armor on Agent Gateway, Client-to-Agent (ingress)** | `reasoningEngines.streamQuery` requests and responses, for ADK agents on Agent Runtime only. So: the operator's prompt, the dispatcher's job envelope, the final visible answer | `query`, `asyncQuery`, every other ReasoningEngine payload, ReasoningEngine error responses, non-ADK payloads. Nothing between the agent and Gemini. Nothing between the agent and its tools | **Fail-closed.** Authorization extension `failOpen` defaults `false`, Google's sample sets `false` with a 1 s timeout. A Model Armor error or timeout stops the request | GA, 2026-06-24. Agent Gateway itself GA 2026-06-18 | **Enforcement-grade on the streamQuery channel**, provided `failOpen` stays `false` and every caller uses `streamQuery`. It adds no caller gate: IAP is not supported during ingress. Whether Gemini Enterprise uses `streamQuery` is **unverified**, so for the human front door the grade is unknown until measured |
 | **Model Armor on Agent Gateway, Agent-to-Anywhere (egress)** | MCP `tools/call` and `prompts/get` requests and responses, plus MCP tool execution errors. A2A v1 `SendMessage`, `AgentCard`, `GetExtendedAgentCard` over JSON-RPC and HTTP+JSON. OpenAI-format LLM calls, non-streaming | Plain HTTPS and REST, which is what Wall-E's tools are. MCP `tools/list`, `resources/*`, `notifications/*`, Streamable HTTP and SSE, MCP protocol errors. A2A `SendStreamingMessage`, tasks, gRPC, errors. Gemini `generateContent`, which is not OpenAI format. File uploads. "Payloads that aren't listed here are allowed without sanitization" | Fail-closed, same extension mechanism | GA, 2026-06-24 | **Screens nothing for Wall-E as designed.** The hostname allowlist the egress gateway brings is real and is [13](13-agent-interconnection.md)'s subject. Its Model Armor becomes enforcement-grade on tool results only if `walle-actions` presents MCP `tools/call` |
 | **Floor settings, project-level inline enforcement** on `VERTEX_AI` | `generateContent` calls to the project's Gemini endpoints, prompt and response. `europe-west1` is a listed location. Applies even when `modelArmorConfig` is omitted. ADK's default `streaming_mode` is `NONE`, so Wall-E's model calls are `generateContent` and fall under it | `streamGenerateContent` is not mentioned on the page: **unverified**. Whether the whole `contents` array is inspected, including history, function responses and the system instruction, or only the latest user text: **unverified** | **Fail-open.** When Model Armor is unavailable in the region, unreachable, or errors, the platform "skips the Model Armor sanitization step and continues processing". Google's page says this "can occasionally expose unscreened prompts or responses" | GA. Google MCP server inline enforcement is Preview | **Detection-grade in every mode**, including `INSPECT_AND_BLOCK`. It is the only platform screen positioned to see a tool result at all, if it inspects function responses, which is the open question in section 3 |
 | **Floor settings, conformance floor** at organisation or folder | No traffic. It rejects the creation or update of any template less restrictive than the floor | Not applicable | Not applicable. It is a create-time check | GA | **Enforcement-grade for one governance property**: nobody, including a deployer, can weaken Wall-E's templates below the floor. See section 4 for the interaction with the confidence-level decision |
@@ -455,17 +455,20 @@ gcloud network-security authz-policies import walle-ma-content-authz-policy \
   --source=walle-ma-policy.yaml --location=europe-west1 --project=PROJECT_ID
 ```
 
-Google recommends pairing this with a `REQUEST_AUTHZ` policy delegating to IAP, started in
-`iamEnforcementMode: DRY_RUN`, which also gates who may call the engine. The Unified Access
-Policy admitting `walle-dispatcher@`, the Discovery Engine service agent and
-`eve-controller@` is [12](12-agent-identity.md)'s subject and its exact syntax for
-service-account callers is **unverified** in this research.
+The set-up page recommends pairing a `CONTENT_AUTHZ` Model Armor policy with a
+`REQUEST_AUTHZ` policy delegating to IAP. The gateway overview says IAP is not supported
+during ingress, so whether that pairing is available on the Client-to-Agent gateway is
+**unverified**. Do not count it as a gate on who may call the engine. Caller gating stays
+`aiplatform.reasoningEngines.query` bound to three principals, [12](12-agent-identity.md).
 
 **Step 8. Bind the engine to the gateway.** GA. `identity_type` and, on the Semantic
 Governance page, `agent_gateway_config` are set at creation. The runtime deployment page
 also shows a `PATCH` of `agentGatewayConfig` on an existing engine; the two pages do not
 agree on whether the gateway binding is patchable, so treat both as create-time until a
-build test says otherwise. `identity_type` is immutable on every page.
+build test says otherwise. `identity_type` is documented as immutable on the gateway
+runtime-deploy page and the Semantic Governance page; the ReasoningEngine REST reference does
+not mark it so, and ADK 2.8.0's `adk deploy` sets it on an `update` after a bare `create`.
+Treat it as fixed at creation until the spike in [12](12-agent-identity.md) shows otherwise.
 
 ```python
 client.agent_engines.create(
@@ -670,10 +673,17 @@ the log row and the audit row share a key without any join. Cloud Audit Logs rec
 template and floor administration and sanitize metadata, never payloads; the principal on
 integrated calls is the service agent.
 
-Reconcile these rows against `walle_audit` as part of the audit-completeness check: every
-`MATCH_FOUND` with `client_name=AGENT_GATEWAY` should have a run whose `trace_id` matches,
-and every `content_flags` on an audit row should have a sanitize row with the matching
-correlation id. A gap in either direction is a finding.
+Reconcile these rows against `walle_audit` as part of the audit-completeness check, with
+the scope stated precisely. For dispatcher-invoked runs, T1 to T3, every `MATCH_FOUND` with
+`client_name=AGENT_GATEWAY` whose trace was issued by the dispatcher should have a run whose
+`trace_id` matches, and every `content_flags` on an audit row should have a sanitize row
+with the matching correlation id; a gap in either direction is a finding. For T0 the caller
+is Gemini Enterprise and no `traceparent` is ours, so T0 hits are reconciled to the sanitize
+log alone and alerted from the log filter alone. A gateway **block**, on any trigger, ends
+the flow before the agent runs and produces no run row by design, so "`MATCH_FOUND` without
+a run" is the expected shape for a block and is not a finding. `content.flagged` with
+`source: gateway` therefore exists only for dispatcher-invoked runs; Eve sees T0 gateway hits
+through the log-based alert, not through `walle-events`.
 
 ### What to alert on
 
@@ -855,7 +865,7 @@ section 2, the change is stated.
 | Whether floor settings inspect the whole `contents` array, including function responses, or only the latest user text | Decides whether any platform screen sees a tool result while `walle-actions` is not an MCP server | Step 10, last block: plant a hostile display name in the sandbox and look for it in a `VERTEX_AI` sanitize entry |
 | Whether `streamGenerateContent` is covered by the floor | Matters only if a caller sets `StreamingMode.SSE`. CI forbids it | CI rule, plus the same test with SSE forced once |
 | Whether the Service Extensions service agent is needed for an ingress `CONTENT_AUTHZ` extension, in addition to the Reasoning Engine service agent | IAM hygiene: an unneeded grant on a service agent | Step 5 grants both, step 9 tests, then remove one |
-| The exact Unified Access Policy syntax for admitting service-account callers on the ingress `REQUEST_AUTHZ` policy | Needed before the IAP policy leaves `DRY_RUN` | [12](12-agent-identity.md) |
+| Whether a `REQUEST_AUTHZ` policy delegating to IAP can exist on a Client-to-Agent gateway at all, given "IAP isn't supported during ingress" | Decides whether the ingress gateway can ever be a second caller gate. Until then it is a Model Armor placement only | A build test on a throwaway gateway; caller gating stays on the engine's IAM |
 | Whether `agent_gateway_config` is patchable on an existing engine | Two Google pages disagree. If it is not, a gateway can be added only by recreating the engine, which changes its identity | Treat as create-time. Test the `PATCH` on a throwaway engine |
 | Whether an Agent Identity principal can present an ID token to `walle-actions` | Gates decision 19 and, through it, Semantic Governance | The spike in [12](12-agent-identity.md), before the production engine is created |
 | The launch stage of the direct streaming sanitize API | The release notes say GA on 2026-07-10; the API page still says Preview. Wall-E uses the gateway's streaming, not the direct API | Not used. Recorded so nobody cites the direct API as GA |

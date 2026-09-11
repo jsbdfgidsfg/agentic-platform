@@ -43,8 +43,9 @@ agent, the dispatcher and Eve gives all three the right to call *every* endpoint
 including `/v1/control/demote`. The claim that the agent "has no IAM on the control
 endpoints" was therefore false as built. Two mechanisms, both required:
 
-1. **A per-endpoint caller allowlist inside the service**, keyed on the verified `email`
-   claim of the caller's ID token. Execute and plan endpoints: `walle-agent@` only.
+1. **A per-endpoint caller allowlist inside the service**, keyed on the verified identity
+   claim of the caller's ID token: `email` for a service account or a human, `sub` or the
+   SPIFFE id for an agent identity, whichever the spike in [12](12-agent-identity.md) shows. Execute and plan endpoints: `walle-agent@` only.
    Control and approval endpoints: `eve-controller@` and members of `walle-operators@`,
    never the agent.
 2. **Operators need a binding at all.** Grant `roles/run.invoker` to `walle-operators@`
@@ -558,6 +559,13 @@ as though it were something else.
 - Two entry modes in one deployment: interactive (`user_id` = the human's email) and job
   (`user_id` = `job:<playbook>`, message = a structured envelope carrying `run_id`,
   playbook version and budget).
+- **For a chat request the run is the managed session.** The action service mints one
+  `run_id` per session id on first contact, stores it in Firestore `runs` keyed on the
+  session, and looks `tainted` up by session on every request regardless of what the agent
+  sends. Otherwise a hostile field read in turn one would be replayed by ADK in turn two
+  under a fresh, untainted run. The plugin's injected `run_id` is a hint, never the key.
+- Principal type `agent` is any caller over an agent protocol, Eve's reasoning layer
+  included; `eve` stays for REST-originated calls from `eve-controller@`. See [13](13-agent-interconnection.md) section 5.4.
 - **The dispatcher invokes the agent with `streamQuery`, never `query` or `asyncQuery`.**
   Model Armor on the ingress gateway screens only `reasoningEngines.streamQuery` for ADK
   agents; every other method passes unscreened. A dispatcher that calls `query` silently

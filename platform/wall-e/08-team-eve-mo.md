@@ -73,7 +73,7 @@ or asks Wall-E questions about itself.
 | `walle_audit.approvals` | who approved what, how long they took, verdicts and reason codes | read | read |
 | `walle_audit.verifications` | verified / drift / unverifiable | read | read |
 | `walle_audit.config_versions` | every ladder change, its decision file, its origin | read | read |
-| Pub/Sub `walle-events` | `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set` | subscribe | subscribe |
+| Pub/Sub `walle-events` | `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged` (payload: `run_id`, `audit_id`, `source: gateway|actions`, the `filter:confidence` list, `trigger_id`; emitted for dispatcher-invoked runs only, see [11](11-prompt-security.md) section 6) | subscribe | subscribe |
 | Workspace audit logs in Cloud Logging | what the robot account actually did, **written by Google, not by Wall-E** | read | read |
 | Agent Runtime traces and OTel metrics | token spend, tool-call counts, latency per run | — | read |
 | `ladder.yaml` in git | what the level *should* be | read | read |

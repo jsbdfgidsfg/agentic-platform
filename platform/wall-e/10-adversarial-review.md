@@ -100,7 +100,7 @@ depending on which page you read. Budgets went 50, then 10, then 25 as autonomy 
 | Claim | Correction |
 |---|---|
 | Cloud Scheduler cannot call the agent directly | It can — it supports OAuth tokens precisely for Google API targets. The dispatcher is still right, for the two other reasons |
-| Agent Identity is unverified | Generally available since April 2026, with its APIs GA in August. A build decision with a published answer |
+| Agent Identity is unverified | Generally available since April 2026, with its APIs GA in August. The launch stage is settled; the Cloud Run hop is a spike, not an assumption, per [12-agent-identity.md](12-agent-identity.md) |
 | A Chat app is optional | Under user authentication the Chat API sends **text only**. The one-click approval and veto cards this design assumes need app authentication |
 | The login alert is created in Alert Center | It is a reporting rule under Rules, and its availability depends on the edition. This is the highest-value control in the design, so the page matters |
 | Secret Manager user-managed replication gives residency | Regional secrets are the current mechanism; replication pins only the payload at rest |

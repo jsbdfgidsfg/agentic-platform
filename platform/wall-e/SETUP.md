@@ -1589,7 +1589,10 @@ export AGENT_PRINCIPAL="principal://agents.global.org-${ORG_ID}.system.id.goog/r
 6. **Baseline grants, and nothing else.** Then dump the two automatic roles and fail if either carries a forbidden permission; their contents are undocumented.
 
 ```bash
-for R in roles/aiplatform.expressUser roles/serviceusage.serviceUsageConsumer roles/browser roles/logging.logWriter; do
+# roles/aiplatform.expressUser is deliberately absent: at project level it carries reasoningEngines.query on
+# every engine, which would make the agent a fourth caller of its own engine. Grant only what inference and
+# Sessions are shown to need at build; if expressUser proves unavoidable, record it as a named exception.
+for R in roles/serviceusage.serviceUsageConsumer roles/browser roles/logging.logWriter; do
   gcloud projects add-iam-policy-binding "$PROJECT" --member="$AGENT_PRINCIPAL" --role="$R"
 done
 for R in roles/aiplatform.agentDefaultAccess roles/aiplatform.agentContextEditor; do

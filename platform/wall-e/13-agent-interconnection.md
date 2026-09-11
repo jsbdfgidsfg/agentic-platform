@@ -24,6 +24,8 @@ The numbered documents already cover the action service, the caller allowlist an
 | [ARCHITECTURE.md](ARCHITECTURE.md) section 9, weakness 13 | A VPC Service Controls perimeter is the deferred answer to the internet-reachable credential holder, to be decided before S1 | VPC Service Controls and Agent Gateway are documented as not supported together on the engine. GA, verified [A6] | Section 7.5. The perimeter decision and the gateway decision are one decision, `tbd` before S1 |
 | [02-identity-and-auth.md](02-identity-and-auth.md), Agent Identity row | "Deferred, and probably wrong to defer" | Binding an engine to Agent Gateway and every Semantic Governance feature need `identity_type=AGENT_IDENTITY` at creation, and it is immutable afterwards. GA, verified [R29] [A10] | The decision is forced before the first production engine exists. [12-agent-identity.md](12-agent-identity.md) owns it. This chapter depends on it |
 | [08-team-eve-mo.md](08-team-eve-mo.md), interfaces | Control endpoints "are plain authenticated REST, not agent-to-agent messages" | Not wrong. Now backed by product facts: neither the A2A specification nor Google's platform supplies replay protection, peer allowlisting or confused-deputy guidance for agent-to-agent calls. Verified [R18] [R34] | Sections 4.3 and 5 |
+| [03-lld.md](03-lld.md) execute schema, [05](05-autonomy-ladder.md) ceilings, [ARCHITECTURE.md](ARCHITECTURE.md) 8.3 and 8.4 | Principal types `human`, `scheduler`, `event`, `inbox`, `eve`; ceiling columns T0 to T3 | A caller over an agent protocol fits none of them | **Applied 2026-09-11 in 03.** Principal type `agent` for any caller over A2A, Eve's reasoning layer included; `eve` stays for REST-originated calls from `eve-controller@`. A ceiling column `agent`, L5 for READ and L0 for every write tier, stamped into `ceilings_sha`. The effective-level line becomes `ceiling[risk]["agent" if principal.type == "agent" else trigger_for_ceiling]`. Section 5.4 |
+| [02](02-identity-and-auth.md) and [03](03-lld.md): `eve-controller@` and `mo-analyst@` are created in Wall-E's project | Not wrong. Section 5.1 explains what does move: reasoning engines only | None |
 | [03-lld.md](03-lld.md), "The agent" | `google-adk~=2.8` with the `a2a` extra | Keep the extra. It carries the A2A 1.0 and 0.3 compatibility layer for the day Wall-E serves A2A. Nothing in the pilot uses it | Section 4.1 |
 
 ---
@@ -125,7 +127,7 @@ A registry description that says Wall-E "never approves" is documentation. Witho
 
 ### 3.1 What it declares
 
-The A2A 1.0 card has: `name`, `description`, `supportedInterfaces[]` each with `url`, `protocolBinding` and `protocolVersion`, `provider`, `version`, `documentationUrl`, `capabilities` with `streaming`, `pushNotifications`, `extensions[]` and `extendedAgentCard`, `securitySchemes` of type `apiKey`, `httpAuth`, `oauth2`, `openIdConnect` or `mtls`, `securityRequirements[]`, default input and output modes, `skills[]`, `signatures[]` as JWS over the JCS canonical form, and `iconUrl`. Clients must send an `A2A-Version` header, where empty means 0.3, and servers must answer `VersionNotSupportedError` otherwise. Open specification, verified [R14].
+The A2A 1.0 card has: `name`, `description`, `supportedInterfaces[]` each with `url`, `protocolBinding` and `protocolVersion`, `provider`, `version`, `documentationUrl`, `capabilities` with `streaming`, `pushNotifications`, `extensions[]` and `extendedAgentCard`, `securitySchemes`, each a oneof keyed by kind: `apiKeySecurityScheme`, `httpAuthSecurityScheme`, `oauth2SecurityScheme`, `openIdConnectSecurityScheme` or `mtlsSecurityScheme`, `securityRequirements[]`, default input and output modes, `skills[]`, `signatures[]` as JWS over the JCS canonical form, and `iconUrl`. Clients must send an `A2A-Version` header, where empty means 0.3, and servers must answer `VersionNotSupportedError` otherwise. Open specification, verified [R14].
 
 | Field | Wall-E's value | Why |
 |---|---|---|
@@ -133,7 +135,7 @@ The A2A 1.0 card has: `name`, `description`, `supportedInterfaces[]` each with `
 | `description` | Scope, then exclusions, in prose: reads the directory, reports on licences and stale accounts, and proposes plans for a small catalogue of reversible admin writes; never approves, never executes unattended, never touches security settings, never acts as a person | The only place a "does not" can be written. Section 3.2 |
 | `supportedInterfaces` | One entry, `protocolBinding` `JSONRPC`, `protocolVersion` `1.0`, `url` of the A2A server once one exists | Section 3.4 for a second `0.3` entry, which is not planned |
 | `capabilities` | `streaming: true`, `pushNotifications: false`, `extendedAgentCard: false` | No push channel, because that is a callback URL a peer supplies. No extended card, because there is nothing to hide behind authentication that should not be in the public card |
-| `securitySchemes`, `securityRequirements` | One scheme, `googleIdToken`: `http`, `bearer`, `bearerFormat` `JWT`; required on every skill | The card itself says "a Google ID token is required", which is what a consumer needs to know and all it needs to know |
+| `securitySchemes`, `securityRequirements` | One scheme, `googleIdToken`, in the 1.0 shape: `httpAuthSecurityScheme` with `scheme` `bearer` and `bearerFormat` `JWT`; required on every skill. The 0.3 shape, a `type` discriminator, is one of the breaking changes and fails 1.0 validation | The card itself says "a Google ID token is required", which is what a consumer needs to know and all it needs to know |
 | `defaultInputModes`, `defaultOutputModes` | `text/plain` | No files, no images |
 | `skills[]` | Read and plan skills only, with `tags`, no `examples` | Section 3.2 |
 | `signatures` | None in the pilot | Whether ADK verifies card signatures is not covered by the research and is unverified. A signature nobody verifies is decoration |
@@ -185,7 +187,7 @@ Which A2A version Gemini Enterprise speaks when it imports an agent from Agent R
     { "url": "https://tbd, only once an A2A server exists", "protocolBinding": "JSONRPC", "protocolVersion": "1.0" }
   ],
   "capabilities": { "streaming": true, "pushNotifications": false, "extendedAgentCard": false },
-  "securitySchemes": { "googleIdToken": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" } },
+  "securitySchemes": { "googleIdToken": { "httpAuthSecurityScheme": { "scheme": "bearer", "bearerFormat": "JWT" } } },
   "securityRequirements": [ { "googleIdToken": [] } ],
   "defaultInputModes": ["text/plain"],
   "defaultOutputModes": ["text/plain"],
@@ -270,12 +272,13 @@ flowchart TB
 
     subgraph AGENTS["Reasoning layer, no credential"]
         WE["Wall-E<br/>ADK 2.8 on Agent Runtime"]
-        EVE["Eve, controller<br/>not yet designed"]
+        EVR["Eve's reasoning layer, if any<br/>not yet designed, own project"]
         MO["Mo, analyst<br/>not yet designed"]
     end
 
     subgraph CRED["Credential boundary"]
         ACT["walle-actions, Cloud Run<br/>REST only, per-endpoint caller allowlist"]
+        EVE["eve-controller, deterministic<br/>KMS signer, own read-only Workspace credential"]
     end
 
     BQ["BigQuery walle_audit"]
@@ -287,6 +290,7 @@ flowchart TB
     ACT -->|"insert only"| BQ
     EVE -->|"REST, ID token<br/>approve, veto, halt, demote, GET plans and runs<br/>never through an LLM hop"| ACT
     EVE -.->|"reasoningEngines.streamQuery now<br/>A2A later, optional, non-safety only<br/>reply is tainted input"| WE
+    EVR -.->|"only through the controller"| EVE
     EVE -->|"read"| BQ
     MO -->|"read"| BQ
     MO -->|"GET plans and runs only"| ACT
@@ -297,11 +301,12 @@ flowchart TB
     classDef nocred fill:#f2f7ff,stroke:#1565c0,stroke-width:1.5px,color:#000
     classDef plat fill:#f5f5f5,stroke:#555,stroke-width:1.5px,color:#000
     class ACT credzone
-    class WE,EVE,MO nocred
+    class WE,EVR,MO nocred
+    class EVE credzone
     class RW,RA,GWX,BQ,WS plat
 ```
 
-Read it for what is absent, as with the diagrams in ARCHITECTURE. There is no arrow from Wall-E to Eve, to Mo, or to any registry entry. There is no arrow from any agent to the control endpoints that passes through another agent. There is no MCP server anywhere.
+Read it for what is absent, as with the diagrams in ARCHITECTURE. Eve's deterministic controller sits inside the credential boundary, because it holds the KMS signer and its own read credential; only a future reasoning layer of Eve's is credential-free, and it reaches nothing except through that controller. There is no arrow from Wall-E to Eve, to Mo, or to any registry entry. There is no arrow from any agent to the control endpoints that passes through another agent. There is no MCP server anywhere.
 
 ---
 
@@ -317,7 +322,7 @@ The specification requires it and does not do it: identity "is handled at the pr
 | A future A2A server on Cloud Run | A Google-signed ID token: signature, `iss`, `exp`, and `aud` equal to Wall-E's A2A URL | A middleware ahead of the `to_a2a` routes that keys on the verified `email` or `sub` claim against a committed caller list. 401 on a missing or invalid token, 403 on a valid token from an unlisted caller. Both are audit rows | Design |
 | Anything else | none | The engine has no other ingress. The gateway's Client-to-Agent mode governs only `query` and `streamQuery` and does not support IAP, so it adds Model Armor and not authentication [R27] | |
 
-Note what the `discoveryengine.serviceAgent` role does to the first row. Google's cross-project guide grants it at project level, and it carries `aiplatform.reasoningEngines.query`, `update` and `delete` on every engine in the project. Verified [I6]. "Query is locked to three principals" is true only while Wall-E's engine is the only engine in its project. Wall-E, Eve and Mo therefore live in separate projects. `Assumption:` the project structure is `tbd` and this becomes a line in the decision record that opens S0.
+Note what the `discoveryengine.serviceAgent` role does to the first row. Google's cross-project guide grants it at project level, and it carries `aiplatform.reasoningEngines.query`, `update` and `delete` on every engine in the project. Verified [I6]. "Query is locked to three principals" is true only while Wall-E's engine is the only engine in its project. So each **reasoning engine** lives alone in its project: Wall-E's, and later Eve's and Mo's if they have one. The attached service accounts `eve-controller@` and `mo-analyst@` stay where [02](02-identity-and-auth.md) and [03](03-lld.md) create them, in Wall-E's project, because a service account is not an engine and the role that forces the split is project-wide over engines only. That is what the bindings in steps (a)-1 and (b)-1 assume. `Assumption:` the project structure is `tbd` and this becomes a line in the decision record that opens S0.
 
 ### 5.2 Which registered agents may call Wall-E
 
