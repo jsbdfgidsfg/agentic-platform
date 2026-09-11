@@ -58,6 +58,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -218,6 +219,126 @@ DEFAULT_PLAYBOOK_JOBS: Tuple[str, ...] = (
 )
 WATCH_RENEW_JOB = "walle-gmail-watch-renew"
 
+# --------------------------------------------------------------------------- #
+# Phases 12b, 12c and 13b (chapters 12, 11 and 13). Every name below is the one
+# the runbook uses; the gcloud invocations are SETUP.md's, verbatim.
+# --------------------------------------------------------------------------- #
+
+# SETUP.md Phase 12b. identity_type is fixed at create and cannot be patched.
+AGENT_IDENTITY_MODES: Tuple[str, ...] = ("AGENT_IDENTITY", "SERVICE_ACCOUNT")
+AGENT_IDENTITY_API = "agentidentity.googleapis.com"
+# Must stay DISABLED: with it off no auth provider can ever be exercised here.
+AGENT_IDENTITY_CREDENTIALS_API = "agentidentitycredentials.googleapis.com"
+AGENT_TRUST_DOMAIN_PREFIX = "agents.global.org-"
+AGENT_KEY_CONSTRAINTS: Tuple[str, ...] = (
+    "iam.managed.disableServiceAccountKeyCreation",
+    "iam.disableServiceAccountKeyUpload",
+)
+# Phase 12b step 6: the baseline the principal gets, and nothing else.
+AGENT_BASELINE_ROLES: Tuple[str, ...] = (
+    "roles/aiplatform.expressUser",
+    "roles/serviceusage.serviceUsageConsumer",
+    "roles/browser",
+    "roles/logging.logWriter",
+)
+# Their contents are undocumented, so they are read back and grepped.
+AGENT_AUTOMATIC_ROLES: Tuple[str, ...] = (
+    "roles/aiplatform.agentDefaultAccess",
+    "roles/aiplatform.agentContextEditor",
+)
+FORBIDDEN_ROLE_PERMISSION_MARKERS: Tuple[str, ...] = ("secretmanager.", "setIamPolicy")
+# Phase 12b step 7. NOTE: every permission name here must be verified against
+# the list of permissions supported in deny policies before a real run; the
+# research did not check it, and an unsupported name fails the create.
+DENY_POLICY_ID = "walle-deny-agents"
+DENY_POLICY_PERMISSIONS: Tuple[str, ...] = (
+    "secretmanager.googleapis.com/versions.access",
+    "aiplatform.googleapis.com/reasoningEngines.setIamPolicy",
+    "run.googleapis.com/services.setIamPolicy",
+)
+# The opt-out that unbinds tokens from the certificate. Never set, anywhere.
+TOKEN_SHARING_OPTOUT = "GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES"
+# Phase 12c step 5: telemetry on, and tool arguments kept OUT of Cloud Trace.
+AGENT_TELEMETRY_ENV: Tuple[Tuple[str, str], ...] = (
+    ("GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY", "true"),
+    ("OTEL_SEMCONV_STABILITY_OPT_IN", "gen_ai_latest_experimental"),
+    ("OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT", "EVENT_ONLY"),
+    ("ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS", "false"),
+)
+SPIKE_DISPLAY_NAME = "walle-spike"
+
+# SETUP.md Phase 12c. Everything starts inspect-only; the flips are `armor --enforce`.
+MODEL_ARMOR_APIS: Tuple[str, ...] = (
+    "modelarmor.googleapis.com",
+    "networkservices.googleapis.com",
+    "networksecurity.googleapis.com",
+)
+CONTENT_LOG_BUCKET = "walle-content-logs"
+CONTENT_LOG_SINK = "walle-content-sink"
+CONTENT_LOG_EXCLUSION = "walle-content"
+ARMOR_TEMPLATES: Tuple[str, ...] = ("walle-ingress-prompt", "walle-ingress-response")
+ARMOR_RAI_FILTERS = (
+    '[{"filterType":"HATE_SPEECH","confidenceLevel":"MEDIUM_AND_ABOVE"},'
+    '{"filterType":"HARASSMENT","confidenceLevel":"MEDIUM_AND_ABOVE"},'
+    '{"filterType":"DANGEROUS","confidenceLevel":"MEDIUM_AND_ABOVE"},'
+    '{"filterType":"SEXUALLY_EXPLICIT","confidenceLevel":"MEDIUM_AND_ABOVE"}]'
+)
+INGRESS_GATEWAY_NAME = "walle-ingress"
+ARMOR_EXTENSION_NAME = "walle-ma-content-authz-ext"
+ARMOR_POLICY_NAME = "walle-ma-content-authz-policy"
+# Where the YAML this script writes and imports is committed: verify reads the
+# extension file back and asserts failOpen is still false.
+ARMOR_CONFIG_SUBDIR = ("config", "armor")
+# Floor administration needs the global endpoint. Passed as the environment
+# form of `gcloud config set api_endpoint_overrides/modelarmor` so it scopes to
+# the floor commands only: set persistently it would also redirect the regional
+# `templates create` on the next re-run.
+MODEL_ARMOR_GLOBAL_ENDPOINT_ENV = {
+    "CLOUDSDK_API_ENDPOINT_OVERRIDES_MODELARMOR": "https://modelarmor.googleapis.com/"
+}
+
+# SETUP.md Phase 13b.
+REGISTRY_APIS: Tuple[str, ...] = (
+    "agentregistry.googleapis.com",
+    "apphub.googleapis.com",
+    "iap.googleapis.com",
+    "dns.googleapis.com",
+    "compute.googleapis.com",
+)
+EGRESS_GATEWAY_NAME = "walle-egress"
+IAP_EXTENSION_NAME = "walle-iap-ext"
+IAP_POLICY_NAME = "walle-iap-policy"
+REGISTRY_AUDIT_FILTER = (
+    'protoPayload.serviceName="agentregistry.googleapis.com" AND '
+    'protoPayload.methodName=~"services\\.(create|update|delete)|bindings\\.|skills\\."'
+)
+# The egress gateway is a default-deny hostname allowlist for the reasoning
+# layer. These are the hosts that must NEVER appear in it: the design's whole
+# point is that the agent reaches Workspace and the secrets only through the
+# action service. A registration naming any of them is a refusal, not a warning.
+FORBIDDEN_EGRESS_HOST_MARKERS: Tuple[str, ...] = (
+    "secretmanager",
+    "firestore",
+    "admin.googleapis.com",
+    "bigquery",
+    # Workspace hosts
+    "gmail.googleapis.com",
+    "chat.googleapis.com",
+    "calendar-json.googleapis.com",
+    "licensing.googleapis.com",
+    "groupssettings.googleapis.com",
+    "drive.googleapis.com",
+    "people.googleapis.com",
+    "cloudidentity.googleapis.com",
+    "www.googleapis.com",
+    "workspace.google.com",
+)
+# A card that advertises a write, an approval or a control operation is wrong
+# by construction (13-agent-interconnection.md section 3.5).
+FORBIDDEN_CARD_SKILL_MARKERS: Tuple[str, ...] = (
+    "write", "approve", "control", "execute", "suspend", "delete", "update", "halt",
+)
+
 # Admin SDK privilege names differ between editions and Google publishes no
 # complete catalogue (SETUP.md Phase 2 step 4). Every family below is resolved
 # against the tenant's live privileges list; the first candidate that exists
@@ -321,6 +442,24 @@ _DEPLOY_KEYS: Tuple[str, ...] = (
     "DOMAIN", "PROJECT", "REGION", "BQ_LOCATION", "ORG_ID", "ROBOT",
     "OPERATORS", "READERS", "PROTECTED", "WALLE_REPO", "SVC_OU", "PILOT_OU",
     "SANDBOX_OU",
+    # Phase 12b. INGRESS_GATEWAY and AGENT_IDENTITY_SPIKE_RESULT are optional
+    # here and are checked at runtime: the first binds the gateway only when
+    # set, the second is required only on the SERVICE_ACCOUNT fallback.
+    "AGENT_IDENTITY_MODE",
+)
+# Phase 12c. MODEL_ARMOR_ENFORCE_DECISION is checked only under --enforce.
+_ARMOR_KEYS: Tuple[str, ...] = (
+    "PROJECT", "REGION", "ORG_ID", "FOLDER_ID", "OPERATORS", "WALLE_REPO",
+    "CONTENT_LOG_RETENTION_DAYS",
+)
+# Phase 13b.
+_REGISTRY_KEYS: Tuple[str, ...] = (
+    "PROJECT", "REGION", "ORG_ID", "CI_DEPLOYER", "MO_PRINCIPAL", "EGRESS_GATEWAY",
+    "WALLE_REPO",
+)
+# Phase 12b step 3, on a throwaway engine.
+_SPIKE_KEYS: Tuple[str, ...] = (
+    "PROJECT", "REGION", "ORG_ID", "WALLE_REPO", "AGENT_IDENTITY_SPIKE_RESULT",
 )
 CONFIG_KEYS_FOR_SUBCOMMAND: Dict[str, Tuple[str, ...]] = {
     # preflight is the "full picture" command: it reports on everything and
@@ -330,6 +469,9 @@ CONFIG_KEYS_FOR_SUBCOMMAND: Dict[str, Tuple[str, ...]] = {
     "gcp": _GCP_KEYS,
     "consent": ("DOMAIN", "PROJECT", "REGION", "ROBOT", "EVE_ROBOT"),
     "deploy": _DEPLOY_KEYS,
+    "spike": _SPIKE_KEYS,
+    "armor": _ARMOR_KEYS,
+    "registry": _REGISTRY_KEYS,
     "register": ("PROJECT", "REGION", "DOMAIN", "READERS", "OPERATORS", "BQ_LOCATION"),
     "triggers": ("PROJECT", "REGION", "ROBOT", "OPERATORS"),
     "verify": REQUIRED_CONFIG_KEYS,
@@ -502,6 +644,11 @@ def derive_config(cfg: Dict[str, str]) -> Dict[str, str]:
     cfg.setdefault(
         "OPERATOR_TOKEN_CACHE", os.path.expanduser("~/.walle/operator-token.json")
     )
+    # Phases 12b, 12c, 13b. The identity default is the design's choice
+    # (decision 19); the fallback needs the spike's recorded result.
+    cfg.setdefault("AGENT_IDENTITY_MODE", "AGENT_IDENTITY")
+    cfg.setdefault("CONTENT_LOG_RETENTION_DAYS", "30")
+    cfg.setdefault("EGRESS_GATEWAY", EGRESS_GATEWAY_NAME)
     return cfg
 
 
@@ -589,6 +736,24 @@ def validate_config(
                 "%s contains %r, which is the Cloud Run env delimiter"
                 % (key, ENV_DELIMITER)
             )
+    # Phases 12b, 12c, 13b. A wrong identity mode deploys an engine whose
+    # identity can never be changed in place, so it is refused up front.
+    mode = cfg.get("AGENT_IDENTITY_MODE", "")
+    if mode and mode not in AGENT_IDENTITY_MODES:
+        problems.append(
+            "AGENT_IDENTITY_MODE must be one of %s, not %r"
+            % ("/".join(AGENT_IDENTITY_MODES), mode)
+        )
+    retention = cfg.get("CONTENT_LOG_RETENTION_DAYS", "")
+    if retention and not retention.isdigit():
+        problems.append("CONTENT_LOG_RETENTION_DAYS must be a number of days, not %r"
+                        % retention)
+    folder = cfg.get("FOLDER_ID", "")
+    if folder and "FOLDER_ID" in required and not folder.isdigit():
+        problems.append("FOLDER_ID must be the numeric folder id, not %r" % folder)
+    ci = cfg.get("CI_DEPLOYER", "")
+    if ci and "CI_DEPLOYER" in required and "@" not in ci:
+        problems.append("CI_DEPLOYER must be a service account email, not %r" % ci)
     return problems
 
 
@@ -621,6 +786,21 @@ class Ctx:
         self._settings: Optional[Any] = None
         self._creds: Optional[Any] = None
         self._notes: List[str] = []
+        # Policy files and YAML that gcloud takes by path. Never a secret.
+        self._scratch_dir: Optional[str] = None
+
+    def scratch_file(self, name: str, text: str) -> str:
+        """Write a non-secret file gcloud will read by path; return the path.
+
+        Lives in a per-run temporary directory, so a --dry-run can still show
+        the exact command it would issue, file argument included.
+        """
+        if self._scratch_dir is None:
+            self._scratch_dir = tempfile.mkdtemp(prefix="walle-")
+        path = os.path.join(self._scratch_dir, name)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        return path
 
     def get(self, key: str, default: str = "") -> str:
         return self.cfg.get(key, default)
@@ -3393,6 +3573,10 @@ def resolve_engine_id(ctx: Ctx) -> str:
 
 def phase_12_agent(ctx: Ctx) -> None:
     section("Phase 12 — the agent on Agent Runtime")
+    # SETUP.md Phase 12b. identity_type is fixed at create and cannot be
+    # patched, so the mode is resolved (and the fallback's gate checked) before
+    # anything mutates, and its prerequisites are proven BEFORE the engine exists.
+    mode = agent_identity_mode(ctx)
     number = project_number(ctx)
     if not number:
         die("PROJECT_NUMBER is unknown; phase 12 cannot name the service agents")
@@ -3403,14 +3587,20 @@ def phase_12_agent(ctx: Ctx) -> None:
             "--service", "aiplatform.googleapis.com", "--project", ctx.need("PROJECT"),
         ],
     )
-    # Deploying under a custom service account needs the Reasoning Engine service
-    # agent to hold tokenCreator ON that account. It grants nothing TO the agent,
-    # so the "reads no secret" property verified in Phase 8 is untouched.
-    ensure_sa_binding(
-        ctx, ctx.need("SA_AGENT"),
-        "serviceAccount:service-%s@gcp-sa-aiplatform-re.iam.gserviceaccount.com" % number,
-        "roles/iam.serviceAccountTokenCreator",
-    )
+    ensure_agent_identity_prereqs(ctx)
+    if mode == "SERVICE_ACCOUNT":
+        # Deploying under a custom service account needs the Reasoning Engine service
+        # agent to hold tokenCreator ON that account. It grants nothing TO the agent,
+        # so the "reads no secret" property verified in Phase 8 is untouched.
+        ensure_sa_binding(
+            ctx, ctx.need("SA_AGENT"),
+            "serviceAccount:service-%s@gcp-sa-aiplatform-re.iam.gserviceaccount.com" % number,
+            "roles/iam.serviceAccountTokenCreator",
+        )
+    else:
+        say("  AGENT_IDENTITY: no service_account is passed and the Reasoning Engine")
+        say("  service agent gets NO serviceAccountTokenCreator on walle-agent@. The")
+        say("  engine's principal is read back after the deploy, never typed by hand.")
 
     before = list_engines(ctx)
     existing = [e for e in before if e.get("displayName") == ctx.get("ENGINE_DISPLAY_NAME")]
@@ -3434,7 +3624,6 @@ def phase_12_agent(ctx: Ctx) -> None:
         "REGION": ctx.need("REGION"),
         "ACTIONS_URL": dry_run_placeholder(ctx, "ACTIONS_URL"),
         "STAGING_BUCKET": ctx.need("STAGING_BUCKET"),
-        "SERVICE_ACCOUNT": ctx.need("SA_AGENT"),
         # The contract with the repo's deploy.py: non-empty means call
         # agent_engines.update(name=...), empty means create.
         "WALLE_ENGINE_NAME": engine_name,
@@ -3444,9 +3633,21 @@ def phase_12_agent(ctx: Ctx) -> None:
         "ENABLE_MEMORY_BANK": "false",     # no long-term memories about employees
         "ENABLE_CODE_EXECUTION": "false",  # no EU at-rest residency
     }
+    env.update(agent_deploy_env(ctx, mode))
     say("  contract with deploy.py:")
     say("    - call update() when WALLE_ENGINE_NAME is set; create is not idempotent")
-    say("    - run as %s" % ctx.need("SA_AGENT"))
+    if mode == "SERVICE_ACCOUNT":
+        say("    - run as %s (SERVICE_ACCOUNT fallback, spike recorded at %s)"
+            % (ctx.need("SA_AGENT"), ctx.get("AGENT_IDENTITY_SPIKE_RESULT")))
+    else:
+        say("    - identity_type AGENT_IDENTITY and NO service_account in the config")
+    if env.get("AGENT_GATEWAY"):
+        say("    - agent_gateway_config.client_to_agent_config.agent_gateway = %s"
+            % env["AGENT_GATEWAY"])
+    say("    - env_vars from AGENT_ENV_VARS (%s): telemetry on, and"
+        % ", ".join(name for name, _ in AGENT_TELEMETRY_ENV))
+    say("      ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false, or tool arguments carrying")
+    say("      employee data land in Cloud Trace")
     say("    - min_instances 0: 1 bills around the clock")
     say("    - Sessions with Memory Bank OFF: an admin agent must not accumulate")
     say("      long-term memories about employees")
@@ -3470,11 +3671,18 @@ def phase_12_agent(ctx: Ctx) -> None:
                    AIPLATFORM_API_VERSION)
             )
         if len(after) != 1:
-            die("expected exactly one reasoning engine in the region, found %d" % len(after))
+            spikes = [e for e in after if e.get("displayName") == SPIKE_DISPLAY_NAME]
+            die(
+                "expected exactly one reasoning engine in the region, found %d%s"
+                % (len(after),
+                   ". A throwaway spike engine is still there: run "
+                   "'walle rollback --phase 12b' first." if spikes else "")
+            )
         engine_name = str(after[0]["name"])
         ctx.cfg["ENGINE_ID"] = engine_name.rsplit("/", 1)[-1]
         say("  ENGINE_ID=%s   <- put this in the config" % ctx.cfg["ENGINE_ID"])
         ctx.note("ENGINE_ID=%s" % ctx.cfg["ENGINE_ID"])
+    phase_12b_identity(ctx, mode)
     lock_engine_iam(ctx)
 
 
@@ -3549,6 +3757,629 @@ def lock_engine_iam(ctx: Ctx) -> None:
         "page with 'Include Google-provided role grants' on: it is created lazily "
         "when the Gemini Enterprise app first runs."
     )
+
+
+# --------------------------------------------------------------------------- #
+# Phase 12b — the agent's identity: Agent Identity, with a gated fallback
+# (SETUP.md Phase 12b, 12-agent-identity.md section 8.1)
+# --------------------------------------------------------------------------- #
+
+
+def ensure_apis_listed(ctx: Ctx, apis: Sequence[str], label: str) -> None:
+    """ensure_apis for a phase-specific list. Same get-or-enable shape."""
+    enabled = _dry_run_list(ctx, "enabled services", "services", "list", "--enabled")
+    if enabled is None:
+        say("  [dry run] would enable %d %s APIs: %s" % (len(apis), label, ", ".join(apis)))
+        return
+    have = {item.get("config", {}).get("name") for item in enabled}
+    missing = [api for api in apis if api not in have]
+    if not missing:
+        step("%s APIs already enabled: %s" % (label, ", ".join(apis)))
+        return
+    say("  enabling %s APIs: %s" % (label, ", ".join(missing)))
+    run(ctx, ["gcloud", "services", "enable"] + missing + ["--project", ctx.need("PROJECT")])
+
+
+def api_is_enabled(ctx: Ctx, api: str) -> Optional[bool]:
+    """None only under --dry-run on a project that does not exist yet."""
+    enabled = _dry_run_list(ctx, "enabled services", "services", "list", "--enabled")
+    if enabled is None:
+        return None
+    return api in {item.get("config", {}).get("name") for item in enabled}
+
+
+def ensure_org_policy_enforced(ctx: Ctx, constraint: str) -> None:
+    """Set explicitly on the project rather than inherited (Phase 12b step 1)."""
+    project = ctx.need("PROJECT")
+    described = gcloud_probe_json(ctx, "org-policies", "describe", constraint,
+                                  "--project", project)
+    rules = ((described or {}).get("spec", {}) or {}).get("rules", []) or []
+    if any(rule.get("enforce") is True for rule in rules):
+        step("org policy enforced on the project: %s" % constraint)
+        return
+    policy_text = (
+        "name: projects/%s/policies/%s\nspec:\n  rules:\n  - enforce: true\n"
+        % (project, constraint)
+    )
+    path = ctx.scratch_file("policy-%s.yaml" % constraint, policy_text)
+    run(ctx, ["gcloud", "org-policies", "set-policy", path, "--project", project])
+
+
+def agent_identity_mode(ctx: Ctx) -> str:
+    """AGENT_IDENTITY by default. SERVICE_ACCOUNT only with the spike on file.
+
+    The fallback is gated on purpose: identity_type is fixed for the life of
+    the engine, so "just use the service account for now" is a decision that
+    must carry the evidence that forced it (decision 19).
+    """
+    mode = ctx.get("AGENT_IDENTITY_MODE") or "AGENT_IDENTITY"
+    if mode not in AGENT_IDENTITY_MODES:
+        die("AGENT_IDENTITY_MODE must be one of %s" % "/".join(AGENT_IDENTITY_MODES))
+    spike_file = os.path.expanduser(ctx.get("AGENT_IDENTITY_SPIKE_RESULT") or "")
+    if mode == "SERVICE_ACCOUNT":
+        if not spike_file or not os.path.isfile(spike_file):
+            die(
+                "AGENT_IDENTITY_MODE=SERVICE_ACCOUNT is the gated fallback, and "
+                "AGENT_IDENTITY_SPIKE_RESULT (%r) does not name an existing file.\n"
+                "Run 'walle spike' first: the fallback is only allowed with the "
+                "spike's recorded output attached to the decision record "
+                "(SETUP.md Phase 12b step 4)." % spike_file
+            )
+        say("  identity mode: SERVICE_ACCOUNT (fallback; spike recorded at %s)" % spike_file)
+        return mode
+    if spike_file and os.path.isfile(spike_file):
+        verdict = spike_verdict(spike_file)
+        if verdict == "fail":
+            die(
+                "the recorded spike at %s says FAIL, and AGENT_IDENTITY_MODE is still "
+                "AGENT_IDENTITY. An engine deployed now could never reach the action "
+                "service and could never change identity in place. Either re-run "
+                "'walle spike' or set AGENT_IDENTITY_MODE=SERVICE_ACCOUNT." % spike_file
+            )
+        say("  identity mode: AGENT_IDENTITY (spike at %s: %s)" % (spike_file, verdict))
+    else:
+        say("  identity mode: AGENT_IDENTITY (no spike result on file; the deploy "
+            "reads the identity back and fails if it is not one)")
+    return mode
+
+
+def spike_verdict(path: str) -> str:
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (OSError, ValueError):
+        return "unreadable"
+    return str((payload or {}).get("verdict", "unknown"))
+
+
+def check_agent_package_hygiene(ctx: Ctx, mode: str) -> None:
+    """Phase 12b step 2, the CI checks, run here too because CI may not exist yet."""
+    repo = os.path.expanduser(ctx.need("WALLE_REPO"))
+    agent_dir = os.path.join(repo, "agent")
+    if grep_tree(agent_dir, (TOKEN_SHARING_OPTOUT,)):
+        die(
+            "%s appears in the agent package (%s). It unbinds tokens from the "
+            "runtime certificate and is refused anywhere in the deploy config."
+            % (TOKEN_SHARING_OPTOUT, agent_dir)
+        )
+    config_path = os.path.join(agent_dir, ".agent_engine_config.json")
+    if os.path.isfile(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as handle:
+                committed = json.load(handle)
+        except ValueError as exc:
+            die("%s is not valid JSON: %s" % (config_path, exc))
+        committed_type = str((committed or {}).get("identity_type", ""))
+        if committed_type and committed_type != mode:
+            die(
+                "%s says identity_type %r but AGENT_IDENTITY_MODE is %r. The SDK "
+                "may read that file; the two must agree." % (config_path, committed_type, mode)
+            )
+    requirements = os.path.join(agent_dir, "requirements.txt")
+    if mode == "AGENT_IDENTITY":
+        if not os.path.isfile(requirements):
+            warn("no %s: cannot prove google-auth>=2.45.0 is pinned (the version that "
+                 "binds tokens to the certificate)" % requirements)
+        else:
+            with open(requirements, "r", encoding="utf-8") as handle:
+                pinned = any(re.match(r"^google-auth>=2\.(4[5-9]|[5-9]\d|\d{3,})", line.strip())
+                             for line in handle)
+            if not pinned:
+                die(
+                    "%s does not pin google-auth>=2.45.0, the version that binds "
+                    "tokens to the agent's certificate (Phase 12b step 2)." % requirements
+                )
+
+
+def grep_tree(root: str, needles: Sequence[str], suffixes: Tuple[str, ...] = (".py", ".json", ".txt", ".toml", ".cfg", ".yaml", ".yml")) -> List[str]:
+    """Which files under root contain any needle. Textual, like lint_ladder_config."""
+    hits: List[str] = []
+    if not os.path.isdir(root):
+        return hits
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d != "__pycache__"]
+        for filename in filenames:
+            if not filename.endswith(suffixes) and not filename.startswith("."):
+                continue
+            path = os.path.join(dirpath, filename)
+            try:
+                with open(path, "r", encoding="utf-8", errors="replace") as handle:
+                    text = handle.read()
+            except OSError:
+                continue
+            if any(needle in text for needle in needles):
+                hits.append(path)
+    return hits
+
+
+def ensure_agent_identity_prereqs(ctx: Ctx) -> None:
+    """Phase 12b step 1: the API on, the credentials API OFF, key constraints set."""
+    say("")
+    say("  Phase 12b step 1: %s on, %s OFF, and the two service-account-key"
+        % (AGENT_IDENTITY_API, AGENT_IDENTITY_CREDENTIALS_API))
+    say("  constraints set explicitly on the project rather than inherited.")
+    ensure_apis_listed(ctx, (AGENT_IDENTITY_API,), "agent identity")
+    credentials = api_is_enabled(ctx, AGENT_IDENTITY_CREDENTIALS_API)
+    if credentials is True:
+        die(
+            "%s is ENABLED on %s. It must stay disabled so no auth provider can "
+            "ever be exercised in this project. This script disables nothing; "
+            "disable it yourself and re-run:\n  gcloud services disable %s --project=%s"
+            % (AGENT_IDENTITY_CREDENTIALS_API, ctx.need("PROJECT"),
+               AGENT_IDENTITY_CREDENTIALS_API, ctx.need("PROJECT"))
+        )
+    if credentials is False:
+        step("%s is disabled, as required" % AGENT_IDENTITY_CREDENTIALS_API)
+    for constraint in AGENT_KEY_CONSTRAINTS:
+        ensure_org_policy_enforced(ctx, constraint)
+
+
+def gateway_resource_name(ctx: Ctx, name: str) -> str:
+    if name.startswith("projects/"):
+        return name
+    return "projects/%s/locations/%s/agentGateways/%s" % (
+        ctx.need("PROJECT"), ctx.need("REGION"), name)
+
+
+def agent_deploy_env(ctx: Ctx, mode: str) -> Dict[str, str]:
+    """The Phase 12b/12c half of the deploy.py contract.
+
+    IDENTITY_TYPE always; SERVICE_ACCOUNT only on the fallback, because passing
+    it alongside AGENT_IDENTITY is exactly the mistake that pins walle-agent@
+    for the life of the engine. AGENT_GATEWAY when the ingress gateway exists.
+    AGENT_ENV_VARS in the same escaped-list form as Cloud Run, validated
+    against the delimiter, with the four telemetry variables.
+    """
+    check_agent_package_hygiene(ctx, mode)
+    env = {"IDENTITY_TYPE": mode}
+    if mode == "SERVICE_ACCOUNT":
+        env["SERVICE_ACCOUNT"] = ctx.need("SA_AGENT")
+    gateway = ctx.get("INGRESS_GATEWAY")
+    if gateway:
+        env["AGENT_GATEWAY"] = gateway_resource_name(ctx, gateway)
+    else:
+        say("  INGRESS_GATEWAY is not set: the engine is NOT bound to a Model Armor")
+        say("  ingress gateway. Run 'walle armor' first and set INGRESS_GATEWAY=%s;"
+            % INGRESS_GATEWAY_NAME)
+        say("  the binding is create-time on some pages, so do it before the first deploy.")
+    pairs = list(AGENT_TELEMETRY_ENV)
+    if any(name == TOKEN_SHARING_OPTOUT for name, _ in pairs):
+        die("%s must never be set" % TOKEN_SHARING_OPTOUT)
+    env["AGENT_ENV_VARS"] = env_flag_value(pairs)
+    return env
+
+
+def read_effective_identity(ctx: Ctx, engine_id: str) -> str:
+    described = describe_engine(ctx, engine_id)
+    if described is None:
+        return ""
+    return str((described.get("spec", {}) or {}).get("effectiveIdentity", "") or "")
+
+
+def principal_for(effective: str, number: str, region: str, engine_id: str) -> str:
+    """principal://<trust domain>/resources/aiplatform/projects/<n>/locations/<r>/reasoningEngines/<id>.
+
+    Built from the value READ BACK, whichever of the two shapes the API uses:
+    the bare trust domain, or the domain with the resource path already on it.
+    """
+    if "/resources/" in effective:
+        return "principal://" + effective
+    return "principal://%s/resources/aiplatform/projects/%s/locations/%s/reasoningEngines/%s" % (
+        effective, number, region, engine_id)
+
+
+def agent_principal(ctx: Ctx) -> str:
+    """The production engine's principal, from spec.effectiveIdentity. Never typed."""
+    engine_id = resolve_engine_id(ctx)
+    number = project_number(ctx)
+    region = ctx.need("REGION")
+    expected_domain = "%s%s.system.id.goog" % (AGENT_TRUST_DOMAIN_PREFIX, ctx.need("ORG_ID"))
+    if not engine_id or not number:
+        if ctx.dry_run:
+            return principal_for(expected_domain, number or "<project-number>", region,
+                                 engine_id or "<engine-id>")
+        die("no reasoning engine to read the identity from; run 'walle deploy' first")
+    effective = read_effective_identity(ctx, engine_id)
+    if not effective.startswith(AGENT_TRUST_DOMAIN_PREFIX):
+        if ctx.dry_run:
+            say("  [dry run] engine %s reports effectiveIdentity %r; using the expected shape"
+                % (engine_id, effective))
+            return principal_for(expected_domain, number, region, engine_id)
+        die(
+            "engine %s runs as %r, which is not an agent identity (expected a value "
+            "starting with %s). identity_type cannot be patched: the engine must be "
+            "recreated." % (engine_id, effective, AGENT_TRUST_DOMAIN_PREFIX)
+        )
+    if not effective.startswith(expected_domain):
+        warn("effectiveIdentity %r is not under the expected trust domain %r; the "
+             "project may not sit under ORG_ID" % (effective, expected_domain))
+    return principal_for(effective, number, region, engine_id)
+
+
+def check_automatic_roles_or_die(ctx: Ctx) -> None:
+    """Phase 12b step 6: the two roles every agent identity gets are undocumented."""
+    for role in AGENT_AUTOMATIC_ROLES:
+        # No --project: these are predefined roles, not the project's custom ones.
+        result = probe(ctx, ["gcloud", "iam", "roles", "describe", role, "--format=json"])
+        if not result.ok:
+            if ctx.dry_run:
+                say("  [dry run] cannot read %s here: %s"
+                    % (role, (result.err or "").strip().splitlines()[:1]))
+                continue
+            die("cannot describe %s, whose contents must be checked before the agent "
+                "holds it:\n%s" % (role, result.err.strip()))
+        payload = json.loads(result.out) if result.out.strip() else {}
+        permissions = list((payload or {}).get("includedPermissions", []) or [])
+        forbidden = [p for p in permissions
+                     if any(marker in p for marker in FORBIDDEN_ROLE_PERMISSION_MARKERS)]
+        if forbidden:
+            die(
+                "%s carries a forbidden permission: %s. The agent must hold no Secret "
+                "Manager access and no setIamPolicy anywhere; stop and record it."
+                % (role, ", ".join(forbidden))
+            )
+        step("%s: %d permissions, none forbidden" % (role, len(permissions)))
+
+
+def ensure_deny_policy(ctx: Ctx) -> None:
+    """Phase 12b step 7: the standing invariants, so a mistaken grant cannot undo them.
+
+    NOTE: every name in DENY_POLICY_PERMISSIONS must be verified against the
+    list of permissions supported in deny policies before a real run. The
+    research did not check it; an unsupported name fails the create, loudly.
+    """
+    project = ctx.need("PROJECT")
+    attachment = "cloudresourcemanager.googleapis.com/projects/%s" % project
+    existing = probe(ctx, ["gcloud", "iam", "policies", "get", DENY_POLICY_ID,
+                           "--attachment-point", attachment, "--kind", "denypolicies",
+                           "--format=json"])
+    if existing.ok:
+        step("deny policy exists: %s" % DENY_POLICY_ID)
+        return
+    lowered = (existing.err or "").lower()
+    if not any(marker in lowered for marker in ABSENT_MARKERS) and not ctx.dry_run:
+        die("cannot read deny policy %s\n%s" % (DENY_POLICY_ID, existing.err.strip()))
+    policy = {
+        "rules": [{
+            "denyRule": {
+                "deniedPrincipals": [
+                    "principalSet://%s%s.system.id.goog/*"
+                    % (AGENT_TRUST_DOMAIN_PREFIX, ctx.need("ORG_ID"))
+                ],
+                "deniedPermissions": list(DENY_POLICY_PERMISSIONS),
+            }
+        }]
+    }
+    path = ctx.scratch_file("deny-agents.json", json.dumps(policy, indent=2))
+    say("  deny policy %s on %s:" % (DENY_POLICY_ID, attachment))
+    say("    denied principals: every agent identity in the organisation")
+    for permission in DENY_POLICY_PERMISSIONS:
+        say("    denies %s" % permission)
+    say("  Permission names must be on the deny-policy supported list; verify them")
+    say("  first, the research did not.")
+    confirm(ctx, "Create the deny policy?")
+    run(ctx, ["gcloud", "iam", "policies", "create", DENY_POLICY_ID, "--kind=denypolicies",
+              "--attachment-point=" + attachment, "--policy-file=" + path])
+
+
+def phase_12b_identity(ctx: Ctx, mode: str) -> None:
+    """Steps 5, 6 and 7, after the engine exists. Step 3 is `walle spike`."""
+    section("Phase 12b — the agent's identity")
+    spike_file = ctx.get("AGENT_IDENTITY_SPIKE_RESULT") or "<AGENT_IDENTITY_SPIKE_RESULT>"
+    if mode == "SERVICE_ACCOUNT":
+        say("  SERVICE_ACCOUNT fallback: Phase 12 as written, run.invoker on walle-agent@")
+        say("  from Phase 10. Agent Identity is deferred hardening; the spike output at")
+        say("  %s goes on the decision record (decision 19)." % spike_file)
+        engine_id = resolve_engine_id(ctx)
+        if engine_id and not ctx.dry_run:
+            say("  effectiveIdentity=%s" % (read_effective_identity(ctx, engine_id) or "<none>"))
+        ctx.note("Agent Identity deferred (AGENT_IDENTITY_MODE=SERVICE_ACCOUNT); spike at %s"
+                 % spike_file)
+        return
+    engine_id = resolve_engine_id(ctx)
+    if engine_id and not ctx.dry_run:
+        effective = read_effective_identity(ctx, engine_id)
+        if not effective.startswith(AGENT_TRUST_DOMAIN_PREFIX):
+            die(
+                "NOT an agent identity: engine %s reports spec.effectiveIdentity=%r.\n"
+                "identity_type cannot be patched. Fix deploy.py to pass identity_type "
+                "AGENT_IDENTITY and NO service_account, run 'walle rollback --phase 12' "
+                "to delete this engine, and deploy again. Do not proceed."
+                % (engine_id, effective)
+            )
+        say("  agent identity: %s" % effective)
+        ctx.note("effectiveIdentity=%s" % effective)
+    elif ctx.dry_run:
+        say("  [dry run] the principal below is the expected shape, not a value read back")
+    principal = agent_principal(ctx)
+    say("  AGENT_PRINCIPAL=%s" % principal)
+    ctx.note("AGENT_PRINCIPAL=%s" % principal)
+    say("")
+    say("  Phase 12b step 6: the baseline grants, and nothing else.")
+    for role in AGENT_BASELINE_ROLES:
+        say("    %s" % role)
+    say("    roles/run.invoker on walle-actions (the binding form the spike proved)")
+    confirm(ctx, "Apply the baseline grants to the agent principal?")
+    for role in AGENT_BASELINE_ROLES:
+        ensure_project_binding(ctx, principal, role)
+    check_automatic_roles_or_die(ctx)
+    ensure_run_invoker(ctx, "walle-actions", principal)
+    say("  The in-app EXEC_CALLER_ALLOWLIST row for the agent is keyed on the claim the")
+    say("  spike showed (sub, email if any, aud), not on an address: an agent identity")
+    say("  has none. Read it from %s and update the action service's allowlist." % spike_file)
+    ctx.note("EXEC_CALLER_ALLOWLIST: key the agent's row on the spike's recorded claim")
+    say("")
+    if getattr(ctx.args, "skip_deny_policy", False):
+        warn("--skip-deny-policy: the standing invariants are NOT enforced by a deny "
+             "policy; a mistaken grant can undo them. Record why.")
+        ctx.note("deny policy %s skipped on request" % DENY_POLICY_ID)
+    else:
+        ensure_deny_policy(ctx)
+
+
+def engine_stream_query(ctx: Ctx, engine_id: str, payload: Dict[str, Any]) -> List[Any]:
+    """POST :streamQuery and return the events. Every caller uses streamQuery."""
+    url = aiplatform_url(ctx, "%s/%s:streamQuery" % (engine_collection_path(ctx), engine_id))
+    say("  HTTP POST %s" % url)
+    if ctx.dry_run:
+        say("    [dry run] not sent")
+        return []
+    request = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"),
+                                     method="POST")
+    request.add_header("Authorization", "Bearer " + access_token(ctx))
+    request.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            text = response.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as exc:
+        die("streamQuery on %s returned HTTP %s: %s"
+            % (engine_id, exc.code, exc.read().decode("utf-8", "replace")[:500]))
+    except urllib.error.URLError as exc:
+        die("network error calling %s: %s" % (url, exc))
+    try:
+        whole = json.loads(text)
+        return list(whole) if isinstance(whole, list) else [whole]
+    except ValueError:
+        pass
+    events: List[Any] = []
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        try:
+            events.append(json.loads(line))
+        except ValueError:
+            events.append({"raw": line[:500]})
+    return events
+
+
+def _find_dict_with_key(node: Any, key: str) -> Optional[Dict[str, Any]]:
+    if isinstance(node, dict):
+        if key in node:
+            return node
+        for value in node.values():
+            found = _find_dict_with_key(value, key)
+            if found is not None:
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = _find_dict_with_key(item, key)
+            if found is not None:
+                return found
+    return None
+
+
+_JWT_RE = re.compile(r"^[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}$")
+
+
+def strip_secrets(node: Any) -> Any:
+    """Drop anything that could be a credential before a result is written.
+
+    The spike records WHETHER a token came back and what its claims were, never
+    the token: a key containing "token" (other than the boolean token_returned)
+    is dropped, and so is any string shaped like a JWT.
+    """
+    if isinstance(node, dict):
+        cleaned = {}
+        for key, value in node.items():
+            if "token" in key.lower() and key != "token_returned":
+                cleaned[key] = "<redacted>"
+            else:
+                cleaned[key] = strip_secrets(value)
+        return cleaned
+    if isinstance(node, list):
+        return [strip_secrets(item) for item in node]
+    if isinstance(node, str) and _JWT_RE.match(node.strip()):
+        return "<redacted jwt>"
+    return node
+
+
+def cmd_spike(ctx: Ctx) -> int:
+    """Phase 12b step 3: three results on a throwaway engine, written to a file.
+
+    12b-a  does Cloud Run IAM accept the principal as an invoker
+    12b-b  from inside the agent, is an ID token for ACTIONS_URL returned at all
+    12b-c  does GET ACTIONS_URL/v1/operations accept it, and what claims does
+           it carry (sub, email if present, aud)
+    """
+    section("Phase 12b step 3 — the Agent Identity spike, on a throwaway engine")
+    result_path = os.path.expanduser(ctx.need("AGENT_IDENTITY_SPIKE_RESULT"))
+    number = project_number(ctx)
+    if not number and not ctx.dry_run:
+        die("PROJECT_NUMBER is unknown; the spike cannot name the principal")
+    ensure_agent_identity_prereqs(ctx)
+    actions_url = ctx.get("ACTIONS_URL") or current_service_url(ctx, "walle-actions")
+    if not actions_url:
+        if not ctx.dry_run:
+            die("walle-actions is not deployed (Phase 10); the spike calls it")
+        actions_url = dry_run_placeholder(ctx, "ACTIONS_URL")
+    engines = list_engines(ctx)
+    if any(e.get("displayName") == ctx.get("ENGINE_DISPLAY_NAME") for e in engines):
+        warn("the production engine already exists. The spike is meant to run BEFORE "
+             "Phase 12's deploy: identity_type cannot be changed afterwards. While the "
+             "spike engine exists, verify's exactly_one_engine fails.")
+    spikes = [e for e in engines if e.get("displayName") == SPIKE_DISPLAY_NAME]
+    say("")
+    say("  This creates a throwaway engine named %s with identity_type AGENT_IDENTITY,"
+        % SPIKE_DISPLAY_NAME)
+    say("  binds its principal as run.invoker on walle-actions, asks it to fetch an ID")
+    say("  token for %s and call /v1/operations, and writes the" % actions_url)
+    say("  three results (never a token) to %s." % result_path)
+    say("  Afterwards: 'walle rollback --phase 12b' deletes the engine and its binding.")
+    confirm(ctx, "Create the spike engine and run the three checks?")
+    deploy_script = repo_path(ctx, "agent", "deploy.py")
+    env = {
+        "PROJECT": ctx.need("PROJECT"),
+        "REGION": ctx.need("REGION"),
+        "ACTIONS_URL": actions_url,
+        "STAGING_BUCKET": ctx.need("STAGING_BUCKET"),
+        "WALLE_ENGINE_NAME": str(spikes[0].get("name", "")) if spikes else "",
+        "ENGINE_DISPLAY_NAME": SPIKE_DISPLAY_NAME,
+        # The contract: WALLE_SPIKE=1 deploys the spike agent instead of Wall-E.
+        # Its one tool, probe_identity(audience), requests an ID token through
+        # google.auth.compute_engine.IDTokenCredentials(request,
+        # target_audience=audience), calls GET <audience>/v1/operations with it,
+        # and returns {"token_returned": bool, "status": int,
+        # "claims": {"sub": ..., "email": ..., "aud": ...}} — never the token.
+        "WALLE_SPIKE": "1",
+        "MIN_INSTANCES": "0",
+        "ENABLE_MEMORY_BANK": "false",
+        "ENABLE_CODE_EXECUTION": "false",
+    }
+    env.update(agent_deploy_env(ctx, "AGENT_IDENTITY"))
+    say("  contract with deploy.py: WALLE_SPIKE=1 deploys the spike agent whose only")
+    say("  tool is probe_identity(audience) and returns token_returned, status and the")
+    say("  decoded claims (sub, email, aud), never the token itself.")
+    run(ctx, [sys.executable, deploy_script], env=env)
+    if ctx.dry_run:
+        say("  [dry run] would then bind the spike principal as run.invoker on")
+        say("  walle-actions, streamQuery the engine, and write %s" % result_path)
+        return 0
+    after = [e for e in list_engines(ctx) if e.get("displayName") == SPIKE_DISPLAY_NAME]
+    if len(after) != 1:
+        die("expected exactly one %s engine after the deploy, found %d"
+            % (SPIKE_DISPLAY_NAME, len(after)))
+    spike_name = str(after[0].get("name", ""))
+    spike_id = spike_name.rsplit("/", 1)[-1]
+    effective = read_effective_identity(ctx, spike_id)
+    if not effective.startswith(AGENT_TRUST_DOMAIN_PREFIX):
+        die("the spike engine reports effectiveIdentity %r: deploy.py did not honour "
+            "IDENTITY_TYPE=AGENT_IDENTITY. Fix that before anything else." % effective)
+    principal = principal_for(effective, number, ctx.need("REGION"), spike_id)
+    say("  spike principal: %s" % principal)
+    results: Dict[str, Any] = {}
+    # 12b-a
+    bind = run(ctx, [
+        "gcloud", "run", "services", "add-iam-policy-binding", "walle-actions",
+        "--region", ctx.need("REGION"), "--member", principal, "--role", "roles/run.invoker",
+        "--project", ctx.need("PROJECT"),
+    ], check=False)
+    results["12b-a"] = {
+        "question": "does Cloud Run IAM accept the principal as an invoker",
+        "pass": bind.ok,
+        "output": (bind.out + "\n" + bind.err).strip()[:2000],
+    }
+    say("  12b-a %s" % ("PASS" if bind.ok else "FAIL"))
+    # 12b-b and 12b-c, from inside the agent
+    events = engine_stream_query(ctx, spike_id, {
+        "class_method": "stream_query",
+        "input": {"user_id": "walle-spike",
+                  "message": "probe_identity audience=%s" % actions_url},
+    })
+    probe_result = _find_dict_with_key(events, "token_returned")
+    raw = strip_secrets(events)
+    if probe_result is None:
+        results["12b-b"] = {"question": "is an ID token for ACTIONS_URL returned at all",
+                            "pass": False, "output": "no probe_identity result in the stream",
+                            "raw_events": raw}
+        results["12b-c"] = {"question": "does /v1/operations accept it; sub, email, aud",
+                            "pass": False, "output": "no probe_identity result in the stream"}
+        say("  12b-b FAIL (no tool result in the stream)")
+        say("  12b-c FAIL")
+    else:
+        cleaned = strip_secrets(probe_result)
+        token_returned = bool(cleaned.get("token_returned"))
+        status = int(cleaned.get("status", 0) or 0)
+        claims = cleaned.get("claims", {}) or {}
+        results["12b-b"] = {"question": "is an ID token for ACTIONS_URL returned at all",
+                            "pass": token_returned, "output": cleaned}
+        results["12b-c"] = {"question": "does /v1/operations accept it; sub, email, aud",
+                            "pass": token_returned and status == 200 and bool(claims),
+                            "status": status, "claims": claims}
+        say("  12b-b %s (token_returned=%s)" % ("PASS" if token_returned else "FAIL", token_returned))
+        say("  12b-c %s (HTTP %s, claims %s)"
+            % ("PASS" if results["12b-c"]["pass"] else "FAIL", status,
+               ", ".join(sorted(claims.keys())) or "none"))
+    verdict = "pass" if all(r.get("pass") for r in results.values()) else "fail"
+    record = {
+        "date": datetime.date.today().isoformat(),
+        "spike_engine": spike_name,
+        "effective_identity": effective,
+        "principal": principal,
+        "actions_url": actions_url,
+        "results": results,
+        "verdict": verdict,
+    }
+    os.makedirs(os.path.dirname(result_path) or ".", exist_ok=True)
+    with open(result_path, "w", encoding="utf-8") as handle:
+        json.dump(strip_secrets(record), handle, indent=2)
+    os.chmod(result_path, 0o600)
+    say("")
+    say("  verdict: %s -> %s" % (verdict.upper(), result_path))
+    if verdict == "pass":
+        say("  Keep AGENT_IDENTITY_MODE=AGENT_IDENTITY. The allowlist row for the agent is")
+        say("  keyed on the claim 12b-c recorded, not on an email.")
+    else:
+        say("  Set AGENT_IDENTITY_MODE=SERVICE_ACCOUNT for 'walle deploy' and attach this")
+        say("  file to the decision record: Agent Identity becomes deferred hardening.")
+    say("  Then: walle rollback --phase 12b   (deletes the spike engine and its binding)")
+    ctx.note("spike %s recorded at %s" % (verdict, result_path))
+    ctx.print_notes()
+    return 0 if verdict == "pass" else 1
+
+
+def rollback_spike(ctx: Ctx) -> None:
+    """SETUP.md Phase 12b rollback: delete the throwaway engine, and its binding."""
+    number = project_number(ctx)
+    for engine in list_engines(ctx):
+        if engine.get("displayName") != SPIKE_DISPLAY_NAME:
+            continue
+        name = str(engine.get("name", ""))
+        engine_id = name.rsplit("/", 1)[-1]
+        effective = read_effective_identity(ctx, engine_id)
+        if effective.startswith(AGENT_TRUST_DOMAIN_PREFIX) and number:
+            principal = principal_for(effective, number, ctx.need("REGION"), engine_id)
+            policy = gcloud_probe_json(ctx, "run", "services", "get-iam-policy",
+                                       "walle-actions", "--region", ctx.need("REGION")) or {}
+            if principal in _members_with_role(policy, "roles/run.invoker"):
+                run(ctx, ["gcloud", "run", "services", "remove-iam-policy-binding",
+                          "walle-actions", "--region", ctx.need("REGION"),
+                          "--member", principal, "--role", "roles/run.invoker",
+                          "--project", ctx.need("PROJECT")])
+        say("  DELETE spike engine %s" % name)
+        confirm(ctx, "Delete spike engine %s?" % name)
+        status, body = http_json(ctx, "DELETE", aiplatform_url(ctx, name), access_token(ctx))
+        if status not in (200, 202) and not ctx.dry_run:
+            die("deleting %s returned HTTP %s: %s" % (name, status, str(body)[:200]))
 
 
 def phase_14_ladder_and_schedulers(ctx: Ctx) -> None:
@@ -3694,7 +4525,9 @@ def cmd_deploy(ctx: Ctx) -> int:
     phase_14_ladder_and_schedulers(ctx)
     ctx.print_notes()
     say("")
-    say("Phases 10, 11, 12 and 14 done. Next: 'walle register' (phase 13).")
+    say("Phases 10, 11, 12, 12b and 14 done. Next: 'walle register' (phase 13), then")
+    say("'walle registry' (phase 13b). 'walle armor' (phase 12c) should have run BEFORE")
+    say("this deploy so the engine was bound to the ingress gateway at creation.")
     return 0
 
 
@@ -3867,6 +4700,712 @@ def verify_gemini_registration(ctx: Ctx) -> Tuple[str, str]:
 # --------------------------------------------------------------------------- #
 # Phase 16 — Gmail watch and its daily renewal
 # --------------------------------------------------------------------------- #
+
+
+# --------------------------------------------------------------------------- #
+# Phase 12c — Model Armor: templates, the ingress gateway, and the floor
+# (SETUP.md Phase 12c, 11-prompt-security.md section 5)
+# --------------------------------------------------------------------------- #
+
+
+def sanitize_log_filter(ctx: Ctx) -> str:
+    return 'logName="projects/%s/logs/modelarmor.googleapis.com%%2Fsanitize_operations"' % (
+        ctx.need("PROJECT"))
+
+
+def ensure_content_log_bucket(ctx: Ctx) -> None:
+    region, project = ctx.need("REGION"), ctx.need("PROJECT")
+    retention = ctx.get("CONTENT_LOG_RETENTION_DAYS") or "30"
+    described = gcloud_probe_json(ctx, "logging", "buckets", "describe", CONTENT_LOG_BUCKET,
+                                  "--location", region)
+    if described is None:
+        run(ctx, ["gcloud", "logging", "buckets", "create", CONTENT_LOG_BUCKET,
+                  "--location=" + region, "--retention-days=" + retention,
+                  "--project=" + project])
+        return
+    step("log bucket exists: %s" % CONTENT_LOG_BUCKET)
+    have = str(described.get("retentionDays", "") or "")
+    if have and have != retention:
+        warn("bucket retention is %s days, CONTENT_LOG_RETENTION_DAYS says %s; updating"
+             % (have, retention))
+        run(ctx, ["gcloud", "logging", "buckets", "update", CONTENT_LOG_BUCKET,
+                  "--location=" + region, "--retention-days=" + retention,
+                  "--project=" + project])
+
+
+def ensure_project_sink(ctx: Ctx, name: str, destination: str, log_filter: str) -> None:
+    """Project level, unlike ensure_sink: these logs are produced in the project."""
+    project = ctx.need("PROJECT")
+    described = gcloud_probe_json(ctx, "logging", "sinks", "describe", name)
+    if described is None:
+        run(ctx, ["gcloud", "logging", "sinks", "create", name, destination,
+                  "--log-filter=" + log_filter, "--project=" + project])
+        return
+    step("sink exists: %s" % name)
+    if str(described.get("filter", "")).strip() != log_filter:
+        warn("sink %s has a different filter; updating it" % name)
+        say("    have: %s" % described.get("filter"))
+        say("    want: %s" % log_filter)
+        run(ctx, ["gcloud", "logging", "sinks", "update", name,
+                  "--log-filter=" + log_filter, "--project=" + project])
+
+
+def ensure_default_exclusion(ctx: Ctx, name: str, log_filter: str) -> None:
+    """The raw prompts must NOT also land in _Default, where every viewer reads."""
+    project = ctx.need("PROJECT")
+    argv = ["gcloud", "logging", "sinks", "update", "_Default",
+            "--add-exclusion=name=%s,filter=%s" % (name, log_filter),
+            "--project=" + project]
+    described = gcloud_probe_json(ctx, "logging", "sinks", "describe", "_Default")
+    if described is None:
+        if not ctx.dry_run:
+            die("cannot describe the _Default sink of %s; it always exists, so this is "
+                "a permission problem" % project)
+        run(ctx, argv)
+        return
+    for exclusion in described.get("exclusions", []) or []:
+        if exclusion.get("name") != name:
+            continue
+        if str(exclusion.get("filter", "")).strip() == log_filter and not exclusion.get("disabled"):
+            step("_Default exclusion present: %s" % name)
+            return
+        die(
+            "the _Default exclusion %s exists with a different filter or is disabled, "
+            "so raw prompts may be landing in _Default:\n  have: %s\n  want: %s\n"
+            "Remove it and re-run:\n  gcloud logging sinks update _Default "
+            "--remove-exclusions=%s --project=%s"
+            % (name, exclusion.get("filter"), log_filter, name, project)
+        )
+    run(ctx, argv)
+
+
+def armor_template_create_argv(ctx: Ctx, name: str) -> List[str]:
+    """SETUP.md Phase 12c step 2, verbatim. inspect-only: the flip is --enforce."""
+    return [
+        "gcloud", "beta", "model-armor", "templates", "create", name,
+        "--location=" + ctx.need("REGION"), "--project=" + ctx.need("PROJECT"),
+        "--pi-and-jailbreak-filter-settings-enforcement=enabled",
+        "--pi-and-jailbreak-filter-settings-confidence-level=medium-and-above",
+        "--malicious-uri-filter-settings-enforcement=enabled",
+        "--basic-config-filter-enforcement=enabled",
+        "--rai-settings-filters=" + ARMOR_RAI_FILTERS,
+        "--template-metadata-enforcement-type=inspect-only",
+        "--template-metadata-log-sanitize-operations",
+    ]
+
+
+def ensure_armor_template(ctx: Ctx, name: str) -> None:
+    described = gcloud_probe_json(ctx, "beta", "model-armor", "templates", "describe", name,
+                                  "--location", ctx.need("REGION"))
+    if described is None:
+        run(ctx, armor_template_create_argv(ctx, name))
+        return
+    step("template exists: %s" % name)
+    enforcement = str((described.get("templateMetadata") or {}).get("enforcementType", "") or "")
+    if enforcement and enforcement.upper().replace("-", "_") != "INSPECT_ONLY":
+        warn("template %s is %s, not INSPECT_ONLY. This run changes nothing about it; "
+             "blocking is a Stage 1 decision (decision 24) and its flip is "
+             "'walle armor --enforce'." % (name, enforcement))
+        ctx.note("template %s already at %s" % (name, enforcement))
+
+
+def ensure_agent_gateway(ctx: Ctx, name: str, yaml_text: str) -> None:
+    region, project = ctx.need("REGION"), ctx.need("PROJECT")
+    described = gcloud_probe_json(ctx, "network-services", "agent-gateways", "describe", name,
+                                  "--location", region)
+    if described is not None:
+        step("agent gateway exists: %s" % name)
+        return
+    path = ctx.scratch_file(name + ".yaml", yaml_text)
+    say("  %s:" % path)
+    for line in yaml_text.rstrip("\n").splitlines():
+        say("    | " + line)
+    run(ctx, ["gcloud", "network-services", "agent-gateways", "import", name,
+              "--source=" + path, "--location=" + region, "--project=" + project])
+
+
+def grant_armor_service_agents(ctx: Ctx) -> None:
+    """Phase 12c step 4. None of these grants touches walle-agent@ or walle-actions@."""
+    number = project_number(ctx)
+    if not number:
+        if not ctx.dry_run:
+            die("PROJECT_NUMBER is unknown; cannot name the service agents")
+        number = "<project-number>"
+    re_agent = "serviceAccount:service-%s@gcp-sa-aiplatform-re.iam.gserviceaccount.com" % number
+    dep_agent = "serviceAccount:service-%s@gcp-sa-dep.iam.gserviceaccount.com" % number
+    for role in ("roles/modelarmor.calloutUser", "roles/modelarmor.user"):
+        ensure_project_binding(ctx, re_agent, role)
+        ensure_project_binding(ctx, dep_agent, role)
+    ensure_project_binding(ctx, dep_agent, "roles/serviceusage.serviceUsageConsumer")
+    say("  The pages disagree on whether the Service Extensions agent is needed for")
+    say("  ingress in addition to the Reasoning Engine agent: both are granted. Prove a")
+    say("  block in the verify step, then remove whichever grant proves unnecessary and")
+    say("  record it.")
+    ctx.note("Model Armor: both service agents granted; remove the unnecessary one after "
+             "the block is proved")
+
+
+def armor_extension_yaml(ctx: Ctx) -> str:
+    """failOpen: false is the correction that makes this path enforcement-grade."""
+    project, region = ctx.need("PROJECT"), ctx.need("REGION")
+    settings = json.dumps([{
+        "request_template_id": "projects/%s/locations/%s/templates/walle-ingress-prompt"
+        % (project, region),
+        "response_template_id": "projects/%s/locations/%s/templates/walle-ingress-response"
+        % (project, region),
+    }], separators=(",", ":"))
+    return (
+        "name: %s\n"
+        "service: modelarmor.%s.rep.googleapis.com\n"
+        "metadata:\n"
+        "  model_armor_settings: '%s'\n"
+        "failOpen: false\n"
+        "timeout: 1s\n" % (ARMOR_EXTENSION_NAME, region, settings)
+    )
+
+
+def armor_policy_yaml(ctx: Ctx) -> str:
+    project, region = ctx.need("PROJECT"), ctx.need("REGION")
+    return (
+        "name: %s\n"
+        "target:\n"
+        '  resources: ["projects/%s/locations/%s/agentGateways/%s"]\n'
+        "policyProfile: CONTENT_AUTHZ\n"
+        "action: CUSTOM\n"
+        "customProvider:\n"
+        "  authzExtension:\n"
+        '    resources: ["projects/%s/locations/%s/authzExtensions/%s"]\n'
+        % (ARMOR_POLICY_NAME, project, region, INGRESS_GATEWAY_NAME,
+           project, region, ARMOR_EXTENSION_NAME)
+    )
+
+
+def write_committed_yaml(ctx: Ctx, subdir: Sequence[str], filename: str, text: str) -> str:
+    """Into WALLE_REPO/<subdir>/, which verify reads back. Under --dry-run: scratch."""
+    repo = os.path.expanduser(ctx.need("WALLE_REPO"))
+    directory = os.path.join(repo, *subdir)
+    path = os.path.join(directory, filename)
+    if ctx.dry_run:
+        say("  WOULD WRITE %s" % path)
+        return ctx.scratch_file(filename, text)
+    os.makedirs(directory, exist_ok=True)
+    if os.path.isfile(path):
+        with open(path, "r", encoding="utf-8") as handle:
+            if handle.read() == text:
+                step("already current: %s" % path)
+                return path
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(text)
+    step("wrote %s (commit it: verify reads it back)" % path)
+    return path
+
+
+def ensure_authz_extension(ctx: Ctx, name: str, path: str, beta: bool = False) -> None:
+    region, project = ctx.need("REGION"), ctx.need("PROJECT")
+    track = ["beta"] if beta else []
+    described = gcloud_probe_json(ctx, *(track + ["service-extensions", "authz-extensions",
+                                                  "describe", name, "--location", region]))
+    argv = ["gcloud"] + track + ["service-extensions", "authz-extensions", "import", name,
+                                 "--source=" + path, "--location=" + region,
+                                 "--project=" + project]
+    if described is None:
+        run(ctx, argv)
+        return
+    step("authz extension exists: %s" % name)
+    if described.get("failOpen") is True:
+        warn("the live extension %s is failOpen TRUE, which is fail-OPEN; re-importing "
+             "the fail-closed YAML" % name)
+        run(ctx, argv)
+
+
+def ensure_authz_policy(ctx: Ctx, name: str, path: str) -> None:
+    region, project = ctx.need("REGION"), ctx.need("PROJECT")
+    described = gcloud_probe_json(ctx, "network-security", "authz-policies", "describe", name,
+                                  "--location", region)
+    if described is not None:
+        step("authz policy exists: %s" % name)
+        return
+    run(ctx, ["gcloud", "network-security", "authz-policies", "import", name,
+              "--source=" + path, "--location=" + region, "--project=" + project])
+
+
+def floor_update_argv(ctx: Ctx, full_uri: str, *flags: str) -> List[str]:
+    return ["gcloud", "model-armor", "floorsettings", "update", "--full-uri=" + full_uri] + list(flags)
+
+
+def apply_floor_settings(ctx: Ctx) -> None:
+    """Phase 12c step 7: conformance at the folder, inline on the project, logging on.
+
+    The folder floor pins only "prompt-injection enabled at HIGH or stricter,
+    malicious URL enabled", so it cannot prejudge the confidence level Stage 0
+    measures. The update commands are declarative, so re-running is safe.
+    """
+    project = ctx.need("PROJECT")
+    folder_uri = "folders/%s/locations/global/floorSetting" % ctx.need("FOLDER_ID")
+    project_uri = "projects/%s/locations/global/floorSetting" % project
+    env = dict(MODEL_ARMOR_GLOBAL_ENDPOINT_ENV)
+    say("  Floor commands run with CLOUDSDK_API_ENDPOINT_OVERRIDES_MODELARMOR set, the")
+    say("  environment form of `gcloud config set api_endpoint_overrides/modelarmor`,")
+    say("  scoped to these commands so a re-run's regional `templates create` is not")
+    say("  redirected to the global endpoint.")
+    for uri in (folder_uri, project_uri):
+        current = probe(ctx, ["gcloud", "model-armor", "floorsettings", "describe",
+                              "--full-uri=" + uri, "--format=json"])
+        if not current.ok:
+            say("  (no readable floor setting at %s yet)" % uri)
+    run(ctx, floor_update_argv(
+        ctx, folder_uri,
+        "--pi-and-jailbreak-filter-settings-enforcement=ENABLED",
+        "--pi-and-jailbreak-filter-settings-confidence-level=HIGH",
+        "--malicious-uri-filter-settings-enforcement=ENABLED",
+        "--enable-floor-setting-enforcement=true",
+    ), env=env)
+    run(ctx, floor_update_argv(ctx, project_uri, "--add-integrated-services=VERTEX_AI"), env=env)
+    number = project_number(ctx) or ("<project-number>" if ctx.dry_run else "")
+    if not number:
+        die("PROJECT_NUMBER is unknown; cannot name the Vertex AI service agent")
+    ensure_project_binding(
+        ctx, "serviceAccount:service-%s@gcp-sa-aiplatform.iam.gserviceaccount.com" % number,
+        "roles/modelarmor.user",
+    )
+    run(ctx, floor_update_argv(ctx, project_uri, "--enable-vertex-ai-cloud-logging"), env=env)
+
+
+def armor_enforce(ctx: Ctx) -> int:
+    """The blocking flips. Later, not at setup, and only with a decision on file."""
+    decision = os.path.expanduser(ctx.get("MODEL_ARMOR_ENFORCE_DECISION") or "")
+    if not decision or not os.path.isfile(decision):
+        die(
+            "--enforce flips both templates to inspect-and-block and the project floor "
+            "to INSPECT_AND_BLOCK. It is refused unless MODEL_ARMOR_ENFORCE_DECISION "
+            "names an existing decision record (the Stage 1 decision, decision 24), and "
+            "%r does not. The flips go through the same reviewed pipeline as ladder.yaml, "
+            "after the Stage 0 numbers." % decision
+        )
+    say("  decision record: %s" % decision)
+    say("  This makes Model Armor BLOCK on the ingress gateway and on the agent's")
+    say("  generateContent calls. A Model Armor outage then stops Wall-E: that is the")
+    say("  price of fail-closed, and it is deliberate.")
+    for name in ARMOR_TEMPLATES:
+        say("    %s -> inspect-and-block" % name)
+    say("    project floor -> --vertex-ai-enforcement-type=INSPECT_AND_BLOCK")
+    confirm(ctx, "Flip Model Armor to blocking?")
+    for name in ARMOR_TEMPLATES:
+        run(ctx, ["gcloud", "beta", "model-armor", "templates", "update", name,
+                  "--location=" + ctx.need("REGION"), "--project=" + ctx.need("PROJECT"),
+                  "--template-metadata-enforcement-type=inspect-and-block"])
+    run(ctx, floor_update_argv(
+        ctx, "projects/%s/locations/global/floorSetting" % ctx.need("PROJECT"),
+        "--vertex-ai-enforcement-type=INSPECT_AND_BLOCK",
+    ), env=dict(MODEL_ARMOR_GLOBAL_ENDPOINT_ENV))
+    ctx.note("Model Armor flipped to blocking per %s" % decision)
+    ctx.print_notes()
+    return 0
+
+
+def cmd_armor(ctx: Ctx) -> int:
+    section("Phase 12c — Model Armor: templates, the ingress gateway, and the floor")
+    if getattr(ctx.args, "enforce", False):
+        return armor_enforce(ctx)
+    project, region = ctx.need("PROJECT"), ctx.need("REGION")
+    say("  The Gemini Enterprise console's Model Armor setting does not screen custom")
+    say("  ADK agents. This puts Model Armor on an ingress gateway (fail-closed) and on")
+    say("  the project floor (fail-open), all INSPECT-ONLY. The sanitize logs are routed")
+    say("  BEFORE any template exists: they carry raw prompts and personal data.")
+    say("  The blocking flips are 'walle armor --enforce', gated on a decision record.")
+    confirm(ctx, "Proceed with the Model Armor setup, inspect-only?")
+    ensure_apis_listed(ctx, MODEL_ARMOR_APIS, "Model Armor")
+
+    say("")
+    say("  step 1: route the sanitize logs")
+    log_filter = sanitize_log_filter(ctx)
+    ensure_content_log_bucket(ctx)
+    ensure_project_sink(
+        ctx, CONTENT_LOG_SINK,
+        "logging.googleapis.com/projects/%s/locations/%s/buckets/%s"
+        % (project, region, CONTENT_LOG_BUCKET),
+        log_filter,
+    )
+    ensure_default_exclusion(ctx, CONTENT_LOG_EXCLUSION, log_filter)
+    say("  readers of %s: %s and IT security, nobody else. This" % (CONTENT_LOG_BUCKET, ctx.need("OPERATORS")))
+    say("  script grants no reader; a bucket-scoped view grant is a console decision.")
+    ctx.note("grant read on %s to %s and IT security only" % (CONTENT_LOG_BUCKET, ctx.need("OPERATORS")))
+
+    say("")
+    say("  step 2: two templates, inspect-only. gcloud beta, because the enforcement-type")
+    say("  flag is on the beta track; the GA track creates blocking templates only.")
+    for name in ARMOR_TEMPLATES:
+        ensure_armor_template(ctx, name)
+    say("  step 3 is manual: run the injection regression suite against")
+    say("  %s:sanitizeUserPrompt directly and record filterVersionConfig from" % ARMOR_TEMPLATES[0])
+    say("  each response. The prompt-injection filter moves to v3 on or before")
+    say("  2026-09-25 and retires v1 and v2 on 2026-11-29: detection changes under you")
+    say("  with no config change.")
+    ctx.note("run the injection regression suite against %s and record filterVersionConfig"
+             % ARMOR_TEMPLATES[0])
+
+    say("")
+    say("  step 4: the ingress gateway, the fail-closed extension, and the policy")
+    ensure_agent_gateway(
+        ctx, INGRESS_GATEWAY_NAME,
+        "name: %s\nprotocols: [MCP]\ngoogleManaged:\n  governedAccessPath: CLIENT_TO_AGENT\n"
+        % INGRESS_GATEWAY_NAME,
+    )
+    grant_armor_service_agents(ctx)
+    extension_path = write_committed_yaml(ctx, ARMOR_CONFIG_SUBDIR, "walle-ma-ext.yaml",
+                                          armor_extension_yaml(ctx))
+    say("  failOpen: false and timeout: 1s. A Model Armor outage then stops Wall-E,")
+    say("  which is the price of an enforcement-grade path.")
+    ensure_authz_extension(ctx, ARMOR_EXTENSION_NAME, extension_path)
+    policy_path = write_committed_yaml(ctx, ARMOR_CONFIG_SUBDIR, "walle-ma-policy.yaml",
+                                       armor_policy_yaml(ctx))
+    ensure_authz_policy(ctx, ARMOR_POLICY_NAME, policy_path)
+
+    say("")
+    say("  step 7: floor settings, conformance at the folder %s, inline on the project"
+        % ctx.need("FOLDER_ID"))
+    apply_floor_settings(ctx)
+
+    say("")
+    say("  INGRESS_GATEWAY=%s   <- put this in the config BEFORE 'walle deploy':"
+        % INGRESS_GATEWAY_NAME)
+    say("  the engine is bound to the gateway at creation (Phase 12c step 5).")
+    ctx.note("INGRESS_GATEWAY=%s" % INGRESS_GATEWAY_NAME)
+    say("  Verify by hand, SETUP.md Phase 12c: a known injection through streamQuery with")
+    say("  a traceparent gives a normal stream while inspect-only and a")
+    say("  SanitizeOperationLogEntry with filterMatchState=MATCH_FOUND and")
+    say("  client_name=AGENT_GATEWAY in %s; point the extension at a wrong" % CONTENT_LOG_BUCKET)
+    say("  template name and confirm the caller gets an error, then restore: that is")
+    say("  fail-closed observed rather than believed.")
+    ctx.print_notes()
+    return 0
+
+
+# --------------------------------------------------------------------------- #
+# Phase 13b — Agent Registry, and the egress gateway in dry-run
+# (SETUP.md Phase 13b, 13-agent-interconnection.md section 10)
+# --------------------------------------------------------------------------- #
+
+
+def assert_egress_host_allowed(url: str) -> None:
+    """The one rule the egress allowlist exists for. A refusal, never a warning."""
+    host = (urllib.parse.urlsplit(url).netloc or url).lower()
+    hits = [marker for marker in FORBIDDEN_EGRESS_HOST_MARKERS if marker in host]
+    if hits:
+        die(
+            "REFUSING to register %s: host %r matches %s. The reasoning layer must "
+            "never reach Secret Manager, Firestore, admin.googleapis.com, any Workspace "
+            "host or BigQuery except through the action service (13-agent-"
+            "interconnection.md section 7)." % (url, host, ", ".join(hits))
+        )
+
+
+def iam_member(value: str, default_kind: str = "serviceAccount") -> str:
+    """'x@y' -> 'serviceAccount:x@y'; an already-prefixed member is left alone."""
+    value = value.strip()
+    if ":" in value.split("@", 1)[0]:
+        return value
+    return "%s:%s" % (default_kind, value)
+
+
+def egress_endpoints(ctx: Ctx) -> List[Tuple[str, str]]:
+    """walle-actions plus the essential platform endpoints, exact hostnames.
+
+    Deliberately absent: secretmanager, firestore, admin.googleapis.com, every
+    Workspace host, bigquery. assert_egress_host_allowed refuses them anyway.
+    """
+    region = ctx.need("REGION")
+    actions_url = ctx.get("ACTIONS_URL") or current_service_url(ctx, "walle-actions")
+    if not actions_url:
+        if not ctx.dry_run:
+            die("walle-actions is not deployed (Phase 10); nothing to register")
+        actions_url = dry_run_placeholder(ctx, "ACTIONS_URL")
+    engine_id = resolve_engine_id(ctx) or "<engine-id>"
+    sessions = "https://%s-aiplatform.googleapis.com/%s/%s/%s/sessions" % (
+        region, AIPLATFORM_API_VERSION, engine_collection_path(ctx), engine_id)
+    return [
+        ("walle-actions", actions_url),
+        ("aiplatform", "https://aiplatform.googleapis.com"),
+        ("aiplatform-regional", "https://%s-aiplatform.googleapis.com" % region),
+        ("aiplatform-mtls", "https://%s-aiplatform.mtls.googleapis.com" % region),
+        ("aiplatform-rep", "https://aiplatform.%s.rep.googleapis.com" % region),
+        ("agentregistry", "https://agentregistry.googleapis.com"),
+        ("logging", "https://logging.googleapis.com"),
+        ("telemetry", "https://telemetry.googleapis.com"),
+        ("cloudtrace", "https://cloudtrace.googleapis.com"),
+        ("monitoring", "https://monitoring.googleapis.com"),
+        ("cloudresourcemanager", "https://cloudresourcemanager.googleapis.com"),
+        ("iamcredentials", "https://iamcredentials.googleapis.com"),
+        ("walle-sessions", sessions),
+    ]
+
+
+def register_egress_endpoint(ctx: Ctx, endpoint_id: str, url: str) -> None:
+    assert_egress_host_allowed(url)
+    region, project = ctx.need("REGION"), ctx.need("PROJECT")
+    described = gcloud_probe_json(ctx, "agent-registry", "services", "describe", endpoint_id,
+                                  "--location", region)
+    if described is not None:
+        step("registered: %s -> %s" % (endpoint_id, url))
+        return
+    run(ctx, [
+        "gcloud", "agent-registry", "services", "create", endpoint_id,
+        "--project=" + project, "--location=" + region,
+        "--display-name=" + endpoint_id, "--endpoint-spec-type=no-spec",
+        "--interfaces=url=%s,protocolBinding=http-json" % url,
+    ])
+
+
+def check_access_policy_bindings_allowed(ctx: Ctx) -> None:
+    """iam.managed.disableAccessPolicyBindings must not be enforced on the project."""
+    constraint = "iam.managed.disableAccessPolicyBindings"
+    described = gcloud_probe_json(ctx, "org-policies", "describe", constraint,
+                                  "--project", ctx.need("PROJECT"), "--effective")
+    rules = ((described or {}).get("spec", {}) or {}).get("rules", []) or []
+    if any(rule.get("enforce") is True for rule in rules):
+        message = (
+            "%s is enforced on %s. The egressor binding cannot be created while it is; "
+            "lift it (an org-policy change, by the organisation admin) and wait up to "
+            "15 minutes for propagation." % (constraint, ctx.need("PROJECT"))
+        )
+        if ctx.dry_run:
+            warn(message)
+            return
+        die(message)
+    step("%s is not enforced (or is unreadable here)" % constraint)
+
+
+def ensure_egressor_policy(ctx: Ctx, endpoint_id: str, policy_path: str,
+                           policy: Dict[str, Any]) -> None:
+    region, project = ctx.need("REGION"), ctx.need("PROJECT")
+    current = gcloud_probe_json(
+        ctx, "iap", "web", "get-iam-policy", "--resource-type=agent-registry",
+        "--region=" + region, "--endpoint=" + endpoint_id,
+    ) or {}
+    have = sorted(
+        (b.get("role"), tuple(sorted(b.get("members", []))))
+        for b in current.get("bindings", []) or []
+    )
+    want = sorted((b["role"], tuple(sorted(b["members"]))) for b in policy["bindings"])
+    if have == want:
+        step("egressor policy current on %s" % endpoint_id)
+        return
+    run(ctx, ["gcloud", "iap", "web", "set-iam-policy", policy_path, "--project=" + project,
+              "--resource-type=agent-registry", "--region=" + region,
+              "--endpoint=" + endpoint_id])
+
+
+def iap_extension_yaml(ctx: Ctx) -> str:
+    """13-agent-interconnection.md (c)-3: IAP request authorization, DRY_RUN.
+
+    The field names under metadata are the ones the chapter records
+    (iapPolicyVersion V2, iamEnforcementMode DRY_RUN); a live import is the
+    first thing that proves their exact spelling.
+    """
+    region = ctx.need("REGION")
+    return (
+        "name: %s\n"
+        "service: iap.googleapis.com\n"
+        "failOpen: false\n"
+        "timeout: 1s\n"
+        "metadata:\n"
+        "  iapPolicyVersion: V2\n"
+        "  iamEnforcementMode: DRY_RUN\n" % IAP_EXTENSION_NAME
+    ) if region else ""
+
+
+def iap_policy_yaml(ctx: Ctx, gateway: str) -> str:
+    project, region = ctx.need("PROJECT"), ctx.need("REGION")
+    return (
+        "name: %s\n"
+        "target:\n"
+        '  resources: ["projects/%s/locations/%s/agentGateways/%s"]\n'
+        "policyProfile: REQUEST_AUTHZ\n"
+        "action: CUSTOM\n"
+        "customProvider:\n"
+        "  authzExtension:\n"
+        '    resources: ["projects/%s/locations/%s/authzExtensions/%s"]\n'
+        % (IAP_POLICY_NAME, project, region, gateway, project, region, IAP_EXTENSION_NAME)
+    )
+
+
+def register_card(ctx: Ctx, card_path: str) -> int:
+    """`registry --card PATH`: the hand-written card, only once A2A exists."""
+    section("Phase 13b step 4 — register the hand-written agent card")
+    path = os.path.expanduser(card_path)
+    if not os.path.isfile(path):
+        die("no such card: %s" % path)
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            card = json.load(handle)
+    except ValueError as exc:
+        die("%s is not valid JSON: %s" % (path, exc))
+    interfaces = list((card or {}).get("supportedInterfaces", []) or [])
+    if not interfaces:
+        die("%s has no supportedInterfaces; a card without an interface points nowhere"
+            % path)
+    for interface in interfaces:
+        url = str((interface or {}).get("url", "") or "")
+        if "tbd" in url.lower() or not url:
+            die(
+                "REFUSING to register %s: supportedInterfaces url %r is still a "
+                "placeholder. The card is registered only in the same change that "
+                "stands up the A2A interface it points at, not before Stage 3 "
+                "(decision 23)." % (path, url)
+            )
+        assert_egress_host_allowed(url)
+    bad_skills = [
+        str(skill.get("id", ""))
+        for skill in (card.get("skills", []) or [])
+        if any(marker in str(skill.get("id", "")).lower()
+               for marker in FORBIDDEN_CARD_SKILL_MARKERS)
+    ]
+    if bad_skills:
+        die("REFUSING: the card advertises a write, approval or control skill: %s. "
+            "Reads and plans only (13-agent-interconnection.md section 3.5)."
+            % ", ".join(bad_skills))
+    region, project = ctx.need("REGION"), ctx.need("PROJECT")
+    entry_id = ctx.get("ENGINE_DISPLAY_NAME") or "wall-e"
+    say("  card: %s, %d interface(s), %d skill(s)" % (path, len(interfaces),
+                                                     len(card.get("skills", []) or [])))
+    say("  Never add a 'Custom agent via A2A' registration in Gemini Enterprise: it is")
+    say("  0.3-only and bypasses the gateway.")
+    described = gcloud_probe_json(ctx, "agent-registry", "services", "describe", entry_id,
+                                  "--location", region)
+    if described is not None:
+        step("registry service exists: %s (update it through the reviewed pipeline)" % entry_id)
+    else:
+        confirm(ctx, "Register the card as %s?" % entry_id)
+        run(ctx, [
+            "gcloud", "agent-registry", "services", "create", entry_id,
+            "--project=" + project, "--location=" + region,
+            "--display-name=Wall-E", "--agent-spec-type=a2a-agent-card",
+            "--agent-spec-content=" + path,
+        ])
+    for argv in (
+        ("agent-registry", "agents", "describe", entry_id, "--location", region),
+        ("agent-registry", "agents", "search", "--location", region,
+         "--search-string=" + entry_id),
+    ):
+        result = probe(ctx, ["gcloud"] + list(argv) + ["--project", project])
+        say("  %s -> %s" % (" ".join(argv[:3]), "ok" if result.ok else "not readable"))
+    ctx.print_notes()
+    return 0
+
+
+def cmd_registry(ctx: Ctx) -> int:
+    card = getattr(ctx.args, "card", None)
+    if card:
+        return register_card(ctx, card)
+    section("Phase 13b — Agent Registry, and the egress gateway in dry-run")
+    project, region = ctx.need("PROJECT"), ctx.need("REGION")
+    ci_member = iam_member(ctx.need("CI_DEPLOYER"))
+    mo_member = iam_member(ctx.need("MO_PRINCIPAL"))
+    eve_member = "serviceAccount:" + ctx.need("SA_EVE")
+    gateway = ctx.get("EGRESS_GATEWAY") or EGRESS_GATEWAY_NAME
+    say("  Registry admin to the CI deployer only, viewer to Eve and Mo. The egress")
+    say("  gateway is a default-deny hostname allowlist for the reasoning layer, and it")
+    say("  starts in DRY_RUN: two undocumented questions gate it to enforced.")
+    say("    admin   %s" % ci_member)
+    say("    viewer  %s" % eve_member)
+    say("    viewer  %s" % mo_member)
+    say("    gateway %s" % gateway)
+    confirm(ctx, "Proceed with the registry and egress gateway setup?")
+    ensure_apis_listed(ctx, REGISTRY_APIS, "Agent Registry")
+
+    say("")
+    say("  step 1: roles. Nobody else: an editor can redirect every consumer that")
+    say("  resolves Wall-E through the registry and flip the tool annotations gateway")
+    say("  rules read.")
+    ensure_project_binding(ctx, ci_member, "roles/agentregistry.admin")
+    ensure_project_binding(ctx, eve_member, "roles/agentregistry.viewer")
+    ensure_project_binding(ctx, mo_member, "roles/agentregistry.viewer")
+
+    say("")
+    say("  step 2: the automatic entry. Deploying to Agent Runtime registered Wall-E.")
+    entry_id = ctx.get("ENGINE_DISPLAY_NAME") or "wall-e"
+    listing = gcloud_probe_json(ctx, "agent-registry", "agents", "list", "--location", region)
+    for item in listing or []:
+        say("    %s" % (item.get("name") or item))
+    entry = gcloud_probe_json(ctx, "agent-registry", "agents", "describe", entry_id,
+                              "--location", region)
+    if entry is None:
+        if not ctx.dry_run:
+            die("no registry entry named %s. Agent Runtime registers the engine on its "
+                "own at deploy; run 'walle deploy' first." % entry_id)
+        say("  [dry run] no entry named %s readable yet" % entry_id)
+    else:
+        text = json.dumps(entry).lower()
+        missing = [a for a in ("runtimeidentity", "runtimereference") if a not in text]
+        if missing:
+            die("registry entry %s lacks the %s attribute(s); expected RuntimeIdentity "
+                "(principal://agents.global.org-...) and RuntimeReference:\n%s"
+                % (entry_id, ", ".join(missing), json.dumps(entry)[:600]))
+        step("entry %s carries RuntimeIdentity and RuntimeReference" % entry_id)
+
+    say("")
+    say("  step 3: alert on registry writes. Commit this query in the repository and")
+    say("  wire it to the operator channel:")
+    say("    %s" % REGISTRY_AUDIT_FILTER)
+    recent = probe(ctx, ["gcloud", "logging", "read", REGISTRY_AUDIT_FILTER,
+                         "--project", project, "--limit=5", "--format=json"])
+    if recent.ok:
+        try:
+            rows = json.loads(recent.out) if recent.out.strip() else []
+        except ValueError:
+            rows = []
+        say("  %d registry write(s) in the recent log" % len(rows))
+    ctx.note("commit the registry write alert query and wire it to the operator channel")
+
+    say("")
+    say("  step 4: the hand-written card is NOT registered here. 'walle registry --card")
+    say("  PATH' does it, only in the change that stands up the A2A interface (not")
+    say("  before Stage 3, decision 23).")
+
+    say("")
+    say("  step 5: the egress gateway, in dry-run. Everything unregistered is denied.")
+    check_access_policy_bindings_allowed(ctx)
+    ensure_agent_gateway(
+        ctx, gateway,
+        "name: %s\ngoogleManaged:\n  governedAccessPath: AGENT_TO_ANYWHERE\nregistries:\n"
+        "  - //agentregistry.googleapis.com/projects/%s/locations/%s\n"
+        % (gateway, project, region),
+    )
+    endpoints = egress_endpoints(ctx)
+    say("  registering %d endpoints; secretmanager, firestore, admin.googleapis.com, every"
+        % len(endpoints))
+    say("  Workspace host and bigquery are deliberately absent, and refused if named.")
+    for endpoint_id, url in endpoints:
+        register_egress_endpoint(ctx, endpoint_id, url)
+    principal = agent_principal(ctx)
+    policy = {"bindings": [{"role": "roles/iap.egressor", "members": [principal]}]}
+    policy_path = ctx.scratch_file("walle-egress-policy.json", json.dumps(policy, indent=2))
+    say("  access policy, per endpoint, for Wall-E's principal only:")
+    say("    roles/iap.egressor -> %s" % principal)
+    confirm(ctx, "Apply the egressor policy on all %d endpoints?" % len(endpoints))
+    for endpoint_id, _url in endpoints:
+        ensure_egressor_policy(ctx, endpoint_id, policy_path, policy)
+    say("  the IAP request-authorization extension and policy, iamEnforcementMode DRY_RUN")
+    extension_path = write_committed_yaml(ctx, ("config", "gateway"), "walle-iap-ext.yaml",
+                                          iap_extension_yaml(ctx))
+    ensure_authz_extension(ctx, IAP_EXTENSION_NAME, extension_path, beta=True)
+    policy_yaml_path = write_committed_yaml(ctx, ("config", "gateway"), "walle-iap-policy.yaml",
+                                            iap_policy_yaml(ctx, gateway))
+    ensure_authz_policy(ctx, IAP_POLICY_NAME, policy_yaml_path)
+
+    say("")
+    say("  Verify: run a shadow playbook; in the IAP logs expect 200 on walle-actions and")
+    say("  a logged deny on an unregistered host; confirm Sessions and tracing still")
+    say("  work. Only then flip iamEnforcementMode to enforced and re-run the K0 drill")
+    say("  through the gateway path, recording the time in drills/{date}.")
+    say("  Two undocumented questions gate dry-run to enforced: whether the gateway")
+    say("  forwards the agent's own bearer token untouched to walle-actions, and whether")
+    say("  an Agent Identity principal can mint an ID token for a Cloud Run audience")
+    say("  (the spike). If either fails the gateway stays in dry-run for the pilot.")
+    ctx.note("egress gateway %s in DRY_RUN; flip to enforced only after the verify above"
+             % gateway)
+    ctx.print_notes()
+    return 0
 
 
 def cmd_triggers(ctx: Ctx) -> int:
@@ -5188,14 +6727,186 @@ def check_engine_properties(ctx: Ctx) -> CheckResult:
         problems.append("Memory Bank appears to be configured")
     if "codeExecution" in spec:
         problems.append("Code Execution appears to be configured (no EU at-rest residency)")
-    service_account = str(described.get("spec", {}).get("serviceAccount", "")) or spec
-    if ctx.need("SA_AGENT") not in service_account:
-        problems.append("the engine does not run as walle-agent@")
+    # Phase 12b: on the AGENT_IDENTITY path the engine runs as its own principal
+    # and must carry NO service account; on the recorded fallback it is walle-agent@.
+    mode = ctx.get("AGENT_IDENTITY_MODE") or "AGENT_IDENTITY"
+    service_account = str((described.get("spec", {}) or {}).get("serviceAccount", "") or "")
+    if mode == "SERVICE_ACCOUNT":
+        if ctx.need("SA_AGENT") not in (service_account or spec):
+            problems.append("the engine does not run as walle-agent@")
+        identity_summary = "runs as walle-agent@ (SERVICE_ACCOUNT fallback)"
+    else:
+        if service_account:
+            problems.append(
+                "AGENT_IDENTITY_MODE is AGENT_IDENTITY but the engine carries "
+                "serviceAccount %s; identity_type cannot be patched" % service_account
+            )
+        identity_summary = "runs as an agent identity, no service account"
     if problems:
         return FAIL, "; ".join(problems)
     return PASS, (
-        "runs as walle-agent@, min_instances 0, no Memory Bank, no Code Execution"
+        "%s, min_instances 0, no Memory Bank, no Code Execution" % identity_summary
     )
+
+
+# --------------------------------------------------------------------------- #
+# Phases 12b, 12c and 13b — the new invariants
+# --------------------------------------------------------------------------- #
+
+
+def deployed_engine_env(ctx: Ctx) -> Optional[Dict[str, str]]:
+    """The engine's environment as deployed. None when there is no engine."""
+    engine_id = resolve_engine_id(ctx)
+    if not engine_id:
+        return None
+    described = describe_engine(ctx, engine_id)
+    if described is None:
+        return None
+    spec = described.get("spec", {}) or {}
+    entries = (spec.get("deploymentSpec", {}) or {}).get("env", []) or []
+    return {
+        str(entry.get("name")): str(entry.get("value", ""))
+        for entry in entries
+        if isinstance(entry, dict) and "name" in entry
+    }
+
+
+def check_agent_identity_effective(ctx: Ctx) -> CheckResult:
+    """Phase 12b step 5: the identity is READ BACK, and the fallback is on file."""
+    engine_id = resolve_engine_id(ctx)
+    if not engine_id:
+        return SKIP, "no engine deployed yet"
+    effective = read_effective_identity(ctx, engine_id)
+    if effective.startswith(AGENT_TRUST_DOMAIN_PREFIX):
+        return PASS, "effectiveIdentity %s" % effective
+    mode = ctx.get("AGENT_IDENTITY_MODE") or "AGENT_IDENTITY"
+    spike_file = os.path.expanduser(ctx.get("AGENT_IDENTITY_SPIKE_RESULT") or "")
+    if mode == "SERVICE_ACCOUNT" and spike_file and os.path.isfile(spike_file):
+        return PASS, (
+            "SERVICE_ACCOUNT fallback, spike recorded at %s (effectiveIdentity %r); "
+            "Agent Identity is deferred hardening" % (spike_file, effective)
+        )
+    return FAIL, (
+        "effectiveIdentity is %r, not an agent identity, and no recorded fallback "
+        "(AGENT_IDENTITY_MODE=%s, AGENT_IDENTITY_SPIKE_RESULT=%r). identity_type "
+        "cannot be patched: the engine must be recreated." % (effective, mode, spike_file)
+    )
+
+
+def check_engine_no_span_content(ctx: Ctx) -> CheckResult:
+    """ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS defaults ON and would put tool
+    arguments and responses, which carry employee data, into Cloud Trace."""
+    env = deployed_engine_env(ctx)
+    if env is None:
+        return SKIP, "no engine deployed yet"
+    value = env.get("ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS")
+    if value is None:
+        return FAIL, ("ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS is absent from the deployed "
+                      "env; it defaults ON")
+    if value.strip().lower() != "false":
+        return FAIL, "ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS is %r, not false" % value
+    return PASS, "ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false on the deployed engine"
+
+
+def check_engine_no_token_sharing_optout(ctx: Ctx) -> CheckResult:
+    env = deployed_engine_env(ctx)
+    if env is None:
+        return SKIP, "no engine deployed yet"
+    if TOKEN_SHARING_OPTOUT in env:
+        return FAIL, ("%s is set on the deployed engine; it unbinds tokens from the "
+                      "runtime certificate" % TOKEN_SHARING_OPTOUT)
+    return PASS, "%s absent from the deployed env" % TOKEN_SHARING_OPTOUT
+
+
+def check_agentidentitycredentials_disabled(ctx: Ctx) -> CheckResult:
+    enabled = gcloud_probe_json(ctx, "services", "list", "--enabled")
+    if enabled is None:
+        return SKIP, "cannot list enabled services"
+    names = {item.get("config", {}).get("name") for item in enabled}
+    if AGENT_IDENTITY_CREDENTIALS_API in names:
+        return FAIL, ("%s is ENABLED; with it on, an auth provider can be exercised in "
+                      "this project" % AGENT_IDENTITY_CREDENTIALS_API)
+    return PASS, "%s is disabled" % AGENT_IDENTITY_CREDENTIALS_API
+
+
+def check_extension_yaml_fail_closed(ctx: Ctx) -> CheckResult:
+    """The committed YAML AND the live extension: failOpen false, or nothing."""
+    path = os.path.join(os.path.expanduser(ctx.need("WALLE_REPO")), *ARMOR_CONFIG_SUBDIR,
+                        "walle-ma-ext.yaml")
+    if not os.path.isfile(path):
+        return SKIP, "'walle armor' has not written %s yet" % path
+    with open(path, "r", encoding="utf-8") as handle:
+        text = handle.read()
+    match = re.search(r"^\s*failOpen:\s*(\S+)", text, re.M)
+    if not match:
+        return FAIL, "%s carries no failOpen key; the default is fail-OPEN" % path
+    if match.group(1).strip().strip("'\"").lower() != "false":
+        return FAIL, "%s has failOpen %s; must be false" % (path, match.group(1))
+    live = gcloud_probe_json(ctx, "service-extensions", "authz-extensions", "describe",
+                             ARMOR_EXTENSION_NAME, "--location", ctx.need("REGION"))
+    if live is not None and live.get("failOpen") is True:
+        return FAIL, "the committed YAML says false but the LIVE extension is failOpen true"
+    return PASS, "failOpen: false in %s%s" % (
+        os.path.relpath(path, os.path.expanduser(ctx.need("WALLE_REPO"))),
+        "" if live is None else ", and on the live extension")
+
+
+def check_dispatcher_stream_query(ctx: Ctx) -> CheckResult:
+    """Phase 12c step 6: every caller uses streamQuery. CI forbids the other two."""
+    root = os.path.join(os.path.expanduser(ctx.need("WALLE_REPO")), "dispatcher")
+    if not os.path.isdir(root):
+        return SKIP, "no dispatcher source at %s" % root
+    hits = grep_tree(root, (".query(", "async_query("), suffixes=(".py",))
+    if hits:
+        return FAIL, ("the dispatcher calls query or async_query, which the ingress "
+                      "gateway does not screen: %s" % ", ".join(
+                          os.path.relpath(h, root) for h in hits))
+    return PASS, "no .query( or async_query( under dispatcher/"
+
+
+def check_agent_no_dynamic_toolsets(ctx: Ctx) -> CheckResult:
+    """No Skill Registry, no MCP, no remote A2A in the agent package (chapter 13)."""
+    root = os.path.join(os.path.expanduser(ctx.need("WALLE_REPO")), "agent")
+    if not os.path.isdir(root):
+        return SKIP, "no agent package at %s" % root
+    needles = ("skill_registry", "SkillToolset", "McpToolset", "RemoteA2aAgent")
+    found = []
+    for needle in needles:
+        hits = grep_tree(root, (needle,), suffixes=(".py",))
+        if hits:
+            found.append("%s in %s" % (needle, ", ".join(os.path.relpath(h, root) for h in hits)))
+    if found:
+        return FAIL, "; ".join(found)
+    return PASS, "none of %s imported under agent/" % ", ".join(needles)
+
+
+def _urls_in(node: Any) -> List[str]:
+    if isinstance(node, dict):
+        return [u for v in node.values() for u in _urls_in(v)]
+    if isinstance(node, list):
+        return [u for item in node for u in _urls_in(item)]
+    if isinstance(node, str) and "://" in node:
+        return [node]
+    return []
+
+
+def check_egress_registry_no_forbidden_hosts(ctx: Ctx) -> CheckResult:
+    services = gcloud_probe_json(ctx, "agent-registry", "services", "list",
+                                 "--location", ctx.need("REGION"))
+    if services is None:
+        return SKIP, "cannot list registry services"
+    if not services:
+        return SKIP, "no endpoints registered yet ('walle registry')"
+    offending = []
+    for service in services:
+        for url in _urls_in(service):
+            host = (urllib.parse.urlsplit(url).netloc or url).lower()
+            if any(marker in host for marker in FORBIDDEN_EGRESS_HOST_MARKERS):
+                offending.append("%s -> %s" % (service.get("name", "?"), host))
+    if offending:
+        return FAIL, ("the egress allowlist names a host the reasoning layer must never "
+                      "reach directly: %s" % "; ".join(offending))
+    return PASS, "%d registered endpoints, none of them a forbidden host" % len(services)
 
 
 CHECKS: Tuple[Tuple[str, str, Callable[[Ctx], CheckResult]], ...] = (
@@ -5228,6 +6939,15 @@ CHECKS: Tuple[Tuple[str, str, Callable[[Ctx], CheckResult]], ...] = (
     ("engine_properties", "12", check_engine_properties),
     # The only check that asks Google rather than Wall-E's own configuration.
     ("no_robot_writes_at_google", "12/14/18", check_no_robot_writes),
+    # Phases 12b, 12c and 13b.
+    ("agent_identity_effective", "12b", check_agent_identity_effective),
+    ("engine_no_span_content", "12c", check_engine_no_span_content),
+    ("engine_no_token_sharing_optout", "12b", check_engine_no_token_sharing_optout),
+    ("agentidentitycredentials_disabled", "12b", check_agentidentitycredentials_disabled),
+    ("extension_yaml_fail_closed", "12c", check_extension_yaml_fail_closed),
+    ("dispatcher_uses_stream_query", "12c", check_dispatcher_stream_query),
+    ("agent_no_dynamic_toolsets", "13b", check_agent_no_dynamic_toolsets),
+    ("egress_registry_no_forbidden_hosts", "13b", check_egress_registry_no_forbidden_hosts),
 )
 
 
@@ -5572,6 +7292,37 @@ def cmd_status(ctx: Ctx) -> int:
     env = deployed_actions_env(ctx)
     add("10", "refresh token pin", bool(env and env.get("REFRESH_TOKEN_VERSION", "").isdigit()),
         "version %s" % (env or {}).get("REFRESH_TOKEN_VERSION", "-"))
+    # Phases 12b, 12c, 13b. Read-only probes; an unreadable one is a "NO" row,
+    # never an abort: status is the command you run when something is broken.
+    try:
+        engine_id = resolve_engine_id(ctx)
+        effective = read_effective_identity(ctx, engine_id) if engine_id else ""
+        add("12b", "agent identity", effective.startswith(AGENT_TRUST_DOMAIN_PREFIX),
+            (effective or "none")[:60])
+    except WalleError as exc:
+        add("12b", "agent identity", False, str(exc).splitlines()[0][:60])
+    for template in ARMOR_TEMPLATES:
+        try:
+            described = gcloud_probe_json(ctx, "beta", "model-armor", "templates", "describe",
+                                          template, "--location", ctx.need("REGION"))
+            add("12c", "armor template %s" % template, described is not None,
+                str(((described or {}).get("templateMetadata") or {}).get("enforcementType", "")))
+        except WalleError as exc:
+            add("12c", "armor template %s" % template, False, str(exc).splitlines()[0][:60])
+    for phase, gateway in (("12c", INGRESS_GATEWAY_NAME),
+                           ("13b", ctx.get("EGRESS_GATEWAY") or EGRESS_GATEWAY_NAME)):
+        try:
+            add(phase, "agent gateway %s" % gateway,
+                gcloud_probe_json(ctx, "network-services", "agent-gateways", "describe",
+                                  gateway, "--location", ctx.need("REGION")) is not None)
+        except WalleError as exc:
+            add(phase, "agent gateway %s" % gateway, False, str(exc).splitlines()[0][:60])
+    try:
+        registered = gcloud_probe_json(ctx, "agent-registry", "services", "list",
+                                       "--location", ctx.need("REGION")) or []
+        add("13b", "egress endpoints", bool(registered), "%d registered" % len(registered))
+    except WalleError as exc:
+        add("13b", "egress endpoints", False, str(exc).splitlines()[0][:60])
     say("")
     say(render_table(rows, ["PHASE", "RESOURCE", "PRESENT", "DETAIL"]))
     say("")
@@ -5631,7 +7382,8 @@ def cmd_teardown(ctx: Ctx) -> int:
         # script created. This one deleted every reasoning engine in the region,
         # which is how a colleague's unrelated Agent Engine deployment in the
         # same project gets destroyed by one flag and one typed project id.
-        if engine.get("displayName") != ctx.get("ENGINE_DISPLAY_NAME"):
+        # The Phase 12b spike engine is this script's too (`walle spike`).
+        if engine.get("displayName") not in (ctx.get("ENGINE_DISPLAY_NAME"), SPIKE_DISPLAY_NAME):
             warn(
                 "leaving reasoning engine %s (displayName %r) alone: this script "
                 "did not create it"
@@ -6033,8 +7785,15 @@ def cmd_rollback(ctx: Ctx) -> int:
                 ctx, "DELETE", aiplatform_url(ctx, name), access_token(ctx))
             if status not in (200, 202):
                 die("deleting %s returned HTTP %s: %s" % (name, status, str(body)[:200]))
+        say("  A production engine cannot change identity in place: recreating it")
+        say("  produces a NEW principal, and every resource-level binding on the old")
+        say("  one dies with it. Treat a recreate as an identity change under the IAM")
+        say("  change checklist (SETUP.md Phase 12b rollback).")
+    elif phase == "12b":
+        # SETUP.md Phase 12b rollback: the throwaway spike engine and its binding.
+        rollback_spike(ctx)
     else:
-        die("rollback takes a phase: 2, 9, 10, 11, 12 or 14")
+        die("rollback takes a phase: 2, 9, 10, 11, 12, 12b or 14")
     ctx.print_notes()
     return 0
 
@@ -6048,8 +7807,11 @@ COMMANDS: Dict[str, Tuple[str, Callable[[Ctx], int]]] = {
     "workspace": ("phases 1 and 2: OUs, robots, groups, sandbox, floor list, roles", cmd_workspace),
     "gcp": ("phases 6, 7 and 8: project, data, keys and secrets", cmd_gcp),
     "consent": ("phases 9 and 15: the one interactive OAuth bootstrap", cmd_consent),
-    "deploy": ("phases 10, 11, 12 and 14: services, sinks, agent, ladder, schedulers", cmd_deploy),
+    "deploy": ("phases 10, 11, 12, 12b and 14: services, sinks, agent + identity, ladder, schedulers", cmd_deploy),
+    "spike": ("phase 12b step 3: the Agent Identity spike on a throwaway engine", cmd_spike),
+    "armor": ("phase 12c: Model Armor templates, ingress gateway, floor (inspect-only)", cmd_armor),
     "register": ("phase 13: Gemini Enterprise registration and sharing", cmd_register),
+    "registry": ("phase 13b: Agent Registry roles, egress gateway in dry-run", cmd_registry),
     "triggers": ("phase 16: Gmail watch and its daily renewal", cmd_triggers),
     "verify": ("every security invariant, asserted", cmd_verify),
     "denials": ("phase 17: the denial suite against the deployed service", cmd_denials),
@@ -6100,8 +7862,16 @@ def build_parser() -> argparse.ArgumentParser:
         _add_global_flags(sub)
         if name == "rollback":
             sub.add_argument("--phase", required=True,
-                             choices=("2", "9", "10", "11", "12", "14"),
-                             help="which phase's rollback to run")
+                             choices=("2", "9", "10", "11", "12", "12b", "14"),
+                             help="which phase's rollback to run (12b: the spike engine)")
+        if name == "armor":
+            sub.add_argument("--enforce", action="store_true",
+                             help="the blocking flips (Stage 1): refused unless "
+                                  "MODEL_ARMOR_ENFORCE_DECISION names an existing file")
+        if name == "registry":
+            sub.add_argument("--card", metavar="PATH",
+                             help="register the hand-written agent card; refused while "
+                                  "a supportedInterfaces url is still 'tbd'")
         if name == "triggers":
             sub.add_argument("--drill-watch-alert", action="store_true",
                              help="Phase 16 verify step 3: pause the renewal on "
@@ -6119,6 +7889,10 @@ def build_parser() -> argparse.ArgumentParser:
         if name == "deploy":
             sub.add_argument("--skip-build", action="store_true",
                              help="reuse the images already in Artifact Registry")
+            sub.add_argument("--skip-deny-policy", action="store_true",
+                             help="phase 12b step 7: do not create the deny policy "
+                                  "(escape hatch while its permission names are "
+                                  "being verified against the supported list)")
         if name == "verify":
             sub.add_argument("--strict", action="store_true",
                              help="treat checks that could not run as failures")

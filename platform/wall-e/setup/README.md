@@ -22,8 +22,12 @@ cp walle.env.example ~/.walle-env && $EDITOR ~/.walle-env   # fill in every <...
 ./walle gcp                  # phases 6, 7, 8
 ./walle consent              # phase 9   — the one interactive step
 ./walle consent --eve        # phase 15
-./walle deploy               # phases 10, 11, 12, 14
+./walle armor                # phase 12c — Model Armor, inspect-only; BEFORE deploy
+./walle spike                # phase 12b step 3 — the Agent Identity spike; BEFORE deploy
+./walle rollback --phase 12b #   then delete the throwaway spike engine
+./walle deploy               # phases 10, 11, 12, 12b, 14
 ./walle register             # phase 13
+./walle registry             # phase 13b — Agent Registry, egress gateway in dry-run
 ./walle triggers             # phase 16
 ./walle verify               # every invariant, as a pass/fail table
 ./walle denials              # phase 17
@@ -42,8 +46,8 @@ shows command output, except where that output is a secret. `./walle status`
 prints where the build actually is, which is what you want after an
 interruption.
 
-`./walle rollback --phase N` undoes one phase (2, 9, 10, 11, 12 or 14) rather
-than everything. Phase 14's rollback pauses every playbook job but deliberately
+`./walle rollback --phase N` undoes one phase (2, 9, 10, 11, 12, 12b or 14)
+rather than everything. Phase 14's rollback pauses every playbook job but deliberately
 leaves `walle-gmail-watch-renew` running: pausing it as collateral damage
 produces SETUP.md §7.6 exactly — no T3 runs, no errors, everything looks healthy
 while the Gmail watch quietly dies.
@@ -63,6 +67,106 @@ Phases 10 to 14 need the Wall-E repository at `WALLE_REPO` (schemas, the two
 service sources, `agent/deploy.py`, `config/ladder.yaml`,
 `config/deploy_ladder.py`, `tests/denials.py`). Phases 1 to 8 do not, and doing
 them early surfaces the tenant surprises while the code is being written.
+
+## The identity, Model Armor and registry phases (12b, 12c, 13b)
+
+Three subcommands implement the chapters
+[11-prompt-security.md](../11-prompt-security.md),
+[12-agent-identity.md](../12-agent-identity.md) and
+[13-agent-interconnection.md](../13-agent-interconnection.md), as SETUP.md
+Phases 12c, 12b and 13b carry them. The gcloud invocations are SETUP.md's,
+verbatim. The config keys they need are documented in `walle.env.example`
+with the subcommand that validates each: `AGENT_IDENTITY_MODE`,
+`AGENT_IDENTITY_SPIKE_RESULT`, `INGRESS_GATEWAY`, `EGRESS_GATEWAY`, `FOLDER_ID`,
+`CI_DEPLOYER`, `MO_PRINCIPAL`, `MODEL_ARMOR_ENFORCE_DECISION`,
+`CONTENT_LOG_RETENTION_DAYS` (default 30).
+
+**`walle armor`** (Phase 12c, before the first `deploy`). Enables the APIs;
+creates the `walle-content-logs` bucket, the `walle-content-sink` sink and the
+`_Default` exclusion **before any template exists**, because the sanitize logs
+carry raw prompts and personal data; creates the two templates with
+`gcloud beta`, `--template-metadata-enforcement-type=inspect-only` and the
+exact filter flags; imports the `walle-ingress` gateway; grants both the
+Reasoning Engine and the Service Extensions service agents (the pages
+disagree on which is needed; remove the unnecessary one after a block is
+proved); writes `config/armor/walle-ma-ext.yaml` into `WALLE_REPO` with
+`failOpen: false` and `timeout: 1s` and imports it; imports the
+`CONTENT_AUTHZ` policy; sets the folder conformance floor and the project
+inline floor with logging. Every create is a get-or-create. It ends by telling
+you to set `INGRESS_GATEWAY=walle-ingress` so `deploy` binds the engine to the
+gateway at creation. **`walle armor --enforce`** performs the blocking flips
+(both templates to `inspect-and-block`, the project floor to
+`INSPECT_AND_BLOCK`) and is refused unless `MODEL_ARMOR_ENFORCE_DECISION`
+names an existing file: the Stage 1 decision record, decision 24.
+
+**`walle spike`** (Phase 12b step 3, before the first `deploy`). Creates a
+throwaway engine named `walle-spike` with `identity_type AGENT_IDENTITY`,
+binds its principal as `run.invoker` on `walle-actions` (12b-a), asks it over
+`streamQuery` to mint an ID token for `ACTIONS_URL` and call
+`/v1/operations` (12b-b, 12b-c), and writes the three results, pass or fail
+with raw output, to `AGENT_IDENTITY_SPIKE_RESULT`. It never writes a token:
+keys containing "token" and any JWT-shaped string are redacted before the
+file is written. The contract with `agent/deploy.py` is `WALLE_SPIKE=1`: deploy
+a spike agent whose one tool, `probe_identity(audience)`, returns
+`token_returned`, `status` and the decoded claims. `walle rollback --phase 12b`
+deletes the engine and its binding afterwards; `deploy` refuses to run while a
+spike engine still exists.
+
+**`walle deploy`** now carries Phase 12b. `AGENT_IDENTITY_MODE` defaults to
+`AGENT_IDENTITY`: no `service_account` is passed to `deploy.py`, the Reasoning
+Engine service agent is **not** granted `serviceAccountTokenCreator` on
+`walle-agent@`, `identity_type` and (when `INGRESS_GATEWAY` is set) the
+`agent_gateway_config` are passed, and the four telemetry variables go through
+the same `^;^` escaped list as Cloud Run, with
+`ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false`. After the deploy the script reads
+`spec.effectiveIdentity` back through the Agent Runtime REST API and **fails
+unless it starts with `agents.global.org-`**; the principal is built from the
+value read back, never typed. Then the four baseline grants, the two automatic
+roles described and refused on `secretmanager.` or `setIamPolicy`, `run.invoker`
+on the principal, and the `walle-deny-agents` deny policy (`--skip-deny-policy`
+is the escape while its permission names are verified against the deny-policy
+supported list, which the research did not do). `AGENT_IDENTITY_MODE=SERVICE_ACCOUNT`
+is the gated fallback: refused unless `AGENT_IDENTITY_SPIKE_RESULT` names an
+existing file, and a spike file whose verdict is `fail` refuses the identity
+path too. Before anything mutates, `deploy` also enables
+`agentidentity.googleapis.com`, **fails if `agentidentitycredentials.googleapis.com`
+is enabled** (it disables nothing), sets the two service-account-key
+constraints explicitly, and refuses an agent package that mentions
+`GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES` or does not pin
+`google-auth>=2.45.0`.
+
+**`walle registry`** (Phase 13b, after `register`). Enables the APIs; grants
+`agentregistry.admin` to `CI_DEPLOYER` only and `viewer` to `eve-controller@`
+and `MO_PRINCIPAL`; lists and describes the automatic `wall-e` entry and fails
+if it lacks `RuntimeIdentity` or `RuntimeReference`; prints the registry-write
+audit filter to commit and wire to the operator channel; imports the
+`walle-egress` gateway; registers `walle-actions` as a `NO_SPEC` endpoint and
+the essential platform endpoints with exact hostnames; writes the
+`roles/iap.egressor` access policy for the agent principal and applies it per
+endpoint; writes and imports the IAP request-authorization extension and
+policy in `iamEnforcementMode DRY_RUN`. **It never registers `secretmanager`,
+`firestore`, `admin.googleapis.com`, any Workspace host or `bigquery`**: a
+registration naming one is a refusal, not a warning, and `verify` re-checks the
+live registry. `walle registry --card PATH` registers the hand-written card and
+refuses while any `supportedInterfaces` url contains `tbd` or names a
+forbidden host, or while a skill id advertises a write, approval or control.
+
+**What remains manual after these three.** Reading which method the Gemini
+Enterprise caller actually uses (`query` or `streamQuery`) from the Agent
+Runtime request logs during the first operator session, and recording it in
+SETUP.md with the date. Capturing each operator's principal at their first
+sign-in for the external-IdP case (12-agent-identity.md 5.2): only a session
+produces it. Running the injection regression suite against
+`walle-ingress-prompt` and recording `filterVersionConfig`. Proving a block and
+the fail-closed behaviour (a wrong template name must error the caller), then
+removing whichever service-agent grant proves unnecessary. Granting readers on
+`walle-content-logs` (operators and IT security, nobody else). Verifying the
+deny policy's permission names against the supported list. Keying the agent's
+`EXEC_CALLER_ALLOWLIST` row on the claim the spike recorded. Lifting
+`iam.managed.disableAccessPolicyBindings` if it is enforced. Flipping the
+egress gateway from `DRY_RUN` to enforced after the shadow-playbook verify, and
+the two undocumented questions that gate it. The SPIFFE-id equality on the
+Gemini Enterprise agent page, and adding it to the drift job.
 
 ## What it cannot do, in the order you meet it
 
@@ -92,8 +196,21 @@ no verifier (M3, M5, M6, M10) is therefore the only thing standing between
 
 ## What `verify` asserts
 
-Twenty-eight named checks, each pass/fail on its own, exit non-zero on any
-failure. The security invariants among them: the agent service account can read
+Thirty-seven named checks, each pass/fail on its own, exit non-zero on any
+failure. The nine from Phases 12b, 12c and 13b: `agent_identity_effective`
+(`spec.effectiveIdentity` starts with `agents.global.org-`, or the recorded
+fallback file exists); `engine_no_span_content`
+(`ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` is `false` on the deployed engine, and
+absent counts as a failure because it defaults on);
+`engine_no_token_sharing_optout`;
+`agentidentitycredentials_disabled`; `extension_yaml_fail_closed` (the
+committed `config/armor/walle-ma-ext.yaml` says `failOpen: false`, and the
+live extension is not `failOpen: true`); `dispatcher_uses_stream_query` (no
+`.query(` or `async_query(` under `dispatcher/`); `agent_no_dynamic_toolsets`
+(none of `skill_registry`, `SkillToolset`, `McpToolset`, `RemoteA2aAgent` under
+`agent/`); `egress_registry_no_forbidden_hosts`; and the pre-existing
+`exactly_one_engine`, which the spike engine makes fail until it is rolled
+back. The older twenty-eight: The security invariants among them: the agent service account can read
 no secret and no KMS key, counting bindings inherited from the key ring and the
 project; the Stage 0 role holds nothing beyond the resolved read set; the robot
 holds **exactly one** role assignment, customer-scoped, and the Stage 1 write
@@ -212,6 +329,25 @@ failures.
 - **A pre-existing admin role with different privileges is a refusal**, not a
   warning. `ensure_role` used to warn and then hand the role to `phase_2_roles`,
   which assigned it to the robot customer-scoped.
+- **The Model Armor floor commands do not run `gcloud config set
+  api_endpoint_overrides/modelarmor`.** That property is persistent, and once
+  set it also redirects the regional `templates create` on the next re-run of
+  `armor`. The script passes the same override as
+  `CLOUDSDK_API_ENDPOINT_OVERRIDES_MODELARMOR`, gcloud's environment form of
+  the property, on the floor commands only. The flags are SETUP.md's.
+- **The template create carries SETUP.md Phase 12c's flag set**, not chapter
+  11's, which adds the custom error code and message flags. They only matter
+  once blocking is on; SETUP.md is authoritative.
+- **The deny policy is read back with `gcloud iam policies get`** before the
+  create, and `verify` reads the agent's `effectiveIdentity` over REST, because
+  there is still no `gcloud ai reasoning-engines` group. The IAP
+  request-authorization extension YAML uses the field names chapter 13 records
+  (`iapPolicyVersion`, `iamEnforcementMode`); a live import is the first thing
+  that proves their spelling.
+- **The egress "Sessions URI" endpoint** is registered as the engine's
+  `/sessions` collection on the regional aiplatform host, which is how the
+  runtime-gateway page describes it; confirm the exact form on the first
+  dry-run deny log.
 
 ## Not implemented
 
@@ -260,9 +396,39 @@ tenant:
   secrets, an asymmetric key for Eve, project roles on the service accounts
 - the Cloud Run environment flag survives email-shaped values, which is the bug that
   would otherwise have stopped the first deploy
+- Phase 12c: `armor --dry-run` issues no mutating command; both templates are
+  created on the beta track with `--template-metadata-enforcement-type=inspect-only`
+  and nothing is flipped to blocking; the bucket, the sink and the `_Default`
+  exclusion are issued **before** the first template; the committed extension
+  YAML contains `failOpen: false` and `timeout: 1s` and is the file imported;
+  the folder and project floors are set with logging; no persistent gcloud
+  config change; `armor --enforce` is refused without a decision file and
+  nothing runs
+- Phase 12b, on the identity path: `deploy.py` receives `IDENTITY_TYPE=AGENT_IDENTITY`
+  and **no `service_account`**; no `serviceAccountTokenCreator` grant to the
+  reasoning-engine service agent; the telemetry env goes through the `^;^` list
+  with `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false` and never the token-sharing
+  opt-out; four baseline grants and `run.invoker` land on the read-back
+  `principal://` member; the deny policy is created, and `--skip-deny-policy`
+  skips it; `SERVICE_ACCOUNT` without a spike file is refused before anything
+  runs, and with one it passes `walle-agent@` and restores the grant; a `fail`
+  spike on file refuses the identity path; `spike --dry-run` mutates nothing
+- Phase 13b: `registry --dry-run` mutates nothing; `agentregistry.admin` goes to
+  `CI_DEPLOYER` and nobody else, viewer to Eve and Mo; `walle-actions` is a
+  `NO_SPEC` endpoint; the essential endpoints are registered and **no forbidden
+  host ever is**; the egressor policy is applied per endpoint; the IAP extension
+  starts fail-closed in `DRY_RUN`; `--card` refuses a `tbd` url and a forbidden host
+- the nine new `verify` checks pass on a good repo, and three of them are shown
+  to fail: on `.query(` in the dispatcher, on `McpToolset` in the agent, and on
+  `failOpen: true` in the committed YAML
+
+Deploy, spike and registry reach the Agent Runtime REST API over HTTP, which
+has no gcloud group to stub, so the self-test loads the script as a module and
+replaces the three HTTP entry points with canned answers (one engine, an agent
+identity, the telemetry env). Everything else still goes through the stubs.
 
 ```bash
 cd setup/selftest && ./selftest.sh
 ```
 
-Run it after any change. Sixteen checks, and they should all pass.
+Run it after any change. Seventy checks, and they should all pass.

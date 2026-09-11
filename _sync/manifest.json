@@ -90,6 +90,9 @@
     "platform/wall-e/09-open-decisions.md": {
       "file_id": "1TstRo4QBPIlEoP3a5Or65y3FWMd09qai4aqJNtfKl_8"
     },
+    "platform/wall-e/10-adversarial-review.md": {
+      "file_id": "1G7imZl8KVu0htG7hpc2M5a4PlAhChMrG"
+    },
     "platform/wall-e/README.md": {
       "file_id": "1t3jmMHGzFYUlAlPKh_9M2QpmPDxMrG7IMpj39vibr_4"
     },
@@ -117,6 +120,7 @@
     "platform": "10Tug5CiVs9mi5A2IZ444xmRy2N8bFOl4",
     "platform/edge-ai-v2": "1Rxc6xAd39RI3NTfnzwC6wI1uaxqQlHkb",
     "platform/wall-e": "18g19EaClaDRshve-F6B9hztVL3iiaYM1",
+    "platform/wall-e/setup": "101UrJm5ACmemDVsPhwh_86nC4lNwXzmO",
     "reference": "1-8e7Q62acDQni50tn1Enc0tSFDU11y_a",
     "runbooks": "1aFjQuSV-lFK1Im1-wGPn2hsWQL7YZUbo"
   },
