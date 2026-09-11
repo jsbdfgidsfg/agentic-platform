@@ -100,9 +100,24 @@ That is worth having and it will sometimes fail. Design accordingly:
 - Treat every ceiling in [05](05-autonomy-ladder.md) §4 as compensating for a prompt that
   has already failed. If a control only works when the prompt works, it is not a control.
 
+## Forbidden configurations, checked in CI
+
+Each of these is one line that removes a property the design depends on.
+
+| Setting | Why it is forbidden | Check |
+|---|---|---|
+| `GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES: False` in any engine config | Opts the agent out of certificate-bound tokens, so a stolen token becomes replayable | CI fails on the variable anywhere under the agent package |
+| `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` unset or `true` | Defaults on, and puts tool arguments and tool responses, which carry employee data, into Cloud Trace with a 30-day retention nobody controls | CI asserts `false`; the daily drift job reads the deployed environment |
+| `failOpen: true` on the Model Armor authorization extension | Turns the one enforcement-grade prompt screen into a detection-grade one | CI asserts `false` in the committed extension YAML |
+| Any caller of the engine on `query` or `asyncQuery` | The ingress gateway screens `streamQuery` only | CI greps the dispatcher and Eve's caller for the forbidden methods |
+| Any import of `google.adk.integrations.skill_registry`, `SkillToolset`, `McpToolset` or `RemoteA2aAgent` in the agent package | Each is a channel through which the model chooses its own capabilities | CI fails on the import; the deployed tool list is compared to `/v1/operations` after every deploy |
+| `identity_type` other than `AGENT_IDENTITY` in the deploy config, unless the recorded spike result says the fallback is in force | The decision is immutable at engine creation | CI check plus a post-deploy assertion on `spec.effectiveIdentity` |
+
+Detail and mechanisms: [11-prompt-security.md](11-prompt-security.md), [12-agent-identity.md](12-agent-identity.md), [13-agent-interconnection.md](13-agent-interconnection.md).
+
 ## Monitoring
 
-Alert on, at minimum:
+Alert on, at minimum (the content-screen, taint-rate, filter-version and span-capture alerts are specified in [11-prompt-security.md](11-prompt-security.md) section 6 and extend this table):
 
 | Signal | Basis | Why |
 |---|---|---|

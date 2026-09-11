@@ -93,7 +93,7 @@ a small set of plan, control and read endpoints.
   "operation": "directory.user.suspend",
   "params": { "user_key": "<user>@<domain>", "suspended": true },
   "principal": {
-    "type": "human",              // human | scheduler | event | inbox | eve
+    "type": "human",              // human | scheduler | event | inbox | eve | agent
     "id": "<operator email>",     // asserted by the front door, re-checked here
     "on_behalf_of": null          // the owning human, for machine principals
   },
@@ -210,7 +210,10 @@ families:
 The effective level for one item is:
 
 ```
-trigger_for_ceiling = "inbox" if run.tainted else trigger
+trigger_for_ceiling = "inbox" if (run.tainted and principal.type != "human") else trigger
+# a human's chat request that is tainted keeps L3, not the inbox ceiling: see 11-prompt-security.md
+# a principal of type "agent" (a peer calling over A2A) has its own ceiling column: L5 for READ,
+# L0 for every write tier. A peer can obtain reads and narration and never a proposal. See 13.
 
 effective = min( ceiling[risk_tier][trigger_for_ceiling],   # code, never raised by config
                  config.families[f].levels[t],              # the ladder
@@ -456,8 +459,8 @@ minutes would break post-execution verification), and keys on the caller's expli
 
 | Table | Purpose | Key columns beyond the obvious |
 |---|---|---|
-| `actions` | One row per request | `principal_type`, `principal_id`, `on_behalf_of`, `run_id`, `plan_id`, `trigger_id`, `family`, `risk`, `level`, `config_version`, `catalogue_version`, `playbook_version`, `model_id`, `decision`, `denial_reason`, `dry_run`, `pre_state_hash`, `post_state_hash`, `verification`, `approval_id`, `approver`, `approval_latency_ms`, `params_redacted`, `result_summary`, `latency_ms`, `error_class` |
-| `runs` | One row per run | terminal state, counts, budget consumed, tokens, cost |
+| `actions` | One row per request | `principal_type`, `principal_id`, `on_behalf_of`, `run_id`, `plan_id`, `trigger_id`, `family`, `risk`, `level`, `tainted`, `content_flags` (list of `filter:confidence` from the content screen), `screen_state` (`screened` / `skipped`), `config_version`, `ceilings_sha`, `catalogue_version`, `playbook_version`, `prompt_hash`, `model_id`, `decision`, `denial_reason`, `dry_run`, `pre_state_hash`, `post_state_hash`, `verification`, `approval_id`, `approver`, `approval_latency_ms`, `params_redacted`, `result_summary`, `latency_ms`, `error_class` |
+| `runs` | One row per run | terminal state, counts, budget consumed, tokens, cost, `trace_id` from the dispatcher's `traceparent` so a Model Armor finding joins to the run |
 | `plans` | Frozen plans with per-item pre-state | `plan_hash`, `rollback_hash` |
 | `approvals` | Every approval and refusal | who, when, how long they took, verdict, reason code |
 | `verifications` | Post-execution comparison | `verified` / `drift` / `unverifiable` |
@@ -555,6 +558,12 @@ as though it were something else.
 - Two entry modes in one deployment: interactive (`user_id` = the human's email) and job
   (`user_id` = `job:<playbook>`, message = a structured envelope carrying `run_id`,
   playbook version and budget).
+- **The dispatcher invokes the agent with `streamQuery`, never `query` or `asyncQuery`.**
+  Model Armor on the ingress gateway screens only `reasoningEngines.streamQuery` for ADK
+  agents; every other method passes unscreened. A dispatcher that calls `query` silently
+  removes the prompt-screening layer. CI forbids the other two methods, and the dispatcher
+  sends a `traceparent` header and stores the trace id on the run record so a Model Armor
+  finding can be walked to the exact tool result. See [11-prompt-security.md](11-prompt-security.md).
 - Sessions: managed, EU. **Memory Bank off** — an admin agent should not accumulate
   long-term memories about employees, and it keeps the DPIA simpler.
 - A `WallEPolicyPlugin` registered on the runner mirrors the catalogue and level in
@@ -568,8 +577,7 @@ as though it were something else.
   2026-06-24 and covering ADK-on-Agent-Runtime ingress, and project-level **floor
   settings**, which apply to the agent's model calls with no code change. The first-party
   `ModelArmorPlugin` in `google-adk` 2.8 is a third option, weakest of the three because
-  it is in the process it protects. Note the fail-open caveat: on a Model Armor error the
-  platform skips sanitisation and continues.
+  it is in the process it protects. Two failure modes, and they differ. On the **Agent Gateway** path Model Armor is attached through a Service Extensions authorization extension whose `failOpen` is false in Google's own sample and defaults to false, so a Model Armor timeout or error **stops the request**: fail-closed. On the **floor-settings** path, which screens the agent's own `generateContent` calls, an error **skips sanitisation and continues**: fail-open. Detail in [11-prompt-security.md](11-prompt-security.md).
 - Do not use ADK tool-confirmation for approvals: it is documented as unsupported with the
   managed session service, and approvals must survive a runtime change anyway.
 - System instruction states plainly that Workspace content is data and never instruction,

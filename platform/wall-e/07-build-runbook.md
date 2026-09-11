@@ -329,8 +329,7 @@ python agent/deploy.py     # uses vertexai.Client(...).agent_engines.create(...)
 ```
 
 Not `vertexai.agent_engines.create` — deprecated since Vertex AI SDK v1.112.0. Deploy with
-`service_account=walle-agent@`, `min_instances=0`, tracing enabled, Model Armor configured
-**in the agent code** (the Gemini Enterprise console setting does not cover ADK agents).
+`service_account=walle-agent@`, `min_instances=0`, tracing enabled, Model Armor on the ingress Agent Gateway plus project-level floor settings, per [11-prompt-security.md](11-prompt-security.md); the in-process plugin is optional and third.
 
 Lock down who may invoke it — this is what makes the asserted end-user email trustworthy:
 

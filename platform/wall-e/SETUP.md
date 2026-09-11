@@ -81,7 +81,10 @@ Unit prices are deliberately not quoted. The Agent Runtime and Sessions pricing 
 | 10 | Deploy the action service | 30 min, **assuming the code exists** | 30 min |
 | 11 | Dispatcher and the two organisation-level log sinks | 45 min | 45 min |
 | 12 | Deploy the agent on Agent Runtime | 30 min | 30 min |
+| 12b | Agent Identity: constraints, CI checks, the spike, baseline grants, deny policy | 90 min plus a one-day spike | 1 to 2 days |
+| 12c | Model Armor: log routing, templates, ingress gateway, floor settings | 90 min | 90 min, plus the Stage 0 measurement before blocking |
 | 13 | Register and share in Gemini Enterprise | 30 min | 30 min |
+| 13b | Agent Registry entry check and alert; egress gateway in dry-run | 60 min | 60 min, plus two spikes before enforcement |
 | 14 | Ladder config v1 and paused schedulers | 45 min | 45 min |
 | 15 | Eve's own read-only credential | 60 min | 60 min |
 | 16 | Gmail watch and its daily renewal | 45 min | 45 min |
@@ -1430,7 +1433,7 @@ Four properties this deployment must have.
 
 **Tools are generated from `/v1/operations`, not hand-written.** An earlier draft's hand-written agent exposed 12 of 16 catalogue operations and never sent `dry_run`, so a flow the design depended on could not happen. Generation makes that drift impossible.
 
-**Model Armor goes on the platform, not in the agent's own code.** The Gemini Enterprise console setting does not cover custom ADK agents, which is true, but it does not follow that screening must live in agent code. Prefer **Model Armor on Agent Gateway**, which covers ADK-on-Agent-Runtime ingress, and project-level **floor settings**, which apply to the agent's model calls with no code change. Both are better than the in-process `ModelArmorPlugin` for one reason: Wall-E's own code cannot switch them off. Note the fail-open caveat: on a Model Armor error the platform skips sanitisation and continues, so it is a mitigation and never a boundary.
+**Model Armor goes on the platform, not in the agent's own code.** The Gemini Enterprise console setting does not cover custom ADK agents, which is true, but it does not follow that screening must live in agent code. Prefer **Model Armor on Agent Gateway**, which covers ADK-on-Agent-Runtime ingress, and project-level **floor settings**, which apply to the agent's model calls with no code change. Both are better than the in-process `ModelArmorPlugin` for one reason: Wall-E's own code cannot switch them off.Two failure modes, and they differ. On the **Agent Gateway** path Model Armor is attached through a Service Extensions authorization extension whose `failOpen` is false in Google's own sample and defaults to false, so a Model Armor timeout or error **stops the request**: fail-closed. On the **floor-settings** path, which screens the agent's own `generateContent` calls, an error **skips sanitisation and continues**: fail-open. Detail in [11-prompt-security.md](11-prompt-security.md).
 
 ### Lock down who may invoke the engine
 
@@ -1532,6 +1535,195 @@ gcloud beta ai reasoning-engines delete "$ENGINE_ID" --region="$REGION" --quiet
 
 ---
 
+## Phase 12b — The agent's identity: Agent Identity, with a gated fallback
+
+**Why this phase exists.** `identity_type` is fixed when the engine is created and cannot be patched afterwards. Deciding it later means deciding `walle-agent@` for the life of the engine. Agent Identity is generally available since 2026-04-22: a per-agent principal with a 24-hour certificate and tokens bound to the runtime, which a stolen token cannot leave. One fact is undocumented, so this phase runs a spike before the production engine exists. Full argument: [12-agent-identity.md](12-agent-identity.md) sections 1 and 8.1.
+
+`Assumption:` the project sits under an organisation, so the trust domain is `agents.global.org-${ORG_ID}.system.id.goog`.
+
+### Steps
+
+1. **APIs and key constraints.** Enable `agentidentity.googleapis.com`; leave `agentidentitycredentials.googleapis.com` disabled, so no auth provider can ever be exercised in this project. Set the two service-account-key constraints explicitly rather than inheriting them.
+
+```bash
+gcloud services enable agentidentity.googleapis.com --project="$PROJECT"
+gcloud services list --enabled --project="$PROJECT" | grep -c agentidentitycredentials   # expect 0
+for C in iam.managed.disableServiceAccountKeyCreation iam.disableServiceAccountKeyUpload; do
+  printf 'name: projects/%s/policies/%s\nspec:\n  rules:\n  - enforce: true\n' "$PROJECT" "$C" > "policy-${C}.yaml"
+  gcloud org-policies set-policy "policy-${C}.yaml" --project="$PROJECT"
+done
+```
+
+2. **The deploy config, in git, checked in CI.** In `agent/.agent_engine_config.json` exactly `{ "identity_type": "AGENT_IDENTITY" }`; `google-auth>=2.45.0` pinned, which is the version that binds tokens to the certificate; and the opt-out variable absent anywhere in the agent package.
+
+```bash
+test "$(jq -r .identity_type agent/.agent_engine_config.json)" = "AGENT_IDENTITY"
+grep -Eq '^google-auth>=2\.45' agent/requirements.txt
+! grep -rq GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES agent/
+```
+
+3. **The spike, on a throwaway engine, before Phase 12's production deploy.** Three results, each recorded pass or fail with raw output, attached to the decision record for [decision 19](09-open-decisions.md).
+
+```bash
+# 12b-a  does Cloud Run IAM accept the principal as an invoker
+gcloud run services add-iam-policy-binding walle-actions --region="$REGION" \
+  --member="$SPIKE_PRINCIPAL" --role=roles/run.invoker
+# 12b-b  from inside the spike agent: request an ID token for audience $ACTIONS_URL via
+#        google.auth.compute_engine.IDTokenCredentials(request, target_audience=ACTIONS_URL)
+#        and record whether a token is returned at all
+# 12b-c  call GET $ACTIONS_URL/v1/operations with it; decode the JWT; record sub, email, aud
+```
+
+4. **Deploy per the result.** Passed: Phase 12's `deploy.py` config carries `"identity_type": types.IdentityType.AGENT_IDENTITY`, **no `service_account`**, and the reasoning-engine service agent's `serviceAccountTokenCreator` grant on `walle-agent@` is **not** made. Failed: `"identity_type": "SERVICE_ACCOUNT"` with `walle-agent@`, Phase 12 as written, and Agent Identity recorded as deferred hardening with the spike output attached.
+
+5. **Read the identity back and fail the pipeline if it is not an agent identity.** Never type the principal by hand.
+
+```bash
+EFFECTIVE="$(curl -sS -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  "https://${REGION}-aiplatform.googleapis.com/v1/projects/${PROJECT}/locations/${REGION}/reasoningEngines/${ENGINE_ID}" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["spec"].get("effectiveIdentity",""))')"
+case "$EFFECTIVE" in agents.global.org-*) echo "agent identity: $EFFECTIVE";; *) echo "NOT an agent identity: $EFFECTIVE"; exit 1;; esac
+export AGENT_PRINCIPAL="principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${PROJECT_NUMBER}/locations/${REGION}/reasoningEngines/${ENGINE_ID}"
+```
+
+6. **Baseline grants, and nothing else.** Then dump the two automatic roles and fail if either carries a forbidden permission; their contents are undocumented.
+
+```bash
+for R in roles/aiplatform.expressUser roles/serviceusage.serviceUsageConsumer roles/browser roles/logging.logWriter; do
+  gcloud projects add-iam-policy-binding "$PROJECT" --member="$AGENT_PRINCIPAL" --role="$R"
+done
+for R in roles/aiplatform.agentDefaultAccess roles/aiplatform.agentContextEditor; do
+  gcloud iam roles describe "$R" --format='value(includedPermissions)' | tr ',' '\n' \
+    | grep -E 'secretmanager\.|setIamPolicy' && { echo "$R carries a forbidden permission"; exit 1; }
+done
+gcloud run services add-iam-policy-binding walle-actions --region="$REGION" \
+  --member="$AGENT_PRINCIPAL" --role=roles/run.invoker      # the binding form the spike proved
+```
+
+7. **The standing invariants as a deny policy**, so a mistaken grant cannot undo them. Verify each permission name against the list of permissions supported in deny policies first; that list was not checked in the research.
+
+```bash
+cat > deny-agents.json <<EOF
+{ "rules": [ { "denyRule": {
+    "deniedPrincipals": [ "principalSet://agents.global.org-${ORG_ID}.system.id.goog/*" ],
+    "deniedPermissions": [ "secretmanager.googleapis.com/versions.access",
+      "aiplatform.googleapis.com/reasoningEngines.setIamPolicy", "run.googleapis.com/services.setIamPolicy" ] } } ] }
+EOF
+gcloud iam policies create walle-deny-agents --kind=denypolicies \
+  --attachment-point="cloudresourcemanager.googleapis.com/projects/${PROJECT}" --policy-file=deny-agents.json
+```
+
+**Verify.** `EFFECTIVE` starts with `agents.global.org-`. Policy Analyzer for `AGENT_PRINCIPAL` shows no Secret Manager, Firestore write, BigQuery or KMS access. After Phase 13, the SPIFFE id on the Gemini Enterprise Agent details page equals `AGENT_PRINCIPAL`; add that equality to the daily drift job. The in-app caller allowlist row for the agent is keyed on whatever claim step 3c showed, not on an email, because an agent identity has none.
+
+**Rollback.** Delete the throwaway spike engine. A production engine cannot change identity in place: recreating it produces a new principal, and every resource-level binding on the old one dies with it, so treat a recreate as an identity change under the IAM change checklist.
+
+## Phase 12c — Model Armor: templates, the ingress gateway, and the floor
+
+**Why this phase exists.** The Gemini Enterprise console's Model Armor setting does not screen custom ADK agents. Screening for Wall-E comes from three places with different guarantees: Model Armor on an ingress Agent Gateway, which screens `reasoningEngines.streamQuery` only and is **fail-closed**; project floor settings on the agent's `generateContent` calls, which are **fail-open**; and canonicalisation, fencing and the taint bit inside the action service, which is the enforcement. Start everything inspect-only and measure with the injection regression suite before blocking. Full argument, the layer table and the alerts: [11-prompt-security.md](11-prompt-security.md).
+
+### Steps
+
+1. **Route the sanitize logs before anything produces them.** They carry raw prompts and personal data.
+
+```bash
+gcloud services enable modelarmor.googleapis.com networkservices.googleapis.com networksecurity.googleapis.com --project="$PROJECT"
+FILTER='logName="projects/'"$PROJECT"'/logs/modelarmor.googleapis.com%2Fsanitize_operations"'
+gcloud logging buckets create walle-content-logs --location="$REGION" --retention-days=30 --project="$PROJECT"
+gcloud logging sinks create walle-content-sink \
+  "logging.googleapis.com/projects/${PROJECT}/locations/${REGION}/buckets/walle-content-logs" \
+  --log-filter="$FILTER" --project="$PROJECT"
+gcloud logging sinks update _Default --add-exclusion="name=walle-content,filter=$FILTER" --project="$PROJECT"
+# readers of walle-content-logs: the operators group and IT security, nobody else
+```
+
+2. **Two templates, inspect-only.** `gcloud beta`, because the enforcement-type flag is on the beta track; the GA track creates blocking templates only.
+
+```bash
+RAI='[{"filterType":"HATE_SPEECH","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"HARASSMENT","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"DANGEROUS","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"SEXUALLY_EXPLICIT","confidenceLevel":"MEDIUM_AND_ABOVE"}]'
+for T in prompt response; do
+  gcloud beta model-armor templates create "walle-ingress-$T" --location="$REGION" --project="$PROJECT" \
+    --pi-and-jailbreak-filter-settings-enforcement=enabled \
+    --pi-and-jailbreak-filter-settings-confidence-level=medium-and-above \
+    --malicious-uri-filter-settings-enforcement=enabled \
+    --basic-config-filter-enforcement=enabled \
+    --rai-settings-filters="$RAI" \
+    --template-metadata-enforcement-type=inspect-only \
+    --template-metadata-log-sanitize-operations
+done
+```
+
+3. **Run the regression suite against the prompt template directly** and record `filterVersionConfig` from each response: the prompt-injection filter moves to v3 on or before 2026-09-25 and retires v1 and v2 on 2026-11-29, so detection changes under you with no config change.
+
+```bash
+curl -s -X POST "https://modelarmor.${REGION}.rep.googleapis.com/v1/projects/${PROJECT}/locations/${REGION}/templates/walle-ingress-prompt:sanitizeUserPrompt" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" \
+  -d '{"userPromptData":{"text":"<one case from the suite>"}}'
+```
+
+4. **The ingress gateway, the fail-closed extension, and the policy.** `failOpen: false` is the correction that makes this path enforcement-grade; a Model Armor outage then stops Wall-E, which is the price.
+
+```bash
+printf 'name: walle-ingress\nprotocols: [MCP]\ngoogleManaged:\n  governedAccessPath: CLIENT_TO_AGENT\n' > walle-ingress.yaml
+gcloud network-services agent-gateways import walle-ingress --source=walle-ingress.yaml --location="$REGION" --project="$PROJECT"
+
+RE_AGENT="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+DEP_AGENT="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-dep.iam.gserviceaccount.com"
+for ROLE in roles/modelarmor.calloutUser roles/modelarmor.user; do
+  gcloud projects add-iam-policy-binding "$PROJECT" --member="$RE_AGENT" --role="$ROLE"
+  gcloud projects add-iam-policy-binding "$PROJECT" --member="$DEP_AGENT" --role="$ROLE"
+done
+gcloud projects add-iam-policy-binding "$PROJECT" --member="$DEP_AGENT" --role=roles/serviceusage.serviceUsageConsumer
+
+cat > walle-ma-ext.yaml <<EOF
+name: walle-ma-content-authz-ext
+service: modelarmor.${REGION}.rep.googleapis.com
+metadata:
+  model_armor_settings: '[{"request_template_id":"projects/${PROJECT}/locations/${REGION}/templates/walle-ingress-prompt","response_template_id":"projects/${PROJECT}/locations/${REGION}/templates/walle-ingress-response"}]'
+failOpen: false
+timeout: 1s
+EOF
+gcloud service-extensions authz-extensions import walle-ma-content-authz-ext --source=walle-ma-ext.yaml --location="$REGION" --project="$PROJECT"
+
+cat > walle-ma-policy.yaml <<EOF
+name: walle-ma-content-authz-policy
+target:
+  resources: ["projects/${PROJECT}/locations/${REGION}/agentGateways/walle-ingress"]
+policyProfile: CONTENT_AUTHZ
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources: ["projects/${PROJECT}/locations/${REGION}/authzExtensions/walle-ma-content-authz-ext"]
+EOF
+gcloud network-security authz-policies import walle-ma-content-authz-policy --source=walle-ma-policy.yaml --location="$REGION" --project="$PROJECT"
+```
+
+The pages disagree on whether the Service Extensions agent is needed for ingress in addition to the Reasoning Engine agent; grant both, prove a block in step 7, then remove whichever grant proves unnecessary and record it.
+
+5. **Bind the engine to the gateway at creation.** In Phase 12's `deploy.py` config, alongside `identity_type`: `"agent_gateway_config": {"client_to_agent_config": {"agent_gateway": "projects/${PROJECT}/locations/${REGION}/agentGateways/walle-ingress"}}`, and the telemetry environment `GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY=true`, `OTEL_SEMCONV_STABILITY_OPT_IN=gen_ai_latest_experimental`, `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=EVENT_ONLY`, `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS=false`. The last one defaults on and would put tool arguments and responses, which carry employee data, into Cloud Trace. Binding costs three things a security reviewer must see: no SCC Agent Engine Threat Detection, no VPC Service Controls, no engine revisions.
+
+6. **Every caller of the engine uses `streamQuery`.** The dispatcher calls `AdkApp.stream_query` with a `traceparent` header and stores the trace id on the run record. CI forbids `query` and `async_query`. Which method Gemini Enterprise itself uses is undocumented: read it from the Agent Runtime request logs during the first operator session and record it here with the date.
+
+7. **Floor settings: conformance at the folder, inline on the project, logging on.**
+
+```bash
+gcloud config set api_endpoint_overrides/modelarmor "https://modelarmor.googleapis.com/"
+gcloud model-armor floorsettings update --full-uri="folders/${FOLDER_ID}/locations/global/floorSetting" \
+  --pi-and-jailbreak-filter-settings-enforcement=ENABLED --pi-and-jailbreak-filter-settings-confidence-level=HIGH \
+  --malicious-uri-filter-settings-enforcement=ENABLED --enable-floor-setting-enforcement=true
+gcloud model-armor floorsettings update --full-uri="projects/${PROJECT}/locations/global/floorSetting" --add-integrated-services=VERTEX_AI
+gcloud projects add-iam-policy-binding "$PROJECT" \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-aiplatform.iam.gserviceaccount.com" --role=roles/modelarmor.user
+gcloud model-armor floorsettings update --full-uri="projects/${PROJECT}/locations/global/floorSetting" --enable-vertex-ai-cloud-logging
+```
+
+The folder floor pins only "prompt-injection enabled at HIGH or stricter, malicious URL enabled", so it cannot prejudge the confidence level Stage 0 measures. `Assumption:` a folder holds the Wall-E project or can be created.
+
+**Verify.** Send a known injection through `streamQuery` with a `traceparent`; expect a normal stream while inspect-only, and a `SanitizeOperationLogEntry` with `filterMatchState=MATCH_FOUND` and `client_name=AGENT_GATEWAY` in `walle-content-logs`. Point the extension at a wrong template name and confirm the caller gets an error, then restore: that is fail-closed observed rather than believed. Plant a hostile display name on a sandbox account, run a shadow playbook, and look for a `VERTEX_AI` sanitize entry containing it: presence means the floor inspects function responses, absence means it does not, and the answer is recorded here.
+
+**Rollback.** Remove the `CONTENT_AUTHZ` policy, then the extension; remove `VERTEX_AI` from the project floor. The folder floor and the templates can stay. None of this is a kill switch: K0 in the action service remains the halt.
+
+**The blocking flips happen later, not here.** After the Stage 0 numbers: `gcloud beta model-armor templates update ... --template-metadata-enforcement-type=inspect-and-block` for both templates and `--vertex-ai-enforcement-type=INSPECT_AND_BLOCK` on the project floor, through the same reviewed pipeline as `ladder.yaml`, recorded in the Stage 1 decision ([decision 24](09-open-decisions.md)).
+
 ## Phase 13 — Register and share in Gemini Enterprise
 
 Gemini Enterprise is the human front door. It authenticates the user through Workspace SSO and passes their email to the agent.
@@ -1576,6 +1768,62 @@ If `principal_id` is empty or is a service account rather than your email, the i
 Unregister the agent from the Gemini Enterprise app. The engine still exists but has no human front door.
 
 ---
+
+## Phase 13b — Agent Registry, and the egress gateway in dry-run
+
+**Why this phase exists.** Wall-E will share the platform with Eve, Mo and agents this design has not met. Agent Registry is where it is found; Agent Gateway in egress mode is a default-deny hostname allowlist for the reasoning layer, the control the design otherwise lacks. The safety interlocks stay plain REST on the action service and never run over an agent protocol. Skill Registry is Preview, loads code by semantic intent, and is deliberately unused. Full argument: [13-agent-interconnection.md](13-agent-interconnection.md).
+
+### Steps
+
+1. **APIs and roles.** Registry admin to the CI deployer only; viewer to the readers. Nobody else, because an editor can redirect every consumer that resolves Wall-E through the registry and can flip the tool annotations gateway rules read.
+
+```bash
+gcloud services enable agentregistry.googleapis.com apphub.googleapis.com iap.googleapis.com dns.googleapis.com compute.googleapis.com --project="$PROJECT"
+gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:${CI_DEPLOYER}" --role=roles/agentregistry.admin
+gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:${SA_EVE}" --role=roles/agentregistry.viewer
+```
+
+2. **The automatic entry.** Deploying to Agent Runtime registered Wall-E already. Confirm it carries the runtime identity.
+
+```bash
+gcloud agent-registry agents list --project="$PROJECT" --location="$REGION"
+gcloud agent-registry agents describe wall-e --project="$PROJECT" --location="$REGION"   # expect RuntimeIdentity and RuntimeReference attributes
+```
+
+3. **Alert on registry writes.** Query committed in the repository, wired to the operator channel.
+
+```bash
+gcloud logging read 'protoPayload.serviceName="agentregistry.googleapis.com" AND protoPayload.methodName=~"services\.(create|update|delete)|bindings\.|skills\."' --project="$PROJECT" --limit=5
+```
+
+4. **The hand-written card is not registered yet.** `agent-card.json` is committed next to `ladder.yaml` and validated in CI; it is registered only in the same change that stands up an A2A interface, which is not before Stage 3 ([decision 23](09-open-decisions.md)). Never add a "Custom agent via A2A" registration in Gemini Enterprise: it is 0.3-only and bypasses the gateway.
+
+5. **The egress gateway, in dry-run.** Everything unregistered is denied. Register `walle-actions` and the essential platform endpoints with exact hostnames; deliberately never register Secret Manager, Firestore, `admin.googleapis.com`, any Workspace host or BigQuery.
+
+```bash
+printf 'name: walle-egress\ngoogleManaged:\n  governedAccessPath: AGENT_TO_ANYWHERE\nregistries:\n  - //agentregistry.googleapis.com/projects/%s/locations/%s\n' "$PROJECT" "$REGION" > walle-egress.yaml
+gcloud network-services agent-gateways import walle-egress --source=walle-egress.yaml --location="$REGION" --project="$PROJECT"
+gcloud agent-registry services create walle-actions --project="$PROJECT" --location="$REGION" \
+  --display-name="walle-actions" --endpoint-spec-type=no-spec \
+  --interfaces="url=${ACTIONS_URL},protocolBinding=http-json"
+# then each essential endpoint from the runtime-gateway page, with regional and mtls variants:
+#   aiplatform.googleapis.com, ${REGION}-aiplatform.googleapis.com, ${REGION}-aiplatform.mtls.googleapis.com,
+#   aiplatform.${REGION}.rep.googleapis.com, agentregistry, logging, telemetry, cloudtrace, monitoring,
+#   cloudresourcemanager, iamcredentials, and the Sessions URI of the engine
+cat > walle-egress-policy.json <<EOF
+{ "bindings": [ { "role": "roles/iap.egressor", "members": [ "${AGENT_PRINCIPAL}" ] } ] }
+EOF
+gcloud iap web set-iam-policy walle-egress-policy.json --project="$PROJECT" --resource-type=agent-registry --region="$REGION" --endpoint=walle-actions
+# the IAP request-authorization extension and policy start in iamEnforcementMode DRY_RUN
+```
+
+The org policy `iam.managed.disableAccessPolicyBindings` must not be enforced on the project before the binding is created; lifting it propagates in up to 15 minutes. `Assumption:` it is enforced by default in your organisation.
+
+**Verify.** Run a shadow playbook. In the IAP logs, expect 200 on `walle-actions` and a logged deny on an unregistered host. Confirm Sessions and tracing still work. Then, and only then, flip `iamEnforcementMode` to enforced and re-run the K0 drill through the gateway path, recording the time in `drills/{date}`.
+
+**Two questions gate dry-run to enforced**, both undocumented: whether the gateway forwards the agent's own `Authorization` bearer token untouched to `walle-actions`, on which the caller allowlist depends, and whether an Agent Identity principal can mint an ID token for a Cloud Run audience, which Phase 12b's spike answers. If either fails, the gateway stays in dry-run for the pilot and the decision record says so.
+
+**Rollback.** Set the IAP policy back to dry-run; unregister the endpoints; delete the gateway. Kill switches never depend on the gateway: the operator andon cord is off it by design.
 
 ## Phase 14 — Ladder configuration v1 and paused schedulers
 

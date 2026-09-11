@@ -72,6 +72,9 @@ plan. Everything else exists to make it enforceable.
 | 8 | [The team: Eve & Mo](08-team-eve-mo.md) | Shared responsibilities and the interfaces Wall-E must expose |
 | 9 | [Decisions to make](09-open-decisions.md) | What you must choose before build starts |
 | 10 | [**Adversarial review**](10-adversarial-review.md) | What was attacked, what changed, what is knowingly accepted |
+| 11 | [Prompt security & monitoring](11-prompt-security.md) | The injection surface, what Model Armor screens and does not, telemetry, and what to alert on |
+| 12 | [Agent, operator & workforce identity](12-agent-identity.md) | Agent Identity for the agents, Google or federated identities for the operators |
+| 13 | [Interconnection](13-agent-interconnection.md) | Agent Registry, A2A, MCP, Agent Gateway and Skill Registry, and which of them a safety interlock may never depend on |
 
 Code scaffold to be built in the application repository (not yet written).
 

@@ -13,7 +13,10 @@ properly: [01-hld.md](01-hld.md) for the component rationale,
 [05-autonomy-ladder.md](05-autonomy-ladder.md) for the enablement plan,
 [06-security-guardrails.md](06-security-guardrails.md) for the threat model,
 [08-team-eve-mo.md](08-team-eve-mo.md) for the Eve and Mo contract, and
-[10-adversarial-review.md](10-adversarial-review.md) for what two review passes corrected.
+[10-adversarial-review.md](10-adversarial-review.md) for what two review passes corrected,
+[11-prompt-security.md](11-prompt-security.md) for prompt security and monitoring,
+[12-agent-identity.md](12-agent-identity.md) for agent, operator and workforce identity, and
+[13-agent-interconnection.md](13-agent-interconnection.md) for connecting Wall-E to other agents.
 To build it, follow [SETUP.md](SETUP.md).
 
 **Audience:** an IT security reviewer, an architect, or an engineer who will build Eve or
@@ -211,6 +214,8 @@ A surface that can assert consent without a per-human assertion the service can 
 ---
 
 ## 4. Identity and credential model
+
+**The agent's runtime identity is decided in [12-agent-identity.md](12-agent-identity.md): Agent Identity, set at engine creation, with `walle-agent@` as a spike-gated fallback.** Where a row below names `walle-agent@`, read "the agent principal, or `walle-agent@` on the fallback path". The two never coexist on one engine.
 
 ### 4.1 The problem in one paragraph
 
@@ -533,7 +538,7 @@ Three mechanisms are often mistaken for boundaries. They are not, and calling th
 | The system instruction telling the agent that content is data, never instruction | A courtesy. It will sometimes fail, and every ceiling in section 8 exists to compensate for a prompt that has already failed. |
 | The ADK policy plugin mirroring the catalogue and level | Defence in depth inside the process it protects. A code change bypasses it. |
 | Cloud Run ingress settings | **Not usable here.** Agent Runtime egresses from a Google-managed tenant project, which Cloud Run treats as external, so internal-only ingress blocks the agent entirely. IAM is the enforced boundary. See section 9 for what that leaves exposed. |
-| Model Armor on Agent Gateway, plus project-level floor settings | Content screening Wall-E's own code cannot switch off, which makes it better than an in-process plugin. Still not a boundary: on a Model Armor error the platform skips sanitisation and continues, so it is detection, not enforcement. The console's Gemini Enterprise Model Armor setting does not cover custom ADK agents. |
+| Model Armor on Agent Gateway, plus project-level floor settings | Content screening Wall-E's own code cannot switch off, which makes it better than an in-process plugin.Two failure modes, and they differ. On the **Agent Gateway** path Model Armor is attached through a Service Extensions authorization extension whose `failOpen` is false in Google's own sample and defaults to false, so a Model Armor timeout or error **stops the request**: fail-closed, which makes Model Armor availability part of Wall-E's availability. On the **floor-settings** path, which screens the agent's own `generateContent` calls, an error **skips sanitisation and continues**: fail-open. See [11-prompt-security.md](11-prompt-security.md). The console's Gemini Enterprise Model Armor setting does not cover custom ADK agents. |
 
 ### 6.1 The two escalation controls
 
@@ -609,7 +614,7 @@ They are plain authenticated REST rather than agent-to-agent messages, because E
 
 ### 7.5 The endpoint-to-caller allowlist
 
-`run.invoker` is granted per service, not per path, so IAM cannot express any of this. The allowlist below is application code doing platform work, keyed on the verified `email` claim of the caller's ID token, and it is therefore printed in full and tested per row rather than described.
+`run.invoker` is granted per service, not per path, so IAM cannot express any of this. The allowlist below is application code doing platform work, keyed on the verified identity claim (`email` for a service account or a human; `sub` or the SPIFFE id for an agent identity, captured in the spike of [12-agent-identity.md](12-agent-identity.md)) of the caller's ID token, and it is therefore printed in full and tested per row rather than described.
 
 | Endpoint | Allowed callers, and nobody else | Negative test that must pass |
 |---|---|---|
@@ -775,6 +780,8 @@ While it is deferred the compensating controls are: the per-endpoint caller allo
 The agent is deployed with `vertexai.Client(project, location).agent_engines.create(...)`. The older module-level API is deprecated. Cloud Run services are deployed with authentication required and an explicit 60 second timeout, so that a long item loop inside a request becomes structurally impossible rather than merely unlikely. Scheduler jobs are created **paused** and enabled one at a time per ladder stage, with a 30 second attempt deadline covering acknowledgement only. The organisation-level log sinks need organisation-level log configuration rights, which is a separate approval from anything in the project. The interactive-login alert on the robot account is a **reporting rule under Admin console Rules**, not an Alert Center alert, and its availability depends on the Workspace edition.
 
 ---
+
+**Cloud Trace holds employee data unless you stop it.** Agent Observability exports ADK spans, and `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` defaults to on, so tool-call arguments and tool responses, which carry names, addresses and group memberships, land in Cloud Trace with a 30-day retention that is not under your control. Set it off for Wall-E, or treat Cloud Trace as a personal-data store in the assessment. Details and the export path in [11-prompt-security.md](11-prompt-security.md).
 
 ## 10. What is deliberately not in the architecture
 
