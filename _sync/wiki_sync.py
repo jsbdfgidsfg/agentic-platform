@@ -52,6 +52,7 @@ from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 HTTP_TIMEOUT = 120      # seconds; the default is the OS default, which hung a push
 NUM_RETRIES = 5         # googleapiclient retries 5xx/429 with exponential backoff
+EMPTY_DOC_MAX_CHARS = 8 # an untouched Doc exports as "&nbsp;", never real text
 WIKI_ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = Path(__file__).resolve().parent / "manifest.json"
 TOKEN = Path.home() / ".config" / "wiki-sync" / "token.json"
@@ -296,16 +297,44 @@ def strip_banner(text: str) -> str:
 # drive helpers
 # --------------------------------------------------------------------------
 
+def _find_by_name(svc, name: str, parent: str, mime: str):
+    """A file this tool created earlier under the same parent with the same name.
+    Used to make Doc creation idempotent without pre-allocated ids, which Google
+    Docs do not accept ("Generated IDs are not supported for Docs Editors formats")."""
+    q = ("name = '%s' and '%s' in parents and mimeType = '%s' and trashed = false"
+         % (name.replace("'", "\\'"), parent, mime))
+    res = svc.files().list(q=q, fields="files(id,name)", pageSize=2,
+                           spaces="drive").execute(num_retries=NUM_RETRIES)
+    files = res.get("files", [])
+    return files[0]["id"] if len(files) == 1 else None
+
+
 def _create(svc, body: dict, manifest: dict, remember) -> str:
-    """Create a Doc or folder with a pre-allocated id.
+    """Create a Doc or folder idempotently.
 
     Retries on a create are dangerous: googleapiclient retries socket timeouts and
     connection errors, which are exactly the cases where the server may already have
     created the file. Retrying then makes a second one, and only the second id is
-    recorded — the same orphan class as the 2026-08 incident. So: reserve an id,
-    write it to the manifest BEFORE the call, and never retry the create itself. A
-    re-run adopts the reserved id instead of making a new file.
+    recorded — the same orphan class as the 2026-09-08 incident. Two strategies:
+
+    - Folders: reserve an id with generateIds, record it BEFORE the call, create with
+      that id and never retry. A re-run adopts the reserved id.
+    - Google Docs: Drive refuses pre-allocated ids for Docs Editors formats (403,
+      "Generated IDs are not supported"). So: look for a Doc of the same name under
+      the same parent first and adopt it; otherwise create with no retries, and
+      record the id the moment the response arrives.
     """
+    mime = body.get("mimeType")
+    name, parents = body["name"], body.get("parents") or [None]
+    if mime == DOC_MIME:
+        existing = _find_by_name(svc, name, parents[0], mime) if parents[0] else None
+        if existing:
+            remember(existing); save_manifest(manifest)
+            return existing
+        created = svc.files().create(body=body, fields="id").execute(num_retries=0)
+        remember(created["id"]); save_manifest(manifest)
+        return created["id"]
+
     reserved = body.get("id")
     if not reserved:
         reserved = svc.files().generateIds(
@@ -362,6 +391,40 @@ def ensure_tree(svc, manifest: dict) -> None:
 UNKNOWN = "<unknown>"       # distinct from None: "we could not find out", not "absent"
 
 
+SETTLE_ROUNDS = 5       # how many times settle() re-reads a fresh write
+SETTLE_SLEEP_S = 3.0    # pause between rounds
+
+
+def settle(svc, manifest, rels) -> int:
+    """Re-reads modifiedTime for pages written this run until it stops moving.
+
+    Docs converts an uploaded markdown body asynchronously: files.update returns,
+    and modifiedTime moves again a few seconds later when the conversion lands.
+    Recording the first value made the next push see "Drive changed" on 18 of
+    43 pages (2026-09-11) and refuse them as conflicts. Returns how many entries
+    were corrected."""
+    import time
+    pending = list(rels)
+    corrected = 0
+    for _ in range(SETTLE_ROUNDS):
+        if not pending:
+            break
+        time.sleep(SETTLE_SLEEP_S)
+        still = []
+        for rel in pending:
+            entry = manifest["files"][rel]
+            ts = remote_modified(svc, entry["file_id"])
+            if ts in (None, UNKNOWN):
+                continue                      # leave the guard to report it next run
+            if ts != entry.get("remote_modified"):
+                entry["remote_modified"] = ts
+                corrected += 1
+                still.append(rel)             # moved: confirm it is stable next round
+        pending = still
+        save_manifest(manifest)
+    return corrected
+
+
 def remote_modified(svc, file_id: str):
     """Returns the timestamp, None if the Doc is gone, or UNKNOWN on a transient
     failure. Collapsing all three into None disabled the conflict guard silently."""
@@ -411,15 +474,21 @@ def cmd_push(args) -> int:
         # _create saves the manifest BEFORE the call. Saving once at the end of the
         # loop meant a timeout mid-loop orphaned every Doc created so far, with no
         # local record of its id. That happened on 2026-09-08.
-        _create(svc,
-                {"name": doc_title(path.relative_to(WIKI_ROOT)),
-                 "parents": [parent], "mimeType": DOC_MIME},
-                manifest,
-                lambda fid, e=entry: e.__setitem__("file_id", fid))
+        fid = _create(svc,
+                      {"name": doc_title(path.relative_to(WIKI_ROOT)),
+                       "parents": [parent], "mimeType": DOC_MIME},
+                      manifest,
+                      lambda fid, e=entry: e.__setitem__("file_id", fid))
+        # A Doc created here has no sync point by construction: record the empty
+        # Doc's own timestamp as the baseline, or pass 2's fail-closed guard refuses
+        # to fill a document this very run just created.
+        entry["remote_modified"] = remote_modified(svc, fid)
+        save_manifest(manifest)
         print(f"created  {rel}")
 
     # Pass 2 — content, with links now resolvable.
     changed = skipped = conflicts = 0
+    written = []
     for path in pages:
         rel = str(path.relative_to(WIKI_ROOT))
         entry = manifest["files"][rel]
@@ -466,9 +535,12 @@ def cmd_push(args) -> int:
         entry["local_hash"] = local_hash
         entry["remote_modified"] = remote_modified(svc, entry["file_id"])
         changed += 1
+        written.append(rel)
         print(f"pushed   {rel}")
 
     save_manifest(manifest)
+    if written:
+        settle(svc, manifest, written)
     print(f"\n{changed} pushed, {skipped} unchanged, {conflicts} conflicted.")
     print(f"Drive folder: https://drive.google.com/drive/folders/{manifest['root_folder_id']}")
     # Non-zero on conflict: an agent running this unattended must not read "success"
@@ -643,8 +715,11 @@ def cmd_reconcile(args) -> int:
         done = False
         while not done:
             _, done = downloader.next_chunk()
-        body = strip_banner(buf.getvalue().decode("utf-8")).strip()
-        if body and not args.force:
+        body = strip_banner(buf.getvalue().decode("utf-8")).strip("\ufeff\xa0 \r\n\t")
+        # A never-written Google Doc does not export as an empty string: it comes
+        # back as the six characters "&nbsp;" (observed 2026-09-11). Anything a
+        # person typed is longer than that.
+        if len(body) > EMPTY_DOC_MAX_CHARS and not args.force:
             print(f"HAS CONTENT {rel}: {len(body)} chars in Drive. "
                   f"Run 'pull' to keep it, or 'reconcile --force' to discard it.")
             kept += 1
