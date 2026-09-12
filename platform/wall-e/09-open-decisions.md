@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-12
 
 Answer these, then record each as a dated file in [`../../decisions/`](../../decisions/).
 Nothing in that directory yet — none of these decisions has been written down, so
@@ -81,6 +81,35 @@ Recorded here so nobody re-opens them.
 6. Whether group-management privileges honour OU scoping.
 7. Current Agent Runtime and Sessions unit prices — the pricing page did not render for
    automated reading.
+
+## Raised by the design challenge of 2026-09-11
+
+[14-hld-challenge.md](14-hld-challenge.md) re-examined the high-level design with the set
+complete and nothing built. Its verdict is that the architecture is the correct path and that
+sixteen further decisions are open. The reasoning, the evidence and the challenge each one
+comes from are on that page; only the decisions are repeated here.
+
+Three are blocking, and two of those come due before the Phase 9 consent, which cannot be
+undone.
+
+| # | Decision | Why | Recommendation | Gate |
+|---|---|---|---|---|
+| **26** | **Is the admin principal a keyless service account holding the custom role, rather than the robot user?** | Google documents that any role except Super Admin can be assigned to a service account with no DWD. If it covers Directory, Licensing and Reports, the password, recovery path, hardware key, consent, frozen scope set and stealable token all disappear. | Spike on a throwaway service account with the reader role through ADC. If it passes, the admin half moves; Gmail, Chat and Calendar stay on a user with no admin role. | **Blocking — before Phase 9 consent, which is irreversible** |
+| **27** | **Catalogue breadth: ratify bands B and C** | The requirement was narrowed and never signed off, and scopes freeze at consent. | Wall-E is a narrow operator, not a stand-in for a super admin. Read the bands table and say which band-B exclusions you disagree with. | **Blocking — before [decision 3](09-open-decisions.md)** |
+| **28** | **Does a human request or approval have to fall inside the requester's own admin scope?** | Group membership currently grants the robot's whole allowlisted reach. Harmless with one super-admin operator, a privilege-escalation path the day a second operator is added — and [SETUP.md](SETUP.md) Phase 1 already names one. | Yes, but through the committed operator list rather than a live check: record each operator's admin role, families and OU reach before they are added, and reconcile daily against `roleAssignments.list`. Live policy step 5b — privilege-level for Groups and Reports, which Google does not OU-scope, full OU intersection for the rest — is the stronger form and is deferred, because it would put a fail-closed live Directory read on the approval path of a one-person rota and rests on a privilege mapping the set records as unverified. | Before S1 and **before any operator who is not a super admin** |
+| **29** | **Where does a change to the gate first execute?** | Today: as the production credential holder, against the production tenant. Group-family writes have no containment but the code under test. | Offline harness by default; a second robot scoped to the sandbox OU with no customer-scoped Reader, in the same project. A separate tenant only if F3/F3b autonomy is wanted. | Before Stage 1's first write; the tenant sub-question before any F3/F3b cell leaves L1 |
+| **30** | **Control-plane durability: RPO, RTO and the restore protocol** | A restore silently rolls back halts, overrides, nonces, dedup records and counters. | PITR, delete protection and daily backups at Phase 7; a restored control plane starts at `halt_all` and is reconciled against BigQuery before it resumes. | Before Phase 7 completes |
+| **31** | **Evidence durability and retention** | `walle_audit` is inside teardown's blast radius, recreation destroys undelete, and grades live only in Firestore. | Write-ahead grades to BigQuery and teardown guards now; an off-project copy at Stage 1. Moves [decision 17](09-open-decisions.md) earlier and makes it a minimum *and* a maximum. | Before Stage 1 |
+| **32** | **Do fully pinned T1/T2 playbooks need a model at all?** | Everything the model would decide is already pinned; keeping it there carries the A3/A11 class and all the platform churn. | Deterministic by default with a typed predicate; `requires_model` per playbook by exception, entering at L0 and tainted. | Before S0 shadow evidence is collected |
+| **33** | **Promotion and demotion statistics** | Point thresholds on 20–30 items promote a 90 % playbook about one time in five and demote an on-target one about one window in four. | Wilson interval gates with hysteresis; `unsure` reported separately. The gate forces the sample floor up and cannot be decided apart from it: at n = 30 even a flawless record gives a Wilson 95 % lower bound of 0.886, so [05](05-autonomy-ladder.md) §7's "≥ 30 proposals graded per family" must rise to ≥ 35 or no cell is ever promotable. | Before the first item is graded |
+| **34** | **Eve is a deterministic verifier; no LLM produces an approval** | Already decided in [12](12-agent-identity.md) section 1.8 and contradicted in four other pages. Eve's designer will inherit whichever version they read. | State it in 01, 05, 06 and 08. Until an Eve design record exists, "Eve v0" is BigQuery scheduled queries read by a human. | Now for the wording; before S3 for the design record |
+| **35** | **Who may receive per-person reporting output?** | `walle-readers@` is specified on the write axis only, and there is no aggregate-only operation to give a non-admin. | Answer inside [decision 8](09-open-decisions.md): aggregate-only family with a minimum cell size (`Assumption:` 5), or no readers beyond admins. | Before the first reader is onboarded |
+| **36** | **What does Stage 0 actually provision?** | Phase 15, the KMS key, the Eve allowlist entries and `walle-events` have no consumer; a consented Eve token dies after six months unused. | Stage 0 provisions what Stage 0 uses; seams stay in code as contracts, audit columns and a CI-only stub caller. | Before Phase 1 |
+| **37** | **Second pair of hands during the build (splits [decision 11](09-open-decisions.md) into 11a)** | Separation of duties, the external validator and credential recovery all need another person before Phase 10, not before S1. | Name a security reviewer with code ownership on the ceiling module, policy chain, catalogue and validator; a validator custodian; and a second person trained and witnessed on the Phase 9 re-bootstrap. | Before Phase 10 |
+| **38** | **Value baseline and stop rule** | No baseline, no stop rule, and a cost table missing its largest line — human time. | Measure four weeks of baseline toil before Phase 1; dated stop-or-continue review at S1 exit. | Baseline before Phase 1; review at S1 exit |
+| **39** | **Robot account lifecycle: detection, custody and rebuild** | No detection of another administrator acting on the robot, no paging class for a removed role assignment, no rebuild path past the 20-day deletion window. | Activity rule (Google's current name for a reporting rule) on admin events targeting the robot; `role_assignment_missing` as a paging class; second vault custodian; rebuild checklist. | Before S0 opens |
+| **40** | **Google-side contract drift probe** | Two dependencies fail silently on the autonomous path: the admin audit event names the playbook `trigger` fields key on, and the robot's actually-assigned privilege set for reads other than the admin enumeration. Loud breaks, such as a renamed privilege returning 403, are already caught by the closed error enum, verification and the breaker. | Extend the existing daily drift job: privilege-name and event-name diffs set `no_autonomous`; discovery-revision bumps are informational and freeze promotions. No SKU diff — Google renames SKU display names while the ids stay stable, and the Licensing API takes ids ([C54](#c54--google-side-contract-drift-is-watched-for-model-armor-but-not-for-the-workspace-apis-stands)). | Before Stage 1 |
+| **41** | **Single region, accepted** | Everything but BigQuery is in one region and nothing records that as a decision. | Accept, with RTO equal to Google's regional recovery, because multi-region would cost a residency analysis and duplicated engines for a system that is not business-critical. | Record now; non-blocking |
 
 ## Sources for the verified rows
 

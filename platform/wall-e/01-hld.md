@@ -3,6 +3,10 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-09
+- Challenged on 2026-09-11 by eleven independent reviewer lenses. Verdict: the architecture
+  is the correct path; three blocking gaps and a set of document corrections stand, and the
+  edits they call for are **not yet applied to this page**. See
+  [14-hld-challenge.md](14-hld-challenge.md).
 
 ## Design intent
 

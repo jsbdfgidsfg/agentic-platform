@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-12
 - Maturity: **design — nothing built, nothing enabled**
 - Codename: `wall-e`. Resource prefix `walle-`. Final naming is [decision 2](09-open-decisions.md).
 - Other writers: `Assumption:` no other automation already writes to the same Workspace objects ([decision 1](09-open-decisions.md))
@@ -76,7 +76,7 @@ plan. Everything else exists to make it enforceable.
 | 11 | [Prompt security & monitoring](11-prompt-security.md) | The injection surface, what Model Armor screens and does not, telemetry, and what to alert on |
 | 12 | [Agent, operator & workforce identity](12-agent-identity.md) | Agent Identity for the agents, Google or federated identities for the operators |
 | 13 | [Interconnection](13-agent-interconnection.md) | Agent Registry, A2A, MCP, Agent Gateway and Skill Registry, and which of them a safety interlock may never depend on |
-
+| 14 | [**HLD challenge & revalidation**](14-hld-challenge.md) | Whether the design is the correct path: 54 challenges from 11 reviewer lenses, what stands, what was refuted, and the alternatives weighed |
 Code scaffold to be built in the application repository (not yet written).
 
 ## This design has been attacked
@@ -91,6 +91,16 @@ produced no evidence, and an admin role sliced in ways Workspace does not allow.
 
 Those are fixed in the documents. [10-adversarial-review.md](10-adversarial-review.md)
 records what was found, so nobody assumes a control works because an earlier draft said so.
+
+A third pass, on 2026-09-11, attacked the design as it now stands rather than as first
+drafted. Eleven reviewer lenses, each arguing for a different cheaper or safer path, produced
+54 challenges; refuter lenses then tried to dismiss each one. Nobody proposed a different
+architecture, and 39 challenges survived refutation. Three of them block:
+a documented service-account option the identity chapter never considered, nobody checking
+what the human behind a request is entitled to, and no environment in which a change to the
+gate runs before it runs as the holder of the production credential.
+[14-hld-challenge.md](14-hld-challenge.md) is the record, and the edits it calls for are
+listed there rather than applied.
 
 ## What is assumed rather than known
 
