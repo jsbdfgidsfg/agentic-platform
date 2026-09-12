@@ -80,7 +80,7 @@ export SA_EVE_VERIFIER="eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com"
 export SA_EVE_CONSOLE="eve-console@${EVE_PROJECT}.iam.gserviceaccount.com"
 
 export EVE_EVIDENCE="gs://${EVE_PROJECT}-eve-evidence"
-export EVE_KEYS="gs://${EVE_PROJECT}-eve-keys"
+export EVE_KEYS="${EVE_EVIDENCE}/keys"     # a prefix, not a second bucket. See Phase 11.
 export EVE_AR="${REGION}-docker.pkg.dev/${EVE_PROJECT}/eve"
 
 echo "EVE_PROJECT=$EVE_PROJECT PROJECT=$PROJECT REGION=$REGION DOMAIN=$DOMAIN"
@@ -188,13 +188,36 @@ gcloud iam service-accounts create eve-v0 --project="$EVE_PROJECT" \
 gcloud projects add-iam-policy-binding "$EVE_PROJECT" \
   --member="serviceAccount:${SA_EVE_V0}" --role=roles/bigquery.jobUser
 
-# the transfer service impersonates this account; the human creating the config must be
-# allowed to say so
+# the transfer config runs AS this account; the human creating the config must be allowed
+# to attach it. actAs, not token minting — see the note below.
 gcloud iam service-accounts add-iam-policy-binding "$SA_EVE_V0" \
   --project="$EVE_PROJECT" \
   --member="user:$(gcloud config get-value account)" \
-  --role=roles/iam.serviceAccountTokenCreator
+  --role=roles/iam.serviceAccountUser
 ```
+
+**`serviceAccountUser`, resource-scoped, and never `serviceAccountTokenCreator`.** Verified
+2026-09-12: `roles/iam.serviceAccountUser` is the role that "lets a principal attach a
+service account to a resource" through `iam.serviceAccounts.actAs`, while
+`roles/iam.serviceAccountTokenCreator` carries `getAccessToken`, `getOpenIdToken`,
+`signBlob`, `signJwt` and `implicitDelegation` and **not** `actAs`
+([Service account permissions](https://docs.cloud.google.com/iam/docs/service-account-permissions));
+BigQuery names the former outright — "`iam.serviceAccountUser` to assign a service account
+to a scheduled query" ([Scheduling
+queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries)). The
+token-creator grant is not merely insufficient, it is worse than nothing: it would leave a
+standing impersonation path into the evidence identity for a human who only ever needed to
+point a config at it. The binding is on the **service account resource**, never at project
+level.
+
+**It will look redundant on the first build.** Cloud Scheduler's own documentation notes
+that whoever created the service account is already granted `actAs` ([HTTP target
+auth](https://docs.cloud.google.com/scheduler/docs/http-target-auth)), and the operator who
+just ran `gcloud projects create` holds `roles/owner`, which carries it too. These grants
+are written for the [E-2](09-open-decisions.md) `eve-owners@` handover, when the person
+re-pointing a transfer config or re-creating a schedule is no longer the person who created
+the account. The same grant is made on `$SA_EVE_VERIFIER` in Phase 10 and on `$SA_EVE` in
+Phase 11, for the same reason.
 
 The read grant on Wall-E's audit dataset is **dataset-level, never project-level** — a
 project-level `roles/bigquery.dataViewer` in Wall-E's project would be a lateral path into
@@ -534,15 +557,37 @@ Verified 2026-09-12: an organisation-level aggregated sink may route to a BigQue
 in another project, and its writer identity needs `roles/bigquery.dataEditor` there
 ([Aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks)).
 
+**The dataset's partition expiry must be set before the sink writes into it, and the sink
+must be told to use a partitioned table.** Neither is the default and neither can be
+retrofitted to rows already written. Verified 2026-09-12: a BigQuery sink creates
+date-sharded tables unless told otherwise — "The default selection is a date-sharded
+table", with names "suffixed with the calendar date of log entry's UTC timestamp"
+([Route logs to BigQuery](https://docs.cloud.google.com/logging/docs/export/bigquery)) —
+and `--use-partitioned-tables` is the flag that changes it: "If specified, use BigQuery's
+partitioned tables. By default, Logging creates dated tables based on the log entries'
+timestamps, e.g. 'syslog_20170523'"
+([gcloud logging sinks create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/sinks/create)).
+`bq update --default_partition_expiration` sets "the default lifetime, in seconds, for
+partitions in newly created partitioned tables"
+([Updating datasets](https://docs.cloud.google.com/bigquery/docs/updating-datasets)), so it
+binds the sink's table only if the dataset already carries it when Logging creates that
+table. Run the three commands in this order.
+
 ```bash
 bq --location="$BQ_LOCATION" mk --dataset \
   --description="Google's admin audit log, Eve's independent copy. No actor exclusion." \
   "${EVE_PROJECT}:eve_workspace_logs"
 
+# 34560000 seconds = 400 days. Assumption: 400 days pending decision E-14.
+# Before the sink, not after: this is the only chance to bound retention on a table
+# Logging creates for itself.
+bq update --default_partition_expiration=34560000 "${EVE_PROJECT}:eve_workspace_logs"
+
 gcloud logging sinks create eve-workspace-audit \
   "bigquery.googleapis.com/projects/${EVE_PROJECT}/datasets/eve_workspace_logs" \
   --organization="$ORG_ID" \
   --include-children \
+  --use-partitioned-tables \
   --log-filter='protoPayload.serviceName="admin.googleapis.com"'
 
 export EVE_SINK_WRITER="$(gcloud logging sinks describe eve-workspace-audit \
@@ -587,17 +632,34 @@ gcloud logging sinks describe eve-workspace-audit --organization="$ORG_ID" \
   --format='value(includeChildren)'
 # expect: True
 
-# 3. rows arrive, and the robot's own events are among them
+# 3. the destination is ONE partitioned table, DAY-partitioned, with a partition expiry.
+#    This is the check that fails if --use-partitioned-tables was forgotten: the table
+#    below will not exist at all, and a series of ..._activity_YYYYMMDD will exist instead.
+bq show --format=prettyjson \
+  "${EVE_PROJECT}:eve_workspace_logs.cloudaudit_googleapis_com_activity" \
+  | python3 -c "import json,sys; t=json.load(sys.stdin).get('timePartitioning',{}); \
+print(t.get('type'), t.get('field'), t.get('expirationMs'))"
+# expect: DAY  <partitioning column or None>  34560000000
+# A Not-found error here means --use-partitioned-tables was forgotten. A null
+# expirationMs means the dataset default was set after the sink, not before.
+# Write down the partitioning column. Both table types partition on the log entry's
+# timestamp, but the column BigQuery reports is what every later query must filter on,
+# as the bare column and not wrapped in a function, or nothing prunes: `timestamp` when
+# a field is named, `_PARTITIONTIME` when the field prints None. *tbd* until run —
+# do not assume which, and do not leave `DATE(timestamp)` in a query either way.
+
+# 4. rows arrive, and the robot's own events are among them
 bq query --use_legacy_sql=false --project_id="$EVE_PROJECT" \
   'SELECT protopayload_auditlog.authenticationInfo.principalEmail AS actor, COUNT(*) n
    FROM `eve_workspace_logs.cloudaudit_googleapis_com_activity`
-   WHERE DATE(timestamp) >= DATE_SUB(CURRENT_DATE(), INTERVAL 2 DAY)
+   WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 DAY)
    GROUP BY actor ORDER BY n DESC'
 # expect: walle@<domain> present. If it is absent, the exclusion was copied by mistake.
+# Substitute _PARTITIONTIME for `timestamp` if step 3 reported no partitioning field.
 ```
 
 Make a trivial admin change in the console and confirm it lands within minutes. Then have
-Wall-E make one — a shadow run is enough — and confirm **that** lands too. Check 3 passing
+Wall-E make one — a shadow run is enough — and confirm **that** lands too. Check 4 passing
 with only human actors in it is the failure this phase exists to prevent.
 
 **Rollback.** `gcloud logging sinks delete eve-workspace-audit --organization="$ORG_ID"`
@@ -846,6 +908,12 @@ retention" — into a preventive one. It also means the answer to
 `objectCreator` rather than `objectAdmin` is the same argument as Wall-E's insert-only
 audit role: the process that writes the evidence must not be able to destroy it.
 
+**Three prefixes live in this bucket**, and the locked policy is why there is no second one:
+`ladder/` for the CI-published artefact, `keys/` for the `eve-approval` PEM archive written
+at S4 entry by Phase 11, and the attestation bundles and daily reconciliation extracts
+`eve-verifier@` writes. Nothing under any of them can be deleted or replaced before its
+retention expires.
+
 **The CI-published ladder artefact.** Wall-E's CI writes
 `gs://<eve-project>-eve-evidence/ladder/<config_version>.yaml` plus its git sha, append-only,
 on every merge to `ladder.yaml`. This replaces "Eve reads `ladder.yaml` in git": Eve needs
@@ -993,6 +1061,14 @@ schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule), veri
 verdict.
 
 ```bash
+# the jobs run AS eve-verifier@; whoever creates them must be allowed to attach it.
+# Resource-scoped, never project-level. See Phase 2 for why this is actAs and not
+# token minting, and why it looks redundant until the E-2 handover.
+gcloud iam service-accounts add-iam-policy-binding "$SA_EVE_VERIFIER" \
+  --project="$EVE_PROJECT" \
+  --member="user:$(gcloud config get-value account)" \
+  --role=roles/iam.serviceAccountUser
+
 run_pass () {  # $1 = scheduler job name, $2 = entrypoint arg, $3 = cron
   gcloud scheduler jobs create http "$1" \
     --project="$EVE_PROJECT" --location="$REGION" --schedule="$3" \
@@ -1188,10 +1264,7 @@ gcloud kms keys versions get-public-key 1 \
   --key=eve-approval --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
   --output-file=./eve-approval-v1.pem
 
-# copy 1: object-retention archive in Eve's project
-gcloud storage buckets create "$EVE_KEYS" \
-  --project="$EVE_PROJECT" --location="$BQ_LOCATION" \
-  --uniform-bucket-level-access --public-access-prevention
+# copy 1: the keys/ prefix of the LOCKED evidence bucket Phase 9 already created
 gcloud storage cp ./eve-approval-v1.pem "${EVE_KEYS}/eve-approval-v1.pem"
 
 # copy 2: committed to Wall-E's repository under ladder.yaml's CODEOWNERS
@@ -1199,6 +1272,18 @@ cp ./eve-approval-v1.pem wall-e/contracts/eve-public-keys/1.pem
 git -C wall-e add contracts/eve-public-keys/1.pem
 git -C wall-e commit -m "eve-approval public key, version 1, exported at creation"
 ```
+
+**One bucket, not two.** The archive is a prefix of the locked evidence bucket from Phase 9,
+not a bucket of its own. A fresh bucket would be an ordinary bucket: every project owner and
+every `roles/storage.objectAdmin` could overwrite or delete the PEM, and per-object retention
+cannot be turned on from gcloud after creation — "Existing buckets can only enable the
+feature using the Google Cloud console" ([Object Retention
+Lock](https://docs.cloud.google.com/storage/docs/object-lock), verified 2026-09-12). The
+evidence bucket already carries the guarantee this archive needs and carries it *locked*: a
+locked retention policy cannot be shortened or removed, objects cannot be deleted or
+replaced before expiry even by a project owner, and the lien prevents the project being
+deleted. Ordering works out — the bucket lands at S3 entry, the key at S4 entry, so the
+destination exists before the first PEM does.
 
 Two copies, deliberately. The bucket copy survives a repository accident; the repository
 copy is what `walle-actions` compiles in for **offline pinned-PEM verification as the
@@ -1263,6 +1348,12 @@ gcloud run jobs deploy eve-gate \
   --args=gate \
   --tasks=1 --max-retries=0 --task-timeout=300s \
   --set-env-vars="^;^EVE_PROJECT=${EVE_PROJECT};WALLE_PROJECT=${PROJECT};ACTIONS_URL=<actions-url>;EVE_KEY_VERSION=${EVE_KEY_VERSION};REFRESH_TOKEN_SECRET=eve-refresh-token;EVE_TOKEN_VERSION=${EVE_TOKEN_VERSION}"
+
+# eve-gate-poll runs AS eve-controller@; same resource-scoped actAs grant as Phase 10.
+gcloud iam service-accounts add-iam-policy-binding "$SA_EVE" \
+  --project="$EVE_PROJECT" \
+  --member="user:$(gcloud config get-value account)" \
+  --role=roles/iam.serviceAccountUser
 
 gcloud scheduler jobs create http eve-gate-poll \
   --project="$EVE_PROJECT" --location="$REGION" --schedule="*/2 * * * *" \
@@ -1352,6 +1443,14 @@ gcloud kms keys versions get-public-key 1 --key=eve-approval --keyring=eve \
   --location="$REGION" --project="$EVE_PROJECT" | sha256sum
 # expect: three identical digests
 
+# 4b. and the bucket copy is under the LOCKED policy, not an ordinary object
+gcloud storage objects describe "${EVE_KEYS}/eve-approval-v1.pem" --format='value(name)'
+# expect: keys/eve-approval-v1.pem
+gcloud storage buckets describe "$EVE_EVIDENCE" \
+  --format='value(retentionPolicy.isLocked,retentionPolicy.retentionPeriod)'
+# expect: True  34560000
+# If isLocked is False the archive is deletable and the forgery argument does not hold.
+
 # 5. the receipt view exposes three columns and nothing else
 bq show --schema --format=prettyjson "${EVE_PROJECT}:eve.verdict_receipts" \
   | python3 -c "import json,sys;print([f['name'] for f in json.load(sys.stdin)])"
@@ -1404,9 +1503,9 @@ warning:**
 # in walle_setup.py, before the --destroy-key-versions branch runs
 def _pem_archive_present(ctx, version_number: str) -> bool:
     """Refuse to destroy a key version whose public key was never exported."""
-    bucket = "%s-eve-keys" % ctx.need("EVE_PROJECT")
+    bucket = "%s-eve-evidence" % ctx.need("EVE_PROJECT")
     committed = "contracts/eve-public-keys/%s.pem" % version_number
-    return (gcs_object_exists(ctx, bucket, "eve-approval-v%s.pem" % version_number)
+    return (gcs_object_exists(ctx, bucket, "keys/eve-approval-v%s.pem" % version_number)
             and pathlib.Path(committed).is_file())
 ```
 
@@ -1494,14 +1593,15 @@ exist and where they live.
 
 ## What to do when a step half-fails
 
-Most of this runbook is idempotent. Four steps are not, and they are the four worth knowing
-before you start.
+Most of this runbook is idempotent. Four steps are not, and the five ways they half-fail
+are the ones worth knowing before you start.
 
 | Step | If it half-fails | Do this |
 |---|---|---|
 | **Phase 8 consent** | A token is stored with the wrong scope set | **Redo all of Phase 8 from step 6.** Scopes freeze at consent. Widening them means a new client, a new consent and a new Trusted-client marking. Revoke the old grant at `myaccount.google.com/permissions` first, then destroy the secret version, then re-consent. The version number will not be 1 — re-export `EVE_TOKEN_VERSION` and redeploy both jobs, or they stay pinned to a destroyed version and fail with an `invalid_grant` that points at nothing. |
 | **Phase 9 bucket lock** | `--lock-retention-period` ran with the wrong period | **Nothing.** It cannot be shortened and it cannot be removed. A longer period can be set. If the period is too short, create a second bucket with the correct period and repoint `EVIDENCE_BUCKET`; leave the first to expire. |
 | **Phase 7 sink** | Created with an actor exclusion copied from Wall-E's | Delete and recreate. Do **not** patch the filter in place and assume the backfill catches up — it does not. The rows for the excluded actor between creation and correction are permanently missing from Eve's copy, and the audit-completeness metric will be quietly wrong for that window. Record the gap. |
+| **Phase 7 sink** | Created without `--use-partitioned-tables`, so the destination is a series of `cloudaudit_googleapis_com_activity_YYYYMMDD` tables and verify step 3 fails Not-found | Recreate the sink with the flag; that is fixable in place and takes effect from then on. **The already-written sharded tables stay sharded** — the same non-backfill property as the actor-exclusion row above. They also carry no partition expiry, so either delete them once their window is outside the evidence horizon or set an expiry on each. Set the dataset's `--default_partition_expiration` before recreating, or the new partitioned table inherits nothing. Record the window in which Eve's copy is sharded, because a query written against the unsuffixed name reads zero rows for it rather than erroring. |
 | **Phase 11 key** | The key version was used before the PEM was exported | Export it immediately; it is still exportable while the version is enabled. If the version has been **destroyed** without an export, every approval it signed is permanently unverifiable. Treat that as a severity 2 incident: the family goes to L0, `eve_authority` for it goes to advisory, and the affected window is named in every future attestation touching it. |
 
 Three general rules for a half-failed step anywhere in this runbook:
@@ -1526,6 +1626,12 @@ written from is `tbd` rather than assumed.
 |---|---|
 | BigQuery scheduled queries run as the creating user's credentials unless `--service_account_name` is given, and a query scheduled exactly on the hour may trigger more than once | [Scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries) |
 | An organisation-level aggregated sink may route to a BigQuery dataset in another project; its writer identity needs `roles/bigquery.dataEditor` there | [Aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks) |
+| A BigQuery sink writes **date-sharded** tables by default — "The default selection is a date-sharded table", suffixed `YYYYMMDD` — and `--use-partitioned-tables` is what makes it one partitioned table instead | [Route logs to BigQuery](https://docs.cloud.google.com/logging/docs/export/bigquery), [gcloud logging sinks create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/sinks/create) |
+| `bq update --default_partition_expiration` sets "the default lifetime, in seconds, for partitions in **newly created** partitioned tables", so it must precede the table's creation | [Updating datasets](https://docs.cloud.google.com/bigquery/docs/updating-datasets) |
+| `roles/iam.serviceAccountUser` carries `iam.serviceAccounts.actAs` and is the role that attaches a service account to a resource; `roles/iam.serviceAccountTokenCreator` carries `getAccessToken`, `getOpenIdToken`, `signBlob`, `signJwt` and `implicitDelegation`, and **not** `actAs`. Whoever created the service account already holds `actAs` | [Service account permissions](https://docs.cloud.google.com/iam/docs/service-account-permissions), [Scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries), [Cloud Scheduler HTTP target auth](https://docs.cloud.google.com/scheduler/docs/http-target-auth) |
+| Only Access Transparency, Admin Audit, Enterprise Groups Audit, Login Audit, OAuth Token Audit and SAML Audit export to Cloud Logging. **There is no Calendar audit stream.** | [Workspace audit logs](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging) |
+| `ADD_GROUP_MEMBER` and `REMOVE_GROUP_MEMBER` are `GROUP_SETTINGS` events under `applicationName=admin`, so Directory-API group-member writes land in the **Admin** audit log | [Admin group settings events](https://developers.google.com/workspace/admin/reports/v1/appendix/activity/admin-group-settings) |
+| Per-object retention can be enabled at bucket creation with `--enable-per-object-retention`; on an existing bucket it can "only enable the feature using the Google Cloud console", and once enabled "cannot be disabled on a bucket" | [Object Retention Lock](https://docs.cloud.google.com/storage/docs/object-lock) |
 | A Cloud Run **job** task may run up to 168 hours; a Cloud Run **service** request is capped at 60 minutes | [Cloud Run task timeout](https://docs.cloud.google.com/run/docs/configuring/task-timeout) |
 | Cloud Scheduler invokes a Cloud Run job with an **OAuth** token against `run.googleapis.com`, not OIDC | [Run jobs on a schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule) |
 | The Cloud Run jobs `:run` request body accepts `overrides.containerOverrides[].args` | [projects.locations.jobs.run](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs/run) |

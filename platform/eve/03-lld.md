@@ -310,7 +310,8 @@ and separating Eve rejections from human ones is a column, not a state (E-11 in
 KMS `GetPublicKey` as fallback only:
 
 - Each key version's PEM is exported at creation, **before first use**, to
-  `gs://<eve-project>-eve-keys/` with object retention, **and** committed to
+  `gs://<eve-project>-eve-evidence/keys/` — the `keys/` prefix of the **locked** evidence
+  bucket, not a bucket of its own — **and** committed to
   `contracts/eve-public-keys/<version>.pem` in Wall-E's repository under `ladder.yaml`'s
   CODEOWNERS. `GetPublicKey` returns PEM usable for exactly this offline verification
   (verified 2026-09-12, source above).
@@ -365,7 +366,7 @@ file is rejected before signing.
 | Class | Codes |
 |---|---|
 | Pre-approval (→ refuse) | `plan_hash_mismatch`, `pre_state_mismatch`, `predicate_unmet`, `level_overclaim`, `config_version_unknown`, `ceilings_sha_mismatch`, `target_protected`, `target_out_of_scope`, `rollback_absent`, `item_count_over_cap`, `trigger_uncorroborated`, `plan_expired`, `eve_read_failed`, `canonicalisation_failed`, `eve_config_stale` |
-| Post-hoc | `post_state_mismatch`, `unverified_within_sla`, `audit_row_missing`, `admin_event_unmatched`, `licence_event_only`, `verification_deferred_lag` (explicitly **not** a failure) |
+| Post-hoc | `post_state_mismatch`, `unverified_within_sla`, `audit_row_missing`, `admin_event_unmatched`, `licence_event_only`, `no_audit_stream`, `verification_deferred_lag` (the last two explicitly **not** failures) |
 | Control plane (→ demote or halt) | `control_plane_divergence`, `audit_claim_divergence`, `ladder_drift`, `epoch_regression`, `google_contract_drift`, `reconciliation_gap`, `evidence_stalled`, `eve_key_unavailable`, `disagreement_rate`, `false_refusal_rate`, `registry_mismatch`, `no_operator_window` |
 
 Two codes deserve their reading spelled out. `verification_deferred_lag` is not a fault: it
@@ -374,7 +375,13 @@ landed yet, and it is one of the two negative controls in the S3 exit gate
 ([05-stages.md](05-stages.md)). `licence_event_only` is a permanent, declared limit: Eve's
 role carries no License Management privilege and `apps.licensing` is dropped per
 [C13](../wall-e/14-hld-challenge.md), so F7 is verified from Google-written licence events
-and recorded `verified_partial`.
+and recorded `verified_partial`. `no_audit_stream` is the third: Google Workspace Calendar
+has **no Cloud Logging audit stream at all**, so a calendar-family item can never be
+attributed from `eve_workspace_logs`. Such an item is recorded `verified_state_only` with
+`no_audit_stream` **permanently** — it never upgrades to `verified` and it never escalates
+to `reconciliation_gap`, because there is nothing that could land. Like
+`licence_event_only`, it is a named, declared limit carried in the attestation, not a gap
+to be closed later.
 
 ## 7. `thresholds.yaml` and the rule about control calls
 
@@ -398,9 +405,20 @@ post_hoc:
   deep_pass_hours: 6                # upgrade verified_state_only -> verified
   gap_after_hours: 6                # nothing landed -> reconciliation_gap
   lag_budget_minutes:
+    # Every budget here clocks ONE stream: the Admin audit log, which is the only thing
+    # Eve's sink filter (serviceName="admin.googleapis.com") carries.
     admin: 15                       # Assumption:
-    groups: 180                     # Assumption:
-    calendar: 180                   # Assumption:
+    groups: 15                      # Assumption: same stream, same number as admin.
+                                    # Wall-E's F3 group-member writes go through the
+                                    # Directory API and are read as GROUP_SETTINGS /
+                                    # ADD_GROUP_MEMBER / REMOVE_GROUP_MEMBER under
+                                    # applicationName=admin, NOT as Enterprise Groups
+                                    # Audit events. The Groups *application's* slower
+                                    # lag is not the lag of the stream Eve reads.
+    # There is deliberately no `calendar` row. Google Workspace Calendar has no Cloud
+    # Logging audit stream at all, so no calendar-family item can ever be attributed
+    # from eve_workspace_logs, and a budget against it could never be satisfied.
+    # See flow 2 in 04-flows.md for how calendar-family verification is recorded instead.
 disagreement:
   window_days: 30
   min_paired_observations: 35
@@ -416,9 +434,17 @@ oncall:
   file: oncall.yaml                 # the no-operator window
 ```
 
-Three notes on those numbers. The lag budgets are `Assumption:` and stay so. The page budget
-is *tbd*. And every one of these is a first draft to be **calibrated at S2 on measured data
-before anything is wired to it**, then reviewed quarterly — E-18 in
+Four notes on those numbers. The lag budgets are `Assumption:` and stay so — what is *not*
+an assumption is which stream they clock, and that is the Admin audit log for both rows,
+because Eve's sink filter carries nothing else. Verified 2026-09-12: only Access
+Transparency, Admin Audit, Enterprise Groups Audit, Login Audit, OAuth Token Audit and SAML
+Audit export to Cloud Logging, and Calendar is not among them ([Workspace audit
+logs](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging)); group-member
+adds and removes made through the Directory API are `GROUP_SETTINGS` events under
+`applicationName=admin` ([Admin group settings
+events](https://developers.google.com/workspace/admin/reports/v1/appendix/activity/admin-group-settings)).
+The page budget is *tbd*. And every one of these is a first draft to be **calibrated at S2
+on measured data before anything is wired to it**, then reviewed quarterly — E-18 in
 [09-open-decisions.md](09-open-decisions.md). Reconciliation will have run about ten weeks
 against real writes by then and its false-positive rate will be measured, which is the only
 honest way to set a halt threshold.
@@ -435,7 +461,7 @@ Eve's copy is the reference the two are asserted equal against.
 |---|---|---|---|---|
 | `walle_audit.{actions,runs,plans,approvals,verifications,config_versions}` | Wall-E | dataset-level `dataViewer`, cross-project | `run_id`, plus ADK `invocation_id` | **This grant does not exist in the runbook today.** Query jobs run in Eve's project, so no `bigquery.jobUser` is needed in Wall-E's |
 | `walle_workspace_logs` | Wall-E | not used | — | Superseded by Eve's own sink. Eve asserts on every pass that Wall-E's copy still carries no actor exclusion, as a drift check on Wall-E |
-| `eve_workspace_logs` | Eve | owner | `insertId`, robot actor | Eve's evidence |
+| `eve_workspace_logs` | Eve | owner | `insertId`, robot actor | Eve's evidence. One DAY-partitioned `cloudaudit_googleapis_com_activity` table, 400-day partition expiry — the sink is created with `--use-partitioned-tables` and the dataset's default partition expiration is set before it, neither of which is the default and neither retrofittable |
 | `eve.*` | Eve | owner | `run_id` | Wall-E's deployers hold no IAM |
 | `eve.walle_audit_mirror` | Eve | owner | `run_id` | Daily append-only copy, outside Wall-E's teardown blast radius |
 | Firestore (Wall-E) | Wall-E | `datastore.viewer` | plan id, `(family, trigger)` | Epochs read strongly consistently and stamped into every verdict |
@@ -498,7 +524,7 @@ One row per verified item in `eve.verdicts`.
 |---|---|---|
 | `pending` | Drawn, not yet verified | — |
 | `verified` | Current state matches **and** a matching admin event attributes the write to the robot | — |
-| `verified_state_only` | Current state matches within the 60-minute SLA; the attributing event has not landed yet | `verification_deferred_lag` |
+| `verified_state_only` | Current state matches within the 60-minute SLA; the attributing event has not landed yet, or — for the calendar family — will never land | `verification_deferred_lag`, `no_audit_stream` |
 | `verified_partial` | Verified as far as Eve's privileges allow, with the gap named | `licence_event_only` |
 | `drift` | Post-state contradicts what the plan said would happen | `post_state_mismatch` |
 | `reconciliation_gap` | A gap in either direction that has outlived its lag budget | `audit_row_missing`, `admin_event_unmatched`, `reconciliation_gap` |

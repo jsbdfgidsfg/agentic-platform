@@ -48,7 +48,7 @@ because the views it reads do not carry one.
 |---|---|---|---|---|
 | **T0 — the metric queries** (`config/metrics/*.sql`) | `mo-metrics@` | `walle_audit`, `walle_workspace_logs` — raw | Computes every number and every selection, including the `ready` / `not_ready` / `insufficient_data` verdict, as a SQL `CASE`. No model, no network egress, nothing to prompt | **S0** |
 | **T1 — `mo-reporter`** | `mo-analyst@` | `walle_metrics` only — never `walle_audit` | Renders the five artefacts, recomputes `plan_hash` on a weekly sample against two read endpoints, writes proposal bundles to the drop box | **S1** (cost report), full set **S2** |
-| **T2 — `mo-narrator`** (optional) | `mo-narrator@` | the agent-facing authorised views — ids, hashes, closed enums, counts, timestamps, surrogate keys | Writes prose beside numbers it did not compute. Computes nothing, selects nothing, ranks nothing, grades nothing. Its output never enters the evidence block | **S4**, and it is legitimate never to build it |
+| **T2 — `mo-narrator`** (optional) | `mo-narrator@` | the agent-facing authorised views in `walle_metrics_views` — ids, hashes, closed enums, counts, timestamps, surrogate keys | Writes prose beside numbers it did not compute. Computes nothing, selects nothing, ranks nothing, grades nothing. Its output never enters the evidence block | **S4**, and it is legitimate never to build it |
 
 ## What Mo is deliberately not
 
@@ -96,7 +96,7 @@ design set lives at `platform/mo/`, alongside Eve's.
 | 5 | [What exists at each stage](05-staging.md) | S0 to S5 and the pre-Phase-1 baseline, what Mo is trusted with at each, the six-criterion acceptance test, and the cost and effort tables |
 | 6 | [Failure modes](06-failure-modes.md) | Mo down, Mo wrong, Mo compromised, the narrator hallucinating, the blocked upstream tables, and the residuals stated unsoftened |
 | 7 | [Building Mo](07-build-runbook.md) | The two new SETUP phases in the runbook's own shape, with verify blocks, rollback and the denial tests authored from Mo's side |
-| 8 | [Open decisions, and what Mo forces on Wall-E](08-open-decisions.md) | The ten open decisions with their gates, the seventeen changes this design forces on Wall-E's set, and the reopen-when table |
+| 8 | [Open decisions, and what Mo forces on Wall-E](08-open-decisions.md) | The ten open decisions with their gates, the eighteen changes this design forces on Wall-E's set, and the reopen-when table |
 
 ## Reading order
 
@@ -121,7 +121,7 @@ disagreements will be.
 | Item | State |
 |---|---|
 | `config/metrics/toil_baseline.csv` | Not started, and it is the only part of Mo that must exist **before Wall-E does**: four weeks of measured baseline toil for the top three admin tasks, plus monthly human operating hours. Decision 38's denominator cannot be reconstructed afterwards. |
-| `walle_metrics`, `walle_metrics_archive`, the ~12 scheduled queries, `gates.yaml`, the golden fixtures | Designed, not built. This is S0, and it is the whole of Mo through S1. |
+| `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private`, `walle_metrics_views`, the ~12 scheduled queries, `gates.yaml`, the golden fixtures | Designed, not built. This is S0, and it is the whole of Mo through S1. |
 | Mo's three service accounts and their BigQuery grants | Not created. **No BigQuery read grant for Mo exists in the runbook today** — `add_dataset_access` is called exactly twice, for neither of these. Every grant is a build task. |
 | `MO_PRINCIPAL` | Resolves to `serviceAccount:mo-analyst@${PROJECT}.iam.gserviceaccount.com`. No edit to `walle_setup.py` is required; [`../wall-e/PREREQUISITES.md`](../wall-e/PREREQUISITES.md) items 11 and 13 are settled by this resolution. |
 | `walle_audit.grades`, `proposal_verdicts`, `drills`, and the new `ladder_events` table | **Blocking upstream dependencies.** Without them plan precision, drill freshness, dwell and the ratchet are not computable at all, and no cell can be reported ready. See [08-open-decisions.md](08-open-decisions.md) and [`../wall-e/03-lld.md`](../wall-e/03-lld.md). |

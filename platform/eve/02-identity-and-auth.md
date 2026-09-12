@@ -343,7 +343,8 @@ covers only the key itself.
 Every key version's public key is exported **at creation, before the version is ever used
 to sign**, to two independent places:
 
-1. `gs://<eve-project>-eve-keys/`, with object retention, in Eve's project.
+1. `gs://<eve-project>-eve-evidence/keys/`, the `keys/` prefix of Eve's **locked** evidence
+   bucket, in Eve's project.
 2. `contracts/eve-public-keys/<version>.pem`, committed in **Wall-E's** repository under
    the same CODEOWNERS entry that protects `ladder.yaml`.
 

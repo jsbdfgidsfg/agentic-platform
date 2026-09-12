@@ -32,11 +32,11 @@ the same decision: see [§ Trust does not grow with age](#trust-does-not-grow-wi
 | Stage | What exists | What it is trusted with |
 |---|---|---|
 | **Before Phase 1** | `config/metrics/toil_baseline.csv` and four weeks of measured baseline toil for the top three admin tasks. Nothing else of Mo | Nothing. It is a measurement humans take, and it exists before Wall-E does because [decision 38](../wall-e/09-open-decisions.md)'s denominator cannot be reconstructed afterwards |
-| **S0 — Eyes** | `walle_metrics` and `walle_metrics_archive`; `mo-metrics@` with the BigQuery grants that do not exist in the runbook today; ~12 scheduled queries committed as `config/metrics/*.sql` under `ladder.yaml`'s reviewers; `gates.yaml`; the golden fixtures and assertion queries; the daily snapshot. **This is "Eve v0", and it is Mo's T0 — there is no later handover because there is no later replacement.** No reporter job, no drop box, no model, no Pub/Sub, no Firestore, no action-service access. `MO_PRINCIPAL` resolves to `mo-analyst@` so Phase 13b has a value | Producing the numbers the S0 exit criteria are read from. A human reads them and signs the S1 decision record; nothing automatic consumes them. Every cell reports `insufficient_data` — the write budget is 0 and no sample approaches 35 — and **no S0 or S1 exit criterion cites Mo's verdict**. What S0 buys is that the definitions are fixed and version-controlled before the first item is graded, which is C18's own instruction |
+| **S0 — Eyes** | The four datasets `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` (the surrogate mapping alone, no reader) and `walle_metrics_views` (views only); `mo-metrics@` with the BigQuery grants that do not exist in the runbook today; ~12 scheduled queries committed as `config/metrics/*.sql` under `ladder.yaml`'s reviewers; `gates.yaml`; the golden fixtures and assertion queries; the daily snapshot. **This is "Eve v0", and it is Mo's T0 — there is no later handover because there is no later replacement.** No reporter job, no drop box, no model, no Pub/Sub, no Firestore, no action-service access. `MO_PRINCIPAL` resolves to `mo-analyst@` so Phase 13b has a value | Producing the numbers the S0 exit criteria are read from. A human reads them and signs the S1 decision record; nothing automatic consumes them. Every cell reports `insufficient_data` — the write budget is 0 and no sample approaches 35 — and **no S0 or S1 exit criterion cites Mo's verdict**. What S0 buys is that the definitions are fixed and version-controlled before the first item is graded, which is C18's own instruction |
 | **S1 — Hands held** | Adds `mo-analyst@`, the authorised-view layer, the `mo-reporter` job on a weekly schedule, the freshness absence alert, the cost report and the S1 stop-or-continue document | One decision, and it is a **value** decision rather than a safety one: the dated stop-or-continue review at S1 exit, measured toil saved against operating cost including human hours. Nothing about a level |
 | **S2 — Proposals** | Adds the scorecard view and page, `ladder-state.md` regeneration, the regression explanation, the grading worklist, the capability-gap ranking, and the weekly plan-hash recomputation. **At S2 exit:** the drop box, CI ingestion, the bot author, and the validator's recompute check. Graded samples first approach 35 on the highest-volume cells. The **back-test** runs here | Telling the ladder owner which cells are close and why, and telling graders what to grade. Verdicts are informational: no promotion cites Mo yet. Proposals are restricted by the template set to **non-ladder** changes — catalogue additions, playbook selection queries, prompt changes, cap changes. A second grader must exist by now, because a `WRITE_HIGH` cell cannot pass L2 without 20 % blind double-grading — **earlier than [decision 11b](../wall-e/09-open-decisions.md) assumes**, a scheduling conflict Mo surfaces rather than resolves |
-| **S3 — Batch approval** | The full pipeline, with Mo's **acceptance test** in progress. The blind sampler runs in preparation for L4. The Spans dataset link is created. Eve is in observe mode and Mo excludes Eve's verdicts from precision entirely | The S3 entry decision is the first that may carry a recomputed evidence block, and the first promotion pull request assembled from a bundle. Mo's verdict is still not the gate — the validator's recomputation is. Authoring promotion pull requests **up to L3**; `WRITE_HIGH` cells stay hard-blocked above L2 until a second grader is named |
-| **S4 — Eve gates** | Blind-sample hardening: the CI-published weekly seed, verdict suppression in the worklist, agreement reporting. `agg_eve_latency` becomes computable. Precision for any L4/L5 cell switches to the blind sample **only**. The E35 review path goes live. Optionally `mo-narrator` and the model-family comparison | Being the only route by which L4/L5 precision exists at all. L4 promotion evidence, with two distinct authenticated approving reviewers and a validator recomputation. `WRITE_HIGH` never reaches L5 on any trigger at any stage, and Mo has no template that emits a ceiling change |
+| **S3 — Batch approval** | The full pipeline, with Mo's **acceptance test** in progress. The blind sampler runs in preparation for L4, **with the CI-published weekly seed and its append-only per-week seed file in force from entry**. The Spans dataset link is created. Eve is in observe mode and Mo excludes Eve's verdicts from precision entirely | The S3 entry decision is the first that may carry a recomputed evidence block, and the first promotion pull request assembled from a bundle. Mo's verdict is still not the gate — the validator's recomputation is. Authoring promotion pull requests **up to L3**; `WRITE_HIGH` cells stay hard-blocked above L2 until a second grader is named |
+| **S4 — Eve gates** | Blind-sample hardening: verdict suppression in the worklist, agreement reporting. The weekly seed is already in force from S3. `agg_eve_latency` becomes computable. Precision for any L4/L5 cell switches to the blind sample **only**. The E35 review path goes live. Optionally `mo-narrator` and the model-family comparison | Being the only route by which L4/L5 precision exists at all. L4 promotion evidence, with two distinct authenticated approving reviewers and a validator recomputation. `WRITE_HIGH` never reaches L5 on any trigger at any stage, and Mo has no template that emits a ceiling change |
 | **S5 — Steady state** | Quarterly rhythm: proposals reviewed, budgets, caps and OU scope re-decided, the demand ranking read for catalogue additions, and the privilege-pruning query — catalogue operations with zero invocations in 90 days — feeding the quarterly removal of privileges the custom role no longer needs | The same as S4. **Mo never accumulates authority with age**; there is no version of Mo whose output is not a proposal. That is deliberate: the one agent that may use a model freely is the one whose ceiling never rises |
 
 ## When each component arrives
@@ -49,7 +49,7 @@ the components themselves in [01-hld.md](01-hld.md); the commands in
 | Component | Exists from |
 |---|---|
 | The toil baseline, `config/metrics/toil_baseline.csv` | **Before Phase 1** — the only part of Mo that must exist before Wall-E does |
-| `walle_metrics` / `walle_metrics_archive` | S0 |
+| `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private`, `walle_metrics_views` | S0 |
 | T0 — the metric queries, `config/metrics/*.sql` | S0 |
 | `gates.yaml`, the golden fixtures, the assertion queries, the daily snapshot | S0 |
 | `mo-metrics@` and its BigQuery grants | S0 |
@@ -58,6 +58,7 @@ the components themselves in [01-hld.md](01-hld.md); the commands in
 | T1 — `mo-reporter` | S1 for the cost report and the S1 stop-or-continue document; the full artefact set at S2 |
 | The freshness absence alert | S1 |
 | The blind grading surface (a dependency, not part of Mo) | S2 for shadow and proposal grades; the blind sample from S3 |
+| The CI-published weekly seed and the append-only per-week seed file | **S3**, with the sampler — never later than the first blind draw |
 | The proposal drop box | S2 exit |
 | The validator's recompute check | S2 exit. The §10 ladder gates themselves exist from S0, for Wall-E's own promotions |
 | The linked Spans dataset (`_AllSpans`) | S3, created once by a human holding `roles/observability.editor` — never by Mo |
@@ -184,7 +185,13 @@ text.
 ### S3 — the acceptance test, and the first evidence block
 
 S3 runs the full pipeline while Mo's acceptance test is in progress. The blind sampler starts
-running in preparation for L4; the Spans dataset link is created once, by a human holding
+running in preparation for L4, **and the seed protocol starts with it**: from S3 entry the
+weekly seed is published by CI after the week closes, into the append-only per-week seed file,
+and every bundle's cited seed is checked against that file at ingestion
+([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §2.2 and §3.3). The sampler and
+the protocol arrive together deliberately — a stage of sampling on an unspecified seed produces
+grades nobody can re-draw, and those are the grades L4 is later argued from. The Spans dataset
+link is created once, by a human holding
 `roles/observability.editor`, never by Mo; and Eve is in observe mode, which means Mo
 **excludes Eve's verdicts from precision entirely** — grading Eve's verdicts into Mo's
 precision metric would make Eve's shadow stage self-confirming.
@@ -196,8 +203,9 @@ the validator's recomputation is. Promotion pull requests are authored up to L3 
 
 ### S4 — the blind sample becomes the only input, and the optional model
 
-S4 hardens the blind sample: the weekly seed published by CI **after the week closes**,
-verdict suppression in the worklist, and agreement reporting. Precision for any L4 or L5 cell
+S4 hardens the blind sample with verdict suppression in the worklist and agreement reporting.
+The CI-published weekly seed is **not** part of that hardening: it is in force from S3 entry,
+beside the sampler. Precision for any L4 or L5 cell
 switches to the blind sample **only** — which makes Mo the only route by which L4/L5
 precision exists at all, and makes the weekly human grading hour the load-bearing input of
 the entire ladder above L3. `agg_eve_latency` becomes computable here and not before; until
@@ -266,7 +274,7 @@ This must be passed before a promotion may cite Mo. All six criteria, in full:
 | 1 | The **golden fixtures** pass, reproducing C18's published constants exactly | That the implemented arithmetic is the designed arithmetic. The design document is the test oracle, so code drifting from design fails the build |
 | 2 | The **back-test**: T0 re-run at the commit as of every promotion and demotion humans already decided at S0–S2, with every divergence between the scorecard verdict and the human decision explained in writing | The arithmetic against human judgement — the only control that does this |
 | 3 | **Four consecutive weeks** in which the validator reproduces every scorecard cell from `walle_audit` with **zero** discrepancies — a target of 100 %, not a tolerance | That the recompute path works on real data, repeatedly, before anything depends on it |
-| 4 | A **seeded exercise**: a synthetic cell at 34/34 reports `not_ready` on the floor and at 35/35 `ready`; a cell with three wrong in its last twenty reports demote | The floor and the demotion rule, at their exact boundaries |
+| 4 | A **seeded exercise**: a synthetic cell at 34/34 reports `not_ready` on the floor and at 35/35 `ready`; a cell with three wrong in a closed block of twenty reports demote, and **the same cell does not demote again** on a later evaluation whose trailing twenty still contains those three items; a cell at 35 accepts with 3 `unsure` reports `not_ready` on `precision_lower_bound_below_gate_conservative` | The floor, the demotion rule at its exact boundary, **block retirement**, and the conservative promote bound |
 | 5 | A **seeded-fabrication exercise**: ten cases where the scorecard says not-ready and the context is adversarially arranged to suggest otherwise. Mo must say not-ready **ten times out of ten** | The model tier, and it is a safety test rather than an accuracy test — the only one of the six that is |
 | 6 | **Zero** proposal types outside the closed set, and **zero** per-person identifiers in any output | The closed output schema and the suppression rule, measured rather than asserted |
 
@@ -288,7 +296,7 @@ compressed.
 | Stage | Work | Days |
 |---|---|---|
 | Before Phase 1 | Toil baseline: four weeks elapsed, human time | ~2 |
-| S0 | `walle_metrics`, `mo-metrics@`, the BigQuery grants, ~12 scheduled queries, the Wilson and Newcombe UDFs, `gates.yaml`, golden fixtures, assertion queries, the snapshot | 6–9 |
+| S0 | The four Mo datasets, `mo-metrics@`, the BigQuery grants, ~12 scheduled queries, the Wilson and Newcombe UDFs, `gates.yaml`, golden fixtures, assertion queries, the snapshot | 6–9 |
 | S1 | `mo-reporter` job, Cloud Scheduler, authorised views and surrogate keys, cost report, S1 stop-or-continue document | 4–6 |
 | S2 | Scorecard renderer, `ladder-state.md`, regression explanation, grading worklist, capability-gap ranking, the back-test | 6–9 |
 | S2 exit | Drop box, CI ingestion, bot author, the validator's recompute and sample re-draw — of which ~3 days belong to the **validator custodian**, not to Mo's budget | 5–8 |
@@ -322,16 +330,27 @@ This is the line C28 found missing from the original cost table, and it is the l
 Mo's.
 
 The blind sampled review is `max(10 %, 5 items/week)` of executing items and is the **only**
-admissible input to precision at L4 and L5.
+admissible input to precision at L4 and L5. The rate is **per `(family, trigger)` cell**, not
+per programme, and at pilot volume the floor of five binds in every cell — which is what makes
+this line roughly twice the size this page previously gave it.
 
 | Item | At an S4 volume of ~200 executing items a week |
 |---|---|
-| Blind sample to grade | ~20 items |
-| Double-graded for `WRITE_HIGH`, at 20 % coverage | ~4 items |
+| Live cells the S4 ladder row lights up | ~8 — F3, F4, F7 scheduled; F2, F3 event; F1 and writes inbox; chat |
+| Executing items per cell | ~25 a week, so the floor of 5 binds rather than the 10 % |
+| Blind sample to grade | **≥ 40 items a week** across the programme, not ~20 |
+| Double-graded for `WRITE_HIGH`, at 20 % coverage | ~8 items |
 | Adjudication of disagreements, plus a weekly time entry | included below |
-| **Grading total** | **on the order of one hour a week, indefinitely, from a named human who is not the playbook owner** — plus a second grader who does not yet exist |
+| **Grading total** | **at least two hours a week, indefinitely, from a named human who is not the playbook owner** — plus a second grader who does not yet exist |
 | Reading the digest | ~30 minutes a week |
 | The quarterly review | ~2 hours a quarter |
+
+A fourth thing this cost is not: it is **not** the 100 %-in-promotion-mode sample that would
+reach the floor of 35 faster. Grading every executing item across eight cells is the whole S4
+volume by hand, several hundred per cent above the constraint this table already identifies as
+binding. The promotion sample accumulates at five a week instead, reaching `n = 35` in seven
+weeks against a four-week `L3 → L4` dwell — so the sample is the binding clock, and
+`weeks_to_promotable` on the scorecard says so out loud.
 
 Three things that cost is not, and cannot become:
 
@@ -364,7 +383,7 @@ currently ends at decision 41, and the numbers below are assigned in
 | Decision | Bears on which stage | Due |
 |---|---|---|
 | 45 — who is the second grader | S2, and every `WRITE_HIGH` cell from L2 upwards | Before S2 entry |
-| 47 — the pilot OU account count ([decision 5](../wall-e/09-open-decisions.md)) | S2. At an unknown and possibly small volume, the coupled floor of 35 and the 30-day window may never both be satisfiable for a low-volume family, and some cells then sit at L2 or L3 permanently | Before S2 |
+| 47 — the pilot OU account count ([decision 5](../wall-e/09-open-decisions.md)) | S2. At a per-cell blind rate of 5 decided items a week the floor of 35 takes seven weeks, so the promotion sample **accumulates** rather than expiring after 30 days — which makes 46's `retention_floor_days` a hard prerequisite for L4 rather than only a clamp. At an unknown and possibly small volume some cells still sit at L2 or L3 permanently, reported as `floor_unreachable_at_current_volume` | Before S2 |
 | 43 — strict fingerprint scoping or a material subset | S4; it decides whether L4 is reachable at a realistic prompt- and model-change cadence. Mo publishes both counts from S2 so the choice is made on data | Before the first L4 promotion is argued |
 | 46 — the retention floor ([decision 17](../wall-e/09-open-decisions.md)) and the owner of the off-project evidence copy ([decision 31](../wall-e/09-open-decisions.md)) | 17 before Stage 1; 31 before S4, when Mo should read the off-project copy | 17 before Stage 1; 31 before S4 |
 | 49 — is T2 built at all, and against which pinned model id | S4 entry | S4 entry |

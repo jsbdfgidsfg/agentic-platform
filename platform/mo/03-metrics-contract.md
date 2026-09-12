@@ -75,7 +75,7 @@ breath.
 | `freshness_bounds` | per source, see [§12](#12-freshness-bounds-and-window-clamping) | This design |
 | `retention_floor_days` | *tbd* — decision 17 | Every window is clamped to it; Mo cannot choose the number |
 
-Two things deliberately **not** in `gates.yaml`:
+Three things deliberately **not** in `gates.yaml`:
 
 - The **dwell durations and the ratchet length**. Their values are taken verbatim from
   [05](../wall-e/05-autonomy-ladder.md) §6 and reproduced in
@@ -84,6 +84,15 @@ Two things deliberately **not** in `gates.yaml`:
   names the file it read.
 - **T2's pinned model id**, which belongs to the narrator's deploy config beside
   `gates.yaml`, never to the gate parameterisation. Provisional decision 49.
+- **The demote gate's evaluation unit and cadence** — [§4](#4-the-gates)'s disjoint blocks of
+  20 decided items, once per closed grading week, with retirement. A `demote_eval_cadence`
+  parameter in `gates.yaml` would be read by Mo and by nothing that enforces: the demote
+  predicate is executed by the action service's breakers and by Eve, and neither reads anything
+  Mo writes ([§15](#15-the-readiness-state-machine)). The rule has to land in
+  [05](../wall-e/05-autonomy-ladder.md) §8 itself — change 18 in
+  [08-open-decisions.md](08-open-decisions.md) — and is reproduced here. Until it does, this
+  contract and the enforcing components compute **different** demote predicates, and that
+  divergence is a reported fact rather than a silent one.
 
 ---
 
@@ -108,6 +117,13 @@ The Wilson interval is used rather than the normal approximation because it does
 degenerate at `p = 1`, which is the case that decides every early promotion: a flawless
 sample still has a lower bound below 1, and how far below is exactly what C18 turned into a
 sample floor.
+
+**Out of domain is `NULL`, never a number.** Both UDFs guard
+`IF(n = 0 OR k < 0 OR k > n, NULL, …)`. A pair outside the domain is a defect upstream — a
+join that let accepts leak in from another window, a negative count from a subtraction — and
+returning a plausible-looking float for it hides the defect behind a bound. Assertion A2
+bounds `precision` to `[0, 1]` and says nothing about the interval columns, so the guard is
+the only thing standing between an impossible `(k, n)` and a published bound.
 
 ### 3.2 Newcombe difference interval
 
@@ -137,11 +153,15 @@ alone would push good playbooks into redesign.
 
 | Rule | Form |
 |---|---|
-| Promote | Wilson 95 % **lower** bound of plan precision at or above `0.90` |
-| Demote one level | Wilson 95 % **upper** bound below `0.95` over the last 20 decided — 3 or more wrong |
-| Drop to L1 | Wilson 95 % **upper** bound below `0.90` — 5 or more wrong in 20 |
+| Promote | Wilson 95 % **lower** bound of plan precision at or above `0.90`, **and** `wilson_lower_conservative` at or above `0.90` |
+| Demote one level | Wilson 95 % **upper** bound below `0.95` over **one closed block of 20 decided** — 3 or more wrong |
+| Drop to L1 | Wilson 95 % **upper** bound below `0.90` over the same block — 5 or more wrong in 20 |
+| Demote evaluation unit | **Disjoint blocks of 20 decided items**, evaluated **once per closed grading week**, never a sliding window and never hourly. A demotion **retires** the block that triggered it |
+| Demote denominator scope | **Not** scoped to the fingerprint — see [§11.2](#112-the-scoping-rule) |
 | Precision denominator | `accept / (accept + reject)`. `unsure` is **excluded** from the ratio and reported separately, capped at `0.10` (`Assumption:`); above the cap the cell is `not_ready` regardless of precision |
+| Conservative denominator | `precision_ratio_conservative = accept / (accept + reject + unsure)`, with `wilson_lower_conservative`. Gates the **promote** side only |
 | Sample floor | `n_decided >= 35`, enforced in the verdict **and** in an assertion query that fails the run if a `ready` row with `n_decided < 35` is ever written |
+| Promotion sample window | **Accumulating, not calendar**: decided items accumulate under one fingerprint until `n` reaches 35, bounded only by `retention_floor_days`. The 30-day rolling window of [§7](#7-the-ten-metrics-the-ladder-is-argued-from) governs the nine rate metrics, not this one |
 | Hysteresis | The band between `0.90` and `0.95`, plus the ratchet in [§9](#9-dwell-the-ratchet-and-the-one-notch-rule) |
 
 **The floor and the gate are one decision.** At `n = 30` even a flawless record gives a
@@ -152,11 +172,65 @@ clear it until `53`. Whoever sets the gate at `0.90` is also choosing how long a
 run before it can ever be promoted, which is why both numbers sit in the same file and move
 in the same pull request.
 
-**`unsure` is excluded, not counted wrong.** [04](../wall-e/04-flows.md) Flow B counted
-`unsure` as wrong, which turns grader hesitation into demotion pressure. It is excluded from
-the ratio, reported as `unsure_rate`, and capped: a cell that cannot make up its mind about
-more than a tenth of its items is not ready, and that is stated as its own reason rather than
-smuggled into precision.
+**The demote gate is evaluated on disjoint blocks, and a demotion retires its block.**
+[14](../wall-e/14-hld-challenge.md) C18's argument is stated *per window*: a truly-95 %
+playbook trips the 20-item demote predicate in about 26 % of windows under §8's point
+threshold, and C18's interval form reduces that to about 7.5 % per evaluation. That reduction
+survives only if each set of 20 decided items is tested **once**. Re-testing an overlapping
+window on every new grade multiplies the evaluations without adding evidence, and returns the
+rate C18 was written to remove. So:
+
+- the last-20 predicate is evaluated over **disjoint blocks** of 20 decided items, in arrival
+  order, **once per closed grading week** — not hourly, and not over a sliding window;
+- a block that triggers a demotion is **retired**: its decided items can never contribute to a
+  second demotion, on re-entry from the ratchet or at any later evaluation;
+- assertion **A9** in [§6](#6-assertion-queries) is the mechanism, and it needs
+  `ladder_events.decided_block_id` — change 2 in
+  [08-open-decisions.md](08-open-decisions.md).
+
+Retirement is the part that must not be dropped. Without it, [§15](#15-the-readiness-state-machine)'s
+`DM → RH → NR` path re-fires deterministically rather than statistically: at a per-cell blind
+rate of 5 decided items a week, the five-business-day hold adds about five items, the same
+three errors are still inside the trailing twenty, and the cell demotes a second time on
+re-entry. `demotions_90d` reaches 2 and `redesign_required` fires as a merge refusal, from a
+single cluster of three errors and with no noise argument involved at all.
+
+**The residual false-demotion budget, at the volume this design actually has.** With
+retirement in place the exposure is about `0.075` per closed block. At the per-cell blind rate
+of `max(10 %, 5 items/week)` — **5 decided items a week for every cell at pilot volume**, not
+the programme-wide figure in [§13.3](#133-coverage-is-itself-a-metric) — a block closes about
+every four weeks, so a cell sees roughly 3.25 blocks in 90 days. That is about a **22 %**
+chance of one false demotion in 90 days and about a **2–3 %** chance of two. The second number
+is the one that matters, because two is what sets `redesign_required`, and
+[§8](#8-error-budget-semantics) removes reviewed false positives from that count so the
+compounding does not run unattended.
+
+**`unsure` is excluded from the demote side, not counted wrong — and the asymmetry is
+deliberate.** [04](../wall-e/04-flows.md) Flow B counted `unsure` as wrong, which turns grader
+hesitation into demotion pressure; C18's remedy is to take it out of the ratio and report it
+separately, capped. That remedy is about **demotion**. Applied to the promote side it biases
+upward: `precision_ratio` becomes an estimate conditional on the grader being sure, and items
+a grader could not decide are, on any reasonable model of grading, likelier to be wrong than
+items they could. So the promote gate additionally clears `wilson_lower_conservative`, the
+Wilson lower bound of `accept / (accept + reject + unsure)`. A future reader must not
+"simplify" this back to symmetry: **the primary ratio excludes `unsure`, the promote gate
+also clears the conservative one, and the demote gate reads the primary ratio alone.**
+
+Worked, because the gap is wide enough to matter on its own: 35 accepts with 3 `unsure` gives
+`unsure_rate = 0.0789`, under the cap so no reason fires; `n_decided = 35`, exactly the floor;
+`wilson_lower(35, 35) = 0.9011`, so the cell reads `ready`. Under the conservative assignment
+the record is 35/38 and `wilson_lower(35, 38) = 0.7921`. Without the second bound the gate
+certifies "at least 90 % with 95 % confidence" for a cell whose worst case is 79 %, with no
+dishonesty anywhere in the chain. The `0.10` cap bounds that bias and is set exactly wide
+enough for it to bite, because the promote gate needs a *perfect* sample at `n = 35` and
+excluding the doubtful items is what makes a sample perfect.
+
+**What the interval covers, and what it does not.** Both Wilson bounds are **sampling-error**
+intervals that treat the recorded grade as ground truth. They do not cover grader error, and
+nothing in this contract does: `raw_agreement` and Gwet's AC1 in [§10](#10-grading-rules)
+*measure* grader disagreement and are not incorporated into any bound. A cell's true
+uncertainty is wider than its interval by that amount, and no increase in sample size closes
+the difference.
 
 ---
 
@@ -168,6 +242,15 @@ value differs. This is the only control that bites on the failure the validator 
 cannot catch — the validator re-runs the same committed SQL and would inherit the same
 arithmetic defect.
 
+**The oracle must not travel with the code it tests.** The fixture table is committed at its
+own path, `config/metrics/fixtures/wilson.sql`, and
+[04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.4 lists
+`config/metrics/fixtures/**` as a change-13 group **distinct from** `config/metrics/*.sql`, so
+one pull request cannot change a UDF and its expected values together. Each constant carries a
+comment citing [14](../wall-e/14-hld-challenge.md) C18 as its source. CI does **not** parse
+this wiki page: a build that reads a document is brittle machinery, and the separation of
+groups is what makes the oracle an independent control rather than a restatement.
+
 | Case | Bound | Expected | Consequence |
 |---|---|---|---|
 | 30/30 | lower | `0.8865` | below `0.90` — not promotable, which is why the floor moved |
@@ -178,15 +261,36 @@ arithmetic defect.
 | 17/20, 3 wrong | upper | `0.9476` | demotes one level |
 | 16/20, 4 wrong | upper | `0.9193` | does **not** drop to L1 |
 | 15/20, 5 wrong | upper | `0.8881` | drops to L1 |
+| 35/38 conservative | lower | `0.7921` | 35 accepts with 3 `unsure` does **not** clear the conservative gate |
+
+Two more, added because [06-failure-modes.md](06-failure-modes.md) §3.1 names them as the
+residuals for which nobody has independent intuition, and a residual that is fixtured is no
+longer only carried:
+
+| Case | What is fixtured | Expected |
+|---|---|---|
+| Newcombe difference | One hand-computed `(p1, l1, u1)` / `(p2, l2, u2)` pair, from [§3.2](#32-newcombe-difference-interval) | `diff_lower` and `diff_upper` to four places, *tbd* until the pair is hand-computed and committed |
+| Business days | One `Europe/Paris` five-business-day count spanning a French public holiday | The ratchet release date, *tbd* until the holiday and the span are chosen and committed |
 
 Also fixtured, because the verdict and the arithmetic are separate code paths and both can be
 wrong:
 
 - a synthetic cell at **34/34** must report `not_ready` with reason `sample_below_floor`;
 - the same cell at **35/35** must report `ready`;
-- a cell with **three wrong in its last twenty** must report a demote verdict.
+- a cell with **three wrong in a closed block of twenty** must report a demote verdict;
+- **the same cell must not demote again** on a later evaluation whose trailing twenty items
+  still contain those same three wrong — the block was retired, so the second evaluation has
+  no eligible block and the cell reports no demote verdict;
+- a cell at **35 accepts with 3 `unsure`** (`unsure_rate = 0.0789`, under the cap) must report
+  `not_ready` with reason `precision_lower_bound_below_gate_conservative`, **not** `ready`;
+- the cap boundary at **3/38** (`0.0789`, no reason) and **4/38** (`0.1053`, fires
+  `unsure_rate_above_cap`).
 
-These three are criterion 4 of Mo's acceptance test in [05-staging.md](05-staging.md).
+These are criterion 4 of Mo's acceptance test in [05-staging.md](05-staging.md). The
+re-fire case is the one that catches the loop C18's thresholds alone do not close, and it is a
+deterministic two-evaluation fixture rather than a simulation: a Monte Carlo over a thousand
+synthetic cells would be out of proportion to a one-administrator pilot and would not catch
+this at all, because the failure is structural rather than statistical.
 
 ---
 
@@ -207,10 +311,11 @@ the SQL share a misunderstanding.
 | A6 | A batch approval never contributes more accepts than its per-item vector has entries | C16's inflation, reintroduced by a join |
 | A7 | No published row carries an email-shaped string | The suppression rule, [§14](#14-the-suppression-rule) |
 | A8 | No published group-by cell has a count between 1 and 4 | Re-identification by small cell |
+| A9 | No cell carries more than one `ladder_events` demotion row attributable to the same `decided_block_id` | A retired block firing a second demotion — [§4](#4-the-gates)'s `DM → RH → NR` loop |
 
-A1–A6 are correctness assertions; A7 and A8 are disclosure assertions and are the mechanism
-behind [§14](#14-the-suppression-rule). All eight are failures of the run, not warnings: a
-metrics run that cannot assert its own output does not publish it, and the watermark then
+A1–A6 and A9 are correctness assertions; A7 and A8 are disclosure assertions and are the
+mechanism behind [§14](#14-the-suppression-rule). All nine are failures of the run, not
+warnings: a metrics run that cannot assert its own output does not publish it, and the watermark then
 ages, which is itself restrictive — see [06-failure-modes.md](06-failure-modes.md).
 
 ---
@@ -222,10 +327,17 @@ thresholds are [05](../wall-e/05-autonomy-ladder.md) §8's, reproduced here with
 form Mo computes and the aggregate view that is the sole source for each. Where this page
 says something §8 does not, it is called out in the last column.
 
+**Two exceptions to that window and that cadence, both on metric 2, both in
+[§4](#4-the-gates).** The *demote* predicate is evaluated over disjoint blocks of 20 decided
+items once per closed grading week, never hourly over a sliding window; and the *promotion*
+sample accumulates to `n = 35` under one fingerprint rather than expiring after 30 days. The
+other nine metrics are rates, and a rate over a rolling window evaluated hourly is the right
+shape for all of them.
+
 | # | Metric | How Mo computes it | Target | Breach → | Sole source |
 |---|---|---|---|---|---|
 | 1 | **Hard-invariant denials** | Count of `actions` rows whose `denial_reason` is one of the ten invariant codes in [03](../wall-e/03-lld.md), from **autonomous** runs only, with `protected_principal` arising from a **human chat request** excluded | **0** | Any one: family to L0 synchronously, incident | `agg_invariant_denials` |
-| 2 | **Plan precision** | `accept / (accept + reject)` over admissible grades scoped to the current fingerprint, with the Wilson bounds of [§4](#4-the-gates) | Wilson lower at or above `0.90` to promote | Upper below `0.95` over the last 20 decided: one level down. Upper below `0.90`: L1 | `agg_precision_cell` |
+| 2 | **Plan precision** | `accept / (accept + reject)` over admissible grades, with the Wilson bounds of [§4](#4-the-gates). The **promote** side is scoped to the current fingerprint and accumulates to `n = 35`; the **demote** side is not fingerprint-scoped and reads closed blocks of 20 decided | Wilson lower **and** `wilson_lower_conservative` at or above `0.90` to promote | Upper below `0.95` over a closed block of 20 decided: one level down. Upper below `0.90`: L1. The block is retired on firing | `agg_precision_cell` |
 | 3 | **Verification success** | `verified / executed writes` from `verifications` | ≥ 99.5 % | Any `drift`: one level down **plus an incident**. `unverifiable` above 2 %: one level down | `agg_verification_cell` |
 | 4 | **Breaker trips** | Distinct `error_class` values within a run, **excluding no-ops** | — | 2 or more distinct classes aborts the run. More than 3 automatic demotions in an hour is itself **severity 2**, counted from `ladder_events` | `agg_breaker_trips` |
 | 5 | **Invalid parameters** | Share of autonomous steps denied `invalid_parameters` | < 1 % | Above 1 %: promotions frozen. Above 5 %: one level down | `agg_invalid_params_cell` |
@@ -287,13 +399,25 @@ columns on the scorecard rather than prose in a review:
 |---|---|---|
 | `budget_exhausted` | The window's allowance for precision, verification or reliability is spent | Promotions frozen for the **rest of the window**; the cell reports `not_ready` |
 | `burn_rate_exceeded` | Burn rate above **2×** the sustainable rate for the window | **One level down** |
-| `redesign_required` | `demotions_90d >= 2` on the same family | The scorecard reports it and the validator enforces it as a **merge refusal**: the playbook is redesigned before re-entry |
+| `redesign_required` | `demotions_90d >= 2` on the same family, counting only demotions whose [§9.3](#93-the-ratchet) `review_verdict` is **not** `false_positive` | The scorecard reports it and the validator enforces it as a **merge refusal**: the playbook is redesigned before re-entry |
 
 `redesign_required` is the one error-budget state the validator acts on directly, because it
 is a fact about `ladder_events` rows rather than about an arithmetic result, and because
 [14](../wall-e/14-hld-challenge.md) C18's whole argument is that noise must not be allowed to
 push a good playbook into redesign — so the count that triggers it has to be auditable from
 rows anyone can re-read.
+
+**Why reviewed false positives leave the count.** [§4](#4-the-gates)'s block rule and its
+retirement remove the re-fire loop, and they leave a residual of about `0.075` per closed
+block, which compounds against a threshold of two. Excluding a demotion that a **named human**
+set to `review_verdict = false_positive` with a `review_ref` is what stops that compounding
+running unattended. It is **not** the false-positive exception [§9.3](#93-the-ratchet)
+refuses: the hold still runs in full, the incident note must still exist in git, the fresh
+decision record is still required, and the demotion row stays in `ladder_events` forever. The
+only thing the verdict changes is whether that row also counts towards a merge refusal months
+later. The control on over-use is the one already built: Mo publishes the **breaker
+false-positive rate** from exactly these rows, so a reviewer who marks everything false makes
+that visible on the scorecard and in the digest rather than quiet.
 
 ---
 
@@ -351,6 +475,14 @@ request targets the **metric definition** or opens an Eve finding — never the 
 the whole of E35's review path, and it is why the review verdict is a column rather than a
 conversation.
 
+The one thing the verdict does change is the `demotions_90d` count that sets
+`redesign_required` ([§8](#8-error-budget-semantics)). That is a different quantity from the
+hold: the hold is what happens *now*, to a cell whose behaviour is in question, and it applies
+whatever anyone later concludes; `demotions_90d` is a claim *about a pattern*, and a demotion a
+named human has found to be false is not evidence of one. Nothing else about the ratchet moves,
+and a `false_positive` verdict on a demotion that has not yet served its five business days
+releases nothing early.
+
 ### 9.4 One notch
 
 - Above L3: **one notch at a time**, with minimum dwell at each level. No skipping.
@@ -377,12 +509,38 @@ approval surface; Mo reads no Firestore.
 | Blindness | Grades with `blind = FALSE` or `saw_eve_verdict = TRUE` are **excluded from L4/L5 precision** and counted | Unblinding makes a cell **less** promotable, never more — the incentive has to point that way |
 | Double-grading | For a `WRITE_HIGH` cell, the second grade must come from someone other than the `owner:` recorded in the playbook file, at **≥ 20 % coverage** | C17 |
 | Below coverage | The cell reports `no_second_grader` and **can never pass L2** — reported from **S0** | The block is visible for months before it bites, rather than discovered at S3 |
-| Disagreement | Where two grades disagree and **no adjudication row exists, the item counts as wrong** | Otherwise double-grading becomes a rubber stamp: the cheapest way to clear a disagreement would be to ignore it |
+| Coverage stability | Double-grade coverage is **held at a fixed rate for the duration of a promotion window**, and `double_grade_coverage` is carried in the evidence block ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.1) so the validator refuses a bundle whose coverage moved mid-window | A precision figure earned at one coverage is not comparable with one earned at another |
+| Disagreement | Where two grades disagree and **no adjudication row exists, the cell is `not_ready` with reason `disagreement_unadjudicated`** until the adjudication row lands | Blocking rather than punitive — strictly more restrictive than counting the item wrong, and it does not distort the ratio |
 | Agreement reporting | Raw agreement **and Gwet's AC1** are reported and may be cited. **Cohen's κ is reported and never gated on** | At a base rate near 95 %, κ collapses towards zero on samples that are in fact excellent, and gating on it would demote good playbooks |
+| Stratified counts | The **count and the wrong-count are reported separately** for the double-graded and the single-graded stratum. No Wilson interval and no Newcombe comparison is published per stratum | The measurement difference is visible; an interval on a seven-item stratum carries no information |
 
 `grades_excluded` carries a count **and a reason breakdown** on every scorecard row. A cell
 whose sample is mostly exclusions is not a cell with a small sample; it is a cell with a
 broken grading process, and the two must be distinguishable at a glance.
+
+**Why an unadjudicated disagreement blocks rather than counts wrong, and why that is
+stricter.** The rule it replaces was written against a real failure: if an unresolved
+disagreement simply vanished, the cheapest way to clear one would be to ignore it, and
+double-grading would become a rubber stamp that only ever adds accepts. That reasoning stands
+and this rule serves it **harder** — an unadjudicated disagreement now stops the cell
+altogether rather than costing it one item. Nothing about it is a relaxation, and it must not
+be read as one.
+
+What counting it wrong did instead was distort the number. Double-grading changes the
+measurement process for 20 % of the sample and leaves it alone for the other 80 %, and the two
+processes have different error rates in the same direction: a double-graded item was counted
+wrong if **either** grader rejected it *or* if the two disagreed with nobody adjudicating,
+while a single-graded item was wrong only if its one grader rejected. `precision_ratio` then
+mixed two estimators in a proportion that was a free parameter of the cell — measured
+precision **fell as double-grade coverage rose**, which penalises the control that makes the
+measurement trustworthy, and precision was comparable neither between two cells at different
+coverage nor within one cell as its coverage moved. It also moved the floor: the promote gate
+needs a perfect sample up to `n = 52`, so one unadjudicated disagreement among the ~7
+double-graded items in a 35-item sample raised the required sample from 35 to 53 — eighteen
+more graded items, which at 5 a week is weeks. Adjudication throughput, not Wall-E's
+behaviour, became the binding constraint on promotion, and the cheapest responses available
+were to adjudicate fast rather than correctly, or to pin coverage at the floor. Blocking on
+the missing row removes all of that and keeps the incentive pointing the right way.
 
 **The second grader does not exist yet.** C17 makes 20 % blind double-grading a condition for
 a `WRITE_HIGH` cell to pass **L2**, which happens at S2, while decision 11b puts the second
@@ -423,10 +581,38 @@ cell.
 
 ### 11.2 The scoping rule
 
-**The promotion sample is scoped to the current fingerprint.** Evidence earned under a
-different one does not count. This closes C15's gaming path — prove 95 % on a narrow
-selection, then widen the selection and keep the level — at the **measurement layer** rather
-than only at CI, which means it holds even for a change CI did not classify as material.
+**The promotion sample is scoped to the current fingerprint. The demotion denominator is
+not.** The scoping is deliberately asymmetric, and both halves point the same way: a
+fingerprint change bounds what a cell may **claim** and never what may be **taken away** from
+it.
+
+| Side | Fingerprint-scoped? | Consequence of a fingerprint change |
+|---|---|---|
+| Promotion sample | **Yes** | The sample resets; `n` falls below 35; the cell reports `not_ready` with `fingerprint_reset` |
+| Demotion denominator | **No** | Demotion evidence carries across the change and ages out only by time, or by [§4](#4-the-gates)'s block rule |
+
+Evidence earned under a different fingerprint does not count towards a promotion. This closes
+C15's gaming path — prove 95 % on a narrow selection, then widen the selection and keep the
+level — at the **measurement layer** rather than only at CI, which means it holds even for a
+change CI did not classify as material.
+
+**Why the demotion side must not be scoped.** Scoped both ways, a fingerprint bump empties the
+demotion denominator, and the design hands an operator a documented, allowlisted lever for
+emptying it: `prompt_change` is one of Mo's own eight proposal types
+([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.5), available from S2, and
+bumping `prompt_hash` creates a fresh cell with no history. The arithmetic of the escape is not
+marginal — `wilson_upper(4, 5) = 0.9637` and `wilson_upper(8, 9) = 0.9801`, both above the
+`0.95` demote threshold — so a cell running at 80 % precision cannot demote for as long as
+someone keeps editing the prompt. Unscoped, the opposite reading has its own cost: a cell whose
+defect has just been fixed carries its predecessor's errors for the rest of the block. That
+cost is bounded by the block rule and it fails restrictively, which the gaming path does not.
+
+The gaming path is closed a second time at CI rather than only here, and with machinery this
+design already owns: [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.4's
+C15 gate is extended to cover `config/prompts/**`, so a prompt change serving a cell above L2
+needs a linked decision record and re-runs the canary at its current level or lower. A
+fingerprint change therefore lowers or holds a level and never clears accumulated demotion
+pressure.
 
 It is correct and it is brutal. When the fingerprint moves, the sample resets, `n` falls below
 35, and the scorecard reports `not_ready` with a reason naming the old fingerprint, the new
@@ -484,6 +670,16 @@ The blind sampled review is `max(10 %, 5 items/week)` of executing items and is 
 admissible input to precision at L4 and L5. Its integrity rests entirely on nobody being able
 to choose or anticipate which items are reviewed.
 
+**The rate is per cell, not per programme.** `GREATEST(CEIL(0.10 * n), 5)` in
+[§13.1](#131-the-draw-published) is evaluated over the executed items **in one
+`(family, trigger)` cell** for that week, so every live cell carries its own floor of five
+graded items a week. That is the number [§4](#4-the-gates)'s block arithmetic and
+[§13.3](#133-coverage-is-itself-a-metric)'s cost line are computed from, and it is the reason
+the accumulating promotion window exists: below about 50 executing items a week in a single
+cell the floor binds, the cell yields 5 decided items a week whatever its volume, and a
+30-day calendar window would cap it at about 21 — permanently under the floor of 35, however
+long the cell ran perfectly.
+
 ### 13.1 The draw, published
 
 Order the executed items in the cell for that week and take the first
@@ -500,13 +696,34 @@ carries the identical two lines; the validator's re-draw executes them unchanged
 
 ### 13.2 The seed protocol
 
-- `week_seed` is generated and committed by **CI, after the week has closed**.
+- `week_seed` is generated and committed by **CI, after the week has closed**, into an
+  **append-only per-week seed file in the configuration repository** — one entry per week,
+  written only by the CI job. A commit that rewrites an existing week's entry is not a
+  correction; it is itself the detectable event.
 - It is therefore unknown at plan-freeze time, so no run can be shaped around whether it will
   be reviewed.
 - **Nobody chooses the draw — including Mo.** Mo computes it; it does not select it.
 - The validator **re-draws the sample from the published seed** and refuses the merge if the
   membership differs from the evidence block. An auditor can re-draw it years later from the
   seed, the SQL and the archived snapshot.
+- The seed carried in a bundle is **anchored** the way `scorecard_sha256` is anchored:
+  ingestion refuses a bundle whose `evidence_block.seed` is not the seed the week file records
+  for `week(window_end)` ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md)
+  §3.3). Without that check the validator's re-draw proves only that a bundle is internally
+  consistent with whatever seed it carries, because both sides of the comparison descend from
+  that one value.
+- The protocol is **in force from S3 entry**, when the sampler starts running — not from S4.
+  A stage of sampling on an unspecified seed would produce grades nobody can re-draw, and
+  those are the grades L4 is later argued from. See [05-staging.md](05-staging.md).
+
+`FARM_FINGERPRINT` is a keyless public hash, so whoever runs the CI job can compute the
+resulting membership offline for any candidate seed before committing one, and a discarded
+candidate leaves no artefact. The append-only file makes the committed seed attributable and
+its replacement visible; it does not make the first choice unpredictable to the person making
+it. That residual is carried in [06-failure-modes.md](06-failure-modes.md) §5 rather than
+engineered away: a commitment-and-reveal scheme, or an Eve signature over the seed, is out of
+proportion to a one-administrator pilot, and the Eve option would drag the enforcing identity
+back into authoring the evidence it is graded against.
 
 **Unresolved: Eve's set claims the draw as well.**
 [`../eve/04-flows.md`](../eve/04-flows.md) flow 7 has `eve-reconciler` draw the sample
@@ -526,17 +743,33 @@ any Eve-drawn sample is a different sample with a different name.
 
 Achieved coverage against `max(10 %, 5 items/week)` is a first-class column. A miss sets
 `sample_coverage_below_floor` and the cell is `not_ready`. This is the control on the quiet
-failure that would otherwise be invisible: a team under time pressure grading five items
-instead of twenty and the numbers still looking fine because the denominator shrank with the
-numerator.
+failure that would otherwise be invisible: a team under time pressure grading two items
+instead of the cell's five, and the numbers still looking fine because the denominator shrank
+with the numerator.
 
-The honest cost, stated here because it belongs beside the rule that creates it: at an S4
-volume of roughly 200 executing items a week, this is ~20 items to grade, plus ~4
-double-graded for `WRITE_HIGH`, plus adjudication — on the order of **one hour a week,
-indefinitely, from a named human who is not the playbook owner**, plus a second grader who
-does not yet exist. It cannot be automated, cannot be sampled more thinly without the cell
-going `not_ready`, and cannot be delegated to a model without destroying the thing it
-measures.
+The honest cost, stated here because it belongs beside the rule that creates it, and computed
+**per cell** because that is how the floor is computed. At an S4 volume of roughly 200
+executing items a week across the whole programme, [05](../wall-e/05-autonomy-ladder.md) §7's
+S4 row lights up eight or more live `(family, trigger)` cells — F3, F4 and F7 on scheduled,
+F2 and F3 on event, F1 and writes on inbox, plus chat — so a cell carries roughly 25 executing
+items a week and the `5 items/week` floor binds in every one of them. The programme therefore
+grades **at least 40 items a week, not about 20**: eight cells at the floor, plus 20 % of
+those double-graded for `WRITE_HIGH`, plus adjudication.
+
+That is at least **two hours a week, indefinitely, from a named human who is not the playbook
+owner**, plus a second grader who does not yet exist — at least twice the "one hour a week"
+this design carried while the floor was read as a programme-wide number. It cannot be
+automated, cannot be sampled more thinly without the cell going `not_ready`, and cannot be
+delegated to a model without destroying the thing it measures.
+
+**And the promotion floor is reachable only because the window accumulates.** Five decided
+items a week reaches `n = 35` in seven weeks, against a four-week `L3 → L4` dwell — so the
+sample, not the dwell, is the binding clock, and it is visible as one: the scorecard carries
+`window_length_days` and `weeks_to_promotable` ([§16](#16-the-scorecard-row)) so a long
+accumulation reads as a long accumulation rather than as ordinary caution. Raising the blind
+rate to 100 % in promotion mode would reach the floor faster and is **not adopted**: at ~25
+executing items a week across ~8 cells it means grading the entire S4 volume by hand, several
+hundred per cent above the human constraint this design already identifies as binding.
 
 ---
 
@@ -585,23 +818,41 @@ stateDiagram-v2
     [*] --> ID
     ID --> NR : n_decided reaches the floor of 35 under the current fingerprint and every source is inside its freshness bound
     NR --> ID : fingerprint changes and the scoped sample falls below 35, or ladder_events or grades are absent
-    NR --> RD : Wilson lower bound at or above 0.90, dwell elapsed, drill within 30 days, reasons array empty
-    RD --> NR : any metric 1 to 10 criterion fails, unsure rate above the cap, sample coverage below floor, or a source goes stale
+    NR --> RD : Wilson lower bound and conservative lower bound both at or above 0.90, dwell elapsed, drill within 30 days, reasons array empty
+    RD --> NR : any metric 1 to 10 criterion fails, unsure rate above the cap, sample coverage below floor, an unadjudicated disagreement appears, or a source goes stale
     RD --> FR : budget_exhausted, invalid parameters above 1 percent, Eve latency breach, or drill stale
     NR --> FR : same freeze conditions, entered from not_ready
     FR --> NR : the window closes and the budget resets, or the incident closes and a new config version lands
     FR --> DM : burn_rate_exceeded above 2 times sustainable
-    RD --> DM : Wilson upper bound below 0.95 over the last 20 decided, any drift, unverifiable above 2 percent, reliability below 97 percent, invalid parameters above 5 percent, or a hard-invariant denial
+    RD --> DM : Wilson upper bound below 0.95 over one closed block of 20 decided, any drift, unverifiable above 2 percent, reliability below 97 percent, invalid parameters above 5 percent, or a hard-invariant denial
     NR --> DM : same demotion predicates
-    DM --> RH : the demotion is written to ladder_events and the ratchet starts
+    ID --> DM : same demotion predicates, because insufficient_data bounds what may be claimed and never what may be taken away
+    ID --> FR : same freeze predicates, including invariant_denial_present which sends the family to L0 synchronously
+    DM --> RH : the demotion is written to ladder_events with its decided_block_id and the ratchet starts
     RH --> NR : five business days elapsed, root-cause note present at incident_ref, fresh decision record merged
     note right of DM
-        Two demotions of the same family
-        within 90 days set redesign_required,
-        which the validator enforces as a
-        merge refusal.
+        The block that fired is retired, so the
+        same decided items can never demote twice.
+        Two demotions of the same family within
+        90 days, excluding reviewed false positives,
+        set redesign_required, which the validator
+        enforces as a merge refusal.
     end note
 ```
+
+Three properties of this diagram are load-bearing and easy to lose in an edit.
+
+- **`insufficient_data` is not a shelter.** A cell pushed into `ID` by a fingerprint change, or
+  by a missing `ladder_events` or `grades` table, still demotes and still freezes on every
+  predicate that applies. `ID` bounds what a cell may **claim**; it never bounds what may be
+  **taken away** from it. Without the `ID → DM` and `ID → FR` edges, a fingerprint bump would
+  park a failing cell in a state with no drawn path to `demoted` — including for
+  `invariant_denial_present`, which [§7](#7-the-ten-metrics-the-ladder-is-argued-from) metric 1
+  says sends the family to L0 **synchronously**.
+- **`RH → NR → DM` cannot re-fire on the same evidence.** The retired block is what makes the
+  loop terminate; see [§4](#4-the-gates).
+- **Nothing here is an action.** Every state is a statement about evidence, and the next
+  paragraph is why that matters.
 
 `ready` is a statement about evidence, never an action. Nothing in Wall-E's enforcement path
 reads this column: the action service's breakers, Eve and CI enforce every §8 breach that
@@ -637,8 +888,14 @@ enum come from the design itself.
 | One column per §8 criterion | mixed | Each carries **measured value, threshold and pass/fail** — never a bare boolean |
 | `n_graded`, `n_decided`, `n_unsure` | `INT64` | A1 asserts `n_decided + n_unsure = n_graded` |
 | `unsure_rate` | `FLOAT64` | Reported separately; above `0.10` the cell is `not_ready` |
-| `precision_ratio` | `FLOAT64` | `accept / (accept + reject)` over admissible grades, [§4](#4-the-gates). Assertion A2 bounds it to `[0, 1]` |
-| `wilson_lower`, `wilson_upper` | `FLOAT64` | [§3.1](#31-wilson-score-interval) |
+| `precision_ratio` | `FLOAT64` | `accept / (accept + reject)` over admissible grades, [§4](#4-the-gates). Assertion A2 bounds it to `[0, 1]`. The **demote** side reads this one |
+| `precision_ratio_conservative` | `FLOAT64` | `accept / (accept + reject + unsure)`, [§4](#4-the-gates). Reported always; gates the **promote** side only |
+| `wilson_lower`, `wilson_upper` | `FLOAT64` | [§3.1](#31-wilson-score-interval). `NULL` where `(k, n)` is out of domain |
+| `wilson_lower_conservative` | `FLOAT64` | The lower bound of `precision_ratio_conservative`. The promote gate clears `0.90` on **both** |
+| `decided_block_id`, `blocks_closed` | `STRING`, `INT64` | The open block's identifier and how many have closed for this cell, [§4](#4-the-gates). A9 reads the first |
+| `window_length_days` | `INT64` | How long the promotion sample has been accumulating, so a long accumulation is visible rather than hidden |
+| `weeks_to_promotable` | `INT64` | `ceil((35 - n_decided) / blind_items_per_week)`. `NULL` once the floor is met |
+| `n_double_graded`, `n_double_graded_wrong`, `n_single_graded`, `n_single_graded_wrong` | `INT64` | The two strata, [§10](#10-grading-rules). Counts only — no interval is published per stratum |
 | `drill_age_days` | `INT64` | Days since the last kill-switch drill, metric 10. Assertion A4 reads it |
 | `cell_count` | `INT64` | The number of distinct subjects behind the row. Assertion A8 fails the run if it is between 1 and 4 — [§14](#14-the-suppression-rule) |
 | `sample_coverage_achieved`, `sample_coverage_required` | `FLOAT64` | [§13.3](#133-coverage-is-itself-a-metric) |
@@ -666,11 +923,14 @@ is a `gates.yaml`-class pull request.
 
 | Reason | Fires when |
 |---|---|
-| `sample_below_floor` | `n_decided < 35` under the current fingerprint |
+| `sample_below_floor` | `n_decided < 35` under the current fingerprint, accumulated since the fingerprint took effect and bounded by `retention_floor_days` — never over a 30-day calendar window |
+| `floor_unreachable_at_current_volume` ◇ | `weeks_to_promotable` exceeds the surviving retention window, so the floor cannot be reached under this fingerprint at this cell's blind rate. A **structurally closed** gate, reported as such rather than as ordinary caution |
 | `precision_lower_bound_below_gate` ◇ | Wilson lower bound below `0.90` |
+| `precision_lower_bound_below_gate_conservative` ◇ | `wilson_lower_conservative` below `0.90` — the promote gate's second bound, [§4](#4-the-gates) |
 | `unsure_rate_above_cap` ◇ | `unsure_rate` above `0.10` |
-| `sample_coverage_below_floor` | Achieved blind coverage below `max(10 %, 5/week)` |
+| `sample_coverage_below_floor` | Achieved blind coverage below `max(10 %, 5/week)` for this cell |
 | `no_second_grader` | `WRITE_HIGH` cell below 20 % blind double-grading — blocks L2 |
+| `disagreement_unadjudicated` ◇ | Two grades disagree and no adjudication row exists. Clears when the row lands, [§10](#10-grading-rules) |
 | `dwell_not_satisfied` ◇ | Dwell elapsed shorter than required for the next notch |
 | `ratchet_hold` ◇ | Inside the five-business-day hold, or the incident note is missing |
 | `redesign_required` | Two demotions of the same family within 90 days |
@@ -703,8 +963,8 @@ back, or pushed forward, by how long a human took to answer.
 | Open | Where it bites | Provisional decision |
 |---|---|---|
 | The retention floor (decision 17) | Every window clamp in [§12](#12-freshness-bounds-and-window-clamping) | 46 |
-| Strict fingerprint scoping versus a material subset | [§11.2](#112-the-scoping-rule); may make L4 unreachable | 43 |
-| The pilot OU account count (decision 5) | The floor of 35 and a 30-day window may never both be satisfiable for a low-volume family | 47 |
+| Strict fingerprint scoping versus a material subset | [§11.2](#112-the-scoping-rule); may make L4 unreachable on the **promotion** side. The demotion denominator is unscoped either way | 43 |
+| The pilot OU account count (decision 5) | The floor of 35 against a per-cell blind rate of 5 decided items a week. At that rate the sample reaches the floor in **seven weeks**, so the promotion window must accumulate rather than expire — which makes decision 17's `retention_floor_days` and decision 31's off-project copy **hard prerequisites for L4**, not merely a clamp on it. Neither number is filled in here | 47, with 46 |
 | Who the second grader is, and when | [§10](#10-grading-rules); blocks `WRITE_HIGH` at L2 from S2 | 45 |
 | The `unsure` cap of `0.10` and the `Europe/Paris` business-day calendar | [§2](#2-configmetricsgatesyaml--the-full-parameter-list) | 51 |
 | Minimum reporting cell size 5, and who may read `walle_metrics` | [§14](#14-the-suppression-rule) | 44 |

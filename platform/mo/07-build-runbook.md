@@ -20,8 +20,8 @@ here.
 | Sitting | Stage | Phases | What exists afterwards |
 |---|---|---|---|
 | **The baseline** | Before Phase 1 | Mo-0 | `config/metrics/toil_baseline.csv`, and four weeks of elapsed measurement that cannot be reconstructed later. Nothing else of Mo |
-| **SETUP phase "Mo — metrics"** | S0 | Mo-1 to Mo-5 | `walle_metrics`, `walle_metrics_archive`, `mo-metrics@`, `gates.yaml`, the Wilson and Newcombe UDFs, the golden fixtures, ~12 scheduled queries, the assertion queries, the daily snapshot. **No reporter job, no drop box, no model, no Pub/Sub, no Firestore, no action-service access.** Every cell reports `insufficient_data` |
-| **SETUP phase "Mo — reporting"** | S1 | Mo-6 to Mo-8 | `mo-analyst@`, the authorised-view layer and its surrogate keys, the `mo-reporter` Cloud Run job on a weekly schedule, the freshness absence alert, the cost report and the S1 stop-or-continue document |
+| **SETUP phase "Mo — metrics"** | S0 | Mo-1 to Mo-5 | The four datasets — `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private`, `walle_metrics_views` — plus `mo-metrics@`, `gates.yaml`, the Wilson and Newcombe UDFs, the golden fixtures, ~12 scheduled queries, the assertion queries, the daily snapshot. **No reporter job, no drop box, no model, no Pub/Sub, no Firestore, no action-service access.** Every cell reports `insufficient_data` |
+| **SETUP phase "Mo — reporting"** | S1 | Mo-6 to Mo-8 | `mo-analyst@`, the authorised views in `walle_metrics_views` and the surrogate mapping in `walle_metrics_private`, the `mo-reporter` Cloud Run job on a weekly schedule, the freshness absence alert, the cost report and the S1 stop-or-continue document |
 | **The gate** | S2 exit | Mo-9 | The drop box, CI ingestion, the bot author, and the validator's recompute check. This is the phase that makes a promotion able to cite Mo at all |
 | **Spans** | S3 | Mo-10 | The one-off linked trace dataset, created by a human, never by Mo |
 | **The narrator** | S4, optional | Mo-11 | `mo-narrator@` and one Cloud Run job calling `generateContent` with a pinned model id. It is legitimate never to execute this phase — [M-8 · 49](08-open-decisions.md) |
@@ -93,7 +93,7 @@ metric if the phase that needs it runs first.
 |---|---|---|
 | [M-5 · 46](08-open-decisions.md) — the retention floor ([decision 17](../wall-e/09-open-decisions.md)) | Mo-1 | `walle_metrics` partition expiry is set to 400 days to match `walle_audit`, marked `Assumption:`. Mo clamps every window to the declared floor and flags a clamped window rather than reporting it as if it were full |
 | [M-4 · 45](08-open-decisions.md) — who is the second grader | Before S2 entry, not S3 | A `WRITE_HIGH` cell cannot pass L2 without 20 % blind double-grading by someone other than the playbook owner. Mo reports `no_second_grader` from S0 so the block is visible for months before it bites |
-| [M-6 · 47](08-open-decisions.md) — the pilot OU account count ([decision 5](../wall-e/09-open-decisions.md)) | Before S2 | Mo's scorecard has no denominator. At small volume the coupled floor of 35 and the 30-day window may never both be satisfiable, and some cells sit at L2 or L3 permanently |
+| [M-6 · 47](08-open-decisions.md) — the pilot OU account count ([decision 5](../wall-e/09-open-decisions.md)) | Before S2 | Mo's scorecard has no denominator. The blind rate is per cell, so the floor of five binds and a cell yields ~5 decided items a week; the promotion sample therefore accumulates to 35 rather than expiring after 30 days, which makes [M-5 · 46](08-open-decisions.md)'s retention floor a prerequisite for L4. Some cells still sit at L2 or L3 permanently, reported as `floor_unreachable_at_current_volume` |
 | [M-3 · 44](08-open-decisions.md) — who may read `walle_metrics` ([decision 35](../wall-e/09-open-decisions.md)) | Mo-8 | Readers are `walle-operators@` and the ladder owner only, minimum reporting cell size 5 (`Assumption:`), and **no Mo artefact is synced to Drive** |
 | [M-7 · 48](08-open-decisions.md) — the git host and its admin-bypass setting | Mo-9 | The two-distinct-authenticated-reviewer rule is decoration if an administrator can bypass branch protection. The validator reports the setting it observes and cannot enforce it |
 | [M-1 · 42](08-open-decisions.md) — does "no write path of any kind" permit `mo-metrics@` writing `walle_metrics`? | Mo-1 | The whole of Mo-1 is that write. The design reads the rule as *no byte Mo writes is read by anything that enforces*, and makes it true by mechanism — denial test **MD-9** below is that mechanism |
@@ -201,12 +201,28 @@ different world.
 
 ---
 
-## Phase Mo-1 — `walle_metrics` and `walle_metrics_archive` **NEW**
+## Phase Mo-1 — the four Mo datasets **NEW**
 
-Two datasets, for the same reason Wall-E's Phase 7 makes two: their reader sets differ.
-`walle_metrics` has a **wider reader set than `walle_audit`** — which is precisely why
-suppression is a mechanism in [03-metrics-contract.md](03-metrics-contract.md) and not a
-promise.
+Four datasets, for the same reason Wall-E's Phase 7 makes two: their reader sets differ, and
+in BigQuery the **dataset is the unit of read access**. `walle_metrics` has a **wider reader
+set than `walle_audit`** — which is precisely why suppression is a mechanism in
+[03-metrics-contract.md](03-metrics-contract.md) and not a promise.
+
+| Dataset | Holds | Who may read it |
+|---|---|---|
+| `walle_metrics` | The scorecard and the sixteen aggregates | `mo-metrics@` (WRITER), `mo-analyst@` (READER) |
+| `walle_metrics_archive` | Dated scorecard snapshots | `mo-metrics@` (WRITER), `mo-analyst@` (READER) |
+| `walle_metrics_private` | `principal_surrogates`, and nothing else | `mo-metrics@` (WRITER). **No reader, ever, to any principal** |
+| `walle_metrics_views` | The agent-facing authorised views. **No tables** | `mo-narrator@` (READER, from Mo-11) |
+
+The last two are not tidiness. `principal_surrogates` cannot live in `walle_metrics`, because
+`mo-analyst@`'s `READER` there is **dataset-level** and covers every table in the dataset —
+including the mapping, and including any table added to that dataset later with no design
+review. A surrogate that can be joined back to an email is not a surrogate. And the views
+cannot live in `walle_metrics` either: Google requires an authorized view to sit in "a
+different dataset than the dataset used in the source query"
+([Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views), verified
+2026-09-12), so a view defined beside its source table is not an authorized view at all.
 
 ```bash
 bq --location="$BQ_LOCATION" mk --dataset \
@@ -216,18 +232,29 @@ bq --location="$BQ_LOCATION" mk --dataset \
 bq --location="$BQ_LOCATION" mk --dataset \
    --description="Dated scorecard snapshots. The citable object a promotion points at." \
    "${PROJECT}:walle_metrics_archive"
+
+bq --location="$BQ_LOCATION" mk --dataset \
+   --description="The surrogate mapping, alone. Written only by mo-metrics@. NO READER, EVER." \
+   "${PROJECT}:walle_metrics_private"
+
+bq --location="$BQ_LOCATION" mk --dataset \
+   --description="Agent-facing authorised views over walle_metrics. Views only, no tables." \
+   "${PROJECT}:walle_metrics_views"
 ```
+
+All four must be `EU`: an authorized view and its source must share a regional location, and
+a cross-location join against `walle_audit` fails outright.
 
 The scorecard and the sixteen supporting aggregates, partitioned on `as_of`. Schemas live in
 `schemas/mo_*.json` in the repository; columns are specified in
 [03-metrics-contract.md](03-metrics-contract.md), which is authoritative wherever this page's
 SQL names one.
 
-`Assumption:` the twenty table names in the loop below, the single agent-facing view
-`walle_metrics.v_cell_public` used as the example in Mo-6, the metric SQL filenames under
-`config/metrics/`, and `config/metrics/graders.yaml` for the committed grader list are this
-runbook's names for objects the design describes without naming. The sixteen `agg_*` names
-are the design's own.
+`Assumption:` the nineteen table names in the loop below, the single agent-facing view
+`walle_metrics_views.v_cell_public` used as the example in Mo-6, the metric SQL filenames
+under `config/metrics/`, and `config/metrics/graders.yaml` for the committed grader list are
+this runbook's names for objects the design describes without naming. The sixteen `agg_*`
+names are the design's own.
 
 ```bash
 # 34560000 seconds = 400 days, matching walle_audit.
@@ -239,14 +266,26 @@ for T in scorecard \
          agg_audit_completeness agg_drill_freshness agg_approval_latency \
          agg_eve_latency agg_sample_coverage agg_regression_attribution \
          agg_cost_operation agg_cost_playbook agg_value_toil agg_capability_gap \
-         grading_worklist principal_surrogates toil_baseline; do
+         grading_worklist toil_baseline; do
   bq mk --table \
     --time_partitioning_field=as_of \
     --time_partitioning_type=DAY \
     --time_partitioning_expiration=34560000 \
     "${PROJECT}:walle_metrics.${T}" "./schemas/mo_${T}.json"
 done
+
+# the surrogate mapping, in the private dataset, alone
+bq mk --table \
+  --time_partitioning_field=as_of \
+  --time_partitioning_type=DAY \
+  --time_partitioning_expiration=34560000 \
+  "${PROJECT}:walle_metrics_private.principal_surrogates" \
+  "./schemas/mo_principal_surrogates.json"
 ```
+
+`principal_surrogates` is **deliberately not in that loop**. It is the one table whose
+presence in `walle_metrics` would make every surrogate in every view and every artefact
+reversible by `mo-analyst@`, and moving it is the whole of that fix.
 
 `bq mk` rejects a clustering field that is not in the supplied schema, so a loop like this
 one dies partway and leaves some tables created and some not. Re-running it after a fix is
@@ -265,20 +304,36 @@ bq show --format=prettyjson "${PROJECT}:walle_metrics.scorecard" \
 
 bq ls --format=prettyjson "${PROJECT}:walle_metrics" | python3 -c \
   "import json,sys; d=json.load(sys.stdin); print(len(d), 'objects')"
-# expect: 20
+# expect: 19 — principal_surrogates is NOT among them
+
+bq ls --format=prettyjson "${PROJECT}:walle_metrics_private" | python3 -c \
+  "import json,sys; d=json.load(sys.stdin); print(len(d), 'objects')"
+# expect: 1 — principal_surrogates and nothing else
+
+bq ls --format=prettyjson "${PROJECT}:walle_metrics_views" | python3 -c \
+  "import json,sys; d=json.load(sys.stdin); print(len(d), 'objects')"
+# expect: 0 at this phase; the views arrive in Mo-6
+
+for DS in walle_metrics walle_metrics_archive walle_metrics_private walle_metrics_views; do
+  bq show --format=prettyjson "${PROJECT}:${DS}" | grep -E '"location"'
+done
+# expect: EU, four times
 ```
 
-Both datasets must report `EU`. A dataset created in the wrong location cannot be moved, and
-a cross-location join against `walle_audit` fails outright rather than quietly.
+All four datasets must report `EU`. A dataset created in the wrong location cannot be moved,
+a cross-location join against `walle_audit` fails outright rather than quietly, and an
+authorized view whose source dataset is in another location is refused.
 
 **Rollback.**
 
 ```bash
 bq rm -r -f -d "${PROJECT}:walle_metrics"
 bq rm -r -f -d "${PROJECT}:walle_metrics_archive"
+bq rm -r -f -d "${PROJECT}:walle_metrics_private"
+bq rm -r -f -d "${PROJECT}:walle_metrics_views"
 ```
 
-Nothing outside these two datasets has changed, and nothing in them is irreplaceable at this
+Nothing outside these four datasets has changed, and nothing in them is irreplaceable at this
 phase — every row is recomputable from `walle_audit` by definition. That stops being true
 from Mo-5, when the archive holds dated snapshots that decision files cite; take those out
 before rolling back after S2.
@@ -331,11 +386,18 @@ EOF
   bq update --source=/tmp/ds.json "${PROJECT}:$1"
 }
 
-grant_dataset walle_audit          READER "$SA_MO_METRICS"
-grant_dataset walle_workspace_logs READER "$SA_MO_METRICS"
-grant_dataset walle_metrics        WRITER "$SA_MO_METRICS"
+grant_dataset walle_audit           READER "$SA_MO_METRICS"
+grant_dataset walle_workspace_logs  READER "$SA_MO_METRICS"
+grant_dataset walle_metrics         WRITER "$SA_MO_METRICS"
 grant_dataset walle_metrics_archive WRITER "$SA_MO_METRICS"
+grant_dataset walle_metrics_private WRITER "$SA_MO_METRICS"
+grant_dataset walle_metrics_views   WRITER "$SA_MO_METRICS"
 ```
+
+`walle_metrics_private` gets exactly this one entry and **never another**. Every later phase
+that adds a reader adds it to `walle_metrics`, `walle_metrics_archive` or
+`walle_metrics_views`; a reader on the private dataset would undo the surrogate scheme
+silently, which is why MD-13 tests for its absence rather than trusting the runbook.
 
 `WRITER` is the dataset-level form of `roles/bigquery.dataEditor`, and the account
 additionally needs `bigquery.datasets.get` and `bigquery.datasets.update` on the **target**
@@ -343,7 +405,7 @@ dataset for the Data Transfer Service to write there — both of which `WRITER` 
 ([Service accounts with BigQuery Data Transfer](https://docs.cloud.google.com/bigquery/docs/use-service-accounts),
 verified 2026-09-12).
 
-> **None of these four grants exists in the runbook today.** `add_dataset_access` is called
+> **None of these six grants exists in the runbook today.** `add_dataset_access` is called
 > exactly twice in `setup/walle_setup.py`, for `walle-actions@` and the `walle-audit-bq`
 > sink writer. This phase is where change 3 of [08-open-decisions.md](08-open-decisions.md)
 > lands.
@@ -351,13 +413,15 @@ verified 2026-09-12).
 **Verify.**
 
 ```bash
-for DS in walle_audit walle_workspace_logs walle_metrics walle_metrics_archive; do
+for DS in walle_audit walle_workspace_logs walle_metrics walle_metrics_archive \
+          walle_metrics_private walle_metrics_views; do
   echo "== $DS"
   bq show --format=prettyjson "${PROJECT}:${DS}" | python3 -c \
     "import json,sys;[print(a) for a in json.load(sys.stdin)['access']]"
 done
 # expect: mo-metrics@ READER on walle_audit and walle_workspace_logs, and WRITER on
-#         neither of them. WRITER on walle_metrics and walle_metrics_archive only.
+#         neither of them. WRITER on the four walle_metrics* datasets only.
+#         walle_metrics_private must show mo-metrics@ and NO other principal.
 
 # prove the negative at project level
 gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' \
@@ -374,7 +438,7 @@ done
 # expect: nothing, four times
 ```
 
-**Rollback.** Remove the four `access` entries the same way they were added, then
+**Rollback.** Remove the six `access` entries the same way they were added, then
 
 ```bash
 gcloud projects remove-iam-policy-binding "$PROJECT" \
@@ -411,7 +475,7 @@ queries, the assertion queries and the validator all execute the same text:
 bq query --use_legacy_sql=false --project_id="$PROJECT" --location="$BQ_LOCATION" <<'SQL'
 CREATE OR REPLACE FUNCTION `walle_metrics.wilson_lower`(k INT64, n INT64)
 RETURNS FLOAT64 AS (
-  IF(n = 0, NULL,
+  IF(n = 0 OR k < 0 OR k > n, NULL,
     ( (k/n) + (1.959964*1.959964)/(2*n)
       - 1.959964 * SQRT( ((k/n)*(1-(k/n)))/n + (1.959964*1.959964)/(4*n*n) )
     ) / (1 + (1.959964*1.959964)/n)
@@ -420,7 +484,7 @@ RETURNS FLOAT64 AS (
 
 CREATE OR REPLACE FUNCTION `walle_metrics.wilson_upper`(k INT64, n INT64)
 RETURNS FLOAT64 AS (
-  IF(n = 0, NULL,
+  IF(n = 0 OR k < 0 OR k > n, NULL,
     ( (k/n) + (1.959964*1.959964)/(2*n)
       + 1.959964 * SQRT( ((k/n)*(1-(k/n)))/n + (1.959964*1.959964)/(4*n*n) )
     ) / (1 + (1.959964*1.959964)/n)
@@ -432,12 +496,29 @@ SQL
 The Newcombe difference interval for attribution is built from these two, per
 [03-metrics-contract.md](03-metrics-contract.md). `z` appears as a literal here and as a
 parameter in `gates.yaml`; CI asserts the two agree, because a UDF that silently disagrees
-with the declared parameter is exactly the failure the fixtures below exist to catch.
+with the declared parameter is exactly the failure the fixtures below exist to catch. Change
+13 lists `config/metrics/gates.yaml` as a group separate from `config/metrics/*.sql`, so the
+pull request that changed both to keep them agreeing is refused.
+
+`IF(n = 0 OR k < 0 OR k > n, NULL, …)` is the domain guard. An out-of-domain pair is a defect
+upstream — a join leaking accepts in from another window, a negative count from a subtraction
+— and returning a plausible float for it hides that defect behind a bound. Assertion A2
+constrains `precision` and says nothing about the interval columns, so the guard is the only
+thing between an impossible `(k, n)` and a published number.
 
 **3. The golden fixtures — the design document is the test oracle.** Expected values are the
 constants [14-hld-challenge.md](../wall-e/14-hld-challenge.md) C18 published, re-derived
 during judging. **CI fails if any differs**, which makes code drifting from the design a
 build failure rather than a discovery.
+
+Commit them at their **own path**, `config/metrics/fixtures/wilson.sql`, with a comment
+against each constant citing C18 as its source — and add `config/metrics/fixtures/**` to
+change 13's mutually-exclusive list as a group distinct from `config/metrics/*.sql`
+([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.4). The fixtures are the
+only control that bites on the failure the validator structurally cannot catch, and an oracle
+that can move in the same pull request as the function it checks is a weaker control than
+that claim requires. CI does **not** parse the wiki page: a build that reads a document is
+brittle machinery for a one-administrator pilot, and the group split does the same job.
 
 ```bash
 bq query --use_legacy_sql=false --project_id="$PROJECT" --location="$BQ_LOCATION" <<'SQL'
@@ -449,7 +530,8 @@ WITH fixtures AS (
   SELECT 'upper', 18, 20, 0.9721 UNION ALL
   SELECT 'upper', 17, 20, 0.9476 UNION ALL
   SELECT 'upper', 16, 20, 0.9193 UNION ALL
-  SELECT 'upper', 15, 20, 0.8881
+  SELECT 'upper', 15, 20, 0.8881 UNION ALL
+  SELECT 'lower', 35, 38, 0.7921    -- conservative: 35 accepts with 3 unsure
 )
 SELECT bound, k, n, expected,
        ROUND(IF(bound='lower', `walle_metrics.wilson_lower`(k,n),
@@ -461,17 +543,31 @@ FROM fixtures ORDER BY bound, n, k;
 SQL
 ```
 
-**Verify.** Eight rows, eight `PASS`. Each one is a decision in the ladder, and it is worth
+**Verify.** Nine rows, nine `PASS`. Each one is a decision in the ladder, and it is worth
 reading them as such rather than as arithmetic: 30/30 does **not** promote, which is why the
 floor moved to 35; 35/35 is the smallest perfect sample that promotes; 39/40 does not
 promote, so one wrong at n=40 is not enough; 52/53 is the smallest sample admitting one
 wrong that promotes; 18/20 (two wrong) does **not** demote; 17/20 (three wrong) demotes one
-level; 16/20 (four wrong) does **not** drop to L1; 15/20 (five wrong) drops to L1.
+level; 16/20 (four wrong) does **not** drop to L1; 15/20 (five wrong) drops to L1; and 35/38 is the
+conservative bound for a cell with 35 accepts and 3 `unsure`, which does not clear `0.90` even
+though the same cell's primary bound does.
 
-Then the two floor fixtures, which are about the verdict rather than the bound: a synthetic
-cell at 34/34 must report `not_ready` with reason `sample_below_floor`, and at 35/35
-`ready`. The floor and the gate are one decision, so a build in which 34/34 reports `ready`
-is not a build with a bug in its floor; it is a build without a floor.
+Then the verdict fixtures, which are about the `CASE` rather than the bound, and which are
+criterion 4 of the acceptance test in [05-staging.md](05-staging.md):
+
+| Fixture | Expected verdict |
+|---|---|
+| A synthetic cell at 34/34 | `not_ready`, reason `sample_below_floor` |
+| The same cell at 35/35 | `ready` |
+| A cell with three wrong in a **closed block** of twenty | demote |
+| **The same cell, evaluated again** on a trailing twenty still containing those three items | **no demote** — the block was retired |
+| A cell at 35 accepts with 3 `unsure` (`unsure_rate` 0.0789, under the cap) | `not_ready`, reason `precision_lower_bound_below_gate_conservative` |
+| The cap boundary at 3/38 and at 4/38 | no reason; `unsure_rate_above_cap` |
+
+The floor and the gate are one decision, so a build in which 34/34 reports `ready` is not a
+build with a bug in its floor; it is a build without a floor. The retirement fixture is the
+same kind of statement about the demote side: a build that demotes twice on one cluster of
+three errors has no block rule, whatever its thresholds say.
 
 **Rollback.**
 
@@ -642,13 +738,30 @@ ASSERT (SELECT COUNT(*) FROM `walle_metrics.scorecard`
 ASSERT (SELECT COUNT(*) FROM `walle_metrics.scorecard`
         WHERE cell_count BETWEEN 1 AND 4) = 0
   AS 'a published group-by cell has a count between 1 and 4';
+
+-- A9: a retired block can never fire a second demotion
+ASSERT (SELECT COUNT(*) FROM (
+          SELECT family, trigger, decided_block_id
+          FROM `walle_audit.ladder_events`
+          WHERE origin = 'breaker' AND to_level < from_level
+          GROUP BY family, trigger, decided_block_id
+          HAVING COUNT(*) > 1)) = 0
+  AS 'a cell carries two demotion rows attributable to the same decided block';
 SQL
 ```
 
-The last two are the suppression rule, and they are enforcement rather than review: no
+A7 and A8 are the suppression rule, and they are enforcement rather than review: no
 published row carries an email-shaped string, and no published group-by cell has a count
 between 1 and 4 (`Assumption:` minimum cell size 5, pending
 [decision 35](../wall-e/09-open-decisions.md)).
+
+**A9 does not run until `ladder_events` exists, and it needs one column beyond the ones dwell
+and the ratchet need.** `decided_block_id` on the demotion row is what makes "the same block" a
+fact rather than an inference; change 2 in [08-open-decisions.md](08-open-decisions.md) carries
+it alongside the rest of that table's columns.
+Until the table and the column land, A9 reports `not_computable` beside the dwell column and
+**no cell is reported ready** — which is the same restrictive behaviour every other
+`ladder_events` dependency already has.
 
 **The daily snapshot.** A promotion should point at a dated, citable object, not at a
 mutable table. `CREATE SNAPSHOT TABLE … OPTIONS(expiration_timestamp=…)` (verified
@@ -747,15 +860,23 @@ than a sanitisation step. Principals granted on an authorised view "can view the
 share and run queries on it, but they can't access the source dataset directly" (verified
 2026-09-12).
 
+The view goes in `walle_metrics_views`, **not** beside its source table: an authorized view
+"must be a different dataset than the dataset used in the source query"
+([Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views), verified
+2026-09-12), so a view defined in `walle_metrics` over `walle_metrics.scorecard` is not an
+authorized view and the whole boundary is decoration.
+
 ```bash
-# one view per agent-facing surface. Ids, hashes, closed enums, counts, timestamps and
-# surrogate keys ONLY: no params_redacted, no result_summary, no content_flags free text,
-# no display name, no group name, no Google error string, no principal email.
+# one view per agent-facing surface, in the VIEW dataset. Ids, hashes, closed enums, counts,
+# timestamps and surrogate keys ONLY: no params_redacted, no result_summary, no content_flags
+# free text, no display name, no group name, no Google error string, no principal email.
 bq query --use_legacy_sql=false --project_id="$PROJECT" --location="$BQ_LOCATION" <<'SQL'
-CREATE OR REPLACE VIEW `walle_metrics.v_cell_public` AS
+CREATE OR REPLACE VIEW `walle_metrics_views.v_cell_public` AS
 SELECT as_of, as_of_hour, family, trigger, fingerprint_sha,
        current_level, target_level, verdict, reasons,
-       n_decided, n_unsure, unsure_rate, wilson_lower, wilson_upper,
+       n_decided, n_unsure, unsure_rate,
+       wilson_lower, wilson_upper, wilson_lower_conservative,
+       window_length_days, weeks_to_promotable,
        sample_coverage_achieved, sample_coverage_required,
        double_grade_coverage, raw_agreement, gwet_ac1,
        error_budget_state, freeze_state, ceiling, dwell_elapsed, dwell_required
@@ -777,13 +898,25 @@ EOF
   bq update --source=/tmp/src.json "${PROJECT}:$1"
 }
 
-authorise_view walle_audit walle_metrics v_cell_public
+# register the view on the dataset it READS FROM — walle_metrics, not walle_audit
+authorise_view walle_metrics walle_metrics_views v_cell_public
 ```
 
-**The surrogate keys.** `walle_metrics.principal_surrogates` holds a monotone integer per
-distinct principal, populated by a `MERGE` inside T0 — never by T1, which cannot read the
-raw rows it would need. The agent-facing views carry `principal_surrogate INT64` and never
-`principal`. This preserves "the same subject recurs", which is a real signal, while
+**There is deliberately no `authorise_view walle_audit …` line here, and its absence is a
+control rather than an omission.** A view executes with **its own** authorization, not the
+caller's, and `mo-metrics@` holds `WRITER` on `walle_metrics` and can therefore
+`CREATE OR REPLACE` this view. A view carrying an authorization on `walle_audit` could be
+redefined to select `walle_audit.actions.params_redacted` and would then hand raw free text to
+whichever principal may read it — a standing escalation path into the one dataset the
+three-tier split exists to fence off, built by a line that serves no purpose. The view reads
+`walle_metrics.scorecard`; it is registered on `walle_metrics`; it holds nothing on
+`walle_audit` at any stage.
+
+**The surrogate keys.** `walle_metrics_private.principal_surrogates` holds a monotone integer
+per distinct principal, populated by a `MERGE` inside T0 — never by T1, which cannot read the
+raw rows it would need, and which cannot read the mapping either: `mo-analyst@`'s `READER` is
+dataset-level on `walle_metrics`, and the mapping is not in that dataset. The agent-facing
+views carry `principal_surrogate INT64` and never `principal`. This preserves "the same subject recurs", which is a real signal, while
 destroying identity, which is strictly better than omitting the column and losing the
 signal with it.
 
@@ -804,17 +937,30 @@ curl -s -X POST -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: applicatio
   -d '{"query":"SELECT COUNT(*) FROM `walle_metrics.scorecard`","useLegacySql":false}'
 # expect: a row count
 
+# it must NOT be able to read the surrogate mapping
+curl -s -X POST -H "Authorization: Bearer ${TOKEN}" -H 'Content-Type: application/json' \
+  "https://bigquery.googleapis.com/bigquery/v2/projects/${PROJECT}/queries" \
+  -d '{"query":"SELECT COUNT(*) FROM `walle_metrics_private.principal_surrogates`","useLegacySql":false}'
+# expect: 403 accessDenied. This is half of denial test MD-13, and it is the whole of the
+#         claim that a surrogate cannot be joined back to an email.
+
 # no free-text column survives into a view
 bq query --use_legacy_sql=false --project_id="$PROJECT" \
-  "SELECT column_name FROM \`walle_metrics.INFORMATION_SCHEMA.COLUMNS\`
+  "SELECT column_name FROM \`walle_metrics_views.INFORMATION_SCHEMA.COLUMNS\`
    WHERE table_name LIKE 'v_%'
      AND column_name IN ('params_redacted','result_summary','content_flags',
                          'principal','primary_email','group_key','error_message')"
 # expect: zero rows
+
+# the view dataset holds views and nothing else, and walle_audit's access array
+# carries NO Mo view entry
+bq show --format=prettyjson "${PROJECT}:walle_audit" | python3 -c \
+  "import json,sys;[print(a) for a in json.load(sys.stdin)['access'] if 'view' in a]"
+# expect: no entry naming walle_metrics_views or any Mo view
 ```
 
-**Rollback.** Remove the `view` entries from `walle_audit`'s access array, drop the views,
-remove the four bindings, and `gcloud iam service-accounts delete "$SA_MO_ANALYST"`. Note
+**Rollback.** Remove the `view` entry from `walle_metrics`'s access array, drop the views,
+remove the bindings, and `gcloud iam service-accounts delete "$SA_MO_ANALYST"`. Note
 that removing the account leaves `MO_PRINCIPAL` dangling again and Phase 13b's grant
 pointing at nothing.
 
@@ -1050,20 +1196,25 @@ the custodian, deployed by digest. It:
   and refuses the merge if **any** value differs;
 - re-draws the blind sample from the published `week_seed` and refuses if the membership
   differs;
-- refuses any bundle citing a `scorecard_sha256` that `mo-metrics@` never published, or a
-  `snapshot_name` that does not exist;
+- refuses any bundle citing a `scorecard_sha256` that `mo-metrics@` never published, a
+  `snapshot_name` that does not exist, or a `seed` that the append-only per-week seed file
+  does not record for `week(window_end)` — all three rejected **at ingestion**, before the
+  recompute runs, because each is an anchor to something published rather than a number the
+  bundle asserts about itself;
+- refuses a bundle whose `double_grade_coverage` moved during the promotion window;
 - refuses every promotion whose `walle_metrics` watermark is older than **24 hours**;
 - enforces every §10 gate — the decision-file link, the ceiling, the second named approver
   for `WRITE_HIGH`, the override-incident reference, the §6 dwell rule and drill freshness
   within 30 days;
 - enforces the **two distinct authenticated approving reviewers**, neither of whom authored
   the pull request, matched against the decision file's `Approvers:` line (C17);
-- refuses a change to a pinned selection query, `uses` list or scope, for a playbook serving
-  a cell above L2, that carries no linked decision record (C15);
-- refuses `redesign_required` where two demotions in 90 days have set it;
+- refuses a change to a pinned selection query, `uses` list, scope **or `config/prompts/**`**,
+  for a playbook serving a cell above L2, that carries no linked decision record (C15);
+- refuses `redesign_required` where two demotions in 90 days, excluding those a named human
+  has marked `false_positive` with a `review_ref`, have set it;
 - refuses a pull request touching more than one of `ladder.yaml`, `config/metrics/*.sql`,
-  `gates.yaml`, the ceiling module, the policy chain, the catalogue risk tiers and the
-  validator (change 13);
+  `config/metrics/fixtures/**`, `gates.yaml`, the ceiling module, the policy chain, the
+  catalogue risk tiers and the validator (change 13);
 - refuses an L3→L4 `WRITE_HIGH` promotion whose decision file lacks the "Why worth it" line
   (C34).
 
@@ -1157,12 +1308,12 @@ gcloud iam service-accounts create mo-narrator --project="$PROJECT" \
 gcloud projects add-iam-policy-binding "$PROJECT" \
   --member="serviceAccount:${SA_MO_NARRATOR}" --role=roles/aiplatform.user
 
-# dataViewer on the AGENT-FACING VIEWS ONLY. Never on walle_metrics as a whole,
-# never on walle_audit, never on the archive.
-bq add-iam-policy-binding \
-  --member="serviceAccount:${SA_MO_NARRATOR}" \
-  --role=roles/bigquery.dataViewer \
-  "${PROJECT}:walle_metrics.v_cell_public"
+# dataViewer on the AGENT-FACING VIEW DATASET. Never on walle_metrics, never on
+# walle_metrics_archive, never on walle_metrics_private, never on walle_audit.
+# The grant is on the DATASET that contains the authorized view, which is what Google
+# requires of the querying principal: a table-level binding on the view alone leaves the
+# query failing on the underlying table.
+grant_dataset walle_metrics_views READER "$SA_MO_NARRATOR"
 
 gcloud run jobs create mo-narrator \
   --image="${MO_AR}/mo-narrator@sha256:<digest>" \
@@ -1188,7 +1339,11 @@ the claim being tested.
   packages specifically. T2 may import them; T0 and T1 may not, and that asymmetry is the
   deterministic boundary expressed as a lint.
 
-**Verify.** Denial test **MD-1**. Then confirm the output contract: the narrator's block is
+**Verify.** Denial test **MD-1**, which is paired and must fail in both directions: the
+narrator's `SELECT` on `walle_metrics_views.v_cell_public` must **succeed**, and its selects
+on `walle_metrics.scorecard`, on `walle_metrics_private.principal_surrogates` and on
+`walle_audit.actions` must each be refused. A negative-only test passes identically whether
+the boundary works or is dead. Then confirm the output contract: the narrator's block is
 closed-schema, any `mo_schema_violation` is counted, and **any occurrence disables the
 renderer until a human reviews it**. A malformed or steered output must be loud, not
 silently dropped.
@@ -1215,7 +1370,7 @@ suite's own 1 to 52, with the phase numbers above, and with
 
 | # | Test | Expected result |
 |---|---|---|
-| MD-1 | `mo-narrator@` selects a raw column: `SELECT params_redacted FROM walle_audit.actions` | **403 accessDenied.** It holds `dataViewer` on the agent-facing views only. Repeat for `result_summary` and for `walle_metrics.scorecard` — the whole table, not the view — which must also fail |
+| MD-1 | **Paired, and it must be able to fail in both directions.** (a) `mo-narrator@` selects from `walle_metrics_views.v_cell_public`. (b) It selects `params_redacted` and `result_summary` from `walle_audit.actions`, `walle_metrics.scorecard` — the whole table, not the view — and `walle_metrics_private.principal_surrogates` | **(a) succeeds**, returning rows; **(b) 403 accessDenied**, every time. A negative-only test passes identically whether the authorised-view boundary works or does not exist |
 | MD-2 | `mo-analyst@` reads `walle_audit`: `SELECT COUNT(*) FROM walle_audit.actions` | **403 accessDenied.** T1 cannot see the raw evidence it would need to forge a number |
 | MD-3 | `mo-analyst@` calls `POST /v1/control/demote` | **403.** `run.invoker` allows the HTTP call; the in-app allowlist refuses the path. Same for `/v1/control/halt`, `/v1/plans/{id}/approve` and `/veto` |
 | MD-4 | `mo-analyst@` calls `GET /v1/ladder` | **403.** Mo is not on that allowlist row (M72). Only `GET /v1/plans/{id}` and `GET /v1/runs/{id}` succeed |
@@ -1223,10 +1378,12 @@ suite's own 1 to 52, with the phase numbers above, and with
 | MD-6 | A bundle citing a `scorecard_sha256` that `mo-metrics@` never published | **Rejected at ingestion.** Closes the "cite evidence that does not exist" path before the recompute even runs. Repeat with a `snapshot_name` that does not exist |
 | MD-7 | A bundle whose `evidence_block` value differs from what the SQL returns when re-run at its pinned commit | **Merge refused by the validator.** A forged promotion has to be *true* to pass |
 | MD-8 | `mo-analyst@` writes a bundle to an object name that already exists; then reads back an object it wrote; then deletes one | **Fails, three times.** `roles/storage.objectCreator` "does not give permission to view, delete, or overwrite objects", so a double-triggered run duplicates nothing and Mo cannot retract a bundle after dropping it |
-| MD-9 | Each of the five enforcement identities [02-identity-and-access.md](02-identity-and-access.md) §5 names reads `walle_metrics`: `walle-actions@`, `walle-dispatcher@`, the ladder deploy tool, `eve-controller@`, the CI gate validator. Run `walle-agent@` as a sixth for completeness — it is not on the assertion's list, and it should fail too | **403 accessDenied**, five times for the assertion and once more for `walle-agent@`. This is the mechanism behind [M-1 · 42](08-open-decisions.md) and change 15, and the only thing that turns Mo's containment from a claim into a test |
+| MD-9 | Each of the five enforcement identities [02-identity-and-access.md](02-identity-and-access.md) §5 names reads each of `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` and `walle_metrics_views`: `walle-actions@`, `walle-dispatcher@`, the ladder deploy tool, `eve-controller@`, the CI gate validator. Run `walle-agent@` as a sixth for completeness — it is not on the assertion's list, and it should fail too | **403 accessDenied**, five times for the assertion and once more for `walle-agent@`. This is the mechanism behind [M-1 · 42](08-open-decisions.md) and change 15, and the only thing that turns Mo's containment from a claim into a test |
 | MD-10 | Any Mo identity attempts `secretmanager.versions.access` on any secret | **403 at Google**, three times. Mo holds no Secret Manager grant anywhere, at any phase |
 | MD-11 | A `walle_metrics.scorecard` row with `verdict='ready'` and `n_decided = 34` is inserted into a scratch copy and the assertion query is run | **The job fails.** The floor and the gate are one decision |
 | MD-12 | A published artefact is searched for an email-shaped string, and for any group-by cell with a count of 1 to 4 | **Zero matches**, both times |
+| MD-13 | `mo-analyst@` and then `mo-narrator@` select from `walle_metrics_private.principal_surrogates` | **403 accessDenied, twice.** The mapping lives in a dataset with one WRITER and no reader. A surrogate that can be joined back to an email is not a surrogate, and dataset-level `READER` on `walle_metrics` would have covered the mapping had it stayed there |
+| MD-14 | A bundle citing a `seed` that the per-week seed file does not record for `week(window_end)` is written to the drop box | **Rejected at ingestion**, beside MD-6 and for the same reason: the seed decides *which items are evidence*, and re-drawing from an unanchored seed proves only that the bundle agrees with itself |
 
 The two shapes every test above uses:
 
@@ -1240,8 +1397,12 @@ as_sa () {   # as_sa <service-account-email> <sql>
     -d "$(python3 -c 'import json,sys;print(json.dumps({"query":sys.argv[1],"useLegacySql":False}))' "$2")"
 }
 
-as_sa "$SA_MO_NARRATOR" 'SELECT params_redacted FROM `walle_audit.actions` LIMIT 1'   # MD-1
+as_sa "$SA_MO_NARRATOR" 'SELECT COUNT(*) FROM `walle_metrics_views.v_cell_public`'    # MD-1a, expect 200
+as_sa "$SA_MO_NARRATOR" 'SELECT params_redacted FROM `walle_audit.actions` LIMIT 1'   # MD-1b
+as_sa "$SA_MO_NARRATOR" 'SELECT COUNT(*) FROM `walle_metrics.scorecard`'              # MD-1b
 as_sa "$SA_MO_ANALYST"  'SELECT COUNT(*) FROM `walle_audit.actions`'                  # MD-2
+as_sa "$SA_MO_ANALYST"  'SELECT COUNT(*) FROM `walle_metrics_private.principal_surrogates`'  # MD-13
+as_sa "$SA_MO_NARRATOR" 'SELECT COUNT(*) FROM `walle_metrics_private.principal_surrogates`'  # MD-13
 as_sa "$SA_ACTIONS"     'SELECT COUNT(*) FROM `walle_metrics.scorecard`'              # MD-9
 as_sa "$SA_DISPATCH"    'SELECT COUNT(*) FROM `walle_metrics.scorecard`'              # MD-9
 as_sa "$SA_EVE"         'SELECT COUNT(*) FROM `walle_metrics.scorecard`'              # MD-9
@@ -1285,7 +1446,7 @@ console** — Mo touches Workspace nowhere.
 | 11 | Disable and audit admin bypass on branch protection; require two distinct authenticated reviewers, neither the author | Mo-9 | [M-7 · 48](08-open-decisions.md). The validator reports the setting it observes and cannot enforce it |
 | 12 | Create the linked Spans dataset once, holding `roles/observability.editor` | Mo-10 | Mo holds that role at no stage |
 | 13 | Decide at the S4 entry record whether `mo-narrator` is built at all, and against which pinned model id | Mo-11 | [M-8 · 49](08-open-decisions.md). Not building it is a defensible reading of this design |
-| 14 | Grade `max(10 %, 5 items/week)` of executing items, blind, weekly, indefinitely — plus 20 % double-graded for `WRITE_HIGH`, plus adjudication | From S2 | Roughly **one hour a week from a named human who is not the playbook owner**. It cannot be automated, cannot be sampled more thinly without the cell going `not_ready`, and cannot be delegated to a model without destroying the thing it measures |
+| 14 | Grade `max(10 %, 5 items/week)` of executing items **per cell**, blind, weekly, indefinitely — at pilot volume the floor of five binds in every cell, so ≥ 40 items a week across ~8 cells — plus 20 % double-graded for `WRITE_HIGH`, plus adjudication | From S2 | At least **two hours a week from a named human who is not the playbook owner**. It cannot be automated, cannot be sampled more thinly without the cell going `not_ready`, and cannot be delegated to a model without destroying the thing it measures |
 
 Step 14 is not a build step and it is the one that decides whether any of the rest matters.
 If nobody grades, the worklist goes ungraded, `n` never reaches 35, and no cell is ever

@@ -198,30 +198,66 @@ Eve said. That is what bounds the compromised-Eve case in
 | **Trigger** | `eve-reconciler` post-hoc task every 5 minutes, polling the DAY-partitioned `actions` table for executed writes. Deep pass every 6 hours. No Pub/Sub subscription at any stage: the only latency-sensitive duty is the 60-minute L5 window, and a 5-minute poll meets it twelvefold. Default-stream writes are queryable immediately ([BigQuery Storage Write API](https://docs.cloud.google.com/bigquery/docs/write-api), verified 2026-09-12), so polling is not a lagging channel. |
 | **Inputs** | `walle_audit.{actions,runs,verifications}` as the **subject**; Eve's Workspace reads and `eve_workspace_logs` as the **evidence**; `GET /v1/runs/{id}` as a claim. |
 | **Outputs** | One `eve.verdicts` row per item; a row visible to `walle-actions` through the existence-only `eve.verdict_receipts` view, exposing `(run_id, item, verdict_ts)` and nothing more. |
-| **Reason codes** | `post_state_mismatch`, `unverified_within_sla`, `audit_row_missing`, `admin_event_unmatched`, `licence_event_only`, `verification_deferred_lag` — the last of which is explicitly **not** a failure. |
+| **Reason codes** | `post_state_mismatch`, `unverified_within_sla`, `audit_row_missing`, `admin_event_unmatched`, `licence_event_only`, `no_audit_stream`, `verification_deferred_lag` — the last two of which are explicitly **not** failures. |
 | **Failure branch** | `post_state_mismatch` and `admin_event_unmatched` past the lag budget halt writes. Separately and independently of Eve, `walle-actions`' `eve_evidence_stale` sweeper freezes promotions when an executed L5 item has no verdict receipt after 60 minutes, and drops that cell to L4 after four hours. That sweeper keys on **absence**; it never reads a verdict's content. |
 
 ### The primary-evidence split
 
 The naive reading of "verify within 60 minutes" is "find the audit event within 60 minutes",
 and it does not survive contact with Google's documented lag. Admin log events are near real
-time, a couple of minutes. Groups and Calendar log events are **tens of minutes and can go up
-to a couple of hours** ([Workspace — data retention and lag times](https://knowledge.workspace.google.com/admin/reports/data-retention-and-lag-times),
-verified 2026-09-12). A group-membership write verified against the audit event alone would
-be reported `unverifiable` for no better reason than that Google had not finished writing
-its own log.
+time, a couple of minutes. The **Groups and Calendar applications** are reported at **tens of
+minutes and can go up to a couple of hours** ([Workspace — data retention and lag times](https://knowledge.workspace.google.com/admin/reports/data-retention-and-lag-times),
+verified 2026-09-12). A write verified against the audit event alone would be reported
+`unverifiable` for no better reason than that Google had not finished writing its own log.
+
+**That slower figure is not the lag of the stream Eve reads, and saying so precisely is
+what keeps the budgets honest.** Eve's sink filter is
+`protoPayload.serviceName="admin.googleapis.com"` and nothing else, so `eve_workspace_logs`
+carries the Admin audit log alone. Two consequences, both verified 2026-09-12:
+
+- **Group-member writes are Admin events.** Wall-E's F3 adds and removes go through the
+  Directory API, which records `ADD_GROUP_MEMBER` and `REMOVE_GROUP_MEMBER` as
+  `GROUP_SETTINGS` events under `applicationName=admin` ([Admin group settings
+  events](https://developers.google.com/workspace/admin/reports/v1/appendix/activity/admin-group-settings)).
+  They arrive on the Admin stream's clock, which is why `thresholds.yaml` gives `groups` the
+  same budget as `admin` rather than the Groups application's slower published figure. The genuine
+  Enterprise Groups Audit stream (`cloudidentity.googleapis.com`) is a *different* log,
+  outside Eve's filter, and member-initiated changes made in the Groups application itself
+  would only appear there.
+- **Calendar has no Cloud Logging audit stream at all.** Only Access Transparency, Admin
+  Audit, Enterprise Groups Audit, Login Audit, OAuth Token Audit and SAML Audit export to
+  Cloud Logging ([Workspace audit
+  logs](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging)). So there is
+  no `calendar` lag budget, because no wait could ever end.
+
+**Option, not taken: widening the filter.** Adding
+`OR protoPayload.serviceName="cloudidentity.googleapis.com"` would pick up member-initiated
+Groups changes. It is recorded here and declined for now on two grounds: that stream is
+Workspace-edition-gated, and — the deciding one — a filter widened later does not backfill,
+so every row between sink creation and the change is permanently absent, exactly the
+property [07-build-runbook.md](07-build-runbook.md)'s half-fail table warns about for the
+actor exclusion. If it is ever wanted it must go in at **Phase 7 creation time**, with the
+edition dependency recorded in [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md).
 
 So the evidence is split by what each source actually proves:
 
 | Evidence | What it proves | When it is read | Clock |
 |---|---|---|---|
 | **Current state**, Admin SDK Directory, as `eve@<domain>` | That the write happened and the object is now in the expected state | Immediately, on the 5-minute pass | The 60-minute SLA is measured on **this** check, and is therefore always meetable |
-| **The admin event**, from Eve's own org-level sink into `eve_workspace_logs` | **Attribution** — that the robot account, not a human, made the change | When it lands, on a per-application clock | `Assumption:` admin 15 minutes, Groups and Calendar 3 hours, as the lag budget in `thresholds.yaml` |
+| **The admin event**, from Eve's own org-level sink into `eve_workspace_logs` | **Attribution** — that the robot account, not a human, made the change | When it lands, on the Admin audit log's clock — the only stream in the dataset | `Assumption:` 15 minutes, for both the `admin` and the `groups` budget in `thresholds.yaml`, because group-member writes are Admin events. No calendar budget exists |
+| **No evidence at all**, for the calendar family | Nothing. There is no Calendar audit stream to read | Never | Calendar-family verification is permanently `verified_state_only`, a named declared limit — never escalated to `reconciliation_gap` |
 
 A verdict at T+60 minutes with state confirmed and no event yet is `verified_state_only`
 with `verification_deferred_lag`, which is a wait, not a fault. The 6-hour deep pass upgrades
 it to `verified` when the event lands. If nothing has landed by T+6 hours it escalates to
 `reconciliation_gap`. A slow log is a wait; a missing event is still caught.
+
+The one exception is the family for which no stream exists. A calendar-family item is
+`verified_state_only` with `no_audit_stream` from the first pass and **stays there**: no
+deep-pass upgrade, and no T+6h escalation, because escalating would be reporting a gap in a
+log Google does not write. It is dead config today — F2b's ceiling is L2, which has no
+autonomous execution path to verify — and it is written down now so that it is a declared
+limit rather than a surprise the first time the cell moves.
 
 The same split answers the F7 licence case from the other direction. Eve's role carries no
 License Management privilege and `apps.licensing` is dropped from its scopes per C13, so Eve
@@ -242,6 +278,7 @@ stateDiagram-v2
     [*] --> pending
     pending: "pending — executed write seen in walle_audit"
     verified_state_only: "verified_state_only — current state matches, event not yet landed"
+    verified_state_only_final: "verified_state_only permanent — calendar family, no audit stream exists"
     verified: "verified — state matches and the robot event is attributed"
     verified_partial: "verified_partial — event-only evidence, F7 licences"
     drift: "drift — post-state contradicts the expected state"
@@ -252,22 +289,28 @@ stateDiagram-v2
     pending --> verified: "state and event both present"
     pending --> drift: "post_state_mismatch"
     pending --> verified_partial: "licence_event_only"
+    pending --> verified_state_only_final: "no_audit_stream, calendar family"
     pending --> unverifiable: "eve_read_failed, no usable evidence"
     verified_state_only --> verified: "event lands on the 6 hour deep pass"
     verified_state_only --> reconciliation_gap: "nothing by T plus 6 hours"
     verified_state_only --> drift: "state contradicted on re-check"
     verified --> [*]
+    verified_state_only_final --> [*]
     verified_partial --> [*]
     drift --> [*]
     reconciliation_gap --> [*]
     unverifiable --> [*]
 ```
 
-`verified_state_only` is the only non-terminal verdict, and `verification_deferred_lag` is
-the only reason code in the set that is not a defect. Both exist so that the answer to
-"Google's log is late" is a wait rather than a false alarm — and so that an over-eager Eve
-that reports lag as failure is caught by negative control N1 at the S3 exit gate
-([05-stages.md](05-stages.md)).
+`verified_state_only` is the only non-terminal verdict — with one exception, the
+calendar-family branch, where it is terminal because no event will ever land.
+`verification_deferred_lag` and `no_audit_stream` are the only reason codes in the set that
+are not defects. The first exists so that the answer to "Google's log is late" is a wait
+rather than a false alarm — and so that an over-eager Eve that reports lag as failure is
+caught by negative control N1 at the S3 exit gate ([05-stages.md](05-stages.md)). The second
+exists so that the answer to "Google writes no log for this at all" is a declared limit
+rather than a six-hour wait ending in a `reconciliation_gap` against a stream that does not
+exist. Neither is discretionary: both are decided by the family, in code.
 
 ---
 
@@ -276,7 +319,7 @@ that reports lag as failure is caught by negative control N1 at the S3 exit gate
 | | |
 |---|---|
 | **Trigger** | `eve-reconciler` hourly, plus a daily pass that writes an extract to the locked evidence bucket. Runs as SQL in Eve v0 from S0, as a job task from S3 entry. |
-| **Inputs** | `eve_workspace_logs` — Eve's **own** organisation-level admin-log sink into Eve's project, `--include-children`, filter `protoPayload.serviceName="admin.googleapis.com"`, **no actor exclusion**. An aggregated organisation sink may route to a BigQuery dataset in another project, its writer identity needing `roles/bigquery.dataEditor` there (verified 2026-09-12, [Aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks)). Against it: `walle_audit.{actions,runs,plans,approvals,verifications}`, joined on `run_id` and the ADK `invocation_id`. |
+| **Inputs** | `eve_workspace_logs` — Eve's **own** organisation-level admin-log sink into Eve's project, `--include-children`, `--use-partitioned-tables`, filter `protoPayload.serviceName="admin.googleapis.com"`, **no actor exclusion**. One DAY-partitioned `cloudaudit_googleapis_com_activity` table with a 400-day partition expiry, not the date-sharded series Logging would write by default. An aggregated organisation sink may route to a BigQuery dataset in another project, its writer identity needing `roles/bigquery.dataEditor` there (verified 2026-09-12, [Aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks)). Against it: `walle_audit.{actions,runs,plans,approvals,verifications}`, joined on `run_id` and the ADK `invocation_id`. |
 | **Outputs** | The audit-completeness series in `eve.findings`, reported with **Wilson interval bounds rather than point estimates**; a daily extract in the evidence bucket; `eve.walle_audit_mirror`, the daily append-only off-project copy. |
 | **Reason codes** | `audit_row_missing` (an event with no row), `admin_event_unmatched` (a row with no event past its lag budget), `reconciliation_gap`. |
 | **Failure branch** | A gap in **either** direction halts writes with `no_writes` until reconciled. Target is 100 % audit completeness. |

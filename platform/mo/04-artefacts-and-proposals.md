@@ -66,9 +66,11 @@ a row was withheld rather than absent.
 Per cell it prints: current level and target level; dwell elapsed against dwell required and
 the event that last reset the clock; days since the last demotion and the ratchet state;
 every [05](../wall-e/05-autonomy-ladder.md) §8 criterion with its measured value, its
-threshold and its pass or fail; `n_decided`, `n_unsure` and `unsure_rate`; `wilson_lower` and
-`wilson_upper`; sample coverage achieved against required; double-grade coverage and
-agreement; `grades_excluded` with the reason each grade was excluded; error-budget state;
+threshold and its pass or fail; `n_decided`, `n_unsure` and `unsure_rate`; `wilson_lower`,
+`wilson_upper` and `wilson_lower_conservative`; `window_length_days` and
+`weeks_to_promotable`, so a long accumulation reads as a long accumulation; sample coverage
+achieved against required; double-grade coverage, the double-graded and single-graded counts,
+and agreement; `grades_excluded` with the reason each grade was excluded; error-budget state;
 freeze state; the ceiling; one-notch eligibility; `max_ts_seen` per source; and the verdict,
 one of `ready`, `not_ready`, `insufficient_data`, with `reasons` drawn from a closed enum.
 
@@ -179,10 +181,15 @@ LIMIT  GREATEST(CEIL(0.10 * n), 5)
 ```
 
 over the executed items in the cell for that week — `max(10 %, 5 items/week)`, which is
-C16's rate.
+C16's rate and is **per cell**, so every live cell carries its own floor of five graded items
+a week.
 
-`week_seed` is generated and committed **by CI after the week has closed**. Three
-consequences, and each of them is the point:
+`week_seed` is generated and committed **by CI after the week has closed**, into an
+**append-only per-week seed file** in the configuration repository: one entry per week,
+written only by the CI job, never by a human and never by Mo. A commit that rewrites an
+existing week's entry is not a correction — it is the detectable event, and it is visible in
+the same history that carries every other change to that repository. Four consequences, and
+each of them is the point:
 
 1. The draw cannot be anticipated at plan-freeze time, so no item can be arranged to be
    reviewed or to escape review.
@@ -191,6 +198,14 @@ consequences, and each of them is the point:
 3. The validator re-draws the sample from the published seed and refuses any merge whose
    sample membership differs. An auditor with `walle_audit` read can do the same, months
    later, from the seed in the evidence block.
+4. The seed a bundle cites is **anchored to that file** at ingestion ([§3.3](#33-ingestion-and-the-bot-author)),
+   the way `scorecard_sha256` is anchored to a published scorecard. Without the anchor, the
+   validator's re-draw compares a membership against a claim that descends from the same seed:
+   it proves the bundle is internally consistent and proves nothing about *which* seed that is.
+
+The protocol is in force from **S3 entry**, when the sampler starts running
+([05-staging.md](05-staging.md)) — not from S4. A stage of sampling on an unspecified seed
+produces grades nobody can re-draw, and those are the grades L4 is later argued from.
 
 Achieved coverage against the floor is itself a metric. A miss sets
 `sample_coverage_below_floor` and the cell is `not_ready`: thinning the sample makes a cell
@@ -206,11 +221,15 @@ Graders must appear on a committed grader list of **human principals**.
 | Grade from the author of the playbook version under test | Excluded, counted |
 | `blind = FALSE` or `saw_eve_verdict = TRUE` | Excluded from L4/L5 precision, counted |
 | `WRITE_HIGH` cell, second grade by someone other than the playbook file's `owner:`, at ≥ 20 % coverage | Required. Below it the cell reports `no_second_grader` and **can never pass L2** |
-| Two grades disagree and no adjudication row exists | The item counts as **wrong** |
+| Double-grade coverage moves during a promotion window | The evidence block carries `double_grade_coverage`; the validator refuses a bundle whose coverage moved mid-window |
+| Two grades disagree and no adjudication row exists | The cell is **`not_ready` with reason `disagreement_unadjudicated`** until the adjudication row lands |
 
 Unblinding therefore makes a cell less promotable rather than more, and an unadjudicated
-disagreement costs the cell rather than being quietly dropped — otherwise double-grading
-becomes a rubber stamp that only ever adds accepts.
+disagreement **stops the cell** rather than being quietly dropped — otherwise double-grading
+becomes a rubber stamp that only ever adds accepts. Blocking is stricter than the rule it
+replaces, not looser: counting the disagreement as one wrong item let the cell continue with a
+distorted number and an inflated floor, while a block cannot be cleared by ignoring it. The
+arithmetic behind that change is in [03-metrics-contract.md](03-metrics-contract.md) §10.
 
 `no_second_grader` is reported from **S0**, months before it can bite, because
 [14](../wall-e/14-hld-challenge.md) C17 makes a second grader a condition for a `WRITE_HIGH`
@@ -243,11 +262,25 @@ computable at all.
 
 ### 2.6 The weekly human cost, stated plainly
 
-At an S4 volume of roughly 200 executing items a week, `max(10 %, 5 items/week)` is about
-**20 items to grade**, plus about **4 double-graded** for `WRITE_HIGH` cells, plus
-adjudication of disagreements, plus a weekly time entry. That is on the order of **one hour a
-week, indefinitely, from a named human who is not the playbook owner** — plus a second grader
-who does not yet exist. Add about 30 minutes a week reading the digest and about 2 hours a
+`max(10 %, 5 items/week)` is a **per-cell** rate, not a programme-wide one, and that is what
+makes this number bigger than it first looks. At an S4 volume of roughly 200 executing items a
+week across the whole programme, [05](../wall-e/05-autonomy-ladder.md) §7's S4 row lights up
+eight or more live `(family, trigger)` cells — F3, F4 and F7 on scheduled, F2 and F3 on event,
+F1 and writes on inbox, plus chat. Each carries roughly 25 executing items a week, so in every
+one of them the floor of five binds rather than the 10 %:
+
+| Line | At an S4 volume of ~200 executing items a week |
+|---|---|
+| Live `(family, trigger)` cells | ~8 |
+| Executing items per cell | ~25 a week |
+| Blind sample per cell | **5 a week** — the floor binds, 10 % would give 3 |
+| Blind sample, programme | **≥ 40 items a week**, not ~20 |
+| Double-graded for `WRITE_HIGH` | ~20 % of those, plus adjudication of disagreements |
+
+That is at least **two hours a week, indefinitely, from a named human who is not the playbook
+owner** — plus a second grader who does not yet exist. The "one hour a week" this page
+previously carried read the floor as programme-wide and understates the real figure by at
+least a factor of two. Add about 30 minutes a week reading the digest and about 2 hours a
 quarter on the review.
 
 It cannot be automated. It cannot be sampled more thinly without the cell going `not_ready`.
@@ -277,6 +310,8 @@ sequenceDiagram
         CI-->>BOX: reject at ingestion, no pull request is opened
     else scorecard_sha256 was never published, or the snapshot does not exist
         CI-->>BOX: reject at ingestion
+    else seed is not the one the per-week seed file records for this window
+        CI-->>BOX: reject at ingestion, before the recompute
     else output fails the closed schema
         CI-->>BOX: reject, count mo_schema_violation, disable the renderer
     else accepted
@@ -328,7 +363,8 @@ empty field is a rejection at ingestion, not a warning.
 | `window_start`, `window_end` | Absolute timestamps | A window is never "the last 30 days" at validation time |
 | `fingerprint_sha` | The fingerprint the evidence was earned under | Evidence earned under a different fingerprint does not count — C15's gaming path, closed at the measurement layer |
 | `n` | The sample size | Checked against the floor of 35 and against the recomputed count |
-| `seed` | The `week_seed` CI published after the week closed | The validator re-draws the blind sample from it |
+| `seed` | The `week_seed` CI published after the week closed | The validator re-draws the blind sample from it — **after** ingestion has checked it against the per-week seed file ([§3.3](#33-ingestion-and-the-bot-author)) |
+| `double_grade_coverage` | The coverage the evidence was earned at | A precision figure earned at one coverage is not comparable with one earned at another; a bundle whose coverage moved mid-window is refused ([§3.4](#34-what-the-validator-enforces)) |
 | `scorecard_sha256` | The SHA-256 of the scorecard row `mo-metrics@` published | A bundle citing a hash that was never published is rejected before the recompute even runs |
 | `snapshot_name` | The `walle_metrics_archive.scorecard_YYYYMMDD` snapshot the claim points at | The dated, citable object an auditor replays against, rather than a mutable table |
 
@@ -359,9 +395,18 @@ different people.
 
 CI ingests one object at a time and, in order: checks the path allowlist; checks the closed
 output schema; checks that `scorecard_sha256` names a scorecard `mo-metrics@` actually
-published and that `snapshot_name` names a snapshot that exists; strips `narrative` from
-everything the validator will see; and only then opens the pull request under a **bot
-identity that is not Mo**.
+published and that `snapshot_name` names a snapshot that exists; checks that
+`evidence_block.seed` **equals the seed CI committed for `week(window_end)`** in the
+append-only per-week seed file ([§2.2](#22-the-draw-and-the-seed-protocol)); strips
+`narrative` from everything the validator will see; and only then opens the pull request under
+a **bot identity that is not Mo**.
+
+The seed check is new, and it is there for the same reason as the `scorecard_sha256` check. Both
+`scorecard_sha256` and `snapshot_name` are anchored to something published; the seed is the
+one input that decides **which items are evidence at all**, and without an anchor the
+validator's later re-draw compares a membership against a claim descending from the same
+unverified value. A bundle citing a seed no week file records is rejected **before** the
+recompute runs.
 
 The bot holds the git credential. Mo does not, at any stage, in any component, for any
 reason. That is the single structural difference between this design and every design in
@@ -377,7 +422,9 @@ that repository, deployed **by image digest** rather than a mutable tag. It neve
 | Gate | Source | Refusal |
 |---|---|---|
 | Re-execute the evidence SQL at `sql_commit_sha` against `walle_audit` | This design | Any value differs → merge refused |
+| `seed` is the seed the per-week file records for `week(window_end)` | This design, C16 | Any other seed → rejected at ingestion, before the recompute |
 | Re-draw the blind sample from `seed` | This design, C16 | Sample membership differs → merge refused |
+| `double_grade_coverage` moved during the promotion window | This design, C17 | Refused: the evidence mixes two measurement processes in an unrecorded proportion |
 | `walle_metrics` watermark ≤ 24 hours old | This design | Stale Mo refuses **every** promotion — absence is restrictive |
 | A level went up without a link to an `accepted` decision file | [05](../wall-e/05-autonomy-ladder.md) §10 | Refused |
 | The level exceeds a ceiling | §10 | Refused |
@@ -386,10 +433,28 @@ that repository, deployed **by image digest** rather than a mutable tag. It neve
 | The §6 dwell rule is unsatisfied | §10 | Refused |
 | The last kill-switch drill is older than 30 days | §10 | Refused |
 | **Two distinct authenticated approving reviewers**, neither of whom authored the pull request, matched against the `Approvers:` line | C17 | Refused |
-| A change to a playbook's pinned selection query, `uses` list or scope, for a playbook serving a cell above L2, without a linked decision record | C15 | Refused; the changed playbook re-runs the canary at its current level or lower |
-| `redesign_required` on the family — two demotions in 90 days | This design, §8 error budgets | Refused until the redesign lands |
-| One pull request touching more than one of `ladder.yaml`, `config/metrics/*.sql`, `config/metrics/gates.yaml`, the ceiling module, the policy chain, the catalogue risk tiers, the validator | This design, change 13 | Refused |
+| A change to a playbook's pinned selection query, `uses` list or scope, **or to `config/prompts/**`**, for a playbook serving a cell above L2, without a linked decision record | C15 | Refused; the changed playbook re-runs the canary at its current level or lower |
+| `redesign_required` on the family — two demotions in 90 days, excluding reviewed false positives | This design, §8 error budgets | Refused until the redesign lands |
+| One pull request touching more than one of `ladder.yaml`, `config/metrics/*.sql`, `config/metrics/fixtures/**`, `config/metrics/gates.yaml`, the ceiling module, the policy chain, the catalogue risk tiers, the validator | This design, change 13 | Refused |
 | The "Why worth it" line, for any L3→L4 `WRITE_HIGH` promotion | C34 | Refused if absent |
+
+**Two of those rows changed shape, and each closes something specific.**
+
+- **C15 now covers `config/prompts/**`.** Prompt text was outside the row that requires a
+  linked decision record and a canary re-run above L2, while `prompt_change` is one of the
+  eight proposal types in [§3.5](#35-the-closed-proposal-type-set) and a prompt edit bumps
+  `prompt_hash` and therefore the fingerprint. With the demotion denominator unscoped
+  ([03-metrics-contract.md](03-metrics-contract.md) §11.2) a fingerprint bump can no longer
+  empty the demotion evidence; with this row, a fingerprint bump above L2 also costs a decision
+  record and a canary at the current level or lower. Together they mean a fingerprint change
+  **lowers or holds** a level and never clears accumulated demotion pressure. No new threshold
+  and no new constant was needed for either half.
+- **`config/metrics/fixtures/**` is a change-13 group of its own**, separate from
+  `config/metrics/*.sql`. The golden fixtures are the design's only control on an arithmetic
+  error the validator structurally cannot catch, and an oracle that can travel in the same pull
+  request as the code it tests is a weaker control than
+  [03-metrics-contract.md](03-metrics-contract.md) §5 claims. Splitting the group is the whole
+  of the fix; CI does not read the wiki.
 
 Two limits on the validator, stated rather than hidden. It **cannot** catch an arithmetic
 error, because it re-runs the same committed SQL and inherits the same defect — that is what
@@ -412,7 +477,7 @@ Mo's acceptance test.
 | `cap_change` | A budget or rate cap in a playbook | S2 | |
 | `playbook_selection_change` | A playbook's selection query | S2 | Re-qualifies the cell under C15; the canary re-runs |
 | `catalogue_addition` | A new operation, entering at L0 | S2 | Ranked from `agg_capability_gap`. Never a risk-tier change |
-| `prompt_change` | Prompt text | S2 | Bumps `prompt_hash`, which changes the fingerprint and resets the promotion sample |
+| `prompt_change` | Prompt text | S2 | Bumps `prompt_hash`, which changes the fingerprint. It **resets the promotion sample** and **does not clear the demotion denominator**, which is unscoped ([03-metrics-contract.md](03-metrics-contract.md) §11.2). Above L2 it needs a linked decision record and re-runs the canary at the current level or lower ([§3.4](#34-what-the-validator-enforces), C15) |
 | `ladder_state_regen` | `platform/wall-e/ladder-state.md` | S2 | The regenerated page, as a pull request |
 | `incident_note` | A note under `platform/wall-e/mo/**` | S2 | How a finding Mo may not act on reaches a human — including the E35 breaker-false-positive route |
 
@@ -502,8 +567,9 @@ the re-promotion decision references both.
 The measurement is now part of the gate, so the measurement is inside the rule that the gate
 cannot be part of what it gates.
 
-Mo may not author a diff to `config/metrics/*.sql`, `config/metrics/gates.yaml`, the ceiling
-module, the policy chain, the catalogue's risk tiers, or the validator. Those paths are
+Mo may not author a diff to `config/metrics/*.sql`, `config/metrics/fixtures/**`,
+`config/metrics/gates.yaml`, the ceiling module, the policy chain, the catalogue's risk tiers,
+or the validator. Those paths are
 outside the drop box allowlist, so the refusal happens at ingestion, before CI, before a pull
 request exists. And per change 13, one pull request may not touch more than one of them even
 when a human authors it: a metric change costs its own reviewed pull request and cannot
@@ -517,6 +583,14 @@ digest, and raises an `incident_note` bundle under `platform/wall-e/mo/**` setti
 case. A human opens the metric pull request, which goes through `ladder.yaml`'s reviewers,
 carries its own decision record, and touches nothing else. Mo's contribution is the evidence
 and the argument; the change to Mo's own arithmetic is always somebody else's commit.
+
+The same route applies to the one rule this set cannot install for itself. The demote
+predicate's evaluation unit — disjoint blocks of 20 decided items, once per closed grading
+week, with the triggering block retired — has to land in
+[05](../wall-e/05-autonomy-ladder.md) §8, because the components that enforce it are the
+action service's breakers and Eve, and neither reads anything Mo writes. That is change 18 in
+[08-open-decisions.md](08-open-decisions.md), it is not a `gates.yaml` edit, and Mo may not
+author the diff: Mo raises an `incident_note` bundle and a human opens the pull request.
 
 ---
 

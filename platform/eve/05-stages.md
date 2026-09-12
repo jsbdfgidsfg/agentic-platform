@@ -30,10 +30,10 @@ with there. Wall-E's floors are S0 3–4 weeks, S1 4–6, S2 6–8, S3 6–8, S4
 |---|---|---|
 | **S0 — Eyes** | Eve's GCP project; `eve-v0@` with two dataset grants; the `eve` dataset; ten scheduled queries plus reconciliation and drift, pinned to that account, scheduled off the hour; the daily `walle_audit` mirror; one Cloud Monitoring absence alert on the metric series. In Wall-E's code: the eight endpoint contracts, `contracts/plan-body.v1.json`, the envelope schema, the `approvals` columns, the pinned-PEM verification path with a CI-only test key, the reason-code validator, the three sweeper/stamp mechanisms (inert), and a CI-only stub caller with denial tests 4, 5, 6 and 52. `thresholds.yaml` numbers stubbed. **Deliberately absent:** `eve@<domain>`, the OAuth client, the token, the secrets, the KMS key, the allowlist entry, `run.invoker`, `datastore.viewer`, `agentregistry.viewer`, any Pub/Sub subscription, and any Eve process. | **Nothing.** Eve v0 is queries a human reads. Daily write budget is 0; there is no autonomous write to gate or verify. |
 | **S1 — Hands held** | Unchanged, now with real rows. **The blind sampled human review starts here**, at `max(10 %, 5 items/week)`, graded without sight of any machine verdict, written write-ahead to `walle_audit.grades`. It must exist before Eve does: it is the thing that will later grade Eve, and the only bound on the compromised-Eve risk. | **Nothing.** An audit gap is a human's finding. At ten human-approved writes a day a machine halt would add latency, not safety. |
-| **S2 — Proposals** | **Eve's organisation-level admin-log sink into Eve's project is created here**, early, so the first enforcing window has history. Eve v0 gains the Google-side contract drift check against a committed privilege- and event-name snapshot. Reconciliation has now run ~10 weeks against real writes and its false-positive rate is measured — the numbers that will become halt thresholds are calibrated here, on data, before anything is wired to them. | **Nothing.** This is the last stage at which that is true. |
+| **S2 — Proposals** | **Eve's organisation-level admin-log sink into Eve's project is created here**, early, so the first enforcing window has history. Eve v0 gains the Google-side contract drift check against a committed privilege- and event-name snapshot. Reconciliation has now run ~10 weeks against real writes and its false-positive rate is measured — the numbers that will become halt thresholds are calibrated here, on data, before anything is wired to them. **Scheduled F2 sits at L3 here, not L4** — CC-32 in [08-contract-changes.md](08-contract-changes.md), because L4 means an Eve signature and Eve has no key for two more stages. | **Nothing.** This is the last stage at which that is true. |
 | **S3 entry — Eve onboarding** | The step [decision 36](../wall-e/09-open-decisions.md) opens, in one sitting: `eve@<domain>` with role, hardware key, Trusted client, consented token (minus `apps.licensing`) and regional secrets in Eve's project; `eve-controller@`, `eve-verifier@`, `eve-console@`; cross-project grants; `CONTROL_CALLER_ALLOWLIST` becomes `${SA_EVE},${SA_EVE_VERIFIER},${OPERATORS}`; the locked evidence bucket; the CI ladder-artefact publisher; `eve/config` and its external validator; `eve-reconciler`, `eve-console` and their schedules; the twelve seeded-fault fixtures. [Decision 18](../wall-e/09-open-decisions.md)'s control-plane split lands with this step. **Still absent:** the KMS key, the signer role, `eve-gate`, any cell with `eve_authority: binding`. | **Halting and demoting, immediately and for real** — the safe direction, which can only make less happen. Also verifying, reconciling, drift detection, and the daily operator-list reconciliation. Its verdicts on plans are observe-mode: logged, graded blind, enforcing nothing. Halt and demote are **live for the invariant class only**; rate-based triggers stay observe-only until their thresholds are calibrated. |
 | **S3 — Batch approval** | As at S3 entry, running ≥ 30 days against L3 batch executions. | Halt and demote. **Not approval.** Exit gate: **100 % catch** of the twelve seeded invariant-class faults, plus both negative controls not firing. Agreement with human verdicts is reported for information only — a 95 % agreement rate is not a gate for a deterministic checker. |
-| **S4 entry — Eve gates** | Adds, and only now: the `eve` key ring and `eve-approval` with its first PEM exported **before first use** and committed under CODEOWNERS; Data Access logging on `AsymmetricSign` and IAP; `eve-gate` and its 2-minute schedule; signature verification, the per-item vector and `eve_authority` in `walle-actions`; the `verdict_receipts` read; the blind sample wired as the only input to L4/L5 precision. | **Signing an approval** — but only for cells whose ladder entry explicitly sets `eve_authority: binding`, which is a pull request with two distinct authenticated approving reviewers, neither the author. Absent reads as advisory, and an Eve signature for an advisory cell is refused with `eve_authority_advisory`. That one field is the per-cell load-bearing switch, the fail-closed default, and the demotion target when an approval is overturned. |
+| **S4 entry — Eve gates** | Adds, and only now: the `eve` key ring and `eve-approval` with its first PEM exported **before first use** and committed under CODEOWNERS; Data Access logging on `AsymmetricSign` and IAP; `eve-gate` and its 2-minute schedule; signature verification, the per-item vector and `eve_authority` in `walle-actions`; the `verdict_receipts` read; the blind sample wired as the only input to L4/L5 precision. **Scheduled F2 reaches L4 here** and not before, which makes it the first autonomous write in the programme (CC-32). | **Signing an approval** — but only for cells whose ladder entry explicitly sets `eve_authority: binding`, which is a pull request with two distinct authenticated approving reviewers, neither the author. Absent reads as advisory, and an Eve signature for an advisory cell is refused with `eve_authority_advisory`. That one field is the per-cell load-bearing switch, the fail-closed default, and the demotion target when an approval is overturned. |
 | **S5 — Steady state** | No new Eve component. F5 reaches L4 with a two-hour hold, so the **two-phase envelope** applies: `envelope_gate` at freeze opens the hold window, `envelope_release` re-verified against freshly re-read pre-state with a 15-minute TTL is required at release. More cells carry `eve_authority: binding`. Annual manual key rotation with a 30-day overlap, each new PEM exported at creation. | The same two authorities on more cells. `WRITE_HIGH` never reaches L5 on any trigger at any stage, so Eve's post-hoc path only ever covers reversible `WRITE_LOW` and `READ`, and pre-approval is permanently the `WRITE_HIGH` mechanism. |
 
 ## S0 — Eyes
@@ -118,8 +118,9 @@ human-approved writes a day a machine halt would add latency, not safety.
 Two things happen here, both early on purpose.
 
 **Eve's own organisation-level admin-log sink is created.** `eve-workspace-audit`,
-org-level, `--include-children`, filter `protoPayload.serviceName="admin.googleapis.com"`,
-**no actor exclusion**, routed to `eve_workspace_logs` in Eve's project. Verified
+org-level, `--include-children`, `--use-partitioned-tables`, filter
+`protoPayload.serviceName="admin.googleapis.com"`, **no actor exclusion**, routed to
+`eve_workspace_logs` in Eve's project. Verified
 2026-09-12: an aggregated organisation-level sink may route to a destination in another
 project — "When the destination is a Google Cloud project, the project can be in any
 organization" — and its writer identity must be granted `roles/bigquery.dataEditor` on that
@@ -131,6 +132,19 @@ blast radius: Eve reconciles against this copy, never against `walle_workspace_l
 Wall-E's project. Org-level sink creation needs org-level permission, so the runbook allows
 calendar time for that approval — see [07-build-runbook.md](07-build-runbook.md).
 
+Two flags on that command are the difference between a usable copy and a mess nobody
+notices for months, and both are once-only. `--use-partitioned-tables` gives one
+`cloudaudit_googleapis_com_activity` table; without it Logging writes a date-sharded series
+`..._YYYYMMDD`, because "The default selection is a date-sharded table" ([Route logs to
+BigQuery](https://docs.cloud.google.com/logging/docs/export/bigquery), verified 2026-09-12).
+And `bq update --default_partition_expiration` must be set on the dataset **before** the
+sink first writes, because it sets the lifetime "for partitions in newly created
+partitioned tables" ([Updating
+datasets](https://docs.cloud.google.com/bigquery/docs/updating-datasets), verified
+2026-09-12) — miss it and Eve's org-wide admin-log copy has no retention bound at all.
+Neither is retrofittable to rows already written, which is the same non-backfill property
+as the actor exclusion.
+
 **The thresholds are calibrated.** By the end of S2 reconciliation has run roughly ten
 weeks against real writes and its false-positive rate is measured. Every number that will
 later trip a halt or a demotion is set here, on data, before anything is wired to it —
@@ -141,6 +155,38 @@ S2 replaces the stubs with measurements.
 Eve v0 also gains the Google-side contract drift check at S2, against a committed snapshot
 of privilege names and admin event names, so a change on Google's side is a finding rather
 than a silent reconciliation gap.
+
+**And one thing has to move out of S2 for that to be true.**
+[../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §7 puts scheduled **F2 at
+L4 in S2**, and calls it "the first autonomous write in the whole programme". §2 of the same
+page defines L4 as the level at which "Eve approves with **its own signing key**". Eve has no
+key at S2, no signer role and no `eve-gate` — by this design's own ordering, and by
+[07-build-runbook.md](07-build-runbook.md) Phase 11's precondition that the key is not built
+until the S3 exit gate has passed at 100 %. An F2 plan at L4 in S2 would therefore sit at
+`pending_eve` until `walle-actions`' `eve_silence` sweeper sets `no_autonomous` four business
+hours later, every time.
+
+The resolution is **CC-32** in [08-contract-changes.md](08-contract-changes.md): scheduled F2
+is **L3 at S2 and S3** and rises to **L4 at S4 entry**, with the rest of the Eve-gated set.
+The phrase "the first autonomous write in the whole programme" moves to S4 with it. Only
+humans raise a level, so the level that moves is the one written down, not the date Eve gets
+a key. This is the joint **C26/C27** residual in
+[../wall-e/14-hld-challenge.md](../wall-e/14-hld-challenge.md), which found the same
+contradiction, recorded that it "belongs to nobody today", and assigned the fix to
+[../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md).
+
+Two consequences worth naming rather than leaving to be discovered:
+
+- **S2's exit criterion is weaker than it reads.** "Zero drift on the F2 notifications
+  actually executed" now has *human-approved* L3 notifications as its subject, not autonomous
+  ones. It is still a real criterion — the notification path, its templating and its
+  config-fixed recipients are all exercised — but it is no longer evidence that an
+  unattended write behaves, because at S2 there is no unattended write.
+- **CI refuses the L4 config from the first commit, not from S4.** CC-6's validator already
+  "refuses any config placing a cell at L4 while its authority is advisory", and no cell
+  carries `eve_authority: binding` before S4 by construction. Pulling that one existing rule
+  forward to the first commit makes an S2 F2-at-L4 config fail the build rather than strand a
+  plan at runtime. No new rule is added for this.
 
 S2 is the last stage at which Eve is trusted with nothing.
 
@@ -277,7 +323,7 @@ and a mechanism in [02-identity-and-auth.md](02-identity-and-auth.md) or
 | Control required before S4 | What it is in this design |
 |---|---|
 | Eve's approval key, readable only by `eve-controller@` | Key ring `eve`, key `eve-approval`, `ASYMMETRIC_SIGN` / `EC_SIGN_P256_SHA256`, **in Eve's project**. `roles/cloudkms.signer` to `eve-controller@` only; `eve-verifier@` holds everything `eve-controller@` holds *except* the signer role. `walle-actions@` holds `roles/cloudkms.publicKeyViewer` cross-project and nothing more — never `signerVerifier` or `cryptoOperator`, both of which carry `useToSign`. Data Access audit logging on `AsymmetricSign`. |
-| Signature verification | **Offline pinned-PEM verification in `walle-actions` as the primary path**, KMS `getPublicKey` as fallback. Each key version's PEM is exported at creation, **before first use**, to `gs://<eve-project>-eve-keys/` with object retention **and** committed to `contracts/eve-public-keys/<version>.pem` in Wall-E's repository under `ladder.yaml`'s CODEOWNERS. No IAM grant inside Wall-E's project can substitute a key; a KMS outage does not stop verification; a destroyed key version never orphans a stored approval. |
+| Signature verification | **Offline pinned-PEM verification in `walle-actions` as the primary path**, KMS `getPublicKey` as fallback. Each key version's PEM is exported at creation, **before first use**, to `gs://<eve-project>-eve-evidence/keys/` — the `keys/` prefix of the **locked** evidence bucket, not a bucket of its own — **and** committed to `contracts/eve-public-keys/<version>.pem` in Wall-E's repository under `ladder.yaml`'s CODEOWNERS. No IAM grant inside Wall-E's project can substitute a key; a KMS outage does not stop verification; a destroyed key version never orphans a stored approval. |
 | Hold window and veto surface | The hold window is Wall-E's; Eve's side is `POST .../veto` when a threshold fires after signing, and the operator veto surface in `eve-console`. A veto wins unconditionally, and the vetoed item enters the blind sample pool at the next draw regardless of rate. |
 | **Eve-unreachable degrades to waiting, never to executing**, tested | Plans sit at `pending_eve` and never fall through. `walle-actions`' own `eve_silence` sweeper sets `no_autonomous` after four business hours; the `eve_evidence_stale` sweeper freezes promotions at 60 minutes and drops the cell to L4 at four hours; the `eve_last_seen` absence alert pages at 15 minutes. **Eve returning clears nothing** — only an operator clears `no_autonomous`. Tested as a denial-suite case, not asserted. |
 | Eve's independent read credential | Already live since S3 entry in this design, which is a change from the inherited ordering: the credential arrives a stage earlier than the key, because reconciliation needs it and signing does not. |
@@ -288,6 +334,11 @@ use; Data Access logging on `AsymmetricSign` and on IAP; `eve-gate` and its 2-mi
 schedule; signature verification, the per-item accept/reject vector and `eve_authority` in
 `walle-actions`; the `eve.verdict_receipts` read; and the blind sample wired as the only
 input to L4 and L5 precision.
+
+It is also where **scheduled F2 arrives at L4**, moved here from S2 by CC-32, which makes the
+templated notification the programme's first autonomous write at the stage where something
+can actually approve it. F2 is the cheapest possible first L4 cell — a templated message to a
+config-fixed recipient — and that is the argument for it going first, not for it going early.
 
 **`eve_authority` is the switch.** An Eve signature binds only for a cell whose ladder entry
 explicitly sets `eve_authority: binding` — a pull request with two distinct authenticated
@@ -326,7 +377,7 @@ No new Eve component is built at S5. What changes is rhythm and reach.
 | **The two-phase envelope** | Because F5's hold is two hours, a single envelope signed at freeze would authorise a write against a pre-state read two hours earlier. So: `envelope_gate` at freeze opens the hold window, and `envelope_release` — re-verified against freshly re-read pre-state, with a 15-minute TTL — is required at release. Any hold beyond 30 minutes uses this shape; see [03-lld.md](03-lld.md). |
 | **Monthly** | A K0 drill issued from Eve, timed into `drills/{date}`. A rollback drill in which Eve proposes and a human executes. |
 | **Quarterly** | The threshold review: every number in `thresholds.yaml` re-argued against the window that has passed, as a reviewed and versioned change, never a quiet one. |
-| **Annually and on suspicion** | Key rotation. Verified 2026-09-12: Cloud KMS does **not** support automatic rotation for asymmetric signing keys, so rotation is a **dated manual procedure** with a 30-day overlap, each new PEM exported at creation to both places — `gs://<eve-project>-eve-keys/` and `contracts/eve-public-keys/<version>.pem` under CODEOWNERS. Old versions are **disabled, never destroyed** inside the 400-day evidence horizon ([Key rotation](https://docs.cloud.google.com/kms/docs/key-rotation)). |
+| **Annually and on suspicion** | Key rotation. Verified 2026-09-12: Cloud KMS does **not** support automatic rotation for asymmetric signing keys, so rotation is a **dated manual procedure** with a 30-day overlap, each new PEM exported at creation to both places — `gs://<eve-project>-eve-evidence/keys/` and `contracts/eve-public-keys/<version>.pem` under CODEOWNERS. Old versions are **disabled, never destroyed** inside the 400-day evidence horizon ([Key rotation](https://docs.cloud.google.com/kms/docs/key-rotation)). |
 | **Weekly, and this is the one that must stay true** | Under half an hour of human time: the blind sample at `max(10 %, 5 items/week)`, five to fifteen items, roughly 20 minutes, plus the digest. If Eve costs more than that in steady state it will be ignored rather than used, which is a worse outcome than not building it. |
 
 ## What the staging does not promise
