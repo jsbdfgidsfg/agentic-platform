@@ -13,6 +13,11 @@ created and assigned to nobody, so even a total failure of every control in the
 action service leaves Workspace refusing the call at Google's end. Assigning it
 needs a dated decision record, not a command.
 
+
+Before the first subcommand, work through [PREREQUISITES.md](../PREREQUISITES.md): the roles,
+licences, keys, tools, organisation policies and product preconditions this tool assumes are already
+in place, with the check that proves each one. `./walle preflight` tests only a small part of that list.
+
 ## Run it
 
 ```bash

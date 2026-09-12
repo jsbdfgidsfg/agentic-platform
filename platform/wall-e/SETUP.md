@@ -99,6 +99,11 @@ Unit prices are deliberately not quoted. The Agent Runtime and Sessions pricing 
 
 ## 1. Before you start
 
+[PREREQUISITES.md](PREREQUISITES.md) is the checklist form of this section: every role, licence,
+seat, key, tool, organisation policy and product precondition the build needs, each with the check
+that proves it and the phase that fails without it. It also lists what this runbook does not yet
+cover. This section holds the reasoning; that page holds the list. Work through it first.
+
 ### 1.1 Decisions that must be closed first
 
 Do not begin Phase 1 until every row below has an answer written down. Four of them are load-bearing enough that getting them wrong means undoing work, and one of them is close to irreversible.

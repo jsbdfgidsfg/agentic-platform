@@ -53,6 +53,7 @@ someone else.
 
 | Document | For |
 |---|---|
+| [**PREREQUISITES.md**](PREREQUISITES.md) | Everything that must be true, decided, granted, bought or installed **before** the first command of SETUP.md, with a verification check per row and the long-lead items that block later stages. Read it first. |
 | [**SETUP.md**](SETUP.md) | The procedure to stand Wall-E up from nothing, executable by a Workspace super admin who owns a GCP project. Ends at Stage 0: it can read the tenant, and no autonomous write is possible. |
 | [**ARCHITECTURE.md**](ARCHITECTURE.md) | The service architecture with diagrams. Written for a security reviewer deciding on a pilot, and for whoever builds Eve or Mo. |
 | [**setup/**](setup/README.md) | The automation for the procedure. One script, `walle`, with a subcommand per group of phases. It stops where the procedure does, and refuses to attest a console step you have not done. |
