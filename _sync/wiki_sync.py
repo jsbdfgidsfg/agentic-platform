@@ -391,8 +391,11 @@ def ensure_tree(svc, manifest: dict) -> None:
 UNKNOWN = "<unknown>"       # distinct from None: "we could not find out", not "absent"
 
 
-SETTLE_ROUNDS = 5       # how many times settle() re-reads a fresh write
-SETTLE_SLEEP_S = 3.0    # pause between rounds
+# Docs converts an uploaded body asynchronously, and a long page takes longer than a
+# short one: a 1,500-line runbook was still settling after 15 s on 2026-09-12, which
+# left its recorded timestamp stale and made the next push call it "Drive changed".
+# Back off instead of polling at a fixed rate, and give up only after ~2 minutes.
+SETTLE_BACKOFF_S = (2, 3, 5, 8, 13, 21, 34, 55)
 
 
 def settle(svc, manifest, rels) -> int:
@@ -406,10 +409,10 @@ def settle(svc, manifest, rels) -> int:
     import time
     pending = list(rels)
     corrected = 0
-    for _ in range(SETTLE_ROUNDS):
+    for wait in SETTLE_BACKOFF_S:
         if not pending:
             break
-        time.sleep(SETTLE_SLEEP_S)
+        time.sleep(wait)
         still = []
         for rel in pending:
             entry = manifest["files"][rel]
@@ -449,6 +452,7 @@ def cmd_push(args) -> int:
     ensure_tree(svc, manifest)
     pages = local_pages()
 
+    created_this_run = set()
     # Pass 1 — every page must have an id before links can be rewritten.
     live = {str(p.relative_to(WIKI_ROOT)) for p in pages}
     for path in pages:
@@ -481,8 +485,12 @@ def cmd_push(args) -> int:
                       lambda fid, e=entry: e.__setitem__("file_id", fid))
         # A Doc created here has no sync point by construction: record the empty
         # Doc's own timestamp as the baseline, or pass 2's fail-closed guard refuses
-        # to fill a document this very run just created.
+        # to fill a document this very run just created. Drive also bumps that
+        # timestamp again a moment after creation, so the value recorded here can be
+        # stale by the time pass 2 reads it: remember the path instead and let pass 2
+        # skip the guard for it. A Doc this run created holds nobody's edits.
         entry["remote_modified"] = remote_modified(svc, fid)
+        created_this_run.add(rel)
         save_manifest(manifest)
         print(f"created  {rel}")
 
@@ -504,7 +512,7 @@ def cmd_push(args) -> int:
         # whatever was in Drive. Every entry in a hand-rebuilt manifest looks like
         # that, which is exactly when you least want a silent overwrite.
         remote_ts = remote_modified(svc, entry["file_id"])
-        known = entry.get("remote_modified")
+        known = remote_ts if rel in created_this_run else entry.get("remote_modified")
         if not args.force:
             if remote_ts is UNKNOWN:
                 print(f"CONFLICT {rel}: cannot read the Doc's state. Not overwriting.")
