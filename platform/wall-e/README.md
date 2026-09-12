@@ -40,11 +40,13 @@ two later designs have something concrete to build against.
 | Agent | Role | Can it act on Workspace? | Can it raise autonomy? | Can it lower it? |
 |---|---|---|---|---|
 | **Wall-E** | The doer. Plans and executes admin operations. | Yes, through the action service only | **Never** | Only by refusing its own run |
-| **Eve** | The controller. Approves, verifies after the fact, halts. | No — read-only, and by a separate credential | **Never** | Yes, instantly, to any level |
-| **Mo** | Continuous improvement. Measures, proposes. | No | No — proposes a pull request a human merges | No |
+| **[Eve](../eve/README.md)** | The controller. Approves, verifies after the fact, halts. | No — read-only, and by a separate credential | **Never** | Yes, instantly, to any level |
+| **[Mo](../mo/README.md)** | Continuous improvement. Measures, proposes. | No | No — proposes a pull request a human merges | No |
 
-Eve and Mo are designed later. See [08-team-eve-mo.md](08-team-eve-mo.md) for the
-contracts Wall-E owes them.
+Both are now designed, on 2026-09-12: [../eve/README.md](../eve/README.md) and
+[../mo/README.md](../mo/README.md). [08-team-eve-mo.md](08-team-eve-mo.md) is the contract
+Wall-E owes them, and [../eve/08-contract-changes.md](../eve/08-contract-changes.md) lists
+what those two designs ask Wall-E to change.
 
 ## Documents
 

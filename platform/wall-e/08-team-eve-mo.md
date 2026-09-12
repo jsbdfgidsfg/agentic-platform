@@ -2,7 +2,12 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-12
+- Eve and Mo are now designed: [../eve/README.md](../eve/README.md) and
+  [../mo/README.md](../mo/README.md), written 2026-09-12 against this contract. Where they
+  depart from it, or where this page contradicts another Wall-E page, the departures are
+  listed in [../eve/08-contract-changes.md](../eve/08-contract-changes.md) rather than
+  edited in here. **This page has not yet been reconciled with them.**
 
 Eve and Mo are designed separately, after this. This document exists so those two designs
 have a fixed contract to attach to, and so Wall-E is built with the right seams from the
