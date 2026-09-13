@@ -12,11 +12,28 @@
   [../mo/README.md](../mo/README.md), written 2026-09-12 against this contract. Where they
   depart from it, or where this page contradicts another Wall-E page, the departures are
   listed in [../eve/08-contract-changes.md](../eve/08-contract-changes.md) rather than
-  edited in here. **This page has not yet been reconciled with them.**
+  edited in here. ~~This page has not yet been reconciled with them.~~ *Rewritten 2026-09-13:*
+  reconciled for Mo's remit over Eve, rule 3, Eve's item 5 and Mo's changes 9 and 10
+  ([../mo/08-open-decisions.md](../mo/08-open-decisions.md)). Eve's other contract changes in
+  [../eve/08-contract-changes.md](../eve/08-contract-changes.md) are still listed there, not
+  here.
+- **Objective restated 2026-09-13; see the platform HLD**
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2, §13.3; §18 item 6).
+  The objective says Mo "work on continuous improvements of both Wall-E & Eve". The
+  responsibility table, the shared data plane and "What Mo must do" gain Eve rows, and rule 3
+  reads "Eve can lower; Mo can only propose". Eve "should work independantly & autonomous" and
+  "report to the human anything wrong", so item 5's "own judgement" is narrowed to Eve's
+  reporting path. Halts stay on declared thresholds, and no model sits on the path that
+  approves, halts, demotes or vetoes. Eve's independence inside the organisation is detective,
+  not structural; the witness organisation is its structural part (platform HLD §13.2). Wall-E
+  holds Super Admin (P33). The separation rules, identities, the eight interfaces and the
+  team failure modes are otherwise unchanged.
 
-Eve and Mo are designed separately, after this. This document exists so those two designs
+~~Eve and Mo are designed separately, after this.~~ *Rewritten 2026-09-13: Eve and Mo were
+designed on 2026-09-12 against this contract, and since 2026-09-13 the platform HLD owns the
+interfaces all three attach to.* This document exists so those two designs
 have a fixed contract to attach to, and so Wall-E is built with the right seams from the
-first commit rather than retrofitted. It is written to be handed to whoever designs them.
+first commit rather than retrofitted. It was written to be handed to whoever designed them.
 
 ## The separation that makes a team worth having
 
@@ -28,9 +45,14 @@ Three agents are only safer than one if they cannot collapse into one. Three rul
    sanity check, not evidence. Eve verifies **independently**, with its own read-only
    credential and against the Workspace audit log, which is written by Google rather than
    by Wall-E.
-3. **Only humans loosen anything.** Eve and Mo can lower a level, halt, and propose. The
-   raise path goes through a pull request, CI validation and a dated decision record with
-   a named human — two of them above L3.
+3. **Only humans loosen anything. Eve can lower; Mo can only propose.** *(Reworded
+   2026-09-13, platform HLD §13.3; was "Eve and Mo can lower a level, halt, and propose", which
+   gave Mo a lowering power no Mo design holds.)* Eve can lower a level and halt. Mo holds no
+   credential, no invoker and no signer, and reaches production only through a pull request a
+   human merges, whether the change is Wall-E's or Eve's. The raise path goes through a pull
+   request, CI validation and a dated decision record with a named human — two of them above
+   L3. A loosening of Eve's thresholds needs two reviewers, including the decision-37 security
+   reviewer.
 
 If a single design change would let one agent do two of decide, act and grade, that change
 is wrong regardless of how convenient it is.
@@ -50,6 +72,11 @@ is wrong regardless of how convenient it is.
 | Detect drift between config and reality | — | **Does** | — | Reads the alert |
 | Explain why precision fell | — | — | **Does** | Reviews |
 | Change a playbook or prompt | — | — | Proposes a PR | Merges |
+| Report misbehaviour of Wall-E, or of a human prompting it (added 2026-09-13) | — | **Does**: deterministic detection catalogue at severity 1–3; the reporting path `eve-advisor` narrates and may page at severity 2 only | — | The second human outside the Wall-E line receives it; halts or demotes through the human path |
+| Measure Eve's detection quality and time-to-report (added 2026-09-13) | — | Keeps its own fast drop to advisory on its own number | **Does**: the Eve quality pack, from `grades_eve`, `seeded_fault_runs`, golden replays and Wall-E's `eve_last_seen`, never from `eve.verdicts` alone | Grades Eve's verdicts on the approval surface |
+| Explain an Eve regression (added 2026-09-13) | — | — | **Does**, keyed on `eve_config_version` | Reviews |
+| Change Eve's thresholds or seeded faults (added 2026-09-13) | — | Never edits its own rules | Proposes a PR from the closed set `eve_threshold_tighten`, `eve_threshold_loosen`, `seeded_fault_addition`, `eve_incident_note` | Merges: one reviewer to tighten, two (one the security reviewer) to loosen |
+| Grade Eve (added 2026-09-13) | — | — | **Never** — Mo is not Eve's grader | Grades |
 
 **Shared responsibility, concretely.** All three own the outcome "Workspace admin work is
 done correctly and safely". They own different halves of it: Wall-E owns *doing the work*,
@@ -59,7 +86,10 @@ and the `walle-events` topic, both in `WALLE_PROJECT`, reached from `EVE_PROJECT
 `MO_PROJECT` through dataset-level `roles/bigquery.dataViewer` and, once a consumer names
 a duty for the topic, a subscription in the reader's own project — one shared set of
 facts, three different readings. No agent's identity is homed in another agent's project
-([../project-topology.md](../project-topology.md)).
+([../project-topology.md](../project-topology.md)). *Added 2026-09-13:* since Mo improves Eve
+too, a second meeting place exists: `eve_quality` in `EVE_PROJECT`, which Eve owns and Mo
+reads (platform HLD §13.3). Mo owns the outcome "Wall-E **and Eve** getting better", and
+"stopping it fast" includes reporting it to a human outside the Wall-E line.
 
 ## Identities
 
@@ -67,7 +97,7 @@ facts, three different readings. No agent's identity is homed in another agent's
 |---|---|---|---|---|---|
 | Wall-E | `WALLE_PROJECT` | `walle-agent@` on Agent Runtime, or the agent principal ([12](12-agent-identity.md)) | none | none | Yes, execute and plan endpoints |
 | Eve | `EVE_PROJECT` | `eve-controller@EVE_PROJECT` (Eve's design adds `eve-v0@`, `eve-verifier@`, `eve-console@`, all in `EVE_PROJECT`) | **Its own read-only robot account** — [decision 10](09-open-decisions.md) says yes; its OAuth client and refresh token live in `EVE_PROJECT`'s Secret Manager, provisioned by [../eve/07-build-runbook.md](../eve/07-build-runbook.md), never in Wall-E's project | `roles/cloudkms.signer` on its own asymmetric key `eve-approval`, in `EVE_PROJECT`; Wall-E verifies with the pinned public PEM | Yes, control and read endpoints only: `roles/run.invoker` on `walle-actions` in `WALLE_PROJECT`, a cross-project **resource-level** binding made by Wall-E's owner |
-| Mo | `MO_PROJECT` | `mo-metrics@`, `mo-analyst@`, `mo-narrator@` (designed 2026-09-12, [../mo/02-identity-and-access.md](../mo/02-identity-and-access.md)) | none | none | Only `mo-analyst@MO_PROJECT`, on the two read endpoints (`roles/run.invoker` on `walle-actions`, cross-project). `mo-metrics@MO_PROJECT` holds dataset-level `dataViewer` on `walle_audit` and `walle_workspace_logs`. Nothing of Mo's lives in `WALLE_PROJECT` |
+| Mo | `MO_PROJECT` | `mo-metrics@`, `mo-analyst@`, `mo-narrator@` (designed 2026-09-12, [../mo/02-identity-and-access.md](../mo/02-identity-and-access.md)) | none | none | Only `mo-analyst@MO_PROJECT`, on the two read endpoints (`roles/run.invoker` on `walle-actions`, cross-project). `mo-metrics@MO_PROJECT` holds dataset-level `dataViewer` on `walle_audit` and `walle_workspace_logs` and, added 2026-09-13, dataset-level `READER` on `eve_quality` in `EVE_PROJECT`, made by Eve's runbook. Nothing of Mo's lives in `WALLE_PROJECT` or `EVE_PROJECT` |
 
 **Eve should get its own Workspace credential.** If Eve verifies through Wall-E's
 credential, a compromised Wall-E path can make the world look however it wants to the
@@ -87,8 +117,11 @@ or asks Wall-E questions about itself.
 | `walle_audit.approvals` | who approved what, how long they took, verdicts and reason codes | read | read | as above |
 | `walle_audit.verifications` | verified / drift / unverifiable | read | read | as above |
 | `walle_audit.config_versions` | every ladder change, its decision file, its origin | read | read | as above |
-| Pub/Sub `walle-events` | `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged` (payload: `run_id`, `audit_id`, `source: gateway\|actions`, the `filter:confidence` list, `trigger_id`; emitted for dispatcher-invoked runs only, see [11](11-prompt-security.md) section 6) | subscribe | subscribe | `WALLE_PROJECT`. Target state ([14](14-hld-challenge.md) C30): a subscription created in the reader's project with `roles/pubsub.subscriber` bound on the topic |
-| Workspace audit logs in Cloud Logging | what the robot account actually did, **written by Google, not by Wall-E** | read | read | Organisation level. Eve reads its own organisation-level sink into `EVE_PROJECT`; Mo reads Wall-E's copy `walle_workspace_logs` in `WALLE_PROJECT` through dataset-level `dataViewer` |
+| Band-B audit rows on `walle-actions-super` (added 2026-09-13) | the full canonical request, the Discovery revision, requester and approver, both human super admins | read | read | `WALLE_PROJECT`, on the platform `audit.schema` (platform HLD §12.3); the same dataset-level grant form |
+| BigQuery `eve_quality` (added 2026-09-13) | `findings`, `verdicts`, `attestations`, `pages`, `incidents` minus narrative, `seeded_fault_runs`, through authorised views with no free-text columns; never `grades_blind` or `review_queue_blind` | owns | read | `EVE_PROJECT`. Dataset-level `READER` to `mo-metrics@MO_PROJECT` and to the validator custodian, made by Eve's runbook, with no binding in `MO_PROJECT` (platform HLD §13.3, P30; topology rows per HLD §18 item 25). Eve reads nothing Mo writes |
+| `grades_eve` (added 2026-09-13) | human grades of Eve's verdicts, written by the platform approval surface, not by `eve-console` | — | read | per platform HLD §13.3 |
+| Pub/Sub `walle-events` | `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged` (payload: `run_id`, `audit_id`, `source: gateway\|actions`, the `filter:confidence` list, `trigger_id`; emitted for dispatcher-invoked runs only, see [11](11-prompt-security.md) section 6) | ~~subscribe~~ none *(2026-09-13, Eve CC-13)* | ~~subscribe~~ none *(2026-09-13, Mo change 10)* | `WALLE_PROJECT`. Target state ([14](14-hld-challenge.md) C30): a subscription created in the reader's project with `roles/pubsub.subscriber` bound on the topic. *2026-09-13:* neither Eve nor Mo subscribes, so the topic stays, and its owner and schema are *tbd* — the obligation of whoever later asks for it (Eve E-20) |
+| Workspace audit logs in Cloud Logging | what the robot account actually did, **written by Google, not by Wall-E** | read | read | Organisation level. Eve reads its own organisation-level sink into `EVE_PROJECT`; Mo reads Wall-E's copy `walle_workspace_logs` in `WALLE_PROJECT` through dataset-level `dataViewer`. *Widened 2026-09-13 (platform HLD §13.2):* Eve's sink covers all six Workspace streams with no actor exclusion, plus a Reports API poll by actor |
 | Agent Runtime traces and OTel metrics | token spend, tool-call counts, latency per run | — | read | `WALLE_PROJECT`. Mo's cross-project read is *tbd* — `Assumption:` a dataset-level `READER` on the linked `walle_spans` dataset, never a project-level viewer role (decision 49) |
 | `ladder.yaml` in git | what the level *should* be | read | read | The repository; crosses no project |
 
@@ -144,15 +177,34 @@ Not a design, a requirements list:
 4. **Drift detection.** Rows whose `config_version` does not match the deployed ladder, or
    levels in Firestore that do not match `ladder.yaml`.
 5. **Halting**, on its own judgement, with a reason code, and a documented bias toward
-   halting when uncertain.
+   halting when uncertain. *Narrowed 2026-09-13 (platform HLD §13.2; C12 in
+   [14](14-hld-challenge.md); Eve E-7).* The halt is taken on **declared thresholds** with a
+   reason code, by Eve's control path, which contains no model; the bias toward halting when
+   uncertain stays. "Its own judgement" survives only on Eve's **reporting path**
+   (`eve-advisor` in `EVE_ADVISOR_PROJECT`, register row P34). That path may reason about
+   "anything wrong" and write `eve.incidents` narratives and `eve.advice`. It may page a human
+   at severity 2, within the page budget, citing the deterministic findings that triggered it.
+   It holds no signer, no invoker and no secret, and nothing it writes is read by `eve-gate`,
+   `eve-reconciler`, `walle-actions` or `walle-actions-super`. A human who agrees halts or
+   demotes through the existing human path.
 6. **Attestation.** For a promotion, produce a dated, signed evidence bundle. It attests;
    it never promotes.
 7. **Fail closed in every direction.** Eve down means L4 items wait and L5 cells demote to
    L4. Eve must never be a thing whose absence lets more happen.
+8. **Report misbehaviour to a human, independently** (added 2026-09-13, platform HLD §13.2).
+   Reconcile every robot-attributed event in every ingested stream, not only catalogued
+   plans. Run the detection catalogue in the reconciler limb, including prompt-to-action
+   divergence on the human's prompt. Run a daily super-admin roster check from Eve's own
+   credential, and emit an evidence heartbeat. Push a daily export to the witness
+   organisation. Page under the reporting contract: severity 1 from the witness to the second
+   human outside the Wall-E line and to the desk. Reports about the administrator's own
+   actions go to the second human alone.
 
 Eve's own progression mirrors Wall-E's: it runs in observe mode through Stage 3, graded
 against human verdicts, and only becomes load-bearing at Stage 4 once it has passed a
-seeded-fault exercise.
+seeded-fault exercise. *Qualified 2026-09-13:* that is the gate layer. Item 8's
+observe-and-report layer is live and drilled **before** Super Admin is granted
+([05](05-autonomy-ladder.md) §7, "The super-admin grant — a gate, not a stage").
 
 ## What Mo must do (input to its design)
 
@@ -168,7 +220,28 @@ seeded-fault exercise.
    catalogue additions, cap changes, promotions and demotions — each with evidence
    attached and each requiring a human merge.
 5. Report cost per operation and per playbook, from token spend and runtime metering.
-6. Never hold a credential, never call the action service, never write to config.
+6. Never hold a credential, never call the action service, never write to config. *Corrected
+   2026-09-13 (Mo change 9, [../mo/08-open-decisions.md](../mo/08-open-decisions.md)):* the
+   action-service rule reads "the two read endpoints only, as `mo-analyst@MO_PROJECT`", as the
+   Identities table already says; no credential and no write to config stand.
+7. **Improve Eve too** (added 2026-09-13, platform HLD §13.3). Measure Eve's detection
+   quality and time-to-report. The Eve quality pack is: false-refusal Wilson bounds,
+   wrong-accept count, agreement, pages against budget, time-to-verdict, time-to-acknowledge,
+   and availability from Wall-E's stamp. Numbers about Eve come from `grades_eve`,
+   `seeded_fault_runs`, golden replays and Wall-E's `eve_last_seen`, never from `eve.verdicts`
+   alone, and an assertion query checks that.
+8. Explain Eve regressions keyed on `eve_config_version`, and report a divergence between Mo's
+   number and Eve's own as an Eve finding.
+9. Propose Eve changes only from the closed set `eve_threshold_tighten`,
+   `eve_threshold_loosen`, `seeded_fault_addition` and `eve_incident_note`, against
+   `eve/config` paths `thresholds.yaml` and `seeded_faults` only. Never propose against
+   `predicates/`, `ceilings.py`, `reasons.yaml`, `oncall.yaml` or `eve_authority`. The
+   validator refuses an Eve loosening within 30 days of a Wall-E promotion on the same cell,
+   in either order. Until the validator custodian reads `eve_quality` (P30), Eve-targeting
+   bundles are advisory `incident_note` only.
+10. Publish the misbehaviour taxonomy and its detector coverage map as the first Eve
+    artefact and the Eve-improvement backlog. Never grade Eve, and never reach Eve's control
+    path except through a merged pull request.
 
 A pragmatic note for Mo's design: Mo is analysis over BigQuery with no Workspace access and
 no write path, which makes it the one place in this team where trying a different model or

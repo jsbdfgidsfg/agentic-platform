@@ -4,6 +4,22 @@
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
 - 2026-09-13: dated placement notes added under C50, C14, C11, the alternatives table, decisions 29, 31 and 36, and the accepted-risks table, because the four-project topology of [../project-topology.md](../project-topology.md) changes where Eve's trust root and evidence live. No verdict changed.
+- **Objective restated 2026-09-13; see the platform HLD**
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) "What this reverses and what it
+  costs", §13.1, §13.2; §18 item 9). Wall-E holds Super Admin on a dedicated user account
+  (register row P33). This page is a dated record of a review against the requirement *as then
+  stated*, so its verdicts are not rewritten. Dated pointers are added where the objective
+  overturns a premise:
+  - **Verdict reason 4 no longer holds.** With a super-admin robot, super-admin-only APIs are
+    reachable.
+  - **C35's rejection of a generic Admin SDK proxy is re-argued as band B**, a lane that is
+    never above L3.
+  - C1 is answered by the objective itself.
+  - Decision 26 (C3) is closed for Wall-E by fact.
+  - C32's "the role is the ceiling" inverts: the scope set is now the only Google-enforced
+    ceiling.
+  - C12's verdict stands for Eve's approval path; the reporting path is reopened by P34.
+  - C50's pre-production holder is a sandbox tenant (decision 29).
 - Subject: [01-hld.md](01-hld.md), challenged on 2026-09-11 with the design set complete and
   nothing built; product facts re-verified 2026-09-12, sources at the end of this page
 - Method: machine-run adversarial review, eleven reviewer lenses, 54 deduplicated
@@ -52,6 +68,14 @@ Five reasons the path is right:
    Chrome Policy and shared drives, and would lose the per-operation inverse, pre-state
    predicate, taint declaration and readable approval card that everything above L2
    depends on.
+   **No longer holds, 2026-09-13** (platform HLD "What this reverses and what it costs",
+   §13.1). The premise "no super admin" was overturned by the objective: Wall-E holds Super
+   Admin, so super-admin-only APIs are reachable, and the limit on breadth is no longer the
+   identity. DWD-only APIs stay unreachable, because no DWD is still a standing constraint. The
+   generic proxy this reason argued against is adopted in narrowed form as **band B**. The
+   losses listed here (inverse, pre-state predicate, taint declaration) are accepted because
+   band B is permanently L3, chat only, and two-person at tier `SUPER`. The full canonical
+   request, the Discovery revision and both humans are recorded on the audit row (see C35).
 5. **The 17 earlier attacks were fixed properly.** The refuters repeatedly found that a
    new challenge was already bounded by A3 taint, A10 full-chain re-run, A11 pinned
    selection, A12 consume-then-reconcile or A16 pinned secret version. That is evidence
@@ -83,7 +107,9 @@ rather than things it gets wrong:
 - **The requirement was narrowed from "any action a human admin can do" to a fixed
   catalogue, and the HLD never says so or asks for sign-off** (C1). Scopes freeze at
   consent, so breadth has to be decided before [decision 3](09-open-decisions.md), not
-  discovered afterwards.
+  discovered afterwards. *Answered 2026-09-13 by the objective itself:* the requirement is
+  restated as "any super admin level action of Google Workspace" on a human's prompt, and
+  decision 27 becomes "which lane" (bands A, B and C, platform HLD §13.1).
 
 **One headline change that is not a gap but a premise.** [02-identity-and-auth.md](02-identity-and-auth.md)
 builds the whole credential story on a Workspace user because a service account cannot
@@ -94,6 +120,11 @@ covers the Directory, Licensing and Reports calls Wall-E needs, it removes the p
 the recovery path, the hardware key in a safe, the interactive consent, the frozen scope
 set and the stealable refresh token in one move. That is a one-day spike before Phase 9,
 not a rewrite — but Phase 9 is irreversible, so the spike has to happen first.
+*Closed for Wall-E 2026-09-13 (platform HLD §4.6; P33):* the objective gives Wall-E Super
+Admin, which is exactly the role a service account cannot hold. The spike does not run for
+Wall-E, and the question survives only for Eve as E-16. The robot user, with its password,
+hardware keys, consent and refresh token, is kept and compensated (platform HLD §13.1
+items 3, 5–7).
 
 **What does not change.** No trust boundary is removed or replaced, the layer
 responsibilities and the no-DWD rule all stand, and every standing challenge is fixable with
@@ -403,6 +434,12 @@ be answered **before** [decision 3](09-open-decisions.md) closes. Widen
 only the nine N-rows. Resolve the read-breadth contradiction in favour of one rule, stated
 in one place.
 
+*History, with a dated pointer, 2026-09-13:* the objective settles C1 by restating the
+requirement as "any super-admin-level action". The bands survive with new meanings (platform
+HLD §13.1). Band B is no longer "reachable with a custom-role token but deliberately excluded";
+it is a generic lane, always human-approved. Band C is console-only work handed to a human.
+Decision 4 is re-ratified as the two lists (P29).
+
 ---
 
 ### C5 — Firestore is the integrity root and its IAM cannot enforce the rules the design claims (stands)
@@ -484,6 +521,11 @@ result in the decision either way. If it passes, the design loses the password, 
 path, the hardware key, the interactive consent, the frozen scope set and the stealable
 refresh token for the admin half — and C4, C6, C9, C32, C33 and C47 shrink or disappear with
 it.
+
+*History, 2026-09-13:* closed for Wall-E by the Google fact this challenge quotes ("any
+prebuilt or custom role except Super Admin", re-read 2026-09-13). C4, C6, C9, C33 and C47
+therefore do not shrink for Wall-E; their compensations are platform HLD §13.1 items 3, 5–7.
+The service-account option survives for Eve's read-only role (E-16).
 
 ---
 
@@ -645,6 +687,13 @@ at high confidence. Verified again on 2026-09-12 for this page: Google documents
   could plausibly use, including `admin.directory.user.security` and `admin.datatransfer`,
   because the staged role is the gate; keep user-data scopes narrow. If decision 26 moves
   the admin half to a service account, the admin-scope question disappears entirely.
+
+*Premise inverted 2026-09-13 (platform HLD "What this reverses", §13.1 item 3):* a super
+admin's role grants everything, so for admin APIs the **consented scope set is now the only
+Google-enforced ceiling**. The "consent to every admin scope the ladder could plausibly use"
+reframing is replaced by two OAuth clients: a narrow one for the catalogue, which keeps a
+ceiling for everything unattended, and a broad one for band B. `cloud-platform` is in neither.
+The token-limit correction stands.
 
 ---
 
@@ -1007,6 +1056,13 @@ to "Eve's design", which contradicts 12 section 1.8.
 - [13-agent-interconnection.md](13-agent-interconnection.md) section 4.3: remove the
   sentence leaving an LLM hop before approve to Eve's design.
 New decision 34 records the constraint so Eve's designer inherits it.
+
+*Qualified 2026-09-13 (platform HLD §13.2; P34):* the verdict stands for Eve's signature, halt,
+demotion and veto, all deterministic. The objective adds a duty this challenge did not weigh:
+Eve must "report to the human anything wrong". A separate reporting path, `eve-advisor`, may
+reason. It writes reports and pages only, and nothing it writes is read by the gate. The
+08 item 5 edit above lands as "declared thresholds with a reason code" for the halt, with
+"own judgement" narrowed to reporting.
 
 ---
 
@@ -1948,6 +2004,25 @@ lane** on chat: Wall-E returns the exact console steps for a human super admin a
 watch via `reports.activities.list`, already in F1, for the matching admin audit event,
 reporting "verified" or "not seen within N hours". No new credential, no new write.
 
+**Re-argued 2026-09-13 as band B** (platform HLD §13.1 "The three bands"; [01-hld.md](01-hld.md)
+§"The three bands"). This rejection was argued for a robot whose identity bounded its reach.
+The objective gives the robot Super Admin, so the generic lane now reaches work no typed
+catalogue will cover in time. The generic executor is built as `/v1/execute-generic` on a
+separate service, `walle-actions-super`, with its own OAuth client:
+- requests schema-validated (`extra=forbid`) against the pinned Google Discovery document;
+- methods mapped to `READ` / `WRITE` / `SUPER` by a committed table;
+- pre-state captured by the matching `get` or `list`, or the request refused `no_pre_state`;
+- no inverse, so treated as irreversible;
+- taint and the hard-denied list applied;
+- never in a playbook;
+- **permanently L3**, chat only, two human super admins at `SUPER`.
+
+It loses the inverse, pre-state predicate and taint declaration listed above, and needs none
+of them, because the lane is never above L3. The full canonical request, the Discovery
+revision and both humans go on its audit row. The handoff lane recommended here is built as
+band C (`/v1/handoff`), with one addition: it refuses hard-denied requests instead of
+returning console steps.
+
 ---
 
 ### C29 — The ingress gateway may screen no production traffic (stands)
@@ -2119,19 +2194,19 @@ Every alternative path raised across the eleven lenses, with its verdict. Produc
 | **Gemini Enterprise no-code agent, or Gemini in the Admin console** | No build. Google-operated. | Gemini in the Admin console advises super admins, it does not act. A no-code agent makes the operator's own admin rights the ceiling and puts no deterministic gate between model output and the Admin SDK. | **Rejected.** Already rejected correctly in [02](02-identity-and-auth.md); the reason now needs dating and a re-evaluation trigger (C25). |
 | **Workflow Builder scheduled agents / Workspace Studio flows** | Native, no GCP project, no credential of our own. | They run on the creating user's credentials — Workflow Builder schedules expire every 14 days; Workspace Studio flows run with the user's identity with no documented expiry — cannot act on other people, and custom steps are in limited preview. | **Rejected.** Re-evaluate when a flow can run as a non-user principal with admin privileges. |
 | **A service account with domain-wide delegation** | Any API, any user, no robot account. | The standing constraint, and the over-broad grant and unreadable audit trail that constraint exists to avoid. | **Rejected permanently.** Not reopened by any lens. |
-| **A service account holding the custom admin role, no DWD** | Removes the password, recovery path, hardware key, interactive consent, frozen scope set and stealable refresh token for the admin half. Keyless tokens from the metadata server. The role becomes the ceiling. | Coverage beyond the Groups APIs is undocumented; Gmail, Chat and Calendar still need a user. Splits the identity in two. | **Pending a spike before Phase 9** — new decision 26 (C3). Verified 2026-09-12: Google documents that any prebuilt or custom role except Super Admin can be assigned to a service account. |
-| **A generic Discovery-driven Admin SDK proxy** | Wider reach without hand-typing each operation; off-the-shelf executors exist. | The per-operation inverse, pre-state predicate, attacker-writable field declaration and readable approval card — all four of which the ladder above L2 depends on. Reach gained only in Directory, Licensing, Data Transfer, Chrome Policy and shared drives. | **Rejected, and the reason must be recorded** (C35). |
+| **A service account holding the custom admin role, no DWD** | Removes the password, recovery path, hardware key, interactive consent, frozen scope set and stealable refresh token for the admin half. Keyless tokens from the metadata server. The role becomes the ceiling. | Coverage beyond the Groups APIs is undocumented; Gmail, Chat and Calendar still need a user. Splits the identity in two. | **Pending a spike before Phase 9** — new decision 26 (C3). Verified 2026-09-12: Google documents that any prebuilt or custom role except Super Admin can be assigned to a service account. **Closed for Wall-E 2026-09-13** by that same fact, since the objective gives Wall-E Super Admin (P33); open for Eve only (E-16). |
+| **A generic Discovery-driven Admin SDK proxy** | Wider reach without hand-typing each operation; off-the-shelf executors exist. | The per-operation inverse, pre-state predicate, attacker-writable field declaration and readable approval card — all four of which the ladder above L2 depends on. Reach gained only in Directory, Licensing, Data Transfer, Chrome Policy and shared drives. | **Rejected, and the reason must be recorded** (C35). **Re-argued 2026-09-13 and adopted as band B**: permanently L3, two-person at `SUPER`, never in a playbook (platform HLD §13.1). |
 | **Buying a SaaS-management platform with AI agents** | No build, vendor-operated, broad coverage. | Every such platform holds a tenant-wide grant outside the no-DWD rule; at least one vendor's exact auth model could not be verified. | **Rejected.** Re-evaluate if a vendor documents least-privilege, no-DWD operation. |
 | **No Eve — human approval only, permanently** | Removes a whole agent, its credential, its project and its acceptance test. L3 is already dual control. | Nothing at L4 or L5, so no unattended write ever. | **Not rejected — it is the honest pilot.** The pilot is capped at L3, Eve has no design and no date, and new decision 34 makes "Eve v0" deterministic BigQuery queries read by a human. This is the operating assumption until an Eve design record exists. |
-| **An LLM Eve** | A second opinion on judgement, not just invariants. | Reproduces Wall-E's own failure modes at the one gate that replaces a human. Contradicts [12](12-agent-identity.md) section 1.8. | **Rejected** (C12). Advisory model beside the deterministic controller is permitted; it may not produce a signature. |
+| **An LLM Eve** | A second opinion on judgement, not just invariants. | Reproduces Wall-E's own failure modes at the one gate that replaces a human. Contradicts [12](12-agent-identity.md) section 1.8. | **Rejected** (C12). Advisory model beside the deterministic controller is permitted; it may not produce a signature. **Overturned for reporting only, 2026-09-13** (P34, `decisions/2026-09-13-eve-reporting-path-may-reason.md`, platform HLD §13.2): `eve-advisor` may reason and page at severity 2; it never approves, halts or signs, and nothing it writes reaches a verdict. Rejected as before for approvals. |
 | **Policy-as-code without stages** | Far less machinery: one allowlist, one on/off switch per operation. | No evidence gradient. `WRITE_HIGH` becomes a boolean nobody can justify flipping. | **Rejected** by the autonomy lens as strictly worse than the ladder. |
 | **Always human, forever (L3 batch as the end state)** | All the safety with none of the Eve machinery. | Nothing, for `WRITE_HIGH`. | **Accepted as a legitimate steady state** (C34). The design must say so rather than treating S4 as inevitable. |
 | **Canary with automatic rollback instead of a ladder** | Fast, familiar from software deploys. | A Workspace rollback is itself a write needing fresh pre-state, which is why F10 is capped at L3. Automatic rollback would be an unapproved write. | **Rejected** on mechanism, not taste. |
 | **Deterministic playbooks with no model on T1/T2** | Removes the A3/A11 injection class, the job envelope, agent job mode and machine-traffic screening from the autonomous path. | A prose `expects` becomes a typed predicate, which is less flexible; genuinely judgement-bearing playbooks need an exception. | **Recommended** — new decision 32 (C2). Deterministic by default, `requires_model` by exception. |
 | **Merging the action service into the agent** | One service, one deploy, one hop less. | Trust boundary 3. The refresh token would sit in the LLM's process. | **Rejected permanently.** |
 | **Approvals in Google Chat instead of an IAP page** | Native, no second surface. | Reinstates attack A1, and under user authentication the Chat API sends text only, so one-click cards need a Chat app anyway. | **Open as [decision 14](09-open-decisions.md)**, unchanged by this review; C43 requires only that whichever surface is chosen produces a verifiable assertion that is stored. |
-| **A separate staging project (`walle-stg`) with its own robot** | A real pre-production credential holder; the denial suite and rollback drills run without touching production. | A second consented robot, a second OAuth client, a second hardware key, and a second tenant-wide reader before the data-protection assessment. | **Deferred in favour of a cheaper form**: offline harness plus a sandbox-OU-scoped second robot holding no customer-scoped Reader, in Wall-E's project (`WALLE_PROJECT`). New decision 29 (C50). |
-| **A separate tenant for pre-production** | The only thing that contains group-family writes, since Groups privileges cannot be OU-scoped. | Cost, and a second tenant to administer. | **Open, due before any F3 or F3b cell leaves L1** — folded into new decision 29. |
+| **A separate staging project (`walle-stg`) with its own robot** | A real pre-production credential holder; the denial suite and rollback drills run without touching production. | A second consented robot, a second OAuth client, a second hardware key, and a second tenant-wide reader before the data-protection assessment. | **Deferred in favour of a cheaper form**: offline harness plus a sandbox-OU-scoped second robot holding no customer-scoped Reader, in Wall-E's project (`WALLE_PROJECT`). New decision 29 (C50). **Superseded 2026-09-13:** a sandbox-OU-scoped robot contains nothing once the robot is a super admin. Pre-production is the nonprod folder `fld-agents-p-sa-nonprod` against a sandbox tenant (decision 29; P40). |
+| **A separate tenant for pre-production** | The only thing that contains group-family writes, since Groups privileges cannot be OU-scoped. | Cost, and a second tenant to administer. | **Open, due before any F3 or F3b cell leaves L1** — folded into new decision 29. **Decided 2026-09-13: yes, before Stage 1**, because Super Admin cannot be limited to an OU (platform HLD §3.1, §9; decision 29). |
 | **A separate evidence project with a project lien** | Puts the promotion evidence outside Wall-E's teardown reach. | One more project and one more IAM boundary to maintain. | **Deferred to Stage 1**, with the cheap half (write-ahead grades to BigQuery, teardown guards) done now — new decision 31 (C46). *As of 2026-09-13* Eve's `walle_audit` mirror in `EVE_PROJECT` exists as an off-project copy, and its locked bucket carries a lien; whether it satisfies decision 31 is decision 51 in [../project-topology.md](../project-topology.md). Decision 31 unchanged. |
 | **Gemini Enterprise Authorizations to bind the requester's identity** | The entitlement check would run on a verified token instead of an asserted email. | A user token passing through the agent process, a consent screen per operator, and dependence on an under-documented binding — not a boundary-3 violation, which the refuter explicitly rejected: a token limited to `userinfo.email` is not an admin credential. | **Rejected** (C44). Keep the IAP-verified approver as the strong binding. |
 | **Exposing `walle-actions` as an MCP server** | The egress gateway's Model Armor would screen tool results. | A second protocol on the credential holder. | **Unchanged: no**, per [decision 22](09-open-decisions.md). No lens reopened it. |
@@ -2146,7 +2221,10 @@ rewords boundaries 1 and 4, and C8 tightens how boundary 1 is enforced. Two touc
 component map: the refresh in C37 adds the
 components 01 omits, and C30 demotes `walle-events` and its two edges to target state. One
 more is contingent — if the decision 26 spike passes, design intent 1's "one Workspace
-identity" becomes two principals and the `RB` node splits.
+identity" becomes two principals and the `RB` node splits. *2026-09-13:* that contingency
+will not arise, because decision 26 is closed for Wall-E. The rows below that assume a custom
+role (02's role-is-the-ceiling rule, the OU-scoped Trusted client, decision 3's "consent to
+every admin scope") are superseded by platform HLD §18 items 1–7, which own the propagation.
 
 | File | Section | Change | From |
 |---|---|---|---|
@@ -2202,6 +2280,11 @@ identity" becomes two principals and the `RB` node splits.
 
 ### New open decisions for [09-open-decisions.md](09-open-decisions.md)
 
+*2026-09-13:* the table below is the text as proposed on 2026-09-11 and is kept as history. The
+live rows, with their dated lines, are in [09-open-decisions.md](09-open-decisions.md): 26 is
+closed for Wall-E, 27 is rewritten as "which lane", and 29's recommendation is replaced by a
+sandbox tenant before Stage 1.
+
 | # | Decision | Why | Recommendation | Gate |
 |---|---|---|---|---|
 | **26** | **Is the admin principal a keyless service account holding the custom role, rather than the robot user?** | Google documents that any role except Super Admin can be assigned to a service account with no DWD. If it covers Directory, Licensing and Reports, the password, recovery path, hardware key, consent, frozen scope set and stealable token all disappear. | Spike on a throwaway service account with the reader role through ADC. If it passes, the admin half moves; Gmail, Chat and Calendar stay on a user with no admin role. | **Blocking — before Phase 9 consent, which is irreversible** |
@@ -2234,7 +2317,7 @@ against the challenger, and they are recorded so nobody assumes otherwise.
 | **The cross-project grants Wall-E's owner makes into and out of `WALLE_PROJECT`** (rewritten 2026-09-13; previously "Eve's trust root stays inside Wall-E's project through the pilot") | Eve's trust root — key, secrets, evidence mirror, jobs — is in `EVE_PROJECT` from the first commit ([../project-topology.md](../project-topology.md)), so the original residual is gone. What remains is the set of resource-level grants that cross: `run.invoker` on `walle-actions` and dataset-level `dataViewer` on `walle_audit` for Eve's and Mo's identities, `walleEngineQuery` on the engine for the app's service agent, and the optional `publicKeyViewer` on `eve-approval` — and the fact that whoever can edit `WALLE_PROJECT`'s IAM can rewrite the first three. | The pilot is capped at L3, where Eve gates nothing. Every crossing is a named row with a drift check in the resource's project; no foreign principal holds a project-level role in `WALLE_PROJECT` (decisions 43 and 44 close the two that did); and the one grant that could be forced project-wide, decision 42's fallback, is a recorded exception rather than a default. |
 | **A compromised action service can still launder a forged trigger** | Fixing the topic-level bindings (C7) does not help against an attacker who already holds the credential — such an attacker can call the Admin SDK directly. | The value of the fix is against a bug, a project Editor and the A5 loop, not against total compromise. The trigger corroboration against Google's own copy is what narrows the laundering path. |
 | **Human attribution for T0 chat rests on a record the action service writes** | Acting as the requester was considered and rejected for good reasons: it makes every operator's own privileges the ceiling and is the wrong identity for admin operations. | Enabling IAP Data Access logs makes the **approver** recoverable from a Google-written record. The T0 chat requester is not, and that is a stated cost (C43). |
-| **The catalogue will never cover a human admin's long tail** | The limit is the identity, not the design. No architecture reachable without DWD closes it. | Band C work gets a handoff-and-verify lane (C35) rather than a pretence of coverage, and `capability_gap` records make the demand visible (C22). |
+| **The catalogue will never cover a human admin's long tail** | The limit is the identity, not the design. No architecture reachable without DWD closes it. *Qualified 2026-09-13:* the identity limit is removed by Super Admin, so the design limit is re-argued. The catalogue still will not cover the long tail; band B covers it under two-person approval, and band C hands the rest to a human. | Band C work gets a handoff-and-verify lane (C35) rather than a pretence of coverage, and `capability_gap` records make the demand visible (C22). *2026-09-13:* plus band B, permanently L3 (platform HLD §13.1). |
 | **Irreversible operations are a matter of degree** | The non-goal says Wall-E does nothing it cannot undo; a sent mail and a Chat message are not undoable, and both sit in the catalogue. | The ceiling table, not the non-goal, is what the service enforces. C36 requires the two to be reconciled in writing rather than reconciled by the reader. |
 
 ## Reopen when
@@ -2243,11 +2326,11 @@ This challenge should be re-run, in whole or in part, when any of these becomes 
 
 | Trigger | Re-run |
 |---|---|
-| The decision-26 spike returns a result | The whole credential chapter. C1, C4, C6, C9, C21, C32, C33, C47 and [decision 3](09-open-decisions.md)'s framing were all judged on the premise that admin scopes freeze at the robot's consent. A keyless service account changes that premise for every admin API. |
+| The decision-26 spike returns a result. *Closed 2026-09-13 by a Google fact:* no spike runs for Wall-E. The re-run it called for is replaced by platform HLD §13.1 and the rewrite of [02](02-identity-and-auth.md) (HLD §18 item 1) | The whole credential chapter. C1, C4, C6, C9, C21, C32, C33, C47 and [decision 3](09-open-decisions.md)'s framing were all judged on the premise that admin scopes freeze at the robot's consent. A keyless service account changes that premise for every admin API. |
 | [Decision 5](09-open-decisions.md) records an absolute pilot-OU account count | C19 and C27, which cannot be settled without it, and the S0, S2 and S3 exit criteria that depend on those volumes. |
-| A second operator is added, or the first non-super-admin operator is added | C41 and C8. Both are latent today only because the rota is one super admin. |
+| A second operator is added, or the first non-super-admin operator is added | C41 and C8. Both are latent today only because the rota is one super admin. *Fires 2026-09-13:* with a super-admin robot, every operator is below the robot, so C41 and C8 are live now. They are answered for band B by platform HLD §13.1 item 4 (decision 28). |
 | The agent is shared with `walle-readers@` | C42 and decision 35. The disclosure is latent until that act and live immediately afterwards. |
-| An Eve design record exists | C10, C11, C12, C13, C14, C16, C30, C34 and C39. Everything about Eve in this review is judged against an Eve that has no design. |
+| An Eve design record exists | C10, C11, C12, C13, C14, C16, C30, C34 and C39. Everything about Eve in this review is judged against an Eve that has no design. *True since 2026-09-12* ([../eve/README.md](../eve/README.md)); the re-run is outstanding, and platform HLD §13.2 now bounds it. |
 | Any F3 or F3b cell is proposed to leave L1 | C50's tenant sub-question. Workspace cannot OU-scope group privileges, so that is the moment containment runs out. |
 | Google ships an Admin console Gemini panel that can act, or a no-code flow that runs as a non-user principal with admin privileges | The alternatives table, and C31 in particular: single-object T0 writes would become redundant. |
 | An identity-provider deprovisioning connector is found or installed | C24 and [decision 13](09-open-decisions.md). Suspension should then belong to the connector, with Wall-E doing the cleanup. |

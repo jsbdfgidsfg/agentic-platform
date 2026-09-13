@@ -5,15 +5,40 @@ This implements platform/wall-e/SETUP.md, the 18-phase runbook. SETUP.md is the
 authoritative source: where ARCHITECTURE.md or the design set disagrees with it,
 this script follows SETUP.md and the disagreement is recorded in README.md.
 
-Five things in the runbook cannot be automated, or must not be. Each of them
+Objective restated 2026-09-13; see the platform HLD
+(platform/agentic-platform/01-hld.md §13.1 and §18 item 5).
+Reversed 2026-09-13: the robot is a SUPER ADMIN on a dedicated licensed user
+account (decision P33), not the holder of a narrow custom role. What that
+changes here, and what compensates (platform HLD §13.1):
+  - no Wall-E custom admin role is created or assigned any more; the
+    "Wall-E — Reader" / "Wall-E — Operator (Stage 1)" roles are RETIRED names
+    that verify reports as a finding if they still exist or are assigned;
+  - Super Admin is granted by a HUMAN super admin at the platform's tier gate
+    (manual step M2C, never by this script, never attested by --yes), with a
+    second human super admin approving under Workspace multi-party approval;
+  - verify's hardening check is INVERTED: the robot must be a super admin once
+    the signed grant record is on file (and must not be one before), with the
+    account hygiene set, the roster rule, and "never the only or the recovery
+    super admin" asserted;
+  - two OAuth clients on the one account, two secrets, two readers, two Cloud
+    Run services: walle-actions (narrow client, band A) and
+    walle-actions-super (broad client, bands B and C); cloud-platform is
+    consented in NEITHER, and the self-test asserts it (the CI assertion);
+  - the hard-denied list is data here (HARD_DENIED), handed to the denial
+    suite, because Google no longer refuses anything at its end: the action
+    services are the only gate and the consented scopes the only
+    Google-enforced ceiling.
+
+Things in the runbook that cannot be automated, or must not be. Each of them
 prints an exact ordered instruction block, blocks until the operator confirms,
 and is verified afterwards wherever an API can see the result:
 
   Phase 3   security key registration, then 2SV enforcement, then the password
   Phase 4   the login reporting rule, under Rules
   Phase 5   "Share data with Google Cloud services"
-  Phase 9   the OAuth consent screen and the OAuth client
-  Phase 9   the robot's own consent, which is interactive by design
+  Phase 9   the OAuth consent screen and the two OAuth clients
+  Phase 9   the robot's own consents, which are interactive by design
+  Gate      the Super Admin grant itself (M2C), at the tier gate only
 
 Nothing here opens a browser for the robot's consent. A desktop OAuth flow
 launched from a terminal opens the machine's *default* browser, which is signed
@@ -44,8 +69,9 @@ Safety properties this file is written to hold:
   - --dry-run prints every command and every API call and changes nothing. It
     issues read-only probes only: no subprocess with mutating=True runs, no
     Admin SDK write is attempted, and the checks whose *probe* is itself a
-    write (the Workspace users.update probe, the BigQuery DELETE probe) return
-    SKIP rather than executing.
+    write (the BigQuery DELETE probe) return SKIP rather than executing. The
+    Workspace users.update write probe is gone (2026-09-13): against a super
+    admin it would SUCCEED and be an unaudited robot write.
   - no silent continue-on-error anywhere
   - every mutating Workspace call prints a summary and, unless --yes, asks.
     --yes covers writes this script makes; it never attests a console step a
@@ -79,6 +105,12 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tupl
 TOOL_NAME = "walle_setup"
 
 # SETUP.md 1.3. Frozen at consent, permanently. Err wide on read, narrow on write.
+# Since 2026-09-13 this is CLIENT 1, the NARROW client read only by
+# walle-actions (band A, the catalogue). With Super Admin behind the account
+# Google authorises by scope, not by role, so this list is the one
+# Google-enforced ceiling left on anything that runs unattended (platform HLD
+# §13.1 item 3). Note: admin.directory.user is enough for users.makeAdmin, so
+# only the hard-denied list stops that call (HLD §13.1, "Minting super admins").
 ROBOT_SCOPES: Tuple[str, ...] = (
     "https://www.googleapis.com/auth/admin.directory.user",
     "https://www.googleapis.com/auth/admin.directory.group",
@@ -95,6 +127,42 @@ ROBOT_SCOPES: Tuple[str, ...] = (
     "https://www.googleapis.com/auth/userinfo.email",
     "openid",
 )
+
+# CLIENT 2, the BROAD client read only by walle-actions-super (band B and the
+# band-C handoff). Added 2026-09-13. Its scope list is itself a
+# super-admin-signed decision (decision 3 re-cut, wall-e/01-hld.md "Decisions
+# this page opens or changes") and is *tbd*: this script does not invent it.
+# It is read from the config key SUPER_SCOPES (comma-separated) and `consent
+# --super` is refused unless SUPER_SCOPES_DECISION names the signed record.
+#
+# In NEITHER client, ever (platform HLD §13.1 item 3, platform 02 PSA3): a
+# cloud-platform token on a super-admin account is a path into the GCP
+# organisation. Both documented forms are refused — cloud-platform and
+# cloud-platform.read-only (https://developers.google.com/identity/protocols/oauth2/scopes,
+# read 2026-09-13) — by validate_config, by run_consent before any URL is
+# printed, by verify, and by the self-test (the CI assertion).
+FORBIDDEN_SCOPE_MARKERS: Tuple[str, ...] = (
+    "https://www.googleapis.com/auth/cloud-platform",
+)
+# userinfo.email and openid are what fetch_consented_email needs to refuse a
+# grant stored against the wrong account (SETUP.md 7.1); client 2 needs them too.
+SCOPES_REQUIRED_IN_EVERY_CLIENT: Tuple[str, ...] = (
+    "https://www.googleapis.com/auth/userinfo.email",
+    "openid",
+)
+
+
+def forbidden_scopes(scopes: Iterable[str]) -> List[str]:
+    """Every scope in `scopes` that is cloud-platform in any form."""
+    return sorted(
+        s for s in (x.strip() for x in scopes)
+        if any(s == m or s.startswith(m + ".") for m in FORBIDDEN_SCOPE_MARKERS)
+    )
+
+
+def parse_scope_list(value: str) -> List[str]:
+    return [s.strip() for s in (value or "").split(",") if s.strip()]
+
 
 # SETUP.md Phase 15. Eve never writes to Workspace, at any stage, ever.
 # Eve's consent is NOT run by this script any more: Eve's OAuth client and
@@ -163,15 +231,24 @@ APIS_TO_ENABLE: Tuple[str, ...] = (
     "groupssettings.googleapis.com",
 )
 
-# Wall-E's own four. eve-controller@ is NOT here any more: every Eve identity
+# Wall-E's own five. eve-controller@ is NOT here any more: every Eve identity
 # is created in EVE_PROJECT by Eve's runbook and every Mo identity in
 # MO_PROJECT by Mo's (project-topology.md §2). Phase 6 creates nothing of theirs.
+# walle-actions-super added 2026-09-13: the second service has its own service
+# account, its own secret pair and its own audit rows (platform HLD §13.1
+# item 3; platform 04 §5.2 names walle-actions-super@).
 SERVICE_ACCOUNT_IDS: Tuple[str, ...] = (
     "walle-actions",
+    "walle-actions-super",
     "walle-agent",
     "walle-dispatcher",
     "walle-operators-caller",
 )
+
+# The two action services (2026-09-13). Band A through the first, bands B and
+# C through the second (platform HLD §13.1, "The three bands").
+ACTIONS_SERVICE = "walle-actions"
+SUPER_SERVICE = "walle-actions-super"
 
 # Foreign identities this script names (never creates), derived in
 # derive_config from EVE_PROJECT and MO_PROJECT. Any of them holding a
@@ -185,6 +262,16 @@ ACTIONS_PROJECT_ROLES: Tuple[str, ...] = (
     "roles/datastore.user",
     "roles/pubsub.publisher",
     "roles/cloudtasks.enqueuer",
+    "roles/monitoring.metricWriter",
+    "roles/logging.logWriter",
+)
+# walle-actions-super@ (2026-09-13): what the HLD's component map draws for
+# the second service — Firestore (approvals, halt flags), Pub/Sub, logs,
+# metrics — and deliberately NOT cloudtasks.enqueuer: band B has no plan
+# items, no queue and no dispatcher entry (wall-e/01-hld.md "The request path").
+SUPER_PROJECT_ROLES: Tuple[str, ...] = (
+    "roles/datastore.user",
+    "roles/pubsub.publisher",
     "roles/monitoring.metricWriter",
     "roles/logging.logWriter",
 )
@@ -205,7 +292,25 @@ WALLE_SECRETS: Tuple[str, ...] = (
     "walle-oauth-client",
     "walle-refresh-token",
     "walle-confirm-hmac",
+    # Added 2026-09-13: client 2, the broad client, and its refresh token.
+    # Names from wall-e/01-hld.md's component map.
+    "walle-super-oauth-client",
+    "walle-super-refresh-token",
 )
+# Exactly one reader per secret (platform HLD §13.1 item 3: "Client 1, narrow,
+# readable only by walle-actions; client 2, broad, readable only by
+# walle-actions-super"). Config key of the reader's service-account email.
+# walle-confirm-hmac stays with walle-actions: nothing on the platform pages
+# gives the band-B service a use for it (its approvals are on the IAP surface).
+SECRET_READERS: Dict[str, str] = {
+    "walle-oauth-client": "SA_ACTIONS",
+    "walle-refresh-token": "SA_ACTIONS",
+    "walle-confirm-hmac": "SA_ACTIONS",
+    "walle-super-oauth-client": "SA_ACTIONS_SUPER",
+    "walle-super-refresh-token": "SA_ACTIONS_SUPER",
+}
+NARROW_CLIENT_SECRETS: Tuple[str, str] = ("walle-oauth-client", "walle-refresh-token")
+SUPER_CLIENT_SECRETS: Tuple[str, str] = ("walle-super-oauth-client", "walle-super-refresh-token")
 # Eve's two secrets live in EVE_PROJECT and are created by Eve's runbook. Named
 # here ONLY so the verify half that reads Eve's project can assert that no
 # Wall-E principal can read them; nothing in this script creates or deletes them.
@@ -278,6 +383,35 @@ ACTIONS_ENV_NAMES: Tuple[str, ...] = (
     "CONTROL_CALLER_ALLOWLIST",
     "READ_CALLER_ALLOWLIST",
     "INTERNAL_CALLER_ALLOWLIST",
+    "AUDIENCE",
+)
+# walle-actions-super's env (2026-09-13). Its own secret pair and version pin,
+# and its own two allowlists, which are deliberately SHORT: platform HLD §15
+# boundary 2 / wall-e/01-hld.md boundary 2 give it "its own run.invoker set:
+# the agent's identity and eve-controller@ (halt only); never Mo". So EXEC is
+# the agent only (band B/C requests come from a human in chat through the
+# agent), CONTROL is eve-controller@ only, and there is no READ and no
+# INTERNAL list: no dispatcher route (by IAM) and no Mo, eve-console@ or
+# eve-verifier@ on this service.
+# EXTENDED 2026-09-13 (review-findings pass; project-topology.md row 27, eve/03
+# section 14): CONTROL is eve-controller@ AND eve-verifier@, halt path only.
+# Eve's reconciler limb runs as eve-verifier@ and raises every super-admin-lane
+# halt (reconciliation_gap, the tenant-integrity rules, log_pipeline_silent);
+# without it those halts could not reach this service. EVE_PUBLIC_KEY_PEM because Eve's halt is
+# verified with "the same invoker principal, same key".
+SUPER_ENV_NAMES: Tuple[str, ...] = (
+    "WORKSPACE_DOMAIN",
+    "ROBOT_ACCOUNT",
+    "OPERATOR_GROUP",
+    "PROTECTED_GROUP",
+    "SECRET_LOCATION",
+    "REFRESH_TOKEN_SECRET",
+    "REFRESH_TOKEN_VERSION",
+    "OAUTH_CLIENT_SECRET",
+    "EVE_PUBLIC_KEY_PEM",
+    "AUDIT_DATASET",
+    "EXEC_CALLER_ALLOWLIST",
+    "CONTROL_CALLER_ALLOWLIST",
     "AUDIENCE",
 )
 # Where the action image carries the pinned PEMs (SETUP.md Phase 8.1 / 10):
@@ -371,13 +505,23 @@ MODEL_ARMOR_GLOBAL_ENDPOINT_ENV = {
 }
 
 # SETUP.md Phase 13b.
+# Changed 2026-09-13 (P71, platform 05 §2.2, platform HLD §18 item 25): the Agent
+# Registry is ONE shared registry in CORE_PROJECT, written by factory-apply@;
+# agentregistry.googleapis.com is absent from the tier folders' restrictServiceUsage
+# allow-lists, so enabling it in Wall-E's project would be refused. REGISTRY_APIS
+# is what Wall-E's project enables for its egress gateway; the per-project list
+# (with agentregistry and apphub) survives only as the recorded fallback, used
+# when REGISTRY_LOCAL_FALLBACK_DECISION names the dated record overturning P71's
+# exclusion.
 REGISTRY_APIS: Tuple[str, ...] = (
-    "agentregistry.googleapis.com",
-    "apphub.googleapis.com",
     "iap.googleapis.com",
     "dns.googleapis.com",
     "compute.googleapis.com",
 )
+REGISTRY_APIS_LOCAL_FALLBACK: Tuple[str, ...] = (
+    "agentregistry.googleapis.com",
+    "apphub.googleapis.com",
+) + REGISTRY_APIS
 EGRESS_GATEWAY_NAME = "walle-egress"
 IAP_EXTENSION_NAME = "walle-iap-ext"
 IAP_POLICY_NAME = "walle-iap-policy"
@@ -416,8 +560,17 @@ FORBIDDEN_CARD_SKILL_MARKERS: Tuple[str, ...] = (
 # complete catalogue (SETUP.md Phase 2 step 4). Every family below is resolved
 # against the tenant's live privileges list; the first candidate that exists
 # wins, and a family that matches nothing is a loud failure, never a silent
-# skip. Finalise the Stage 1 role from `walle dump-privileges` output.
-READER_PRIVILEGE_CANDIDATES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+# skip.
+#
+# Reversed 2026-09-13 (platform HLD §13.1, §18 item 5): these families used to
+# build two WALL-E roles, a customer-scoped Stage 0 reader and an OU-scoped
+# Stage 1 operator. Wall-E holds Super Admin instead, which cannot be limited
+# to an organisational unit or subset by privilege, so no Wall-E custom role
+# exists and nothing here is resolved for the robot. The read families are
+# kept for the one role this script still creates: Eve's read-only role.
+# Eve's widened read privilege set (evidence perimeter, E-16) is fixed by Eve's
+# runbook before her one-sitting consent; until it lands, this is the set.
+EVE_PRIVILEGE_CANDIDATES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("users read", ("USERS_RETRIEVE", "USER_READ")),
     ("groups read", ("GROUPS_RETRIEVE", "GROUP_READ")),
     ("org units read", ("ORGANIZATION_UNITS_RETRIEVE",)),
@@ -425,12 +578,6 @@ READER_PRIVILEGE_CANDIDATES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("reports usage read", ("USAGE_REPORTS", "REPORTS_ACCESS", "ADMIN_DASHBOARD")),
     ("admin roles read", ("ROLE_MANAGEMENT_RETRIEVE", "ROLE_MANAGEMENT")),
 )
-OPERATOR_PRIVILEGE_CANDIDATES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
-    ("users update", ("USERS_UPDATE", "USER_UPDATE")),
-    ("groups update", ("GROUPS_UPDATE", "GROUP_UPDATE")),
-    ("license management", ("MANAGE_LICENSES", "LICENSE_MANAGEMENT")),
-)
-EVE_PRIVILEGE_CANDIDATES = READER_PRIVILEGE_CANDIDATES
 
 # A denylist of write-shaped substrings cannot prove "no write privilege at
 # all". Google publishes no complete privilege catalogue (SETUP.md Phase 2
@@ -438,31 +585,210 @@ EVE_PRIVILEGE_CANDIDATES = READER_PRIVILEGE_CANDIDATES
 # USERS_ALL, GROUPS_ALL, ORGANIZATION_UNITS_ALL and ADMIN_APIS_ALL are the
 # whole-service grants (create, update, delete), SUPER_ADMIN and ROOT_APP_ADMIN
 # are total, and USER_SECURITY is password reset and session revocation. So the
-# classification is INVERTED: this is the exact set of read privileges Stage 0
-# is permitted to hold, and anything not named here counts as a write.
-READ_PRIVILEGE_ALLOWLIST: frozenset = frozenset(
+# classification is INVERTED: this is the exact set of read privileges Eve's
+# role is permitted to hold, and anything not named here counts as a write.
+# (Until 2026-09-13 the same allowlist was READ_PRIVILEGE_ALLOWLIST and bounded
+# Wall-E's Stage 0 role; that role is retired.)
+EVE_READ_PRIVILEGE_ALLOWLIST: frozenset = frozenset(
     name
-    for _family, candidates in READER_PRIVILEGE_CANDIDATES
+    for _family, candidates in EVE_PRIVILEGE_CANDIDATES
     for name in candidates
 )
 
 
 def is_write_privilege(name: str) -> bool:
-    """True unless this privilege is on the Stage 0 read allowlist.
+    """True unless this privilege is on Eve's read allowlist.
 
     Unknown is a write. A privilege this script has never resolved has no
-    business in a role it is about to assign to the robot customer-scoped, and
-    treating the unknown as harmless is how USERS_ALL passes a denylist.
+    business in a role it is about to assign to Eve's robot customer-scoped,
+    and treating the unknown as harmless is how USERS_ALL passes a denylist.
     """
-    return name.strip().upper() not in READ_PRIVILEGE_ALLOWLIST
+    return name.strip().upper() not in EVE_READ_PRIVILEGE_ALLOWLIST
 
 
-ROLE_READER_NAME = "Wall-E — Reader"
-ROLE_OPERATOR_NAME = "Wall-E — Operator (Stage 1)"
+# RETIRED 2026-09-13 (platform HLD §18 item 5). These were Wall-E's two custom
+# admin roles ("Wall-E — Reader", customer-scoped, Stage 0; "Wall-E —
+# Operator (Stage 1)", OU-scoped, assigned to nobody). Kept as names only, so
+# verify can report a leftover role as a finding and FAIL if one is still
+# assigned (the roster rule: the robot holds Super Admin and nothing else),
+# status can show them, and teardown / rollback --phase 2 can remove them.
+# Nothing in this script creates them any more.
+RETIRED_WALLE_ROLE_NAMES: Tuple[str, ...] = (
+    "Wall-E — Reader",
+    "Wall-E — Operator (Stage 1)",
+)
 # A Workspace admin role is a tenant object with no GCP project. What moved to
 # EVE_PROJECT is the role's OAuth consent (client and token), which Eve's
 # runbook now performs; the role itself is still created here in Phase 2.
+# Eve's robot is NEVER a super admin (platform HLD §4.6, R7).
 ROLE_EVE_NAME = "Eve — Verifier"
+
+# --------------------------------------------------------------------------- #
+# The hard-denied list, as data (added 2026-09-13).
+#
+# Source: platform HLD §13.1 item 2 and wall-e/01-hld.md "The controls that
+# replace role scoping". Hard-denied in EVERY lane — band A (walle-actions
+# /v1/execute), band B (walle-actions-super /v1/execute-generic) and the
+# band-C handoff (/v1/handoff refuses these instead of returning console
+# steps) — with a breaker trip and a severity-1 page. The list is signed by
+# the owner as P29 (open on 2026-09-13); until then this is the HLD's text.
+#
+# This script enforces none of it: the action services do. It exists here as
+# DATA so the denial suite tests every row (cmd_denials hands the resolved list
+# to tests/denials.py through WALLE_HARD_DENIED_FILE) and so the self-test can
+# assert the list is complete and the vocabulary closed.
+#
+# The reason vocabulary is closed (platform HLD §12.3 audit.schema).
+# Assumption: the per-row reason mapping below is this script's reading of
+# the HLD, which names the five reasons but not which row carries which; the
+# P29 signature settles it.
+# --------------------------------------------------------------------------- #
+
+HARD_DENIED_REASONS: Tuple[str, ...] = (
+    "self_modification_denied",
+    "escalation_denied",
+    "posture_change_denied",
+    "irreversible_denied",
+    "money_denied",
+)
+HARD_DENIED_LANES: Tuple[str, ...] = ("A", "B", "C")
+
+# The control groups the HLD names by local part, resolved against DOMAIN.
+# OPERATORS and PROTECTED come from the config (walle-operators@,
+# walle-protected@ in the HLD's spelling). walle-super-approvers@ is the band-B
+# SUPER approver group of platform 04 §6.4. The mo-* groups are matched by
+# prefix.
+HARD_DENIED_CONTROL_GROUP_LOCAL_PARTS: Tuple[str, ...] = (
+    "eve-owners", "ge-admins", "platform-approvers", "walle-super-approvers",
+)
+HARD_DENIED_CONTROL_GROUP_PREFIXES: Tuple[str, ...] = ("mo-",)
+
+# kind: "target"  — any request whose target (user, group, OU, role) is this;
+#       "method"  — Admin SDK Directory methods, with an optional condition;
+#       "setting" — a tenant or GCP setting, reachable in the console only,
+#                   so it matters to the band-C handoff above all.
+# Method names verified against the Directory API REST reference on
+# 2026-09-13: https://developers.google.com/workspace/admin/directory/reference/rest
+HARD_DENIED: Tuple[Dict[str, Any], ...] = (
+    {"id": "HD-01", "kind": "target", "what": "anything targeting the robot account",
+     "targets": ("$ROBOT",), "reason": "self_modification_denied"},
+    {"id": "HD-02", "kind": "target", "what": "anything targeting the robot's OU",
+     "targets": ("$SVC_OU",), "reason": "self_modification_denied"},
+    # HD-03 to HD-05 carry self_modification_denied, as 03-lld.md's hard-denied table
+    # assigns them: disabling the controller or the control groups modifies the
+    # envelope Wall-E runs inside. escalation_denied is for granting privilege
+    # (makeAdmin, a Super Admin assignment). Aligned 2026-09-13.
+    {"id": "HD-03", "kind": "target", "what": "anything targeting Eve's robot",
+     "targets": ("$EVE_ROBOT",), "reason": "self_modification_denied"},
+    {"id": "HD-04", "kind": "target", "what": "Eve's admin role",
+     "targets": ("role:" + ROLE_EVE_NAME,), "reason": "self_modification_denied"},
+    {"id": "HD-05", "kind": "target", "what": "the control groups",
+     "targets": ("$OPERATORS", "$PROTECTED", "$CONTROL_GROUPS", "prefix:mo-"),
+     "reason": "self_modification_denied"},
+    {"id": "HD-06", "kind": "setting",
+     "what": "the two OAuth clients (their GCP objects and their API-controls trust entries)",
+     "targets": ("secret:walle-oauth-client", "secret:walle-super-oauth-client"),
+     "reason": "self_modification_denied"},
+    {"id": "HD-07", "kind": "setting", "what": "the activity rules that alert on the robot",
+     "targets": ("rule:Wall-E robot interactive login",), "reason": "posture_change_denied"},
+    {"id": "HD-08", "kind": "setting", "what": "\"Share data with Google Cloud services\"",
+     "targets": (), "reason": "posture_change_denied"},
+    {"id": "HD-09", "kind": "setting", "what": "the SecOps export setting",
+     "targets": (), "reason": "posture_change_denied"},
+    {"id": "HD-10", "kind": "setting", "what": "the organisation sinks",
+     "targets": ("sink:walle-workspace-audit", "sink:walle-audit-bq"),
+     "reason": "posture_change_denied"},
+    {"id": "HD-11", "kind": "method", "what": "users.makeAdmin, on anyone",
+     "methods": ("directory.users.makeAdmin",), "condition": "always",
+     "reason": "escalation_denied"},
+    {"id": "HD-12", "kind": "method",
+     "what": "roleAssignments.insert of Super Admin or of a role carrying admin-role management",
+     "methods": ("directory.roleAssignments.insert",),
+     "condition": "role.isSuperAdminRole or role carries admin-role management",
+     "reason": "escalation_denied"},
+    {"id": "HD-13", "kind": "method", "what": "users.delete of any admin",
+     "methods": ("directory.users.delete",),
+     "condition": "target isAdmin or isDelegatedAdmin", "reason": "irreversible_denied"},
+    {"id": "HD-14", "kind": "setting", "what": "deletion of the tenant account",
+     "targets": (), "reason": "irreversible_denied"},
+    {"id": "HD-15", "kind": "method", "what": "other admins' security settings and backup codes",
+     "methods": ("directory.verificationCodes.generate",
+                 "directory.verificationCodes.invalidate",
+                 "directory.verificationCodes.list",
+                 "directory.twoStepVerification.turnOff",
+                 "directory.asps.delete", "directory.tokens.delete",
+                 "directory.users.signOut",
+                 # Added 2026-09-13 (review-findings pass): resetting another
+                 # admin's password or recovery fields, or suspending them, is
+                 # account takeover, and wall-e/03-lld.md's row already names
+                 # "password or recovery-field changes". Assumption: this reading
+                 # of "security settings" is confirmed by the P29 signature.
+                 "directory.users.update", "directory.users.patch"),
+     "condition": "target isAdmin or isDelegatedAdmin; for directory.users.update and "
+                  "directory.users.patch, only when the body touches password, "
+                  "changePasswordAtNextLogin, hashFunction, recoveryEmail, recoveryPhone "
+                  "or suspended",
+     "security_fields": ("password", "changePasswordAtNextLogin", "hashFunction",
+                         "recoveryEmail", "recoveryPhone", "suspended"),
+     "reason": "escalation_denied"},
+    {"id": "HD-16", "kind": "setting", "what": "the super-admin self-recovery setting",
+     "targets": (), "reason": "posture_change_denied"},
+    {"id": "HD-17", "kind": "setting", "what": "domain-wide delegation, any change",
+     "targets": (), "reason": "posture_change_denied"},
+    # platform 04 §8.4, P66: "MPA off" is hard-denied and severity 1, and the
+    # robot is never an approver on the multi-party approval surface.
+    {"id": "HD-18", "kind": "setting",
+     "what": "turning Workspace multi-party approval off, or approving through it",
+     "targets": (), "reason": "posture_change_denied"},
+)
+
+
+def hard_denied_resolved(cfg: Dict[str, str]) -> List[Dict[str, Any]]:
+    """HARD_DENIED with $KEY targets resolved from the config, for the suite.
+
+    Unresolvable targets stay visible as "<KEY unset>" rather than vanishing:
+    a row that silently lost its target would test nothing and read as green.
+    """
+    domain = cfg.get("DOMAIN", "")
+    groups = ["%s@%s" % (local, domain or "<DOMAIN unset>")
+              for local in HARD_DENIED_CONTROL_GROUP_LOCAL_PARTS]
+    out: List[Dict[str, Any]] = []
+    for row in HARD_DENIED:
+        resolved: List[str] = []
+        for target in row.get("targets", ()):
+            if target == "$CONTROL_GROUPS":
+                resolved.extend(groups)
+            elif target.startswith("$"):
+                resolved.append(cfg.get(target[1:], "") or "<%s unset>" % target[1:])
+            else:
+                resolved.append(target)
+        entry = dict(row)
+        entry["targets"] = resolved
+        entry["methods"] = list(row.get("methods", ()))
+        entry["lanes"] = list(HARD_DENIED_LANES)
+        entry["severity"] = 1
+        out.append(entry)
+    return out
+
+
+def hard_denied_problems() -> List[str]:
+    """Static consistency of the list: closed vocabulary, unique ids, shapes."""
+    problems: List[str] = []
+    seen = set()
+    for row in HARD_DENIED:
+        if row.get("id") in seen:
+            problems.append("duplicate id %s" % row.get("id"))
+        seen.add(row.get("id"))
+        if row.get("reason") not in HARD_DENIED_REASONS:
+            problems.append("%s carries reason %r outside the closed vocabulary"
+                            % (row.get("id"), row.get("reason")))
+        if row.get("kind") not in ("target", "method", "setting"):
+            problems.append("%s has kind %r" % (row.get("id"), row.get("kind")))
+        if row.get("kind") == "method" and not row.get("methods"):
+            problems.append("%s is a method row with no method" % row.get("id"))
+        if row.get("kind") == "target" and not row.get("targets"):
+            problems.append("%s is a target row with no target" % row.get("id"))
+    return problems
 
 GEMINI_ROUTING_DESCRIPTION = (
     "Answers questions about the Google Workspace directory: users, groups, "
@@ -526,6 +852,11 @@ _GCP_KEYS: Tuple[str, ...] = (
     # READER grants to Eve's and Mo's identities, which are named from their
     # projects. Every key a subcommand uses is validated for that subcommand.
     "FOLDER_ID", "GEMINI_PROJECT", "EVE_PROJECT", "MO_PROJECT",
+    # The PARENT of Wall-E's project: the P-SA tier folder fld-agents-p-sa-prod
+    # (agentic-platform/02-landing-zone-and-tiers.md section 2), never FOLDER_ID
+    # itself. A project parented straight to the platform folder inherits the
+    # floor but none of its tier's stricter policies (PREREQUISITES.md s.10 #36).
+    "WALLE_FOLDER_ID",
 )
 _DEPLOY_KEYS: Tuple[str, ...] = (
     "DOMAIN", "PROJECT", "REGION", "BQ_LOCATION", "ORG_ID", "ROBOT",
@@ -549,8 +880,10 @@ _ARMOR_KEYS: Tuple[str, ...] = (
 # Phase 13b. MO_PRINCIPAL is no longer here: the agentregistry.viewer grants to
 # Eve and Mo were project-level roles in Wall-E's project for foreign
 # identities and are dropped (project-topology.md decision 43).
+# 2026-09-13 (P71): CI_DEPLOYER is needed only on the local fallback, and
+# CORE_PROJECT is checked by registry_project() so the fallback does not need it.
 _REGISTRY_KEYS: Tuple[str, ...] = (
-    "PROJECT", "REGION", "ORG_ID", "CI_DEPLOYER", "EGRESS_GATEWAY",
+    "PROJECT", "REGION", "ORG_ID", "EGRESS_GATEWAY",
     "WALLE_REPO",
 )
 # Phase 12b step 3, on a throwaway engine.
@@ -564,7 +897,8 @@ CONFIG_KEYS_FOR_SUBCOMMAND: Dict[str, Tuple[str, ...]] = {
     "workspace": _WORKSPACE_KEYS,
     "gcp": _GCP_KEYS,
     # Phase 9 only. Phase 15 (Eve's consent) is Eve's runbook: EVE_ROBOT is no
-    # longer needed here.
+    # longer needed here. `consent --super` (client 2, 2026-09-13) additionally
+    # reads SUPER_SCOPES and SUPER_SCOPES_DECISION with ctx.need at run time.
     "consent": ("DOMAIN", "PROJECT", "REGION", "ROBOT"),
     "deploy": _DEPLOY_KEYS,
     "spike": _SPIKE_KEYS,
@@ -575,7 +909,10 @@ CONFIG_KEYS_FOR_SUBCOMMAND: Dict[str, Tuple[str, ...]] = {
                  "REGION", "DOMAIN", "READERS", "OPERATORS", "BQ_LOCATION"),
     "triggers": ("PROJECT", "REGION", "ROBOT", "OPERATORS"),
     "verify": REQUIRED_CONFIG_KEYS,
-    "denials": ("PROJECT", "REGION", "ORG_ID", "ROBOT", "OPERATORS", "SANDBOX_ACCOUNTS"),
+    # DOMAIN, SVC_OU, EVE_ROBOT and PROTECTED added 2026-09-13: the hard-denied
+    # rows resolve their targets from them, and an unresolved target tests nothing.
+    "denials": ("PROJECT", "REGION", "ORG_ID", "ROBOT", "OPERATORS", "SANDBOX_ACCOUNTS",
+                "DOMAIN", "SVC_OU", "EVE_ROBOT", "PROTECTED"),
     "stage0": REQUIRED_CONFIG_KEYS,
     "rollback": ("PROJECT", "REGION", "CUSTOMER_ID", "OPERATOR_OAUTH_CLIENT_FILE"),
     # status reports on the cross-project grants this script owns, so it must
@@ -600,7 +937,8 @@ ENV_DELIMITER = ";"
 # the delimiter must appear in none of them (see env_flag_value).
 ENV_DELIMITED_CONFIG_KEYS: Tuple[str, ...] = (
     "DOMAIN", "ROBOT", "EVE_ROBOT", "OPERATORS", "READERS", "PROTECTED",
-    "SVC_OU", "PILOT_OU", "SANDBOX_OU", "SA_ACTIONS", "SA_AGENT", "SA_DISPATCH",
+    "SVC_OU", "PILOT_OU", "SANDBOX_OU", "SA_ACTIONS", "SA_ACTIONS_SUPER", "SA_AGENT",
+    "SA_DISPATCH",
     "SA_EVE", "SA_EVE_VERIFIER", "SA_EVE_CONSOLE", "SA_MO_ANALYST", "MO_PRINCIPAL",
     "SA_OPS_CALLER", "AUDIT_DATASET", "LOGS_DATASET", "TASKS_QUEUE",
     "KMS_KEYRING", "KMS_KEY", "PROJECT", "REGION",
@@ -729,6 +1067,9 @@ def derive_config(cfg: Dict[str, str]) -> Dict[str, str]:
     project = cfg.get("PROJECT", "")
     region = cfg.get("REGION", "")
     cfg.setdefault("SA_ACTIONS", "walle-actions@%s.iam.gserviceaccount.com" % project)
+    cfg.setdefault(
+        "SA_ACTIONS_SUPER", "walle-actions-super@%s.iam.gserviceaccount.com" % project
+    )
     cfg.setdefault("SA_AGENT", "walle-agent@%s.iam.gserviceaccount.com" % project)
     cfg.setdefault("SA_DISPATCH", "walle-dispatcher@%s.iam.gserviceaccount.com" % project)
     cfg.setdefault(
@@ -841,6 +1182,49 @@ def validate_config(
         value = cfg.get(key, "")
         if value and domain and not value.endswith("@" + domain):
             problems.append("%s (%s) is not in DOMAIN %s" % (key, value, domain))
+    # 2026-09-13, platform HLD §13.1 items 3 and 6.
+    # cloud-platform in any form, in either client's list, is a refusal before
+    # anything runs: on a super-admin account it is a path into the GCP
+    # organisation. ROBOT_SCOPES is a constant and asserted by the self-test;
+    # SUPER_SCOPES is config and asserted here.
+    for label, scopes in (("ROBOT_SCOPES", list(ROBOT_SCOPES)),
+                          ("SUPER_SCOPES", parse_scope_list(cfg.get("SUPER_SCOPES", "")))):
+        bad = forbidden_scopes(scopes)
+        if bad:
+            problems.append(
+                "%s carries %s. cloud-platform is never consented on the robot, in "
+                "either client (platform HLD §13.1 item 3)" % (label, ", ".join(bad)))
+    super_scopes = parse_scope_list(cfg.get("SUPER_SCOPES", ""))
+    if super_scopes and not PLACEHOLDER_RE.search(cfg.get("SUPER_SCOPES", "")):
+        odd = [s for s in super_scopes
+               if s != "openid" and not s.startswith("https://www.googleapis.com/auth/")]
+        if odd:
+            problems.append("SUPER_SCOPES holds values that are not Google OAuth scopes: %s"
+                            % ", ".join(odd))
+        absent = [s for s in SCOPES_REQUIRED_IN_EVERY_CLIENT if s not in super_scopes]
+        if absent:
+            problems.append(
+                "SUPER_SCOPES lacks %s; without them the consent cannot prove which "
+                "account consented (SETUP.md 7.1)" % ", ".join(absent))
+    # Added 2026-09-13: a gate key that names a file which does not exist is a
+    # config error, not "gate not passed". Only an EMPTY value means the gate is
+    # not passed (the spike gates refuse the same way).
+    for key in ("SUPER_ADMIN_GRANT_DECISION", "SUPER_SCOPES_DECISION"):
+        value = cfg.get(key, "")
+        if value and not PLACEHOLDER_RE.search(value) and \
+                not os.path.isfile(os.path.expanduser(value)):
+            problems.append("%s (%r) does not name an existing file; leave it empty until "
+                            "the signed record exists" % (key, value))
+    roster = [a.strip() for a in cfg.get("SUPER_ADMIN_ROSTER", "").split(",") if a.strip()]
+    if roster and not PLACEHOLDER_RE.search(cfg.get("SUPER_ADMIN_ROSTER", "")):
+        eve = cfg.get("EVE_ROBOT", "").lower()
+        if eve and eve in (a.lower() for a in roster):
+            problems.append("SUPER_ADMIN_ROSTER lists EVE_ROBOT; Eve's robot is never a "
+                            "super admin (platform HLD §4.6)")
+        for address in roster:
+            if domain and not address.lower().endswith("@" + domain.lower()):
+                problems.append("SUPER_ADMIN_ROSTER entry %s is not in DOMAIN %s"
+                                % (address, domain))
     sandbox = [a.strip() for a in cfg.get("SANDBOX_ACCOUNTS", "").split(",") if a.strip()]
     if sandbox and len(sandbox) < 3 and "SANDBOX_ACCOUNTS" in required:
         # Only a refusal for the subcommands that use it. A malformed value a
@@ -881,6 +1265,15 @@ def validate_config(
     folder = cfg.get("FOLDER_ID", "")
     if folder and "FOLDER_ID" in required and not folder.isdigit():
         problems.append("FOLDER_ID must be the numeric folder id, not %r" % folder)
+    parent = cfg.get("WALLE_FOLDER_ID", "")
+    if parent and "WALLE_FOLDER_ID" in required:
+        if not parent.isdigit():
+            problems.append("WALLE_FOLDER_ID must be the numeric folder id, not %r" % parent)
+        elif parent == folder:
+            problems.append(
+                "WALLE_FOLDER_ID equals FOLDER_ID: Wall-E's project would sit directly under "
+                "the platform folder and inherit none of the P-SA tier's policies. Set it to "
+                "the id of fld-agents-p-sa-prod (agentic-platform/02 section 2)")
     ci = cfg.get("CI_DEPLOYER", "")
     if ci and "CI_DEPLOYER" in required and "@" not in ci:
         problems.append("CI_DEPLOYER must be a service account email, not %r" % ci)
@@ -1321,15 +1714,73 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
             [
                 "Admin console -> Security -> Authentication -> 2-step verification, "
                 "scoped to %s." % c("SVC_OU", ""),
-                "Enforcement: ON. Methods: security key only. No 'allow codes'.",
-                "Same OU: less secure app access OFF; Google session control short, "
-                "no 'remember this device'; login challenges at the strictest setting.",
-                "Confirm %s is NOT a super admin." % c("ROBOT", ""),
+                "Enforcement: ON. Methods: security key only. No 'allow codes'. This is "
+                "the TENANT's policy on the robot OU: Google's own admin-2SV mandate is "
+                "a gradual, edition-scoped rollout, not a universal rule (platform HLD "
+                "§4.6, corrected 2026-09-13).",
+                "Same OU: less secure app access OFF; Google session control and Google "
+                "Cloud session control at 1 hour with security-key re-authentication, "
+                "no 'remember this device'; login challenges at the strictest setting. "
+                "The Admin console session itself is Google's fixed one hour and is not "
+                "a setting.",
+                "Super-admin self-recovery: OFF at the TOP organisational unit (it is set "
+                "per OU or configuration group and defaults to On for Enterprise "
+                "Standard/Plus), and confirm no child OU or configuration group turns it "
+                "back on (platform HLD §13.1 item 6).",
+                "Reversed 2026-09-13: this step used to say 'Confirm %s is NOT a super "
+                "admin.' The robot WILL be one, but NOT here: Super Admin is granted "
+                "only at the platform's tier gate, as M2C, after this hardening is "
+                "verified. Until then it must hold no admin role at all." % c("ROBOT", ""),
                 "Sign out, sign back in, and confirm you are forced through the key. "
                 "If a code fallback is offered, enforcement is wrong for this OU.",
-                "Repeat the sign-out check for %s." % c("EVE_ROBOT", ""),
+                "Repeat the sign-out check for %s, which is never a super admin."
+                % c("EVE_ROBOT", ""),
             ],
             verifier="verify_2sv_enforced",
+            subcommand="workspace",
+        ),
+        ManualStep(
+            "M2C",
+            "Tier gate (platform HLD §0.4), added 2026-09-13",
+            "Grant Super Admin to the robot — at the tier gate, by a human, never by this script",
+            "The objective gives Wall-E a licensed user account with Super Admin "
+            "(decision P33). Super Admin cannot be limited to an OU or subset by "
+            "privilege, so the grant is a gate with its own checklist, not a runbook "
+            "phase. users.makeAdmin and any Super Admin roleAssignments.insert are on "
+            "the hard-denied list, so the robot's own credential can never do it, and "
+            "this script refuses to: it only prints this block, blocks, and verifies.",
+            [
+                "PRECONDITIONS, every one, or stop here: the signed record at "
+                "SUPER_ADMIN_GRANT_DECISION (%s) — decision P33, the TISAX deviation and "
+                "row one of the risk register; every row of the platform's P line green "
+                "(Eve's observe-and-report layer live and drilled, the witness "
+                "organisation, the SIEM with 24x7 acknowledgement, the penetration test, "
+                "the DPIA started, the works-council information, the two lists signed "
+                "(P29), the perimeter decision); the second human outside the Wall-E "
+                "administration line named." % c("SUPER_ADMIN_GRANT_DECISION", "<unset>"),
+                "The roster: at least TWO human super admins on separate admin accounts "
+                "with hardware keys, one of them outside the Wall-E line; the robot is "
+                "never the only super admin and never the recovery super admin of "
+                "anyone. SUPER_ADMIN_ROSTER must already hold the exact committed roster "
+                "INCLUDING %s, committed and exported BEFORE 'walle workspace' was run on "
+                "gate day: the config is read once at start, so an edit made while this "
+                "step blocks is not seen (platform 04 §8.1, P68)." % c("ROBOT", ""),
+                "Workspace multi-party approval ON for every covered setting, console "
+                "and API, before the grant (P66); the robot is never an approver.",
+                "Super-admin self-recovery OFF at the top OU (M2B), no recovery channels "
+                "on %s (M1), 2SV enforced (M2B), the login reporting rule live (M3)."
+                % c("ROBOT", ""),
+                "As one human super admin: Admin console -> Directory -> Users -> %s -> "
+                "Admin roles and privileges -> assign Super Admin. A DIFFERENT human "
+                "super admin approves it under multi-party approval. (Console labels "
+                "may differ by edition.)" % c("ROBOT", ""),
+                "Both humans and the time go into the P33 record. The robot's grant is "
+                "a role change on the roster: Eve's roster check and the SIEM set page "
+                "on it by design; tell the second human before you do it.",
+                "The reverse is K6: a human super admin removes Super Admin from the "
+                "robot. Neither direction is ever done by a machine.",
+            ],
+            verifier="verify_super_admin_grant",
             subcommand="workspace",
         ),
         ManualStep(
@@ -1389,7 +1840,7 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
         ManualStep(
             "M5",
             "Phase 9 steps 1 and 2",
-            "The consent screen and the robot's OAuth client",
+            "The consent screen and the robot's OAuth client (client 1, narrow)",
             "External + Testing expires refresh tokens after seven days. The app name "
             "is shown to the robot on the consent screen and is awkward to change.",
             [
@@ -1404,6 +1855,32 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
                 "project's own consent screen; never reuse this one. More than 100 "
                 "live tokens for one client makes Google invalidate the oldest silently."
                 % c("EVE_PROJECT", "<EVE_PROJECT>"),
+                "Since 2026-09-13 there is a SECOND client on the same robot account "
+                "(M5S, 'walle consent --super'). Two clients, two tokens, never one "
+                "client reused for both.",
+            ],
+            verifier=None,
+            subcommand="consent",
+        ),
+        ManualStep(
+            "M5S",
+            "Phase 9, band B (added 2026-09-13)",
+            "The robot's SECOND OAuth client (client 2, broad), for walle-actions-super",
+            "Decision 18 forced to now: the narrow client's scopes are the only "
+            "Google-enforced ceiling left on unattended work, so the broad scopes "
+            "must live in a separate client read by a separate service (platform HLD "
+            "§13.1 item 3). Consented in the same sitting, on the same hardware key.",
+            [
+                "SUPER_SCOPES_DECISION must name the signed record of the broad scope "
+                "list (decision 3 re-cut); SUPER_SCOPES must be exactly that list. "
+                "cloud-platform in any form is refused.",
+                "Same consent screen as M5 (Internal, In production). Credentials -> "
+                "Create credentials -> OAuth client ID -> Desktop app, a NEW client.",
+                "Download the JSON and pass it to 'walle consent --super --store-client "
+                "PATH': it goes into walle-super-oauth-client, readable by "
+                "walle-actions-super@ only, and the local copy is shredded.",
+                "Mark THIS client Trusted too (M6), in the same sitting.",
+                "Adding a scope later is a re-consent of client 2 only.",
             ],
             verifier=None,
             subcommand="consent",
@@ -1431,8 +1908,9 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
             "The one interactive consent, as the robot, in a clean profile",
             "The script drives this but must never open a browser. A desktop OAuth "
             "flow opens the machine's default browser, which is signed in as you, a "
-            "super admin, and the grant is then stored against your account with none "
-            "of the role constraints. SETUP.md 7.1.",
+            "super admin, and the grant is then stored against your account: every "
+            "robot action would then be attributed to you and invisible to the "
+            "robot-attributed detection Eve and the SIEM run. SETUP.md 7.1.",
             [
                 "Have ready: the clean browser profile signed into nothing, the vault "
                 "password for the robot, and the hardware key from the safe.",
@@ -1442,8 +1920,9 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
                 "The script checks, through userinfo, that the account that consented "
                 "really is the robot, and refuses to store the token otherwise.",
                 "Write down the secret VERSION NUMBER it prints. It is 1 only on a "
-                "first clean bootstrap. Export it as REFRESH_TOKEN_VERSION and put it "
-                "in the config before deploying.",
+                "first clean bootstrap. Export it as REFRESH_TOKEN_VERSION (client 1) "
+                "or SUPER_REFRESH_TOKEN_VERSION (client 2, --super) and put it in the "
+                "config before deploying.",
                 "Then sign out and close the clean profile. You are done signing in as "
                 "the robot forever: from now on a login alert is an incident.",
             ],
@@ -1781,14 +2260,15 @@ def ensure_user(ctx: Ctx, email: str, given: str, family: str, ou_path: str) -> 
         if existing.get("orgUnitPath") != ou_path:
             # Every Phase 3 hardening control — 2SV enforcement, session
             # length, less secure app access, login challenges — is scoped to
-            # this OU. An account outside it would go on to receive the
-            # customer-scoped reader role in phase_2_roles with none of that
+            # this OU. An account outside it would go on to hold Super Admin
+            # (Wall-E, at the tier gate) or Eve's read role with none of that
             # hardening applied. check_robot_hardening catches it, but only
-            # after the role has been granted.
+            # after the fact.
             die(
                 "%s is in %s, not %s. Every Phase 3 hardening control is scoped to "
-                "%s, so this account would hold the reader role with no 2SV "
-                "enforcement, no session limit and no login challenges. Move it in "
+                "%s, so this account would hold its admin rights (Super Admin for "
+                "the robot, since 2026-09-13) with no 2SV enforcement, no session "
+                "limit and no login challenges. Move it in "
                 "Admin console -> Directory -> Users and re-run; this script does "
                 "not move existing accounts."
                 % (email, existing.get("orgUnitPath"), ou_path, ou_path)
@@ -1910,7 +2390,7 @@ def resolve_privileges(
             die(
                 "no privilege in this tenant matches '%s'. Tried: %s\n"
                 "Run 'walle dump-privileges' and pick the real name, then correct "
-                "READER_PRIVILEGE_CANDIDATES. SETUP.md Phase 2 step 4 warns that "
+                "EVE_PRIVILEGE_CANDIDATES. SETUP.md Phase 2 step 4 warns that "
                 "console labels do not match API names." % (family, ", ".join(options))
             )
         if match in seen:
@@ -1935,10 +2415,12 @@ def ensure_role(
     """Get-or-create. A role that already exists with DIFFERENT privileges is a
     refusal, not a warning.
 
-    phase_2_roles assigns whatever comes back from here to the robot,
-    customer-scoped. The privilege set is the Workspace-side enforcement point,
-    the one that still stands after every control in the action service has
-    failed (SETUP.md Phase 2). A role somebody widened by hand, or an earlier
+    phase_2_roles assigns whatever comes back from here to Eve's robot,
+    customer-scoped. (Until 2026-09-13 it also built the roles assigned to
+    Wall-E's robot, whose privilege set was then the Workspace-side
+    enforcement point; the robot holds Super Admin now and has no custom
+    role.) For Eve the privilege set is still what keeps her read-only at
+    Google's end, whatever Eve's own code does. A role somebody widened by hand, or an earlier
     draft created, or an attacker touched, must never be granted with a warning
     that scrolls past — and a role that is silently NARROWER than expected
     breaks the reports the runbook expects, which no write check would catch.
@@ -1997,7 +2479,9 @@ def ensure_role_assignment(
 
     SETUP.md Phase 2 and adversarial finding A7: the admin enumeration under an
     OU-scoped role returns admins inside that OU only, often none, and an empty
-    result reads as success.
+    result reads as success. Since 2026-09-13 the only caller is Eve's role
+    (Eve's assignment keeps this rule); the robot's Super Admin is never
+    assigned by this script.
     """
     if role_id == "DRYRUN" or user_id == "DRYRUN":
         say("  [dry run] would assign role %s to %s, scope %s" % (role_id, user_id, scope))
@@ -2085,6 +2569,11 @@ def collect_admins(ctx: Ctx) -> List[str]:
 
     Denial test 13 requires the runtime check to match isDelegatedAdmin, not only
     isAdmin, so the group and the floor list must cover both.
+
+    Qualified 2026-09-13: once Super Admin is granted at the tier gate the
+    robot itself is returned by the isAdmin query. It was already on the floor
+    list and in the protected group by name (phase_1_protected_and_floor), so
+    nothing changes in mechanism; it is now there by two routes.
     """
     users = admin(ctx).users()
     found: Dict[str, str] = {}
@@ -2167,6 +2656,9 @@ def write_floor_list(ctx: Ctx, addresses: Sequence[str]) -> None:
         "# $ROBOT or anything in $SVC_OU to be refused as protected_principal, so",
         "# the runtime protected set has to cover them too. Deliberate, and wider",
         "# than the runbook specifies.",
+        "# 2026-09-13: once Super Admin is granted (tier gate, M2C) the robot is",
+        "# also a super admin, so it appears here by both routes; it stays a",
+        "# protected principal under its own N7 rule (platform HLD §13.1 item 2).",
         "",
     ]
     body = "\n".join(header + list(addresses)) + "\n"
@@ -2234,51 +2726,75 @@ def phase_1_sandbox(ctx: Ctx) -> None:
     ctx.note("sandbox accounts: %s" % ", ".join(accounts))
 
 
-def phase_2_roles(ctx: Ctx) -> None:
-    section("Phase 2 — the two custom admin roles")
-    say(
-        "  A customer-scoped read role, assigned now, and a separate OU-scoped write "
-        "role, created now and assigned to nobody. Groups and Reports privileges "
-        "cannot be OU-scoped, and Stage 0's whole value is tenant-wide reads."
-    )
-    catalogue = list_privileges(ctx)
-    say("  %d privilege names in this tenant's catalogue." % len(catalogue))
+def super_admin_grant_on_file(ctx: Ctx) -> bool:
+    """The tier gate's record (decision P33), patterned on the spike gates.
 
-    reader_privs = resolve_privileges(ctx, catalogue, READER_PRIVILEGE_CANDIDATES)
-    for entry in reader_privs:
-        name = entry["privilegeName"]
-        if is_write_privilege(name):
-            die(
-                "resolved '%s' into the READ role, and it looks like a write "
-                "privilege. Stage 0's role must contain no write privilege at all." % name
-            )
-    reader = ensure_role(
-        ctx, ROLE_READER_NAME,
-        "Stage 0. Tenant-wide reads only. No write privilege, no License Management.",
-        reader_privs,
+    SUPER_ADMIN_GRANT_DECISION names the signed decision record
+    (decisions/2026-09-13-wall-e-holds-super-admin.md, platform HLD §13.1 item
+    12). Present: the robot MUST be a super admin. Absent: it must NOT be one,
+    because a grant with no signed record is a grant nobody decided.
+    """
+    path = os.path.expanduser(ctx.get("SUPER_ADMIN_GRANT_DECISION") or "")
+    return bool(path) and os.path.isfile(path)
+
+
+def phase_2_roles(ctx: Ctx) -> None:
+    section("Phase 2 — Wall-E holds no custom role; Eve's read-only role")
+    say(
+        "  Reversed 2026-09-13 (platform HLD §13.1, §18 item 5). This phase used to "
+        "create two Wall-E custom roles: a customer-scoped Stage 0 reader, assigned "
+        "now, and an OU-scoped Stage 1 write role assigned to nobody. The robot holds "
+        "Super Admin instead, which cannot be limited to an OU or subset by privilege, "
+        "so there is no Wall-E role to build and no role that 'grows with the ladder'. "
+        "Google no longer refuses anything at its end: the action services are the "
+        "only gate, the consented scopes the only Google-enforced ceiling."
     )
+    say(
+        "  Kept as footnotes, still true for custom roles and for Eve: Groups and "
+        "Reports privileges cannot be OU-scoped, and an OU-scoped read role "
+        "enumerates admins inside that OU only (attack A7)."
+    )
+    # Leftovers from a build made before 2026-09-13. Reported, never deleted
+    # here: nothing is deleted outside teardown (and `rollback --phase 2`, which
+    # removes assignments on request).
     robot = api_get(
         ctx, "users.get robot", admin(ctx).users().get(userKey=ctx.need("ROBOT"))
     )
-    if not robot:
-        if not ctx.dry_run:
-            die("robot account %s does not exist; run the earlier phases" % ctx.need("ROBOT"))
-        robot = {"id": "DRYRUN"}
-    ensure_role_assignment(ctx, reader["roleId"], robot["id"], "CUSTOMER")
-
-    operator_privs = resolve_privileges(ctx, catalogue, OPERATOR_PRIVILEGE_CANDIDATES)
-    ensure_role(
-        ctx, ROLE_OPERATOR_NAME,
-        "Stage 1 ONLY. Assigned to nobody until a dated decision record says so.",
-        operator_privs,
-    )
+    for title in RETIRED_WALLE_ROLE_NAMES:
+        role = find_role(ctx, title)
+        if not role:
+            continue
+        assigned = [a for a in list_role_assignments(ctx, role["roleId"])]
+        warn(
+            "retired role '%s' still exists with %d assignment(s). The robot must hold "
+            "Super Admin and nothing else; remove it with 'walle rollback --phase 2' "
+            "(assignments) and then in Admin console -> Account -> Admin roles."
+            % (title, len(assigned))
+        )
+        ctx.note("retired Wall-E role '%s' still exists (%d assignment(s)); verify "
+                 "fails while it is assigned" % (title, len(assigned)))
+    if robot and robot.get("isAdmin") and not super_admin_grant_on_file(ctx):
+        warn(
+            "%s is ALREADY a super admin and SUPER_ADMIN_GRANT_DECISION names no signed "
+            "record. The grant is a tier gate (M2C), not a runbook act: record it or "
+            "have a human super admin remove it (K6)." % ctx.need("ROBOT")
+        )
+        ctx.note("robot is a super admin with no grant record on file: verify fails")
     say("")
-    say(
-        "  '%s' is created and assigned to NOBODY. Creating a role grants nothing; "
-        "only an assignment does, and that assignment is the single act that makes "
-        "any Workspace write possible." % ROLE_OPERATOR_NAME
-    )
+    say("  This script never grants Super Admin, never calls users.makeAdmin and never")
+    say("  inserts a Super Admin role assignment: both are on the hard-denied list,")
+    say("  and the grant is manual step M2C at the tier gate.")
+
+    catalogue = list_privileges(ctx)
+    say("  %d privilege names in this tenant's catalogue." % len(catalogue))
     eve_privs = resolve_privileges(ctx, catalogue, EVE_PRIVILEGE_CANDIDATES)
+    for entry in eve_privs:
+        name = entry["privilegeName"]
+        if is_write_privilege(name):
+            die(
+                "resolved '%s' into Eve's read role, and it looks like a write "
+                "privilege. Eve's role must contain no write privilege at all." % name
+            )
     eve_role = ensure_role(
         ctx, ROLE_EVE_NAME,
         "Eve verifies independently. Read privileges only, at every stage, forever.",
@@ -2291,8 +2807,8 @@ def phase_2_roles(ctx: Ctx) -> None:
         ensure_role_assignment(ctx, eve_role["roleId"], eve["id"], "CUSTOMER")
     say("")
     say(
-        "  Do not trust console labels: run 'walle dump-privileges' once the robot "
-        "has a credential and finalise the Stage 1 role from the real API names."
+        "  Do not trust console labels: run 'walle dump-privileges' and fix Eve's read "
+        "set from the real API names (Eve's widened set, E-16, is Eve's runbook's)."
     )
 
 
@@ -2315,6 +2831,26 @@ def cmd_workspace(ctx: Ctx) -> int:
     # Phase 5 belongs here, not in `deploy`: the toggle takes up to 24 hours to
     # produce rows and the login half must be resolved before Phase 9.
     do_manual_step(ctx, "M4")
+    # The Super Admin grant (2026-09-13): last, after the hardening and the login
+    # rule it depends on, and only when the tier gate's signed record is on file.
+    # Re-running `walle workspace` on the gate day is how it is reached.
+    if super_admin_grant_on_file(ctx):
+        # Precondition, checked before the block (2026-09-13): the verifier reads
+        # SUPER_ADMIN_ROSTER from the config loaded at start, so a roster that
+        # does not list the robot yet would FAIL right after a correct human grant.
+        roster = [a.strip().lower() for a in ctx.get("SUPER_ADMIN_ROSTER", "").split(",")
+                  if a.strip()]
+        if ctx.need("ROBOT").lower() not in roster:
+            die("SUPER_ADMIN_ROSTER does not list %s. Commit the exact roster including the "
+                "robot, export it, and re-run 'walle workspace' BEFORE the grant (M2C): the "
+                "config is read once at start." % ctx.need("ROBOT"))
+        do_manual_step(ctx, "M2C")
+    else:
+        say("")
+        say("  M2C (the Super Admin grant) is NOT offered: SUPER_ADMIN_GRANT_DECISION")
+        say("  names no signed record. The robot holds no admin role until the platform's")
+        say("  tier gate is passed (platform HLD §0.4); verify asserts exactly that.")
+        ctx.note("Super Admin not granted: tier gate not passed (no P33 record on file).")
     ctx.print_notes()
     say("")
     say("Phases 1 and 2 done. Next: 'walle gcp' (phases 6, 7, 8).")
@@ -2341,13 +2877,14 @@ def ensure_project(ctx: Ctx) -> None:
     if project_exists(ctx):
         step("project exists: %s" % project)
     else:
-        # --folder, not --organization: all four projects are children of
-        # FOLDER_ID, and a project parented straight to the organisation
-        # inherits nothing from the folder's Model Armor floor
-        # (project-topology.md §5). gcloud takes one or the other, never both.
+        # --folder, not --organization, and the TIER folder, not the platform
+        # folder: WALLE_FOLDER_ID is fld-agents-p-sa-prod, a descendant of
+        # FOLDER_ID, so the project inherits the platform floor AND the P-SA
+        # tier's stricter policies (agentic-platform/02 section 2). Corrected
+        # 2026-09-13; this used FOLDER_ID. gcloud takes one flag, never both.
         run(
             ctx,
-            ["gcloud", "projects", "create", project, "--folder", ctx.need("FOLDER_ID")],
+            ["gcloud", "projects", "create", project, "--folder", ctx.need("WALLE_FOLDER_ID")],
         )
     # Wall-E's project is the gcloud default from here on. Every read of
     # another project's resource must therefore name it: gcloud_probe_json_in.
@@ -2522,6 +3059,10 @@ def ensure_sa_binding(ctx: Ctx, sa_email: str, member: str, role: str) -> None:
 
 
 def phase_6_project(ctx: Ctx) -> None:
+    # Platform HLD §18 item 5 (2026-09-13): SETUP.md Phase 6 becomes a factory
+    # call (Cloud Foundation Fabric project-factory, platform 02 §3, P35), with
+    # WALLE_PROJECT under fld-agents-p-sa. The factory is not built yet, so this
+    # hand-made path is kept unchanged until it is; it is not the target state.
     section("Phase 6 — project, APIs, service accounts, staging bucket, budget")
     ensure_project(ctx)
     ensure_apis(ctx)
@@ -2534,6 +3075,8 @@ def phase_6_project(ctx: Ctx) -> None:
     say("  request including reads is denied with control_plane_unavailable.")
     for role in ACTIONS_PROJECT_ROLES:
         ensure_project_binding(ctx, "serviceAccount:" + ctx.need("SA_ACTIONS"), role)
+    for role in SUPER_PROJECT_ROLES:
+        ensure_project_binding(ctx, "serviceAccount:" + ctx.need("SA_ACTIONS_SUPER"), role)
     for role in DISPATCH_PROJECT_ROLES:
         ensure_project_binding(ctx, "serviceAccount:" + ctx.need("SA_DISPATCH"), role)
     # EVE_PROJECT_ROLES is empty (decision 44): a project-level role in Wall-E's
@@ -2873,12 +3416,17 @@ def ensure_secrets(ctx: Ctx) -> None:
         else:
             run(ctx, ["gcloud", "secrets", "create", name,
                       "--location", ctx.need("REGION"), "--project", ctx.need("PROJECT")])
+        # One reader per secret (2026-09-13): the narrow pair to walle-actions@,
+        # the broad pair to walle-actions-super@, never crossed. Putting the
+        # broad client where the catalogue can read it would make the narrow
+        # client's Google-enforced ceiling decorative (wall-e/01-hld.md).
+        reader = ctx.need(SECRET_READERS[name])
         run(
             ctx,
             [
                 "gcloud", "secrets", "add-iam-policy-binding", name,
                 "--location", ctx.need("REGION"),
-                "--member", "serviceAccount:" + ctx.need("SA_ACTIONS"),
+                "--member", "serviceAccount:" + reader,
                 "--role", "roles/secretmanager.secretAccessor",
                 "--project", ctx.need("PROJECT"),
             ],
@@ -2887,6 +3435,11 @@ def ensure_secrets(ctx: Ctx) -> None:
         "  walle-agent@ appears nowhere in that loop and must never be added: the "
         "credential does not exist in the model's process or context, so no prompt "
         "and no tool can exfiltrate it. That absence is trust boundary 3."
+    )
+    say(
+        "  Each OAuth pair has exactly one reader: walle-oauth-client and "
+        "walle-refresh-token to walle-actions@, walle-super-oauth-client and "
+        "walle-super-refresh-token to walle-actions-super@ (platform HLD §13.1 item 3)."
     )
 
 
@@ -2943,6 +3496,12 @@ def ensure_audit_writer_role(ctx: Ctx) -> None:
     add_dataset_access(
         ctx, ctx.get("AUDIT_DATASET"),
         "projects/%s/roles/walleAuditWriter" % project, ctx.need("SA_ACTIONS"),
+    )
+    # The band-B service writes its own audit rows (the canonical request, the
+    # Discovery revision, both humans), insert-only like the first.
+    add_dataset_access(
+        ctx, ctx.get("AUDIT_DATASET"),
+        "projects/%s/roles/walleAuditWriter" % project, ctx.need("SA_ACTIONS_SUPER"),
     )
 
 
@@ -3125,7 +3684,13 @@ def run_consent(
     expect_account: str, scopes: Sequence[str], paste_mode: bool,
 ) -> None:
     """The one interactive step. Prints a URL and waits. Never opens a browser."""
-    _Request, _Credentials, InstalledAppFlow, build = _import_google()
+    # Before anything, dry run included: cloud-platform in any form is never
+    # requested on the robot (platform HLD §13.1 item 3). A refused list is a
+    # refusal of the whole consent, not a trimmed request.
+    bad = forbidden_scopes(scopes)
+    if bad:
+        die("REFUSING the consent: the scope list carries %s. cloud-platform is never "
+            "consented on the robot account, in either client." % ", ".join(bad))
     # oauthlib treats any change in the returned scope string, reordering
     # included, as an error. The strict comparison after the exchange is this
     # script's own and is what actually enforces the frozen list.
@@ -3143,6 +3708,9 @@ def run_consent(
             % client_secret)
         say("  [dry run] nothing stored, no browser opened, no token minted.")
         return
+    # Below the dry-run return (2026-09-13): rehearsing a consent needs no
+    # Python OAuth library, the same way it needs no stored client.
+    _Request, _Credentials, InstalledAppFlow, build = _import_google()
     client_config = json.loads(read_secret(ctx, client_secret).decode("utf-8"))
     flow = InstalledAppFlow.from_client_config(client_config, list(scopes))
 
@@ -3219,6 +3787,10 @@ def run_consent(
     if missing:
         die("the grant is missing scopes and cannot be widened later: %s" % ", ".join(missing))
     extra = [s for s in granted if s not in scopes]
+    if forbidden_scopes(granted):
+        die("REFUSING TO STORE: the grant carries %s, which was not requested and is "
+            "never allowed on the robot. Revoke the grant as the robot at "
+            "https://myaccount.google.com/permissions." % ", ".join(forbidden_scopes(granted)))
     if extra:
         die(
             "the grant carries scopes that were NOT requested: %s\n"
@@ -3239,9 +3811,12 @@ def run_consent(
     say("  " + "=" * 72)
     say("  Stored as %s version %s" % (target_secret, version))
     say("")
+    pin_key, service = (("SUPER_REFRESH_TOKEN_VERSION", SUPER_SERVICE)
+                        if target_secret == SUPER_CLIENT_SECRETS[1]
+                        else ("REFRESH_TOKEN_VERSION", ACTIONS_SERVICE))
     say("  PUT THIS IN THE CONFIG NOW:")
-    say("    REFRESH_TOKEN_VERSION=%s" % version)
-    say("  and redeploy walle-actions. It is 1 only on a first clean bootstrap;")
+    say("    %s=%s" % (pin_key, version))
+    say("  and redeploy %s. It is 1 only on a first clean bootstrap;" % service)
     say("  every rollback and every K4 or K5 drill produces a higher number, and")
     say("  a stale pin points the service at a destroyed version.")
     say("  " + "=" * 72)
@@ -3281,12 +3856,35 @@ def cmd_consent(ctx: Ctx) -> int:
             "Nothing of Eve's is stored in Wall-E's project."
             % ctx.get("EVE_PROJECT", "<EVE_PROJECT>")
         )
-    client_secret = "walle-oauth-client"
-    target_secret = "walle-refresh-token"
     account = ctx.need("ROBOT")
-    scopes = ROBOT_SCOPES
-
-    do_manual_step(ctx, "M5")
+    band_b = bool(getattr(ctx.args, "super", False))
+    if band_b:
+        # Client 2, the broad client (2026-09-13, platform HLD §13.1 item 3).
+        # Its scope list is a signed decision and *tbd*; nothing is consented
+        # without the record, and nothing ever with cloud-platform.
+        client_secret, target_secret = SUPER_CLIENT_SECRETS
+        decision = os.path.expanduser(ctx.get("SUPER_SCOPES_DECISION") or "")
+        if not decision or not os.path.isfile(decision):
+            die(
+                "'walle consent --super' consents the BROAD client that walle-actions-"
+                "super reads. Its scope list is a super-admin-signed decision (decision 3 "
+                "re-cut) and SUPER_SCOPES_DECISION (%r) names no existing record. "
+                "Nothing ran." % decision
+            )
+        scopes = tuple(parse_scope_list(ctx.need("SUPER_SCOPES")))
+        bad = forbidden_scopes(scopes)
+        if bad:
+            die("SUPER_SCOPES carries %s; cloud-platform is never consented. Nothing ran."
+                % ", ".join(bad))
+        missing = [s for s in SCOPES_REQUIRED_IN_EVERY_CLIENT if s not in scopes]
+        if missing:
+            die("SUPER_SCOPES lacks %s. Nothing ran." % ", ".join(missing))
+        say("  Client 2 (broad), decision record: %s" % decision)
+        do_manual_step(ctx, "M5S")
+    else:
+        client_secret, target_secret = NARROW_CLIENT_SECRETS
+        scopes = ROBOT_SCOPES
+        do_manual_step(ctx, "M5")
     store = getattr(ctx.args, "store_client", None)
     if store:
         store_client_json(ctx, os.path.expanduser(store), client_secret)
@@ -3309,9 +3907,11 @@ def cmd_consent(ctx: Ctx) -> int:
             "If you are genuinely re-bootstrapping: revoke the old grant at "
             "https://myaccount.google.com/permissions as %s, destroy the old "
             "version, then re-run with --rotate. The new number must be re-exported "
-            "as REFRESH_TOKEN_VERSION and walle-actions redeployed, or the service "
+            "as %s and %s redeployed, or the service "
             "stays pinned to the version you just destroyed."
-            % (target_secret, len(existing_versions), account)
+            % (target_secret, len(existing_versions), account,
+               "SUPER_REFRESH_TOKEN_VERSION" if band_b else "REFRESH_TOKEN_VERSION",
+               SUPER_SERVICE if band_b else ACTIONS_SERVICE)
         )
     say("")
     say("  Scopes about to be requested (frozen permanently at consent):")
@@ -3327,23 +3927,18 @@ def cmd_consent(ctx: Ctx) -> int:
     say("  key back in the safe. From here a login alert is an incident.")
     if not ctx.dry_run:
         say("")
-        say("  While the credential is in hand, close the two Phase 9 items that are")
-        say("  cheap only right now and expensive later:")
-        say("   1. walle dump-privileges > privileges.txt")
-        say("      Finalise '%s' from these API names, not console" % ROLE_OPERATOR_NAME)
-        say("      labels: Google publishes no complete privilege catalogue.")
-        say("   2. python bootstrap/verify_token.py --project=%s --region=%s \\"
+        say("  While the credential is in hand, check the stored grant:")
+        say("   python bootstrap/verify_token.py --project=%s --region=%s \\"
             % (ctx.need("PROJECT"), ctx.need("REGION")))
-        say("        --secret=walle-refresh-token --secret-version=<the number above> \\")
-        say("        --expect-account=%s \\" % ctx.need("ROBOT"))
-        say("        --probe=licensing.licenseAssignments.listForProduct")
-        say("      Expect 403: License Management is indivisible and waits for")
-        say("      Stage 1. If it returns ROWS, the Phase 2 role carries a privilege")
-        say("      it should not, and that is a finding, not a convenience.")
-        ctx.note(
-            "Phase 9: record the licence probe result against 09-open-decisions "
-            "'still to verify' item 1."
-        )
+        say("     --secret=%s --secret-version=<the number above> \\" % target_secret)
+        say("     --expect-account=%s" % ctx.need("ROBOT"))
+        say("  Reversed 2026-09-13: the old follow-ups here — finalise the Stage 1")
+        say("  custom role from 'walle dump-privileges', and expect a licensing probe")
+        say("  to answer 403 because 'License Management waits for Stage 1' — assumed")
+        say("  a narrow role. With Super Admin that probe SUCCEEDS; Google refuses")
+        say("  nothing but what the scopes exclude, so the account and the exact scope")
+        say("  set are what this check proves, and verify's robot_credentials_scoped")
+        say("  asserts both for each client.")
     ctx.print_notes()
     return 0
 
@@ -3473,6 +4068,107 @@ def actions_env_pairs(ctx: Ctx, audience: str) -> List[Tuple[str, str]]:
     ]
 
 
+def super_env_pairs(ctx: Ctx, audience: str) -> List[Tuple[str, str]]:
+    """walle-actions-super's env (2026-09-13). Its own pair, its own pin.
+
+    The pin is SUPER_REFRESH_TOKEN_VERSION, a NUMBER, never 'latest', for the
+    same kill-switch reason as the narrow pin. The allowlists are the HLD's
+    invoker set and nothing more: EXEC the agent, CONTROL eve-controller@ and
+    (since 2026-09-13, topology row 27) eve-verifier@, halt only. No read list,
+    no internal list, no Mo, no dispatcher.
+    """
+    version = ctx.get("SUPER_REFRESH_TOKEN_VERSION")
+    if not version or not version.isdigit():
+        die(
+            "SUPER_REFRESH_TOKEN_VERSION must be the NUMBER 'walle consent --super' "
+            "printed, not %r. Never 'latest'." % version
+        )
+    return [
+        ("WORKSPACE_DOMAIN", ctx.need("DOMAIN")),
+        ("ROBOT_ACCOUNT", ctx.need("ROBOT")),
+        ("OPERATOR_GROUP", ctx.need("OPERATORS")),
+        ("PROTECTED_GROUP", ctx.need("PROTECTED")),
+        ("SECRET_LOCATION", ctx.need("REGION")),
+        ("REFRESH_TOKEN_SECRET", SUPER_CLIENT_SECRETS[1]),
+        ("REFRESH_TOKEN_VERSION", version),
+        ("OAUTH_CLIENT_SECRET", SUPER_CLIENT_SECRETS[0]),
+        ("EVE_PUBLIC_KEY_PEM", EVE_PUBLIC_KEY_PEM_PATH),
+        ("AUDIT_DATASET", ctx.get("AUDIT_DATASET")),
+        ("EXEC_CALLER_ALLOWLIST", ctx.need("SA_AGENT")),
+        ("CONTROL_CALLER_ALLOWLIST", "%s,%s" % (ctx.need("SA_EVE"), ctx.need("SA_EVE_VERIFIER"))),
+        ("AUDIENCE", audience),
+    ]
+
+
+def phase_10_super(ctx: Ctx) -> None:
+    """The second action service, bands B and C (platform HLD §13.1 item 3).
+
+    Deployed only once client 2 has been consented: without
+    SUPER_REFRESH_TOKEN_VERSION there is no credential for it to hold, and a
+    service pinned to nothing is a failure that looks like a bug. That state is
+    a note, not a stop, under --dry-run and on a real run alike.
+    """
+    section("Phase 10 (band B) — walle-actions-super")
+    if not ctx.get("SUPER_REFRESH_TOKEN_VERSION"):
+        say("  SUPER_REFRESH_TOKEN_VERSION is not set: client 2 has not been consented")
+        say("  ('walle consent --super'), so walle-actions-super is NOT deployed.")
+        ctx.note("walle-actions-super not deployed: band B client not consented yet")
+        return
+    image = ctx.get("ACTIONS_SUPER_IMAGE") or build_image(
+        # Assumption: the repository carries the band-B service as
+        # action-service-super/; the HLD says "two services with one policy
+        # library" and names no source layout. ACTIONS_SUPER_IMAGE overrides.
+        ctx, "action-service-super", "actions-super:%s" % repo_sha(ctx))
+    audience = ctx.get("SUPER_ACTIONS_URL") or current_service_url(ctx, SUPER_SERVICE) or ""
+    pairs = super_env_pairs(ctx, audience)
+    names = [name for name, _ in pairs]
+    if sorted(names) != sorted(SUPER_ENV_NAMES):
+        die("the band-B service env set drifted from SUPER_ENV_NAMES: %s" % names)
+    run(
+        ctx,
+        [
+            "gcloud", "run", "deploy", SUPER_SERVICE,
+            "--image", image,
+            "--region", ctx.need("REGION"),
+            "--service-account", ctx.need("SA_ACTIONS_SUPER"),
+            "--no-allow-unauthenticated",
+            # Same reasoning and same drift check as walle-actions until P3's
+            # engine-reach spike passes (wall-e/01-hld.md, Cloud Run ingress row).
+            "--ingress", "all",
+            "--timeout", "60s",
+            "--min-instances", "0", "--max-instances", "4", "--concurrency", "8",
+            "--set-env-vars", env_flag_value(pairs),
+            "--project", ctx.need("PROJECT"),
+        ],
+    )
+    # The invoker set, exactly as wall-e/01-hld.md boundary 2 draws it. NOT the
+    # dispatcher ("no route to walle-actions-super, by IAM"), NOT Mo, NOT
+    # eve-console@, NOT walle-operators-caller@. eve-verifier@ IS on it since
+    # 2026-09-13 (topology row 27), halt only. The agent principal on the
+    # AGENT_IDENTITY path is bound in Phase 12b.
+    ensure_run_invoker(ctx, SUPER_SERVICE, "serviceAccount:" + ctx.need("SA_AGENT"))
+    ensure_run_invoker(ctx, SUPER_SERVICE, "serviceAccount:" + ctx.need("SA_EVE"),
+                       foreign="eve-controller@ (EVE_PROJECT, halt path only; "
+                               "platform HLD §18 item 25)")
+    ensure_run_invoker(ctx, SUPER_SERVICE, "serviceAccount:" + ctx.need("SA_EVE_VERIFIER"),
+                       foreign="eve-verifier@ (EVE_PROJECT, halt path only; "
+                               "project-topology.md row 27, 2026-09-13)")
+    url = current_service_url(ctx, SUPER_SERVICE)
+    if url:
+        ctx.cfg["SUPER_ACTIONS_URL"] = url
+        run(ctx, ["gcloud", "run", "services", "update", SUPER_SERVICE,
+                  "--region", ctx.need("REGION"), "--update-env-vars", "AUDIENCE=%s" % url,
+                  "--project", ctx.need("PROJECT")])
+        say("  SUPER_ACTIONS_URL=%s   <- put this in the config" % url)
+        ctx.note("SUPER_ACTIONS_URL=%s" % url)
+    say("")
+    say("  Open question carried, not invented: the HLD's invoker set for this service")
+    say("  has no human halt handle (only eve-controller@ and eve-verifier@), unlike walle-actions,")
+    say("  where the operators group can pull the andon cord. Human stops on band B")
+    say("  are K5/K6/K7 until that is decided.")
+    ctx.note("walle-actions-super: no human halt invoker in the HLD's set (open question)")
+
+
 def env_flag_value(pairs: Sequence[Tuple[str, str]]) -> str:
     """One --set-env-vars flag, not seventeen.
 
@@ -3598,6 +4294,7 @@ def phase_10_actions(ctx: Ctx) -> None:
         "level. The separation is enforced inside the service by the caller "
         "allowlists above. Denial tests 4, 5 and 51 exist to prove it."
     )
+    phase_10_super(ctx)
 
 
 def ensure_run_invoker(ctx: Ctx, service: str, member: str, foreign: str = "") -> None:
@@ -3696,6 +4393,12 @@ def phase_11_dispatcher(ctx: Ctx) -> None:
 
 
 def phase_11_sinks(ctx: Ctx, pubsub_sa: str) -> None:
+    # Platform HLD §18 item 5 and item 25 (2026-09-13): Wall-E's two
+    # organisation sinks are to be deleted and re-homed as P104's aggregated
+    # sinks into LOGGING_PROJECT plus a log view per agent (platform 08 §3,
+    # §5.4); gate: before Wall-E's Stage 1. LOGGING_PROJECT and the log view
+    # are not built yet, so these sinks stay until the re-home lands. Both sink
+    # names are on the hard-denied list (HD-10) from today.
     project, robot = ctx.need("PROJECT"), ctx.need("ROBOT")
     trigger_filter = (
         'protoPayload.serviceName="admin.googleapis.com" AND '
@@ -4443,6 +5146,10 @@ def check_automatic_roles_or_die(ctx: Ctx) -> None:
 def ensure_deny_policy(ctx: Ctx) -> None:
     """Phase 12b step 7: the standing invariants, so a mistaken grant cannot undo them.
 
+    Platform HLD §4.5 and §18 item 5 (2026-09-13): lifted to the folder as
+    deny-agents-platform, one copy for the fleet, attached by the platform
+    under PAM. This project-level copy stays until that folder policy exists.
+
     NOTE: every name in DENY_POLICY_PERMISSIONS must be verified against the
     list of permissions supported in deny policies before a real run. The
     research did not check it; an unsupported name fails the create, loudly.
@@ -4523,6 +5230,10 @@ def phase_12b_identity(ctx: Ctx, mode: str) -> None:
         ensure_project_binding(ctx, principal, role)
     check_automatic_roles_or_die(ctx)
     ensure_run_invoker(ctx, "walle-actions", principal)
+    # The agent is the one caller of the band-B service too (2026-09-13), once
+    # that service exists; the dispatcher never is.
+    if current_service_url(ctx, SUPER_SERVICE):
+        ensure_run_invoker(ctx, SUPER_SERVICE, principal)
     say("  The in-app EXEC_CALLER_ALLOWLIST row for the agent is keyed on the claim the")
     say("  spike showed (sub, email if any, aud), not on an address: an agent identity")
     say("  has none. Read it from %s and update the action service's allowlist." % spike_file)
@@ -5549,6 +6260,40 @@ def egress_endpoints(ctx: Ctx) -> List[Tuple[str, str]]:
     ]
 
 
+def registry_local_fallback(ctx: Ctx) -> bool:
+    """True only when the dated record overturning P71's exclusion is on file."""
+    path = os.path.expanduser(ctx.get("REGISTRY_LOCAL_FALLBACK_DECISION") or "")
+    return bool(path) and os.path.isfile(path)
+
+
+def registry_project(ctx: Ctx) -> str:
+    """Where Wall-E's registry entries live: CORE_PROJECT (P71), or Wall-E's own
+    project on the recorded fallback."""
+    if registry_local_fallback(ctx):
+        return ctx.need("PROJECT")
+    core = ctx.get("CORE_PROJECT")
+    if not core:
+        die("CORE_PROJECT is empty. Since 2026-09-13 the Agent Registry is the shared one "
+            "in CORE_PROJECT (P71); set it, or name the dated record overturning P71's "
+            "exclusion in REGISTRY_LOCAL_FALLBACK_DECISION to use a per-project registry.")
+    if core == ctx.get("PROJECT"):
+        die("CORE_PROJECT equals Wall-E's PROJECT; the shared registry is a core project")
+    return core
+
+
+def check_shared_egress_endpoint(ctx: Ctx, endpoint_id: str, url: str) -> bool:
+    """Shared registry (P71): the entry is factory-apply@'s write. Read, never create."""
+    assert_egress_host_allowed(url)
+    described = gcloud_probe_json_in(ctx, registry_project(ctx), "agent-registry", "services",
+                                     "describe", endpoint_id, "--location", ctx.need("REGION"))
+    if described is not None:
+        step("registered in the shared registry: %s -> %s" % (endpoint_id, url))
+        return True
+    ctx.note("shared registry lacks %s -> %s: the factory (factory-apply@) writes it" %
+             (endpoint_id, url))
+    return False
+
+
 def register_egress_endpoint(ctx: Ctx, endpoint_id: str, url: str) -> None:
     assert_egress_host_allowed(url)
     region, project = ctx.need("REGION"), ctx.need("PROJECT")
@@ -5663,6 +6408,10 @@ def register_card(ctx: Ctx, card_path: str) -> int:
                 "(decision 23)." % (path, url)
             )
         assert_egress_host_allowed(url)
+    if not registry_local_fallback(ctx):
+        die("REFUSING to register the card from here: since 2026-09-13 the registry is the "
+            "shared one in CORE_PROJECT and only factory-apply@ writes it (P71). Commit the "
+            "card to the manifest and let the factory register it.")
     bad_skills = [
         str(skill.get("id", ""))
         for skill in (card.get("skills", []) or [])
@@ -5708,6 +6457,85 @@ def cmd_registry(ctx: Ctx) -> int:
         return register_card(ctx, card)
     section("Phase 13b — Agent Registry, and the egress gateway in dry-run")
     project, region = ctx.need("PROJECT"), ctx.need("REGION")
+    local = registry_local_fallback(ctx)
+    reg_project = registry_project(ctx)
+    gateway = ctx.get("EGRESS_GATEWAY") or EGRESS_GATEWAY_NAME
+    if local:
+        return cmd_registry_local_fallback(ctx)
+    say("  Changed 2026-09-13 (P71): the registry is the SHARED one in %s, written by" % reg_project)
+    say("  factory-apply@ only. This project never enables agentregistry.googleapis.com")
+    say("  (the tier folder's allow-list refuses it) and no project-level registry role")
+    say("  is granted here. This command reads the shared entries and builds the egress")
+    say("  gateway in Wall-E's project, in DRY_RUN.")
+    say("    registry %s (%s)" % (reg_project, region))
+    say("    gateway  %s" % gateway)
+    confirm(ctx, "Proceed with the egress gateway setup against the shared registry?")
+    ensure_apis_listed(ctx, REGISTRY_APIS, "egress gateway")
+
+    say("")
+    say("  step 1: roles. None in this project: roles/agentregistry.admin on %s is" % reg_project)
+    say("  factory-apply@'s, humans reach it only through PAM (ent-folder-admin), and no")
+    say("  agent principal holds a registry role (decision 43, P71).")
+
+    say("")
+    say("  step 2: the entry. Automatic same-project registration has nowhere to land;")
+    say("  the factory writes Wall-E's registry card in the shared registry.")
+    entry_id = ctx.get("ENGINE_DISPLAY_NAME") or "wall-e"
+    entry = gcloud_probe_json_in(ctx, reg_project, "agent-registry", "agents", "describe",
+                                 entry_id, "--location", region)
+    if entry is None:
+        ctx.note("no registry entry %s in %s yet: the factory writes it (P71)"
+                 % (entry_id, reg_project))
+        say("  no entry named %s in %s yet (the factory's write)" % (entry_id, reg_project))
+    else:
+        step("entry %s present in the shared registry" % entry_id)
+
+    say("")
+    say("  step 3: the registry write alert lives with the platform, in %s:" % reg_project)
+    say("    %s" % REGISTRY_AUDIT_FILTER)
+    ctx.note("the registry write alert is the platform's, on %s (P71, P80)" % reg_project)
+
+    say("")
+    say("  step 4: the hand-written card is the factory's to register (P71), and only in")
+    say("  the change that stands up the A2A interface (decision 23).")
+
+    say("")
+    say("  step 5: the egress gateway, in dry-run, bound to the shared registry.")
+    say("  Assumption: a gateway in Wall-E's project resolves a registry in %s; the" % reg_project)
+    say("  P71 nonprod spike confirms it before the first factory run.")
+    check_access_policy_bindings_allowed(ctx)
+    ensure_agent_gateway(
+        ctx, gateway,
+        "name: %s\ngoogleManaged:\n  governedAccessPath: AGENT_TO_ANYWHERE\nregistries:\n"
+        "  - //agentregistry.googleapis.com/projects/%s/locations/%s\n"
+        % (gateway, reg_project, region),
+    )
+    endpoints = egress_endpoints(ctx)
+    present = sum(1 for endpoint_id, url in endpoints
+                  if check_shared_egress_endpoint(ctx, endpoint_id, url))
+    say("  %d of %d endpoints present in the shared registry; the rest, and the per-endpoint"
+        % (present, len(endpoints)))
+    say("  roles/iap.egressor bindings for Wall-E's principal, are the factory's writes.")
+    say("  the IAP request-authorization extension and policy, iamEnforcementMode DRY_RUN")
+    extension_path = write_committed_yaml(ctx, ("config", "gateway"), "walle-iap-ext.yaml",
+                                          iap_extension_yaml(ctx))
+    ensure_authz_extension(ctx, IAP_EXTENSION_NAME, extension_path, beta=True)
+    policy_yaml_path = write_committed_yaml(ctx, ("config", "gateway"), "walle-iap-policy.yaml",
+                                            iap_policy_yaml(ctx, gateway))
+    ensure_authz_policy(ctx, IAP_POLICY_NAME, policy_yaml_path)
+    say("")
+    say("  Verify as below (SETUP.md Phase 13b); flip to enforced only after it.")
+    ctx.note("egress gateway %s in DRY_RUN against the shared registry in %s"
+             % (gateway, reg_project))
+    ctx.print_notes()
+    return 0
+
+
+def cmd_registry_local_fallback(ctx: Ctx) -> int:
+    """The per-project registry, kept as the recorded fallback of P71 (dated
+    2026-09-13): used only when REGISTRY_LOCAL_FALLBACK_DECISION names the dated
+    record overturning the exclusion. The steps are the pre-2026-09-13 ones."""
+    project, region = ctx.need("PROJECT"), ctx.need("REGION")
     ci_member = iam_member(ctx.need("CI_DEPLOYER"))
     gateway = ctx.get("EGRESS_GATEWAY") or EGRESS_GATEWAY_NAME
     say("  Registry admin to the CI deployer only, and NO viewer to Eve or Mo. The")
@@ -5716,7 +6544,9 @@ def cmd_registry(ctx: Ctx) -> int:
     say("    admin   %s" % ci_member)
     say("    gateway %s" % gateway)
     confirm(ctx, "Proceed with the registry and egress gateway setup?")
-    ensure_apis_listed(ctx, REGISTRY_APIS, "Agent Registry")
+    warn("REGISTRY_LOCAL_FALLBACK_DECISION is on file: per-project registry (P71's recorded "
+         "fallback). The tier folder's allow-list must carry the dated exception.")
+    ensure_apis_listed(ctx, REGISTRY_APIS_LOCAL_FALLBACK, "Agent Registry")
 
     say("")
     say("  step 1: roles. Nobody else: an editor can redirect every consumer that")
@@ -6123,87 +6953,120 @@ def _eve_side_policies(ctx: Ctx) -> Tuple[Dict[str, Dict[str, Any]], str]:
     return policies, "and nothing on Eve's key, ring or secrets in EVE_PROJECT %s" % eve_project
 
 
-def check_stage0_role_has_no_write(ctx: Ctx) -> CheckResult:
+def check_eve_role_is_read_only(ctx: Ctx) -> CheckResult:
     """Allowlist first. A denylist over names Google does not publish in full
-    cannot prove "no write privilege at all" (SETUP.md Phase 2 step 4)."""
-    role = find_role(ctx, ROLE_READER_NAME)
+    cannot prove "no write privilege at all" (SETUP.md Phase 2 step 4).
+
+    Rewritten 2026-09-13: this was stage0_role_has_no_write and asserted
+    Wall-E's Stage 0 reader role. That role is retired (the robot holds Super
+    Admin); the same allowlist discipline now bounds Eve's role, the one custom
+    role this script still builds.
+    """
+    role = find_role(ctx, ROLE_EVE_NAME)
     if not role:
-        return FAIL, "role '%s' does not exist" % ROLE_READER_NAME
+        return FAIL, "role '%s' does not exist" % ROLE_EVE_NAME
     names = {p["privilegeName"] for p in role.get("rolePrivileges", [])}
     expected = {
         p["privilegeName"]
-        for p in resolve_privileges(ctx, list_privileges(ctx), READER_PRIVILEGE_CANDIDATES)
+        for p in resolve_privileges(ctx, list_privileges(ctx), EVE_PRIVILEGE_CANDIDATES)
     }
     unexpected = sorted(names - expected)
     if unexpected:
         return FAIL, (
-            "privileges beyond the resolved Stage 0 read set: %s. Whatever they "
-            "are called, this role is assigned to the robot customer-scoped."
-            % unexpected
+            "privileges beyond the resolved Eve read set: %s. Whatever they are "
+            "called, this role is assigned to Eve's robot customer-scoped." % unexpected
         )
     offenders = sorted(n for n in names if is_write_privilege(n))
     if offenders:
-        return FAIL, "write privileges in the Stage 0 role: %s" % ", ".join(offenders)
+        return FAIL, "write privileges in Eve's role: %s" % ", ".join(offenders)
     licence = sorted(n for n in names if "LICEN" in n.upper())
     if licence:
-        return FAIL, "License Management is indivisible and must wait for Stage 1: %s" % licence
+        return FAIL, "License Management is a write privilege and never Eve's: %s" % licence
     return PASS, "%d privileges, exactly the resolved read set" % len(names)
 
 
+def _super_admin_role_ids(ctx: Ctx) -> List[str]:
+    """roleIds whose Role resource says isSuperAdminRole (Directory API roles
+    resource, read 2026-09-13)."""
+    roles = admin(ctx).roles()
+    request = roles.list(customer=ctx.need("CUSTOMER_ID"), maxResults=100)
+    return [str(r.get("roleId")) for r in paginate(ctx, roles, request, "items")
+            if r.get("isSuperAdminRole")]
+
+
 def check_role_assignments(ctx: Ctx) -> CheckResult:
-    reader = find_role(ctx, ROLE_READER_NAME)
-    writer = find_role(ctx, ROLE_OPERATOR_NAME)
-    if not reader or not writer:
-        return FAIL, "expected both '%s' and '%s' to exist" % (ROLE_READER_NAME, ROLE_OPERATOR_NAME)
+    """Rewritten 2026-09-13 for a super-admin robot (platform HLD §13.1).
+
+    Robot: after the tier gate (SUPER_ADMIN_GRANT_DECISION on file) it holds
+    exactly one role assignment, and that role is the Super Admin role; before
+    the gate it holds none. Either way it holds no retired Wall-E role and no
+    other custom or delegated role: a second role on a super admin grants
+    nothing more, so its only effect would be to hide a change on the roster.
+    Eve: exactly one customer-scoped assignment of Eve's read-only role.
+    """
     robot = api_get(ctx, "users.get robot", admin(ctx).users().get(userKey=ctx.need("ROBOT")))
     if not robot:
         return FAIL, "robot account does not exist"
-    reader_assignments = [
-        a for a in list_role_assignments(ctx, reader["roleId"])
-        if a.get("assignedTo") == robot["id"]
-    ]
-    if len(reader_assignments) != 1:
-        return FAIL, "expected one reader assignment on the robot, found %d" % len(reader_assignments)
-    scope = reader_assignments[0].get("scopeType")
-    if scope != "CUSTOMER":
-        return FAIL, (
-            "reader role is scoped %s, not CUSTOMER. Under an OU-scoped role the "
-            "admin enumeration returns nothing and an empty result reads as success "
-            "(attack A7)." % scope
-        )
-    writer_assignments = list_role_assignments(ctx, writer["roleId"])
-    if writer_assignments:
-        return FAIL, (
-            "'%s' is ASSIGNED to %d principal(s). That is the single act that makes "
-            "a Workspace write possible and it needs a Stage 1 decision record."
-            % (ROLE_OPERATOR_NAME, len(writer_assignments))
-        )
-    # "One reader assignment" only means something if it is ALL of them. A
-    # second custom or delegated admin role on the robot is invisible to
-    # isAdmin, which is the only thing check_robot_hardening tests.
-    all_on_robot = [
-        a for a in list_role_assignments(ctx) if a.get("assignedTo") == robot["id"]
-    ]
-    if len(all_on_robot) != 1:
-        return FAIL, (
-            "the robot holds %d role assignments, expected exactly one (the "
-            "customer-scoped reader): roleIds %s"
-            % (len(all_on_robot), [a.get("roleId") for a in all_on_robot])
-        )
+    problems: List[str] = []
+    assignments = list_role_assignments(ctx)
+    on_robot = [a for a in assignments if a.get("assignedTo") == robot["id"]]
+    super_ids = set(_super_admin_role_ids(ctx))
+    granted = super_admin_grant_on_file(ctx)
+    for title in RETIRED_WALLE_ROLE_NAMES:
+        role = find_role(ctx, title)
+        if role and any(a.get("roleId") == role["roleId"] for a in assignments):
+            problems.append("retired role '%s' is still ASSIGNED (reversed 2026-09-13; "
+                            "rollback --phase 2 removes it)" % title)
+    non_super = [a.get("roleId") for a in on_robot if str(a.get("roleId")) not in super_ids]
+    if non_super:
+        problems.append("the robot holds role assignment(s) other than Super Admin: roleIds %s"
+                        % non_super)
+    super_on_robot = [a for a in on_robot if str(a.get("roleId")) in super_ids]
+    if granted and len(super_on_robot) != 1:
+        problems.append("the grant record is on file but the robot holds %d Super Admin "
+                        "assignment(s), expected exactly one (role_assignment_missing)"
+                        % len(super_on_robot))
+    if not granted and super_on_robot:
+        problems.append("the robot holds Super Admin and SUPER_ADMIN_GRANT_DECISION names no "
+                        "signed record: the tier gate was skipped")
     eve_role = find_role(ctx, ROLE_EVE_NAME)
-    if eve_role:
+    eve = api_get(ctx, "users.get eve", admin(ctx).users().get(userKey=ctx.need("EVE_ROBOT")))
+    eve_detail = "Eve holds exactly her customer-scoped read role"
+    if not (eve_role and eve):
+        # Corrected 2026-09-13: this half used to be skipped silently while the
+        # PASS text still asserted it. Eve's observe-and-report layer is a
+        # precondition of the grant (G1), so after the grant her absence FAILs;
+        # before it, the detail says what was not checked.
+        absent = [n for n, v in (("role '%s'" % ROLE_EVE_NAME, eve_role),
+                                 ("account %s" % ctx.need("EVE_ROBOT"), eve)) if not v]
+        if granted:
+            problems.append("Eve's %s not present although the grant record is on file "
+                            "(Eve's observe-and-report layer precedes the grant)"
+                            % " and ".join(absent))
+        eve_detail = "Eve's %s not present yet, so her role was NOT checked" % " and ".join(absent)
+    if eve_role and eve:
+        eve_assignments = [a for a in assignments if a.get("assignedTo") == eve["id"]]
+        if [a.get("roleId") for a in eve_assignments] != [eve_role["roleId"]]:
+            problems.append("Eve's robot holds %s, expected exactly '%s'"
+                            % ([a.get("roleId") for a in eve_assignments], ROLE_EVE_NAME))
+        elif eve_assignments[0].get("scopeType") != "CUSTOMER":
+            problems.append(
+                "Eve's role is scoped %s, not CUSTOMER. Under an OU-scoped role the admin "
+                "enumeration returns nothing and an empty result reads as success "
+                "(attack A7)." % eve_assignments[0].get("scopeType"))
         eve_writes = sorted(
             p["privilegeName"] for p in eve_role.get("rolePrivileges", [])
             if is_write_privilege(p["privilegeName"])
         )
         if eve_writes:
-            return FAIL, (
-                "'%s' carries write privileges: %s. Eve never acts on Workspace, at "
-                "any stage, ever (SETUP.md Phase 15)." % (ROLE_EVE_NAME, eve_writes)
-            )
+            problems.append("'%s' carries write privileges: %s. Eve never acts on "
+                            "Workspace, at any stage, ever" % (ROLE_EVE_NAME, eve_writes))
+    if problems:
+        return FAIL, "; ".join(problems)
     return PASS, (
-        "robot holds exactly one assignment, customer-scoped reader; Stage 1 write "
-        "role assigned to nobody; Eve's role is read-only"
+        "robot holds %s; no retired Wall-E role assigned; %s" % (
+            "exactly Super Admin (grant on file)" if granted
+            else "no admin role (tier gate not passed)", eve_detail)
     )
 
 
@@ -6241,7 +7104,22 @@ def check_secrets_regional_and_pinned(ctx: Ctx) -> CheckResult:
     latest = [k for k, v in env.items() if "latest" in str(v).lower()]
     if latest:
         return FAIL, "these env values contain 'latest': %s" % latest
-    return PASS, "3 regional secrets; service pins version %s, no 'latest' anywhere" % version
+    super_env = deployed_service_env(ctx, SUPER_SERVICE)
+    super_detail = "walle-actions-super not deployed"
+    if super_env is not None:
+        super_version = super_env.get("REFRESH_TOKEN_VERSION", "")
+        described = gcloud_probe_json(
+            ctx, "secrets", "versions", "describe", super_version or "0",
+            "--secret", SUPER_CLIENT_SECRETS[1], "--location", ctx.need("REGION"),
+        ) if super_version.isdigit() else None
+        if not described or described.get("state") != "ENABLED":
+            return FAIL, ("walle-actions-super pins %s version %r, which is absent or not "
+                          "ENABLED" % (SUPER_CLIENT_SECRETS[1], super_version))
+        if any("latest" in str(v).lower() for v in super_env.values()):
+            return FAIL, "walle-actions-super env contains 'latest'"
+        super_detail = "walle-actions-super pins version %s" % super_version
+    return PASS, "%d regional secrets; walle-actions pins version %s; %s; no 'latest'" % (
+        len(WALLE_SECRETS), version, super_detail)
 
 
 def check_kms_separation(ctx: Ctx) -> CheckResult:
@@ -6259,7 +7137,7 @@ def check_kms_separation(ctx: Ctx) -> CheckResult:
     """
     problems: List[str] = []
     project_policy = gcloud_probe_json(ctx, "projects", "get-iam-policy", ctx.need("PROJECT")) or {}
-    for key in ("SA_ACTIONS", "SA_AGENT", "SA_DISPATCH", "SA_OPS_CALLER"):
+    for key in ("SA_ACTIONS", "SA_ACTIONS_SUPER", "SA_AGENT", "SA_DISPATCH", "SA_OPS_CALLER"):
         member = "serviceAccount:" + ctx.need(key)
         held = [
             r for r in _roles_of_member(project_policy, member)
@@ -6545,8 +7423,13 @@ def check_scheduler_states(ctx: Ctx) -> CheckResult:
 
 
 def deployed_actions_env(ctx: Ctx) -> Optional[Dict[str, str]]:
+    return deployed_service_env(ctx, ACTIONS_SERVICE)
+
+
+def deployed_service_env(ctx: Ctx, service: str) -> Optional[Dict[str, str]]:
+    """The env of one deployed Cloud Run service. None when not deployed."""
     described = gcloud_probe_json(
-        ctx, "run", "services", "describe", "walle-actions", "--region", ctx.need("REGION")
+        ctx, "run", "services", "describe", service, "--region", ctx.need("REGION")
     )
     if described is None:
         return None
@@ -6671,7 +7554,7 @@ def check_read_caller_allowlist(ctx: Ctx) -> CheckResult:
 def check_cloud_run_requires_auth(ctx: Ctx) -> CheckResult:
     problems = []
     checked = 0
-    for service in ("walle-actions", "walle-dispatcher"):
+    for service in ("walle-actions", SUPER_SERVICE, "walle-dispatcher"):
         policy = gcloud_probe_json(
             ctx, "run", "services", "get-iam-policy", service, "--region", ctx.need("REGION")
         )
@@ -6773,6 +7656,12 @@ def check_project_roles(ctx: Ctx) -> CheckResult:
     actions = set(_roles_of_member(policy, "serviceAccount:" + ctx.need("SA_ACTIONS")))
     if not set(ACTIONS_PROJECT_ROLES) <= actions:
         problems.append("walle-actions@ is missing %s" % sorted(set(ACTIONS_PROJECT_ROLES) - actions))
+    super_roles = set(_roles_of_member(policy, "serviceAccount:" + ctx.need("SA_ACTIONS_SUPER")))
+    if not set(SUPER_PROJECT_ROLES) <= super_roles:
+        problems.append("walle-actions-super@ is missing %s"
+                        % sorted(set(SUPER_PROJECT_ROLES) - super_roles))
+    if "roles/cloudtasks.enqueuer" in super_roles:
+        problems.append("walle-actions-super@ holds cloudtasks.enqueuer; band B has no queue")
     dispatch = set(_roles_of_member(policy, "serviceAccount:" + ctx.need("SA_DISPATCH")))
     if not set(DISPATCH_PROJECT_ROLES) <= dispatch:
         problems.append("walle-dispatcher@ is missing %s" % sorted(set(DISPATCH_PROJECT_ROLES) - dispatch))
@@ -6918,7 +7807,7 @@ def check_residency(ctx: Ctx) -> CheckResult:
         checked += 1
         if str(bucket.get("location", "")).upper() != ctx.need("REGION").upper():
             problems.append("staging bucket is in %s" % bucket.get("location"))
-    for service in ("walle-actions", "walle-dispatcher"):
+    for service in ("walle-actions", SUPER_SERVICE, "walle-dispatcher"):
         described = gcloud_probe_json(
             ctx, "run", "services", "describe", service, "--region", ctx.need("REGION"))
         if described is None:
@@ -6935,8 +7824,8 @@ def check_residency(ctx: Ctx) -> CheckResult:
             )
         timeout = described.get("spec", {}).get("template", {}).get("spec", {}).get(
             "timeoutSeconds")
-        if service == "walle-actions" and timeout not in (60, "60"):
-            problems.append("walle-actions timeout is %s, not 60s" % timeout)
+        if service in ("walle-actions", SUPER_SERVICE) and timeout not in (60, "60"):
+            problems.append("%s timeout is %s, not 60s" % (service, timeout))
     if not checked:
         return SKIP, "nothing exists yet to be in region"
     if problems:
@@ -7051,17 +7940,111 @@ def check_protected_covers_floor(ctx: Ctx) -> CheckResult:
     return PASS, "%d floor addresses, all covered transitively" % len(floor)
 
 
+def _super_admin_addresses(ctx: Ctx) -> List[str]:
+    """Every super admin, from users.list isAdmin=true, fully paginated."""
+    users = admin(ctx).users()
+    request = users.list(customer=ctx.need("CUSTOMER_ID"), query="isAdmin=true",
+                         maxResults=200, projection="basic")
+    return sorted(u["primaryEmail"].lower() for u in paginate(ctx, users, request, "users"))
+
+
+def _roster_problems(ctx: Ctx, granted: bool) -> Tuple[List[str], List[str]]:
+    """The roster rule (platform 04 §8.1, P68), read live as the operator.
+
+    Returns (problems, notes). Eve's daily roster check from her own credential
+    is the detective control; this is the build-time assertion of the same rule.
+    """
+    problems: List[str] = []
+    notes: List[str] = []
+    robot = ctx.need("ROBOT").lower()
+    eve = ctx.get("EVE_ROBOT", "").lower()
+    supers = _super_admin_addresses(ctx)
+    humans = [a for a in supers if a not in (robot, eve)]
+    if eve and eve in supers:
+        problems.append("%s (Eve's robot) is a super admin; Eve never holds super admin "
+                        "(platform HLD §4.6)" % eve)
+    if granted:
+        if robot not in supers:
+            problems.append("the robot is not a super admin although the grant record is "
+                            "on file (role_assignment_missing)")
+        if len(humans) < 2:
+            problems.append(
+                "%d human super admin(s) besides the robot; at least two are required, so "
+                "the robot is never the only super admin and never the only one who can "
+                "recover another (platform HLD §13.1 item 6)" % len(humans))
+    else:
+        if robot in supers:
+            problems.append("the robot is a super admin and SUPER_ADMIN_GRANT_DECISION names "
+                            "no signed record: the tier gate (platform HLD §0.4) was skipped")
+        if len(humans) < 2:
+            notes.append("%d human super admin(s): two are a precondition of the grant"
+                         % len(humans))
+    # "Never the recovery super admin": no super admin's recovery email is the
+    # robot's address (Directory API users.get, projection full).
+    for address in humans:
+        record = api_get(ctx, "users.get %s" % address,
+                         admin(ctx).users().get(userKey=address, projection="full"))
+        if record and str(record.get("recoveryEmail", "")).lower() == robot:
+            problems.append("the robot is the recovery email of super admin %s" % address)
+        # Added 2026-09-13: the two humans count only if hardened (platform HLD
+        # §13.1 item 6, "separate admin accounts with hardware keys"). The
+        # Directory API exposes 2SV enrolment and enforcement, not the key type;
+        # the hardware-key half stays the console check of Phase 2 G3.
+        if record and not (record.get("isEnrolledIn2Sv") and record.get("isEnforcedIn2Sv")):
+            message = ("human super admin %s is not enrolled in and enforced for 2-step "
+                       "verification (isEnrolledIn2Sv=%s, isEnforcedIn2Sv=%s)" % (
+                           address, record.get("isEnrolledIn2Sv"), record.get("isEnforcedIn2Sv")))
+            (problems if granted else notes).append(message)
+    roster = sorted(a.strip().lower() for a in ctx.get("SUPER_ADMIN_ROSTER", "").split(",")
+                    if a.strip())
+    if roster:
+        added = sorted(set(supers) - set(roster))
+        missing = sorted(set(roster) - set(supers))
+        if added:
+            problems.append("super admins NOT on the committed roster: %s (role_assignment_added)"
+                            % added)
+        if missing:
+            problems.append("roster entries that are not super admins: %s "
+                            "(role_assignment_missing)" % missing)
+        if granted and robot not in roster:
+            problems.append("SUPER_ADMIN_ROSTER does not list the robot although it is granted")
+    elif granted:
+        problems.append("SUPER_ADMIN_ROSTER is empty: after the grant the committed roster "
+                        "must list exactly the super admins (P68)")
+    else:
+        notes.append("no committed roster yet (SUPER_ADMIN_ROSTER)")
+    return problems, notes
+
+
 def check_robot_hardening(ctx: Ctx) -> CheckResult:
+    """INVERTED 2026-09-13 (platform HLD §13.1 item 10, §18 item 5).
+
+    Was: FAIL if the robot isAdmin ("the difference between a contained
+    incident and a breach"). The objective makes the robot a super admin, so
+    the check now asserts, from the operator's credential:
+      - the super-admin state matches the tier gate: a super admin once the
+        signed P33 record is on file, not one before;
+      - the account hygiene set: no recovery email or phone, 2SV enrolled and
+        enforced, in the robot OU;
+      - the roster rule: at least two human super admins, Eve's robot never
+        one, the robot never the recovery email of a super admin, and the
+        live roster equal to the committed SUPER_ADMIN_ROSTER in both
+        directions.
+    Not readable with this script's scopes and asserted by the platform drift
+    job's Policy API read instead (platform 04 §8.2, §8.4): super-admin
+    self-recovery Off at the top OU, multi-party approval on, session control.
+    """
     robot = api_get(ctx, "users.get robot", admin(ctx).users().get(
         userKey=ctx.need("ROBOT"), projection="full"))
     if not robot:
         return FAIL, "robot account does not exist"
+    granted = super_admin_grant_on_file(ctx)
     problems = []
-    if robot.get("isAdmin"):
-        problems.append(
-            "the robot is a SUPER ADMIN. That is the difference between a contained "
-            "incident and a breach"
-        )
+    if granted and not robot.get("isAdmin"):
+        problems.append("the grant record is on file and the robot is NOT a super admin")
+    if not granted and robot.get("isAdmin"):
+        problems.append("the robot is a SUPER ADMIN with no signed grant record on file "
+                        "(SUPER_ADMIN_GRANT_DECISION): the tier gate was skipped")
     if robot.get("recoveryEmail"):
         problems.append("a recovery email is set")
     if robot.get("recoveryPhone"):
@@ -7072,9 +8055,27 @@ def check_robot_hardening(ctx: Ctx) -> CheckResult:
         problems.append("no 2SV method is enrolled")
     if robot.get("orgUnitPath") != ctx.need("SVC_OU"):
         problems.append("the robot is in %s, not %s" % (robot.get("orgUnitPath"), ctx.need("SVC_OU")))
+    roster_problems, notes = _roster_problems(ctx, granted)
+    problems.extend(roster_problems)
     if problems:
         return FAIL, "; ".join(problems)
-    return PASS, "not a super admin, no recovery contacts, 2SV enrolled and enforced"
+    return PASS, "%s; no recovery contacts, 2SV enrolled and enforced; roster rule holds%s" % (
+        "super admin per the grant record" if granted else "not a super admin (gate not passed)",
+        " (%s)" % "; ".join(notes) if notes else "")
+
+
+def verify_super_admin_grant(ctx: Ctx) -> CheckResult:
+    """M2C's verifier: the human grant happened, and the roster still holds."""
+    if not super_admin_grant_on_file(ctx):
+        return FAIL, "SUPER_ADMIN_GRANT_DECISION names no signed record"
+    robot = api_get(ctx, "users.get robot", admin(ctx).users().get(
+        userKey=ctx.need("ROBOT"), projection="full"))
+    if not robot or not robot.get("isAdmin"):
+        return FAIL, "the robot is not a super admin yet"
+    problems, _notes = _roster_problems(ctx, True)
+    if problems:
+        return FAIL, "; ".join(problems)
+    return PASS, "the robot is a super admin and the roster rule holds"
 
 
 def check_sandbox(ctx: Ctx) -> CheckResult:
@@ -7117,91 +8118,145 @@ def check_budget(ctx: Ctx) -> CheckResult:
     return FAIL, "no walle-stage-0 budget exists"
 
 
-def robot_credentials(ctx: Ctx) -> Any:
-    """Build the robot's credential from Secret Manager, in memory only.
+def robot_credential_fields(ctx: Ctx, band_b: bool = False) -> Dict[str, Any]:
+    """The client id, secret, token URI and PINNED refresh token of one client.
+
+    In memory only; never printed. Reads the pinned version, never 'latest'.
+    """
+    pin_key = "SUPER_REFRESH_TOKEN_VERSION" if band_b else "REFRESH_TOKEN_VERSION"
+    client_secret, token_secret = SUPER_CLIENT_SECRETS if band_b else NARROW_CLIENT_SECRETS
+    version = ctx.get(pin_key)
+    if not version:
+        env = (deployed_service_env(ctx, SUPER_SERVICE) if band_b
+               else deployed_actions_env(ctx)) or {}
+        version = env.get("REFRESH_TOKEN_VERSION", "")
+    if not version.isdigit():
+        die("%s is not a version number: %r" % (pin_key, version))
+    client = json.loads(read_secret(ctx, client_secret).decode("utf-8"))
+    block = client.get("installed") or client.get("web") or {}
+    token = read_secret(ctx, token_secret, version).decode("utf-8").strip()
+    return {
+        "refresh_token": token,
+        "client_id": block.get("client_id"),
+        "client_secret": block.get("client_secret"),
+        "token_uri": block.get("token_uri", "https://oauth2.googleapis.com/token"),
+    }
+
+
+def robot_credentials(ctx: Ctx, band_b: bool = False) -> Any:
+    """Build one of the robot's two credentials from Secret Manager, in memory only.
 
     Reads the PINNED version, never 'latest', for the same reason the service
     does: latest resolves to the newest enabled version, so disabling the newest
-    falls back to the previous, still-valid token.
+    falls back to the previous, still-valid token. band_b selects client 2.
+
+    NOT for proving what Google granted: google-auth sends `scopes` as the
+    `scope` parameter of the refresh, so the access token comes back narrowed
+    to exactly this list. check_robot_credentials_scoped uses
+    refresh_unnarrowed() instead (corrected 2026-09-13).
     """
     _Request, Credentials, _Flow, _build = _import_google()
-    version = ctx.get("REFRESH_TOKEN_VERSION")
-    if not version:
-        env = deployed_actions_env(ctx) or {}
-        version = env.get("REFRESH_TOKEN_VERSION", "")
-    if not version.isdigit():
-        die("REFRESH_TOKEN_VERSION is not a version number: %r" % version)
-    client = json.loads(read_secret(ctx, "walle-oauth-client").decode("utf-8"))
-    block = client.get("installed") or client.get("web") or {}
-    token = read_secret(ctx, "walle-refresh-token", version).decode("utf-8").strip()
-    return Credentials(
-        token=None,
-        refresh_token=token,
-        client_id=block.get("client_id"),
-        client_secret=block.get("client_secret"),
-        token_uri=block.get("token_uri", "https://oauth2.googleapis.com/token"),
-        scopes=list(ROBOT_SCOPES),
-    )
+    fields = robot_credential_fields(ctx, band_b)
+    scopes = parse_scope_list(ctx.get("SUPER_SCOPES")) if band_b else list(ROBOT_SCOPES)
+    return Credentials(token=None, scopes=scopes, **fields)
 
 
-def check_robot_credential_is_read_only(ctx: Ctx) -> CheckResult:
-    """SETUP.md Phase 9's fourth check, the one people skip.
+def refresh_unnarrowed(request: Any, fields: Dict[str, Any]) -> Tuple[str, List[str]]:
+    """Refresh WITHOUT a scope parameter and return (access_token, granted scopes).
 
-    At Stage 0 the role is read-only, so a write MUST fail at Google's end. If it
-    succeeds, the Phase 2 role carries a write privilege it should not and the
-    Workspace layer is not the second enforcement point the design claims.
+    Google's refresh request takes client_id, client_secret, grant_type and
+    refresh_token, and its response carries `scope`, "the scopes of access
+    granted by the access_token" (developers.google.com/identity/protocols/
+    oauth2/native-app, read 2026-09-13). With no scope parameter nothing narrows
+    the answer, so an extra or cloud-platform scope on the consent is visible.
+    Neither the token nor the response body is ever printed or logged.
     """
-    if not secret_exists(ctx, "walle-refresh-token"):
-        return SKIP, "no refresh token yet (phase 9)"
+    body = urllib.parse.urlencode({
+        "client_id": fields.get("client_id") or "",
+        "client_secret": fields.get("client_secret") or "",
+        "grant_type": "refresh_token",
+        "refresh_token": fields.get("refresh_token") or "",
+    }).encode("utf-8")
+    response = request(url=fields["token_uri"], method="POST", body=body,
+                       headers={"Content-Type": "application/x-www-form-urlencoded"})
+    if getattr(response, "status", None) != 200:
+        raise WalleError("the refresh was refused (HTTP %s)" % getattr(response, "status", "?"))
+    data = response.data
+    data = json.loads(data.decode("utf-8") if isinstance(data, bytes) else data)
+    token = data.get("access_token") or ""
+    if not token:
+        raise WalleError("the refresh returned no access token")
+    return token, str(data.get("scope") or "").split()
+
+
+def check_robot_credentials_scoped(ctx: Ctx) -> CheckResult:
+    """Rewritten 2026-09-13. Was robot_credential_is_read_only.
+
+    The old check proved a users.update as the robot was REFUSED at Google's
+    end, because the Stage 0 role was read-only. Against a super admin that
+    write SUCCEEDS, so the probe would be an unaudited robot write and a
+    reconciliation gap, and "Google refuses" is no longer a property of the
+    design. What still holds at Google's end is the scope set, so for each
+    stored client this asserts: the credential belongs to the robot (SETUP.md
+    7.1), and the scopes Google granted equal the reviewed list exactly and
+    carry no cloud-platform in any form (platform HLD §13.1 item 3).
+
+    Refreshing a token and calling userinfo are robot-attributed token events,
+    not admin writes. Run verify inside a change window the operators know of.
+    """
     if ctx.dry_run:
-        # This probe is a real Admin SDK write, issued directly rather than
-        # through api_mutate, so nothing else would stop it: confirm() returns
-        # under --dry-run and the call went straight out. If the Phase 2 role
-        # were wrong the write would SUCCEED, and the Phase 18 checklist
-        # requires the Workspace admin audit log to show zero rows attributed
-        # to the robot apart from the single Phase 17 event — so a dry run had
-        # a path to manufacturing the very evidence Stage 0 entry reads as a
-        # control failure.
-        return SKIP, (
-            "--dry-run: the users.update probe is a real Workspace write and a "
-            "robot-attributed admin event. Not issued."
-        )
-    _Request, _Credentials, _Flow, build = _import_google()
-    creds = robot_credentials(ctx)
-    email = fetch_consented_email(ctx, creds, build)
-    if email.lower() != ctx.need("ROBOT").lower():
-        return FAIL, (
-            "the stored credential belongs to %s, not %s. Destroy that secret "
-            "version and re-run the consent (SETUP.md 7.1)." % (email, ctx.need("ROBOT"))
-        )
-    directory = build("admin", "directory_v1", credentials=creds, cache_discovery=False)
-    try:
-        directory.users().list(customer=ctx.need("CUSTOMER_ID"), maxResults=1).execute()
-    except Exception as exc:
-        return FAIL, "users.list as the robot failed: %s" % exc
-    targets = [a.strip() for a in ctx.get("SANDBOX_ACCOUNTS").split(",") if a.strip()]
-    if not targets:
-        return SKIP, "no sandbox account to probe; a real account must never be named"
-    target = targets[0]
-    record = api_get(ctx, "users.get sandbox", admin(ctx).users().get(userKey=target))
-    if not record or record.get("orgUnitPath") != ctx.need("SANDBOX_OU"):
-        return SKIP, "%s is not in %s; refusing to probe" % (target, ctx.need("SANDBOX_OU"))
-    say("  WORKSPACE WRITE PROBE: users.update on %s, expected to be REFUSED" % target)
-    if refuse_in_dry_run(ctx, "users.update probe on %s" % target):
-        return SKIP, "--dry-run"
-    confirm(ctx, "Attempt the write that must fail?")
-    body = {"name": {"givenName": record.get("name", {}).get("givenName", "Wall-E test"),
-                     "familyName": record.get("name", {}).get("familyName", "01")}}
-    try:
-        directory.users().update(userKey=target, body=body).execute()
-    except Exception as exc:
-        if _http_status(exc) in (403, 401):
-            return PASS, "reads succeed, a write on %s is refused 403" % target
-        return FAIL, "the write failed for the wrong reason: %s" % exc
-    return FAIL, (
-        "a users.update as the robot SUCCEEDED on %s. The Stage 0 role carries a "
-        "write privilege and the Workspace layer is not enforcing anything." % target
-    )
+        return SKIP, "--dry-run: refreshing the robot's tokens is a robot-attributed token event"
+    _Request, Credentials, _Flow, build = _import_google()
+    Request = _Request
+    checked: List[str] = []
+    problems: List[str] = []
+    for band_b, label in ((False, "client 1 (narrow)"), (True, "client 2 (broad)")):
+        token_secret = (SUPER_CLIENT_SECRETS if band_b else NARROW_CLIENT_SECRETS)[1]
+        if not secret_exists(ctx, token_secret):
+            continue
+        versions = gcloud_probe_json(ctx, "secrets", "versions", "list", token_secret,
+                                     "--location", ctx.need("REGION"),
+                                     "--filter", "state=ENABLED") or []
+        if not versions:
+            continue
+        expected = set(parse_scope_list(ctx.get("SUPER_SCOPES")) if band_b else ROBOT_SCOPES)
+        if band_b and not expected:
+            # Refuse before touching the token: with no reviewed list there is
+            # nothing to compare Google's answer with.
+            problems.append("%s is stored but SUPER_SCOPES is empty: the reviewed broad "
+                            "list is unknown, so its scope set cannot be asserted" % label)
+            continue
+        fields = robot_credential_fields(ctx, band_b)
+        try:
+            # Corrected 2026-09-13: refresh WITHOUT narrowing. The old code built
+            # Credentials(scopes=expected), which google-auth sends as `scope`,
+            # so Google's answer could never hold a scope outside the list.
+            access_token, granted = refresh_unnarrowed(Request(), fields)
+        except Exception as exc:
+            problems.append("%s cannot refresh: %s" % (label, type(exc).__name__))
+            continue
+        creds = Credentials(token=access_token)
+        email = fetch_consented_email(ctx, creds, build)
+        if email.lower() != ctx.need("ROBOT").lower():
+            problems.append("%s belongs to %s, not %s; destroy that version and re-run the "
+                            "consent (SETUP.md 7.1)" % (label, email, ctx.need("ROBOT")))
+        if not granted:
+            problems.append("%s: Google's refresh response carried no scope field; its "
+                            "breadth is unknown" % label)
+            continue
+        bad = forbidden_scopes(granted)
+        if bad:
+            problems.append("%s carries %s" % (label, ", ".join(bad)))
+        if set(granted) != expected:
+            problems.append("%s granted scopes differ from the reviewed list: extra %s, "
+                            "missing %s" % (label, sorted(set(granted) - expected),
+                                            sorted(expected - set(granted))))
+        checked.append(label)
+    if problems:
+        return FAIL, "; ".join(problems)
+    if not checked:
+        return SKIP, "no stored refresh token yet (phase 9)"
+    return PASS, "%s: the robot's, exact scope set, no cloud-platform" % ", ".join(checked)
 
 
 def verify_operator_client_file(ctx: Ctx) -> CheckResult:
@@ -7279,11 +8334,17 @@ def verify_2sv_enforced(ctx: Ctx) -> CheckResult:
             problems.append("%s has no 2SV method enrolled (register the key FIRST)" % email)
         if not record.get("isEnforcedIn2Sv"):
             problems.append("%s is not under 2SV enforcement" % email)
-        if record.get("isAdmin"):
-            problems.append("%s is a super admin" % email)
+        # Rewritten 2026-09-13: kept for EVE_ROBOT, which is never a super admin.
+        # For ROBOT the super-admin state is the tier gate's, asserted by
+        # check_robot_hardening; M2B runs before the grant, so at this point the
+        # robot must not be one yet either.
+        if key == "EVE_ROBOT" and record.get("isAdmin"):
+            problems.append("%s (Eve's robot) is a super admin" % email)
+        if key == "ROBOT" and record.get("isAdmin") and not super_admin_grant_on_file(ctx):
+            problems.append("%s is already a super admin before the tier gate (M2C)" % email)
     if problems:
         return FAIL, "; ".join(problems)
-    return PASS, "both robots: 2SV enrolled and enforced, neither is a super admin"
+    return PASS, "both robots: 2SV enrolled and enforced; Eve's robot is not a super admin"
 
 
 def verify_workspace_log_sharing(ctx: Ctx) -> CheckResult:
@@ -7332,6 +8393,12 @@ def _assert_no_robot_admin_events(ctx: Ctx, freshness: str = "24h") -> CheckResu
 
     No methodName filter, deliberately: the Workspace admin audit log records
     CHANGES only and never reads, so ANY row attributed to the robot is a write.
+
+    Qualified 2026-09-13: this stays the Stage 0 assertion. Once Super Admin
+    is granted and band B is live, legitimate robot writes exist, and the
+    control that matters is Eve's minute-latency reconciliation of every
+    robot-attributed event against walle_audit and the band-B audit rows
+    (platform HLD §13.1 item 5), not a count of zero here.
     """
     result = probe(ctx, [
         "gcloud", "logging", "read",
@@ -7621,9 +8688,158 @@ def check_cross_project_dataset_access(ctx: Ctx) -> CheckResult:
                   "authorised view, nothing spelled in Wall-E's project")
 
 
+# --------------------------------------------------------------------------- #
+# The super-admin robot: two clients, two services, the lists (2026-09-13)
+# --------------------------------------------------------------------------- #
+
+
+def check_no_cloud_platform_scope(ctx: Ctx) -> CheckResult:
+    """cloud-platform is consented in neither client (platform HLD §13.1 item 3).
+
+    Static half: the constant and the configured list. The consented half is
+    robot_credentials_scoped, which reads what Google actually granted. The
+    self-test asserts the static half without credentials: that is the CI
+    assertion the HLD asks for.
+    """
+    problems = []
+    for label, scopes in (("ROBOT_SCOPES (client 1)", list(ROBOT_SCOPES)),
+                          ("SUPER_SCOPES (client 2)", parse_scope_list(ctx.get("SUPER_SCOPES")))):
+        bad = forbidden_scopes(scopes)
+        if bad:
+            problems.append("%s carries %s" % (label, ", ".join(bad)))
+    if problems:
+        return FAIL, "; ".join(problems)
+    return PASS, "no cloud-platform scope in either client's list%s" % (
+        "" if ctx.get("SUPER_SCOPES") else " (client 2's list not set yet)")
+
+
+def check_hard_denied_list(ctx: Ctx) -> CheckResult:
+    """The hard-denied list as data: closed vocabulary, every row resolvable."""
+    problems = hard_denied_problems()
+    unresolved = sorted({t for row in hard_denied_resolved(ctx.cfg) for t in row["targets"]
+                         if "unset>" in t})
+    if unresolved:
+        problems.append("targets that cannot be resolved from the config: %s" % unresolved)
+    if problems:
+        return FAIL, "; ".join(problems)
+    return PASS, "%d hard-denied rows, closed reason vocabulary, every target resolved; " \
+                 "the denial suite exercises them (walle denials)" % len(HARD_DENIED)
+
+
+def check_secret_readers_split(ctx: Ctx) -> CheckResult:
+    """One reader per OAuth pair, never crossed (platform HLD §13.1 item 3)."""
+    problems = []
+    checked = 0
+    members = {key: "serviceAccount:" + ctx.need(key) for key in ("SA_ACTIONS", "SA_ACTIONS_SUPER")}
+    for secret, reader_key in SECRET_READERS.items():
+        if not secret_exists(ctx, secret):
+            continue
+        checked += 1
+        policy = gcloud_probe_json(
+            ctx, "secrets", "get-iam-policy", secret, "--location", ctx.need("REGION")) or {}
+        accessors = set(_members_with_role(policy, "roles/secretmanager.secretAccessor"))
+        other_key = "SA_ACTIONS_SUPER" if reader_key == "SA_ACTIONS" else "SA_ACTIONS"
+        if members[other_key] in accessors:
+            problems.append("%s is readable by %s; each client has exactly one reader"
+                            % (secret, ctx.need(other_key)))
+        extra = sorted(a for a in accessors if a != members[reader_key])
+        if extra:
+            problems.append("%s has accessors beyond %s: %s" % (secret, ctx.need(reader_key), extra))
+    if not checked:
+        return SKIP, "no Wall-E secret exists yet (phase 8)"
+    if problems:
+        return FAIL, "; ".join(problems)
+    return PASS, "narrow pair read by walle-actions@ only, broad pair by walle-actions-super@ only"
+
+
+def check_super_service(ctx: Ctx) -> CheckResult:
+    """walle-actions-super: env complete, pins a number, allowlists and invokers
+    EXACTLY the HLD's set, compared both ways (tightened 2026-09-13; the old
+    check only intersected with a denylist, so walle-actions@, a user: or
+    group: principal, or any unlisted account passed):
+
+      EXEC_CALLER_ALLOWLIST    = {the agent's service account} plus, only when
+                                 AGENT_IDENTITY_SPIKE_RESULT is on file, the
+                                 agent-identity claim;
+      CONTROL_CALLER_ALLOWLIST = {eve-controller@, eve-verifier@} (halt only,
+                                 project-topology.md row 27);
+      run.invoker              = {the agent's service account, eve-controller@,
+                                 eve-verifier@} plus the agent principal bound
+                                 in Phase 12b, plus SUPER_EXTRA_INVOKERS (the
+                                 approval surface's and the platform drift job's
+                                 accounts once named).
+    Never the narrow secrets, no read or internal list."""
+    env = deployed_service_env(ctx, SUPER_SERVICE)
+    if env is None:
+        return SKIP, "walle-actions-super is not deployed yet (band B client not consented)"
+    problems = []
+    missing = [n for n in SUPER_ENV_NAMES if not str(env.get(n, "")).strip()]
+    if missing:
+        problems.append("missing or empty env: %s" % missing)
+    if env.get("REFRESH_TOKEN_SECRET") != SUPER_CLIENT_SECRETS[1] or \
+            env.get("OAUTH_CLIENT_SECRET") != SUPER_CLIENT_SECRETS[0]:
+        problems.append("it does not read the broad pair (%s, %s): %s, %s" % (
+            SUPER_CLIENT_SECRETS[0], SUPER_CLIENT_SECRETS[1],
+            env.get("OAUTH_CLIENT_SECRET"), env.get("REFRESH_TOKEN_SECRET")))
+    if not str(env.get("REFRESH_TOKEN_VERSION", "")).isdigit():
+        problems.append("REFRESH_TOKEN_VERSION is %r, not a version NUMBER"
+                        % env.get("REFRESH_TOKEN_VERSION"))
+    for name in ("READ_CALLER_ALLOWLIST", "INTERNAL_CALLER_ALLOWLIST"):
+        if name in env:
+            problems.append("%s is set; the band-B service has no read and no internal "
+                            "caller" % name)
+    agent_sa = ctx.need("SA_AGENT")
+    eve_control = {ctx.need("SA_EVE"), ctx.need("SA_EVE_VERIFIER")}
+    spike_on_file = bool(ctx.get("AGENT_IDENTITY_SPIKE_RESULT")) and os.path.isfile(
+        os.path.expanduser(ctx.get("AGENT_IDENTITY_SPIKE_RESULT")))
+
+    def is_agent_claim(entry: str) -> bool:
+        return entry.startswith("principal://" + AGENT_TRUST_DOMAIN_PREFIX) or \
+            entry.startswith(AGENT_TRUST_DOMAIN_PREFIX)
+
+    exec_list = [e.strip() for e in env.get("EXEC_CALLER_ALLOWLIST", "").split(",") if e.strip()]
+    control = [e.strip() for e in env.get("CONTROL_CALLER_ALLOWLIST", "").split(",") if e.strip()]
+    if ctx.need("SA_DISPATCH") in exec_list + control:
+        problems.append("walle-dispatcher@ is on an allowlist; it has no route to band B")
+    exec_extra = sorted(e for e in set(exec_list)
+                        if e != agent_sa and not (spike_on_file and is_agent_claim(e)))
+    if exec_extra:
+        problems.append("EXEC_CALLER_ALLOWLIST names callers the HLD does not give this "
+                        "service: %s (expected the agent only)" % exec_extra)
+    if not any(e == agent_sa or is_agent_claim(e) for e in exec_list):
+        problems.append("EXEC_CALLER_ALLOWLIST does not name the agent (%s)" % agent_sa)
+    if set(control) != eve_control or len(control) != len(set(control)):
+        problems.append("CONTROL_CALLER_ALLOWLIST is %s, expected exactly eve-controller@ and "
+                        "eve-verifier@ of %s (halt only; extra %s, missing %s)" % (
+                            control, ctx.need("EVE_PROJECT"),
+                            sorted(set(control) - eve_control), sorted(eve_control - set(control))))
+    policy = gcloud_probe_json(ctx, "run", "services", "get-iam-policy", SUPER_SERVICE,
+                               "--region", ctx.need("REGION")) or {}
+    members = {m for b in policy.get("bindings", []) for m in b.get("members", [])}
+    if members & {"allUsers", "allAuthenticatedUsers"}:
+        problems.append("walle-actions-super is publicly invocable")
+    invokers = set(_members_with_role(policy, "roles/run.invoker"))
+    required = {"serviceAccount:" + agent_sa} | {"serviceAccount:" + e for e in eve_control}
+    extra_ok = {m.strip() for m in ctx.get("SUPER_EXTRA_INVOKERS", "").split(",") if m.strip()}
+    allowed = required | extra_ok
+    extra = sorted(m for m in invokers - allowed if not is_agent_claim(m))
+    if extra:
+        problems.append("run.invoker on walle-actions-super held by %s; the set is the agent, "
+                        "eve-controller@ and eve-verifier@ (plus SUPER_EXTRA_INVOKERS)" % extra)
+    missing_invokers = sorted(required - invokers)
+    if missing_invokers:
+        problems.append("run.invoker on walle-actions-super is missing %s (an Eve identity "
+                        "absent before Eve's runbook created it: re-run 'walle deploy')"
+                        % missing_invokers)
+    if problems:
+        return FAIL, "; ".join(problems)
+    return PASS, "broad pair pinned to version %s; EXEC the agent, CONTROL eve-controller@ " \
+                 "and eve-verifier@ only; invokers exactly the HLD's set" % env.get("REFRESH_TOKEN_VERSION")
+
 CHECKS: Tuple[Tuple[str, str, Callable[[Ctx], CheckResult]], ...] = (
     ("agent_reads_no_secret", "8", check_agent_reads_no_secret),
-    ("stage0_role_has_no_write", "2", check_stage0_role_has_no_write),
+    # Rewritten 2026-09-13: Wall-E's Stage 0 role is retired; Eve's role is checked.
+    ("eve_role_is_read_only", "2", check_eve_role_is_read_only),
     ("role_assignments", "2", check_role_assignments),
     ("secrets_regional_and_version_pinned", "8/10", check_secrets_regional_and_pinned),
     ("kms_separation", "8", check_kms_separation),
@@ -7643,8 +8859,9 @@ CHECKS: Tuple[Tuple[str, str, Callable[[Ctx], CheckResult]], ...] = (
     ("audit_tables_partitioned", "7", check_audit_tables),
     ("eve_credential_separation", "8", check_eve_separation),
     ("protected_group_covers_floor", "1", check_protected_covers_floor),
-    ("robot_hardening", "3", check_robot_hardening),
-    ("robot_credential_is_read_only", "9", check_robot_credential_is_read_only),
+    # Inverted 2026-09-13: the robot IS a super admin once the grant is on file.
+    ("robot_hardening_and_roster", "3/gate", check_robot_hardening),
+    ("robot_credentials_scoped", "9", check_robot_credentials_scoped),
     ("sandbox_accounts", "1", check_sandbox),
     ("exactly_one_engine", "12", check_single_engine),
     ("budget_alert", "6", check_budget),
@@ -7662,6 +8879,11 @@ CHECKS: Tuple[Tuple[str, str, Callable[[Ctx], CheckResult]], ...] = (
     ("dispatcher_uses_stream_query", "12c", check_dispatcher_stream_query),
     ("agent_no_dynamic_toolsets", "13b", check_agent_no_dynamic_toolsets),
     ("egress_registry_no_forbidden_hosts", "13b", check_egress_registry_no_forbidden_hosts),
+    # The super-admin robot (2026-09-13, platform HLD §13.1 items 2 and 3).
+    ("no_cloud_platform_scope", "9", check_no_cloud_platform_scope),
+    ("hard_denied_list", "17", check_hard_denied_list),
+    ("secret_readers_split", "8", check_secret_readers_split),
+    ("super_service_allowlists", "10", check_super_service),
 )
 
 
@@ -7753,6 +8975,35 @@ def cmd_denials(ctx: Ctx) -> int:
             "denials-%s.json" % datetime.date.today().isoformat(),
         )
         os.makedirs(os.path.dirname(output), exist_ok=True)
+        # The hard-denied list as data (2026-09-13, platform HLD §13.1 items 2
+        # and 10). Every row must be refused in every lane with its reason and
+        # a severity-1 page, including "a write targeting the robot itself"
+        # (HD-01) and "any makeAdmin" (HD-11). The contract with
+        # tests/denials.py is the environment, like deploy.py's: the file path
+        # and the band-B service URL. Not a secret; a scratch file.
+        problems = hard_denied_problems()
+        if problems:
+            die("the hard-denied list is inconsistent: %s" % "; ".join(problems))
+        # Added 2026-09-13: the same resolvability rule as check_hard_denied_list.
+        # A row whose target reads "<EVE_ROBOT unset>" would be handed to the
+        # suite, test nothing and read green.
+        unresolved = sorted({t for row in hard_denied_resolved(ctx.cfg) for t in row["targets"]
+                             if "unset>" in t})
+        if unresolved:
+            die("the hard-denied list has targets the config cannot resolve: %s; set those "
+                "keys before running the denial suite" % unresolved)
+        hard_denied_path = ctx.scratch_file(
+            "hard-denied.json", json.dumps(hard_denied_resolved(ctx.cfg), indent=2))
+        say("  hard-denied list for the suite: %d rows -> %s"
+            % (len(HARD_DENIED), hard_denied_path))
+        denial_env = {"WALLE_HARD_DENIED_FILE": hard_denied_path}
+        super_url = ctx.get("SUPER_ACTIONS_URL") or current_service_url(ctx, SUPER_SERVICE)
+        if super_url:
+            denial_env["WALLE_SUPER_ACTIONS_URL"] = super_url
+        else:
+            warn("walle-actions-super is not deployed: the suite can test the hard-denied "
+                 "rows in band A only. Bands B and C must be run once it exists.")
+            ctx.note("hard-denied rows NOT yet tested in bands B and C (no walle-actions-super)")
         result = run(
             ctx,
             [
@@ -7760,6 +9011,7 @@ def cmd_denials(ctx: Ctx) -> int:
                 "--project", ctx.need("PROJECT"), "--json",
             ],
             check=False,
+            env=denial_env,
         )
         if not ctx.dry_run:
             with open(output, "w", encoding="utf-8") as handle:
@@ -7852,28 +9104,33 @@ def run_infrastructure_denials(ctx: Ctx, url: str) -> List[Tuple[int, str, str, 
     # and "denied", and this test used to report PASS without ever reaching
     # Secret Manager.
     can_agent, why_agent = impersonation_works(ctx, ctx.need("SA_AGENT"))
-    if not can_agent:
-        results.append((7, "walle-agent@ accesses the refresh token", SKIP, why_agent))
-    else:
-        probe_secret = run(
-            ctx,
-            [
-                "gcloud", "secrets", "versions", "access", "latest",
-                "--secret", "walle-refresh-token", "--location", ctx.need("REGION"),
-                "--project", ctx.need("PROJECT"),
-                # If this test FAILS the payload exists; never let it reach a
-                # terminal or a captured log.
-                "--out-file", os.devnull,
-            ],
-            mutating=False, check=False, stdout_is_secret=True,
-            env={"CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT": ctx.need("SA_AGENT")},
-        )
-        results.append((
-            7, "walle-agent@ accesses the refresh token",
-            FAIL if probe_secret.ok else PASS,
-            "SUCCEEDED, which is trust boundary 3 gone" if probe_secret.ok
-            else "refused at Google",
-        ))
+    # Both refresh tokens since 2026-09-13: the broad one is the super-admin
+    # credential with the widest scopes, and trust boundary 3 covers it too.
+    for token_secret in (NARROW_CLIENT_SECRETS[1], SUPER_CLIENT_SECRETS[1]):
+        if not can_agent:
+            results.append((7, "walle-agent@ accesses %s" % token_secret, SKIP, why_agent))
+        elif not secret_exists(ctx, token_secret):
+            results.append((7, "walle-agent@ accesses %s" % token_secret, SKIP, "secret absent"))
+        else:
+            probe_secret = run(
+                ctx,
+                [
+                    "gcloud", "secrets", "versions", "access", "latest",
+                    "--secret", token_secret, "--location", ctx.need("REGION"),
+                    "--project", ctx.need("PROJECT"),
+                    # If this test FAILS the payload exists; never let it reach a
+                    # terminal or a captured log.
+                    "--out-file", os.devnull,
+                ],
+                mutating=False, check=False, stdout_is_secret=True,
+                env={"CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT": ctx.need("SA_AGENT")},
+            )
+            results.append((
+                7, "walle-agent@ accesses %s" % token_secret,
+                FAIL if probe_secret.ok else PASS,
+                "SUCCEEDED, which is trust boundary 3 gone" if probe_secret.ok
+                else "refused at Google",
+            ))
 
     status_bq, detail_bq = check_actions_cannot_delete_bigquery(ctx)
     results.append((9, "walle-actions@ DELETEs audit rows", status_bq, detail_bq))
@@ -7947,10 +9204,20 @@ def cmd_status(ctx: Ctx) -> int:
             record = api_get(ctx, "groups.get", admin(ctx).groups().get(groupKey=ctx.get(key)))
             add("1", "group %s" % ctx.get(key), bool(record),
                 "%s members" % (record or {}).get("directMembersCount", "?"))
-        for title in (ROLE_READER_NAME, ROLE_OPERATOR_NAME, ROLE_EVE_NAME):
+        role = find_role(ctx, ROLE_EVE_NAME)
+        assignments = list_role_assignments(ctx, role["roleId"]) if role else []
+        add("2", "role %s" % ROLE_EVE_NAME, bool(role), "%d assignment(s)" % len(assignments))
+        # Retired 2026-09-13: "yes" on these rows is a finding, not progress.
+        for title in RETIRED_WALLE_ROLE_NAMES:
             role = find_role(ctx, title)
-            assignments = list_role_assignments(ctx, role["roleId"]) if role else []
-            add("2", "role %s" % title, bool(role), "%d assignment(s)" % len(assignments))
+            if role:
+                assignments = list_role_assignments(ctx, role["roleId"])
+                add("2", "RETIRED role %s (remove it)" % title, True,
+                    "%d assignment(s)" % len(assignments))
+        robot = api_get(ctx, "users.get", admin(ctx).users().get(userKey=ctx.get("ROBOT")))
+        add("gate", "robot is a super admin", bool((robot or {}).get("isAdmin")),
+            "grant record on file" if super_admin_grant_on_file(ctx)
+            else "no grant record: must read NO until the tier gate")
     except WalleError as exc:
         rows.append(["1/2", "Workspace", "?", str(exc).splitlines()[0][:80]])
 
@@ -8011,7 +9278,7 @@ def cmd_status(ctx: Ctx) -> int:
             add("10 x-proj", "run.invoker %s" % label, member in invokers, "topology rows 3, 8")
     except WalleError as exc:
         rows.append(["10 x-proj", "run.invoker", "?", str(exc).splitlines()[0][:60]])
-    for service in ("walle-actions", "walle-dispatcher"):
+    for service in ("walle-actions", SUPER_SERVICE, "walle-dispatcher"):
         url = current_service_url(ctx, service)
         add("10/11", "cloud run %s" % service, bool(url), url)
     for sink in ("walle-workspace-audit", "walle-audit-bq"):
@@ -8049,6 +9316,10 @@ def cmd_status(ctx: Ctx) -> int:
     env = deployed_actions_env(ctx)
     add("10", "refresh token pin", bool(env and env.get("REFRESH_TOKEN_VERSION", "").isdigit()),
         "version %s" % (env or {}).get("REFRESH_TOKEN_VERSION", "-"))
+    super_env = deployed_service_env(ctx, SUPER_SERVICE)
+    add("10", "band-B refresh token pin",
+        bool(super_env and super_env.get("REFRESH_TOKEN_VERSION", "").isdigit()),
+        "version %s" % (super_env or {}).get("REFRESH_TOKEN_VERSION", "-"))
     # Phases 12b, 12c, 13b. Read-only probes; an unreadable one is a "NO" row,
     # never an abort: status is the command you run when something is broken.
     try:
@@ -8085,8 +9356,10 @@ def cmd_status(ctx: Ctx) -> int:
     say("")
     say("Config values still to fill in as phases produce them:")
     for key in ("PROJECT_NUMBER", "GEMINI_PROJECT_NUMBER", "REFRESH_TOKEN_VERSION",
-                "ACTIONS_URL", "DISPATCHER_URL", "ENGINE_ID"):
-        say("  %-22s %s" % (key, ctx.get(key) or "<empty>"))
+                "SUPER_REFRESH_TOKEN_VERSION", "ACTIONS_URL", "SUPER_ACTIONS_URL",
+                "DISPATCHER_URL", "ENGINE_ID", "SUPER_ADMIN_GRANT_DECISION",
+                "SUPER_ADMIN_ROSTER"):
+        say("  %-28s %s" % (key, ctx.get(key) or "<empty>"))
     say("(EVE_TOKEN_VERSION is Eve's runbook's, in EVE_PROJECT; not tracked here.)")
     return 0
 
@@ -8105,8 +9378,10 @@ def cmd_teardown(ctx: Ctx) -> int:
     say("")
     say("  Note what cannot be undone:")
     say("   - a deleted project id can never be reused")
-    say("   - the OAuth grant survives project deletion: revoke it as the robot at")
-    say("     https://myaccount.google.com/permissions")
+    say("   - the OAuth grants (both clients) survive project deletion: revoke them")
+    say("     as the robot at https://myaccount.google.com/permissions")
+    say("   - Super Admin on the robot is NOT removed here: that is K6, a human super")
+    say("     admin's act, and teardown never touches the roster")
     say("  And what this teardown never reaches (project-topology.md §1.3): nothing")
     say("  in EVE_PROJECT (%s) or MO_PROJECT (%s) — Eve's key, secrets and mirror,"
         % (ctx.get("EVE_PROJECT", "<EVE_PROJECT>"), ctx.get("MO_PROJECT", "<MO_PROJECT>")))
@@ -8162,7 +9437,7 @@ def cmd_teardown(ctx: Ctx) -> int:
             if status not in (200, 202):
                 warn("deleting engine %s returned HTTP %s: %s"
                      % (engine_name, status, str(body)[:200]))
-    for service in ("walle-actions", "walle-dispatcher"):
+    for service in ("walle-actions", SUPER_SERVICE, "walle-dispatcher"):
         if current_service_url(ctx, service):
             run(ctx, ["gcloud", "run", "services", "delete", service,
                       "--region", ctx.need("REGION"), "--quiet", "--project", project])
@@ -8174,7 +9449,8 @@ def cmd_teardown(ctx: Ctx) -> int:
                          "--location", ctx.need("REGION")) is not None:
         run(ctx, ["gcloud", "tasks", "queues", "delete", ctx.get("TASKS_QUEUE"),
                   "--location", ctx.need("REGION"), "--quiet", "--project", project])
-    # Wall-E's three secrets only. Eve's two are in EVE_PROJECT and are Eve's.
+    # Wall-E's five secrets only (both OAuth pairs and the HMAC). Eve's two are
+    # in EVE_PROJECT and are Eve's.
     for secret in WALLE_SECRETS:
         if secret_exists(ctx, secret):
             run(ctx, ["gcloud", "secrets", "delete", secret,
@@ -8227,9 +9503,10 @@ def cmd_teardown(ctx: Ctx) -> int:
     say("")
     say("  Remaining by design, and NOT cleaned up:")
     say("   - the Firestore database (delete the project to remove it)")
-    say("   - the OAuth grant at Google: revoke it as the robot at")
+    say("   - both OAuth grants at Google: revoke them as the robot at")
     say("     https://myaccount.google.com/permissions")
-    say("   - the four service accounts and every project-level IAM binding")
+    say("   - Super Admin on the robot (K6 is a human's act, never this script's)")
+    say("   - the five service accounts and every project-level IAM binding")
     say("   - everything in EVE_PROJECT and MO_PROJECT, which this script never touches")
     say("   - the budget walle-stage-0, which keeps alerting on a rebuilt project")
     say("   - Workspace, unless --include-workspace was given")
@@ -8243,7 +9520,12 @@ def teardown_workspace(ctx: Ctx) -> None:
     # --yes skips confirmations on the BUILD. It must not silently delete a
     # Workspace account: every deletion below is asked for individually.
     ctx.yes = False
-    for title in (ROLE_READER_NAME, ROLE_OPERATOR_NAME, ROLE_EVE_NAME):
+    # The retired Wall-E roles are removed too, if a pre-2026-09-13 build left
+    # them. The robot's Super Admin is NOT: a Super Admin assignment is not a
+    # role this script made, and removing it is K6, a human's act. Deleting a
+    # super-admin user through the API is hard-denied for the robot and refused
+    # here; the robot's own deletion below is only reached once K6 is done.
+    for title in RETIRED_WALLE_ROLE_NAMES + (ROLE_EVE_NAME,):
         role = find_role(ctx, title)
         if not role:
             continue
@@ -8268,6 +9550,10 @@ def teardown_workspace(ctx: Ctx) -> None:
         if record.get("orgUnitPath") not in (ctx.get("SVC_OU"), ctx.get("SANDBOX_OU")):
             warn("refusing to delete %s: it is in %s, not an OU this script created"
                  % (email, record.get("orgUnitPath")))
+            continue
+        if record.get("isAdmin"):
+            warn("refusing to delete %s: it is a SUPER ADMIN. A human super admin removes "
+                 "the role first (K6) and records it on the roster; then re-run." % email)
             continue
         api_mutate(ctx, "DELETE user %s" % email,
                    lambda e=email: admin(ctx).users().delete(userKey=e))
@@ -8417,13 +9703,14 @@ def cmd_preflight(ctx: Ctx) -> int:
 
 def cmd_dump_privileges(ctx: Ctx) -> int:
     """Google publishes no complete privilege catalogue and console labels do not
-    always match API names. Use this, not the labels, for the Stage 1 role."""
+    always match API names. Use this, not the labels, for Eve's read role."""
     catalogue = list_privileges(ctx)
     rows = [[name, service] for name, service in sorted(catalogue.items())]
     say(render_table(rows, ["PRIVILEGE", "SERVICE ID"]))
     say("")
-    say("%d privileges. Filter for licen/user/group/report/role when you finalise" % len(rows))
-    say("'%s'." % ROLE_OPERATOR_NAME)
+    say("%d privileges. Filter for user/group/report/role when you fix Eve's read" % len(rows))
+    say("set in '%s'. (Wall-E's Stage 1 role is retired since 2026-09-13: the" % ROLE_EVE_NAME)
+    say("robot holds Super Admin, which no privilege list describes.)")
     return 0
 
 
@@ -8490,21 +9777,27 @@ def cmd_rollback(ctx: Ctx) -> int:
         say("  Then, in the repository:")
         say("    python config/deploy_ladder.py --revert-to=<previous version>")
     elif phase == "9":
-        version = ctx.need("REFRESH_TOKEN_VERSION")
+        band_b = bool(getattr(ctx.args, "super", False))
+        pin_key = "SUPER_REFRESH_TOKEN_VERSION" if band_b else "REFRESH_TOKEN_VERSION"
+        token_secret = (SUPER_CLIENT_SECRETS if band_b else NARROW_CLIENT_SECRETS)[1]
+        version = ctx.need(pin_key)
         say("  FIRST, as the robot in the clean profile, revoke the app at")
         say("  https://myaccount.google.com/permissions. The grant survives this.")
-        confirm(ctx, "Destroy walle-refresh-token version %s?" % version)
+        confirm(ctx, "Destroy %s version %s?" % (token_secret, version))
         run(ctx, ["gcloud", "secrets", "versions", "destroy", version,
-                  "--secret", "walle-refresh-token", "--location", ctx.need("REGION"),
+                  "--secret", token_secret, "--location", ctx.need("REGION"),
                   "--project", ctx.need("PROJECT"), "--quiet"])
         say("  Now delete the OAuth client in the console and remove it from API")
         say("  controls. Never reuse it: more than 100 live tokens for one client")
         say("  makes Google invalidate the oldest silently. A re-run produces a")
-        say("  HIGHER version: re-export REFRESH_TOKEN_VERSION and redeploy")
-        say("  walle-actions, or the service stays pinned to what you just destroyed.")
+        say("  HIGHER version: re-export %s and redeploy" % pin_key)
+        say("  %s, or the service stays pinned to what you just destroyed."
+            % (SUPER_SERVICE if band_b else ACTIONS_SERVICE))
     elif phase == "2":
-        # The account is left intact: Phase 2's rollback is the ASSIGNMENT only.
-        for title in (ROLE_READER_NAME, ROLE_EVE_NAME):
+        # The account is left intact: Phase 2's rollback is the ASSIGNMENT only:
+        # Eve's, and any assignment of a retired Wall-E role (2026-09-13). The
+        # robot's Super Admin is never rolled back by this script; that is K6.
+        for title in RETIRED_WALLE_ROLE_NAMES + (ROLE_EVE_NAME,):
             role = find_role(ctx, title)
             if not role:
                 continue
@@ -8519,14 +9812,17 @@ def cmd_rollback(ctx: Ctx) -> int:
                     ),
                 )
         say("  The roles and the accounts are left in place: the assignment is the")
-        say("  single act that grants anything.")
+        say("  single act that grants anything. Super Admin on the robot is untouched:")
+        say("  removing it is K6, by a human super admin.")
     elif phase in ("10", "11"):
-        service = "walle-actions" if phase == "10" else "walle-dispatcher"
-        if current_service_url(ctx, service):
-            confirm(ctx, "Delete Cloud Run service %s?" % service)
-            run(ctx, ["gcloud", "run", "services", "delete", service,
-                      "--region", ctx.need("REGION"), "--quiet",
-                      "--project", ctx.need("PROJECT")])
+        services = (("walle-actions", SUPER_SERVICE) if phase == "10"
+                    else ("walle-dispatcher",))
+        for service in services:
+            if current_service_url(ctx, service):
+                confirm(ctx, "Delete Cloud Run service %s?" % service)
+                run(ctx, ["gcloud", "run", "services", "delete", service,
+                          "--region", ctx.need("REGION"), "--quiet",
+                          "--project", ctx.need("PROJECT")])
         if phase == "11":
             for sink in ("walle-workspace-audit", "walle-audit-bq"):
                 if gcloud_probe_json(ctx, "logging", "sinks", "describe", sink,
@@ -8562,11 +9858,12 @@ def cmd_rollback(ctx: Ctx) -> int:
 
 COMMANDS: Dict[str, Tuple[str, Callable[[Ctx], int]]] = {
     "preflight": ("tools, permissions, config, and the manual step list", cmd_preflight),
-    "workspace": ("phases 1 and 2: OUs, robots, groups, sandbox, floor list, roles", cmd_workspace),
+    "workspace": ("phases 1 and 2: OUs, robots, groups, sandbox, floor list, Eve's role; "
+                  "M2C (the Super Admin grant) only at the tier gate", cmd_workspace),
     "gcp": ("phases 6, 7 and 8: project, data, secrets, and the cross-project reader "
             "grants for Eve and Mo", cmd_gcp),
-    "consent": ("phase 9: the one interactive OAuth bootstrap (Eve's is Eve's runbook)",
-                cmd_consent),
+    "consent": ("phase 9: the robot's OAuth bootstraps, client 1 and (--super) client 2 "
+                "(Eve's is Eve's runbook)", cmd_consent),
     "deploy": ("phases 10, 11, 12, 12b and 14: services, sinks, agent + identity, ladder, schedulers", cmd_deploy),
     "spike": ("phase 12b step 3: the Agent Identity spike on a throwaway engine", cmd_spike),
     "armor": ("phase 12c: Model Armor templates, ingress gateway, floor (inspect-only)", cmd_armor),
@@ -8624,6 +9921,8 @@ def build_parser() -> argparse.ArgumentParser:
             sub.add_argument("--phase", required=True,
                              choices=("2", "9", "10", "11", "12", "12b", "14"),
                              help="which phase's rollback to run (12b: the spike engine)")
+            sub.add_argument("--super", action="store_true",
+                             help="with --phase 9: act on client 2 (the band-B pair)")
         if name == "armor":
             sub.add_argument("--enforce", action="store_true",
                              help="the blocking flips (Stage 1): refused unless "
@@ -8647,6 +9946,10 @@ def build_parser() -> argparse.ArgumentParser:
                              help="store this downloaded client JSON, then shred it")
             sub.add_argument("--paste", action="store_true",
                              help="consent on another machine: paste the redirect URL back")
+            sub.add_argument("--super", action="store_true",
+                             help="client 2, the broad band-B client read by "
+                                  "walle-actions-super; refused unless SUPER_SCOPES_DECISION "
+                                  "names the signed scope record; cloud-platform never")
         if name == "deploy":
             sub.add_argument("--skip-build", action="store_true",
                              help="reuse the images already in Artifact Registry")

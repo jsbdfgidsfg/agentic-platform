@@ -4,9 +4,15 @@
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
 - Last executed: **never**
+- Objective restated 2026-09-13; see the platform HLD
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3, §18 items 20–22). Added
+  on that date: Mo's `READER` on `eve_quality` (an Eve owner's step in Mo-2), the Eve-pack and
+  uncatalogued-event tables and queries (Mo-1, Mo-4), assertions A10 and A11 (Mo-5), the Eve
+  paths in the allowlist (Mo-9), and denial test MD-15 (Mo-12). The drop box is `mo-proposals`.
 - Placement: every command here runs against **`MO_PROJECT`**, Mo's own project, except the
   three that are marked as Wall-E's owner's and run against `WALLE_PROJECT` from Wall-E's
-  runbook. [`../project-topology.md`](../project-topology.md) is the authority for both.
+  runbook, and — since 2026-09-13 — the one marked as Eve's owner's, which runs against
+  `EVE_PROJECT` from Eve's runbook. [`../project-topology.md`](../project-topology.md) is the authority for both.
 
 ## When to use this
 
@@ -125,7 +131,7 @@ metric if the phase that needs it runs first.
 |---|---|---|---|
 | `roles/resourcemanager.projectCreator` on `FOLDER_ID` and Billing Account User on the billing account, to create `MO_PROJECT`; then owner of `MO_PROJECT`, or the narrower set below | The folder; then `MO_PROJECT` | Mo-1 step 0, then Mo-1 onward | Same day if you already hold the folder role; otherwise calendar time |
 | `bigquery.transfers.update` on the project, **and** Service Account User on `mo-metrics@` | `MO_PROJECT` | Mo-4 | Same day. Both are required to pin a scheduled query to a service account |
-| The two dataset `READER` entries on `walle_audit` and `walle_workspace_logs` for `mo-metrics@${MO_PROJECT}` | **`WALLE_PROJECT`** — Wall-E's owner's step, run from Wall-E's runbook (`walle_setup.py` `add_dataset_access`, SETUP Phase 7) with `MO_PROJECT` set in `walle.env`. Mo's builder hands over the project id and does **not** need `walle_audit` access | Mo-2 | Same day once `MO_PROJECT` exists. This is the grant nothing in the runbook makes today |
+| The two dataset `READER` entries on `walle_audit` and `walle_workspace_logs` for `mo-metrics@${MO_PROJECT}` (qualified 2026-09-13: the logs half moves to `READER` on `platform_logs_views` in `LOGGING_PROJECT`, made by the factory, topology row 40) | **`WALLE_PROJECT`** — Wall-E's owner's step, run from Wall-E's runbook (`walle_setup.py` `add_dataset_access`, SETUP Phase 7) with `MO_PROJECT` set in `walle.env`. Mo's builder hands over the project id and does **not** need `walle_audit` access | Mo-2 | Same day once `MO_PROJECT` exists. This is the grant nothing in the runbook makes today |
 | The `roles/run.invoker` binding on `walle-actions` for `mo-analyst@${MO_PROJECT}` | **`WALLE_PROJECT`** — Wall-E's owner's step, SETUP Phase 10's invoker loop, plus the in-app allowlist email | Mo-6 | Same day once `mo-analyst@` exists |
 | **`roles/observability.editor`** | **`WALLE_PROJECT`** (`Assumption:` the trace bucket is Wall-E's engine's) | Mo-10 | **Allow calendar time** if you do not already hold it. One human holds it once, to create the linked trace dataset. Mo never holds it |
 | Repository admin on the config repository, to add a required CI check and to set branch protection | Git host | Mo-9 | `tbd` until [M-7 · 48](08-open-decisions.md) names the host |
@@ -164,7 +170,7 @@ export SA_MO_METRICS="mo-metrics@${MO_PROJECT}.iam.gserviceaccount.com"
 export SA_MO_ANALYST="mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com"
 export SA_MO_NARRATOR="mo-narrator@${MO_PROJECT}.iam.gserviceaccount.com"
 
-export MO_PROPOSALS="gs://walle-mo-proposals"                 # created in MO_PROJECT
+export MO_PROPOSALS="gs://mo-proposals"   # created in MO_PROJECT; agent-neutral name since 2026-09-13 (04 §3.7)
 export MO_AR="${REGION}-docker.pkg.dev/${MO_PROJECT}/mo"     # Artifact Registry in MO_PROJECT
 
 echo "MO_PROJECT=$MO_PROJECT WALLE_PROJECT=$WALLE_PROJECT REGION=$REGION BQ_LOCATION=$BQ_LOCATION"
@@ -366,6 +372,15 @@ this runbook's names for objects the design describes without naming. The sixtee
 names are the design's own.
 
 ```bash
+# Added 2026-09-13 (03-metrics-contract.md §7.2, §7.3): metric 9b's aggregate, and the Eve
+# quality pack's tables. Create the Eve-pack tables only once Eve's runbook has created
+# eve_quality and granted mo-metrics@ on it (Mo-2, Eve's owner's step).
+#   agg_uncatalogued_admin_events
+#   eve_scorecard agg_eve_false_refusal agg_eve_wrong_accept agg_eve_agreement agg_eve_pages
+#   agg_eve_time_to_verdict agg_eve_time_to_ack agg_eve_availability agg_eve_seeded_faults
+#   agg_eve_divergence
+# Same bq mk shape and schemas/mo_<table>.json as the loop below; every table carries agent_id.
+
 # 34560000 seconds = 400 days, matching walle_audit.
 # Assumption: 400 days pending Wall-E decision 17 (M-5). The floor is read from gates.yaml
 # query time, so a later, shorter answer clamps the windows without a table rebuild.
@@ -413,7 +428,7 @@ bq show --format=prettyjson "${MO_PROJECT}:walle_metrics.scorecard" \
 
 bq ls --format=prettyjson "${MO_PROJECT}:walle_metrics" | python3 -c \
   "import json,sys; d=json.load(sys.stdin); print(len(d), 'objects')"
-# expect: 19 — principal_surrogates is NOT among them
+# expect: 19 — principal_surrogates is NOT among them; 30 once the 2026-09-13 tables exist
 
 bq ls --format=prettyjson "${MO_PROJECT}:walle_metrics_private" | python3 -c \
   "import json,sys; d=json.load(sys.stdin); print(len(d), 'objects')"
@@ -503,6 +518,19 @@ EOF
 # Mo's builder does not run them and needs no access to walle_audit.
 grant_dataset "$WALLE_PROJECT" walle_audit           READER "$SA_MO_METRICS"
 grant_dataset "$WALLE_PROJECT" walle_workspace_logs  READER "$SA_MO_METRICS"
+# Moved 2026-09-13 (P104, P107, topology row 40): Wall-E's organisation sink is deleted and
+# walle_workspace_logs becomes the authorised view platform_logs_views.walle_workspace_logs in
+# LOGGING_PROJECT. The line above is kept as history; the live grant is dataset-level READER on
+# "${LOGGING_PROJECT}:platform_logs_views" for mo-metrics@, made by the factory's platform-core
+# module, and Mo's builder runs neither.
+
+# ---- Eve's owner's step, in EVE_PROJECT, from Eve's runbook — added 2026-09-13 ----
+# Dataset-level READER on eve_quality for mo-metrics@${MO_PROJECT} (platform HLD §13.3,
+# §18 items 17 and 25; 02-identity-and-access.md §2.1). Made by Eve's owner once Eve's
+# observe-and-report layer has created eve_quality. Shown for the build order only: Mo's
+# builder does not run it, holds nothing in EVE_PROJECT, and makes no binding in MO_PROJECT
+# in return. Never on the eve dataset itself, never on grades_blind or review_queue_blind.
+grant_dataset "$EVE_PROJECT" eve_quality READER "$SA_MO_METRICS"
 
 # ---- Mo's own, in MO_PROJECT --------------------------------------------------
 grant_dataset "$MO_PROJECT" walle_metrics         WRITER "$SA_MO_METRICS"
@@ -530,6 +558,12 @@ dataset for the Data Transfer Service to write there — both of which `WRITER` 
 ([Service accounts with BigQuery Data Transfer](https://docs.cloud.google.com/bigquery/docs/use-service-accounts),
 verified 2026-09-12).
 
+> **Added 2026-09-13:** a seventh, the `eve_quality` `READER`, is cross-project and lands in
+> Eve's runbook (change 20 of [08-open-decisions.md](08-open-decisions.md)). Its verify is
+> denial test MD-15 (a), run as `mo-metrics@` from `MO_PROJECT`, because Mo's builder cannot
+> read `EVE_PROJECT`'s access lists; that query also proves `eve_quality` is in `EU`, since a
+> cross-location query fails outright.
+>
 > **None of these six grants exists in any runbook today.** `add_dataset_access` is called
 > exactly twice in `setup/walle_setup.py`, for `walle-actions@` and the `walle-audit-bq`
 > sink writer. Two of the six are cross-project and land in Wall-E's runbook (change 3 of
@@ -547,6 +581,8 @@ for DS in "${WALLE_PROJECT}:walle_audit" "${WALLE_PROJECT}:walle_workspace_logs"
     "import json,sys;[print(a) for a in json.load(sys.stdin)['access']]"
 done
 # expect: mo-metrics@${MO_PROJECT} READER on walle_audit and walle_workspace_logs, and
+#         (since 2026-09-13, P104) READER on ${LOGGING_PROJECT}:platform_logs_views instead of
+#         walle_workspace_logs once the factory has re-homed it;
 #         WRITER on neither of them. WRITER on the four walle_metrics* datasets only.
 #         walle_metrics_private must show mo-metrics@ and NO other principal.
 
@@ -776,6 +812,14 @@ create_metric capability-gap        config/metrics/capability_gap.sql
 create_metric cost-attribution      config/metrics/cost_attribution.sql
 create_metric toil-baseline-load    config/metrics/toil_baseline_load.sql
 create_metric scorecard             config/metrics/scorecard.sql
+
+# Added 2026-09-13. Metric 9b, from S0 with the rest of Wall-E's pack:
+create_metric uncatalogued-admin-events config/metrics/uncatalogued_admin_events.sql
+# The Eve quality pack, only once eve_quality exists and MD-15 (a) passes
+# (03-metrics-contract.md §7.3; file names are this runbook's):
+create_metric eve-quality-pack      config/metrics/eve_quality_pack.sql
+create_metric eve-divergence        config/metrics/eve_divergence.sql     # A11
+create_metric eve-scorecard         config/metrics/eve_scorecard.sql
 ```
 
 That is fifteen transfer configs, against the "~12 scheduled queries" the rest of this set
@@ -804,7 +848,8 @@ SQL `CASE` over its own columns and nothing else.
    2026-09-13 that bill is `MO_PROJECT`'s.
 3. **Every reference to Wall-E's data is fully qualified** —
    `` `<walle-project-id>.walle_audit.<table>` `` and
-   `` `<walle-project-id>.walle_workspace_logs.<table>` ``. The job's default project is
+   `` `<walle-project-id>.walle_workspace_logs.<table>` `` — and, since 2026-09-13, every
+   reference to Eve's as `` `<eve-project-id>.eve_quality.<view>` ``. The job's default project is
    `MO_PROJECT`, the destination must be in `MO_PROJECT`, and the source may be in another
    project: "The destination dataset and table for a scheduled query must be in the same
    project as the scheduled query" and "Queries can reference tables from different projects
@@ -914,6 +959,16 @@ ASSERT (SELECT COUNT(*) FROM (
   AS 'a cell carries two demotion rows attributable to the same decided block';
 SQL
 ```
+
+**Added 2026-09-13: A10, the source rule, and A11, the differential check**
+([03-metrics-contract.md](03-metrics-contract.md) §6, §7.3). A10 is an `ASSERT` and runs after
+every Eve-pack query, with the text §7.3 prints, committed as
+`config/metrics/assert_eve_source_rule.sql`. A11 is **not** an `ASSERT`: it is the
+`eve-divergence` transfer config of Mo-4, a `MERGE` that sets `metric_divergence` on
+`walle_metrics.eve_scorecard` wherever Mo's value for one of the ten metrics and a window
+differs from `eve.findings` read through `eve_quality`, because a divergence is an Eve finding
+rather than a failed run. Neither runs before `eve_quality` exists; until then the Eve scorecard
+reads `not_computable`.
 
 A7 and A8 are the suppression rule, and they are enforcement rather than review: no
 published row carries an email-shaped string, and no published group-by cell has a count
@@ -1303,8 +1358,9 @@ Deleting the reporter degrades nothing that enforces. The artefacts go stale and
 
 No cloud resource. Four things a human does, and the reason each one is a human's.
 
-1. **Create the artefact directory** `platform/wall-e/mo/` in the wiki repository, and
-   commit an empty `ladder-state.md` with the current matrix. `mo-reporter` regenerates it
+1. **Create the artefact directories** in the wiki repository — `platform/wall-e/mo/`, and
+   since 2026-09-13 `platform/eve/mo/` and one `platform/<agent>/mo/` per high-risk system for
+   its Art. 72 plan — and commit an empty `ladder-state.md` with the current matrix. `mo-reporter` regenerates it
    **as a pull request**, never as a push — Mo holds no git credential, at any phase.
 2. **Set the reader list.** Until [decision 35](../wall-e/09-open-decisions.md) lands,
    readers are `walle-operators@` and the ladder owner only, and **no Mo artefact is synced
@@ -1322,7 +1378,8 @@ No cloud resource. Four things a human does, and the reason each one is a human'
    [08-open-decisions.md](08-open-decisions.md). Do not inherit the false version into the
    assessment.
 
-**Verify.** The wiki sync excludes `platform/wall-e/mo/**`; the grader list is committed and
+**Verify.** The wiki sync excludes `platform/wall-e/mo/**` and, since 2026-09-13,
+`platform/eve/mo/**`; the grader list is committed and
 contains at least one human who is not the playbook owner; the assessment names Mo.
 
 **Rollback.** Revert the commits. Step 2 has no rollback worth the name — a reader set that
@@ -1414,7 +1471,20 @@ config/prompts/**
 config/catalogue/**
 platform/wall-e/mo/**
 platform/wall-e/ladder-state.md
+platform/eve/mo/**                     # added 2026-09-13
+platform/<agent>/mo/art72-plan.md      # added 2026-09-13
+
+# eve/config — added 2026-09-13, Eve proposal types only (04 §3.2, §3.5)
+eve/config/thresholds.yaml
+eve/config/seeded_faults/**
 ```
+
+Never, in any bundle: `eve/config/predicates/**`, `ceilings.py`, `reasons.yaml`, `oncall.yaml`,
+or a diff to `eve_authority`. The Eve types, their reviewer rules, the five-business-day cooling
+and the 30-day cross rule are enforced by the validator
+([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.4–§3.6); ingestion refuses an
+Eve type other than `eve_incident_note` while the custodian's `READER` on `eve_quality` (P30,
+made by Eve's runbook) does not exist.
 
 The ceiling module, the policy chain, the catalogue's risk tiers and the validator itself
 are **unreachable by construction** — Mo may not propose changes to its own gating layer.
@@ -1450,7 +1520,12 @@ the custodian, deployed by digest. It:
   `config/metrics/fixtures/**`, `gates.yaml`, the ceiling module, the policy chain, the
   catalogue risk tiers and the validator (change 13);
 - refuses an L3→L4 `WRITE_HIGH` promotion whose decision file lacks the "Why worth it" line
-  (C34).
+  (C34);
+- since 2026-09-13, for Eve bundles: re-executes the evidence against `eve_quality` (P30),
+  refuses a value that is not `evidence_eligible` under A10, refuses an `eve_threshold_loosen`
+  without two reviewers including the decision-37 security reviewer, a decision record and five
+  business days' cooling, and refuses a loosening and a Wall-E `promote` on the same cell within
+  30 days of each other, in either order, reading both repositories' merge history.
 
 The authoritative list, with each gate's source and refusal, is
 [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.4; this is the build-order
@@ -1657,6 +1732,7 @@ suite's own 1 to 52, with the phase numbers above, and with
 | MD-11 | A `walle_metrics.scorecard` row with `verdict='ready'` and `n_decided = 34` is inserted into a scratch copy and the assertion query is run | **The job fails.** The floor and the gate are one decision |
 | MD-12 | A published artefact is searched for an email-shaped string, and for any group-by cell with a count of 1 to 4 | **Zero matches**, both times |
 | MD-13 | `mo-analyst@` and then `mo-narrator@` select from `walle_metrics_private.principal_surrogates` | **403 accessDenied, twice.** The mapping lives in a dataset with one WRITER and no reader. A surrogate that can be joined back to an email is not a surrogate, and dataset-level `READER` on `walle_metrics` would have covered the mapping had it stayed there |
+| MD-15 (added 2026-09-13) | **Paired.** (a) `mo-metrics@` selects from a view in `` `${EVE_PROJECT}.eve_quality` ``, job in `MO_PROJECT`. (b) `mo-metrics@` selects from `` `${EVE_PROJECT}.eve.grades_blind` `` and from any other `eve` dataset; `mo-analyst@` and `mo-narrator@` select from `eve_quality`; a bundle whose diff touches `eve/config/predicates/**`, `ceilings.py`, `reasons.yaml`, `oncall.yaml` or `eve_authority` is dropped | **(a) succeeds; (b) 403 accessDenied** on every read, and the bundle is **rejected at ingestion**. Mo reads Eve's quality surfaces through one identity, never Eve's blind grades, and cannot reach Eve's gating layer |
 | MD-14 | A bundle citing a `seed` that the per-week seed file does not record for `week(window_end)` is written to the drop box | **Rejected at ingestion**, beside MD-6 and for the same reason: the seed decides *which items are evidence*, and re-drawing from an unanchored seed proves only that the bundle agrees with itself |
 
 The two shapes every test above uses:
@@ -1684,6 +1760,11 @@ as_sa "$SA_ACTIONS"     "$WALLE_PROJECT" "SELECT COUNT(*) FROM \`${MO_PROJECT}.w
 as_sa "$SA_DISPATCH"    "$WALLE_PROJECT" "SELECT COUNT(*) FROM \`${MO_PROJECT}.walle_metrics.scorecard\`"              # MD-9
 as_sa "$SA_AGENT"       "$WALLE_PROJECT" "SELECT COUNT(*) FROM \`${MO_PROJECT}.walle_metrics.scorecard\`"              # MD-9, sixth
 as_sa "$SA_EVE"         "$EVE_PROJECT"   "SELECT COUNT(*) FROM \`${MO_PROJECT}.walle_metrics.scorecard\`"              # MD-9
+# MD-15, added 2026-09-13 (<view> is any view Eve's runbook publishes in eve_quality)
+as_sa "$SA_MO_METRICS"  "$MO_PROJECT"    "SELECT COUNT(*) FROM \`${EVE_PROJECT}.eve_quality.<view>\`"                 # MD-15a, expect 200
+as_sa "$SA_MO_METRICS"  "$MO_PROJECT"    "SELECT COUNT(*) FROM \`${EVE_PROJECT}.eve.grades_blind\`"                   # MD-15b, expect 403
+as_sa "$SA_MO_ANALYST"  "$MO_PROJECT"    "SELECT COUNT(*) FROM \`${EVE_PROJECT}.eve_quality.<view>\`"                 # MD-15b, expect 403
+as_sa "$SA_MO_NARRATOR" "$MO_PROJECT"    "SELECT COUNT(*) FROM \`${EVE_PROJECT}.eve_quality.<view>\`"                 # MD-15b, expect 403
 
 # MD-9b: the containment assertion as a project-IAM fact
 gcloud projects get-iam-policy "$MO_PROJECT" --flatten='bindings[].members' \
@@ -1726,6 +1807,7 @@ console** — Mo touches Workspace nowhere.
 |---|---|---|---|
 | 1 | Measure four weeks of baseline toil for the top three admin tasks, and the monthly human operating hours | Mo-0 | The denominator of [decision 38](../wall-e/09-open-decisions.md)'s stop-or-continue review cannot be reconstructed once Wall-E is doing the tasks |
 | 1a | Create `MO_PROJECT` under `FOLDER_ID`, link billing, record its number; give Wall-E's owner the value for `walle.env` | Mo-1 step 0 | Project creation needs a folder-level role and a billing role no agent holds, and the id must reach Wall-E's config before any cross-project grant can be spelled |
+| 1c | Eve's owner creates `eve_quality` and makes the dataset-level `READER` for `mo-metrics@${MO_PROJECT}` from Eve's runbook (added 2026-09-13) | Mo-2 | The dataset and the grant are Eve's resources, in `EVE_PROJECT`; Mo's builder never edits `EVE_PROJECT` (platform HLD §18 items 17 and 25) |
 | 1b | Wall-E's owner runs the cross-project grants from Wall-E's runbook — two dataset `READER`s on `walle_audit` and `walle_workspace_logs` after Phase 7, and the Phase 10 `run.invoker` entry plus the allowlist email | Mo-2, Mo-6 | The grants are on Wall-E's resources, in `WALLE_PROJECT`; Mo's builder never edits `WALLE_PROJECT` ([`../project-topology.md`](../project-topology.md) §7.1) |
 | 2 | Review and merge `config/metrics/gates.yaml` under `ladder.yaml`'s reviewers, in a pull request that does **not** also touch `ladder.yaml` | Mo-3 | M29, and change 13: a metric change must cost its own reviewed pull request and cannot promote anything in the same breath |
 | 3 | Review the ~12 metric SQL files, checking specifically that no free-text column is selected and every query prunes to its window | Mo-4 | The exclusion of `params_redacted`, `result_summary` and error text is enforced by the query text and by this review, and by nothing else |
@@ -1739,6 +1821,7 @@ console** — Mo touches Workspace nowhere.
 | 11 | Disable and audit admin bypass on branch protection; require two distinct authenticated reviewers, neither the author | Mo-9 | [M-7 · 48](08-open-decisions.md). The validator reports the setting it observes and cannot enforce it |
 | 12 | Create the linked Spans dataset once in `WALLE_PROJECT`, holding `roles/observability.editor` there, then add the cross-project `READER` for `mo-metrics@${MO_PROJECT}` (a spike) | Mo-10 | Mo holds that role at no stage, and the dataset is Wall-E's |
 | 13 | Decide at the S4 entry record whether `mo-narrator` is built at all, and against which pinned model id | Mo-11 | [M-8 · 49](08-open-decisions.md). Not building it is a defensible reading of this design |
+| 13a | Review the first edition of the misbehaviour taxonomy and coverage map with the Eve owner and the security reviewer, before Wall-E's Stage 1 (added 2026-09-13) | With Eve's observe-and-report layer | Mo names the gaps; only humans decide which detectors to build ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §1.6) |
 | 14 | Grade `max(10 %, 5 items/week)` of executing items **per cell**, blind, weekly, indefinitely — at pilot volume the floor of five binds in every cell, so ≥ 40 items a week across ~8 cells — plus 20 % double-graded for `WRITE_HIGH`, plus adjudication | From S2 | At least **two hours a week from a named human who is not the playbook owner**. It cannot be automated, cannot be sampled more thinly without the cell going `not_ready`, and cannot be delegated to a model without destroying the thing it measures |
 
 Step 14 is not a build step and it is the one that decides whether any of the rest matters.
@@ -1759,7 +1842,7 @@ the build order needs them.
 |---|---|---|---|
 | Mo-4 | Write-ahead `grades`, `proposal_verdicts`, `drills`; new table `ladder_events`; `actions.noop`; the four missing fingerprint columns; the `approvals` per-item vector; the `capability_gap` enum; the canonical plan serialisation spec | 1, 2, 4, 5, 6, 7, 8 | [03-lld.md](../wall-e/03-lld.md), SETUP Phase 7 |
 | Mo-1 step 0 | `walle.env.example` and `walle_setup.py` gain `MO_PROJECT` (with `EVE_PROJECT`, `GEMINI_PROJECT`, `GEMINI_PROJECT_NUMBER`); `validate_config` refuses a placeholder | 19 | `setup/walle.env.example`, `walle_setup.py`, SETUP §1.6 and §1.7 |
-| Mo-2 | Dataset `READER` on `walle_audit` and `walle_workspace_logs` for `mo-metrics@${MO_PROJECT}`, keyed on the new config key `MO_PROJECT` — the cross-project half only; the accounts, datasets and view registration are `MO_PROJECT` resources built here | 3 | SETUP Phase 7, `walle_setup.py` `add_dataset_access` (gains a project argument), `walle.env.example` |
+| Mo-2 | Dataset `READER` on `walle_audit` and `walle_workspace_logs` for `mo-metrics@${MO_PROJECT}` (dated 2026-09-13: the `walle_workspace_logs` half is now `READER` on `platform_logs_views` in `LOGGING_PROJECT`, made by the factory, P104/P107, topology row 40), keyed on the new config key `MO_PROJECT` — the cross-project half only; the accounts, datasets and view registration are `MO_PROJECT` resources built here | 3 | SETUP Phase 7, `walle_setup.py` `add_dataset_access` (gains a project argument), `walle.env.example` |
 | Mo-6 | Correct the Mo identities row and item 6 from "never call the action service" to "**the two read endpoints only**"; remove `walle-events` "subscribe" for Mo | 9, 10 | [08-team-eve-mo.md](../wall-e/08-team-eve-mo.md), [ARCHITECTURE](../wall-e/ARCHITECTURE.md) |
 | Mo-6 | `run.invoker` on `walle-actions` for `mo-analyst@${MO_PROJECT}` in Phase 10's loop, and the full cross-project email in the §7.5 read-endpoint allowlist | 9, 19 | SETUP Phase 10, [ARCHITECTURE](../wall-e/ARCHITECTURE.md) §7.5 |
 | Mo-6 | Record `MO_PRINCIPAL = serviceAccount:mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com`, and remove Phase 13b's project-level `roles/agentregistry.viewer` for it (or make it resource-level, if verified) | 12 | `setup/walle.env.example`, `walle_setup.py` `registry`, SETUP Phase 13b, [PREREQUISITES](../wall-e/PREREQUISITES.md) items 11 and 13 |
@@ -1770,6 +1853,7 @@ the build order needs them.
 | Mo-12 | The denial-suite row asserting that **no enforcement identity holds any binding in `MO_PROJECT`** — the identities now cross-project, named with their home projects, plus the `MO_PROJECT` IAM-policy clause (MD-9, MD-9b) | 15 | SETUP §4 |
 | Before S2 | Note that a second **grader** is needed by S2, not S3 | 16 | [05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §7, decision 11b |
 | — | Only the cross-project grant steps enter SETUP (after Phase 7; in Phase 10), keyed on `MO_PROJECT`; the two full phases stay here, against `MO_PROJECT` | 17 | SETUP. No Mo step exists at all today |
+| Mo-2 (added 2026-09-13) | **On Eve's set:** `eve_quality` and the `READER` for `mo-metrics@${MO_PROJECT}` (and P30's for the custodian) in Eve's runbook; Eve's "no `userByEmail` entry for `mo-metrics@` on `eve` — ever" check narrowed to the non-quality datasets; `grades_eve` and `eve.seeded_fault_runs`; the `eve/config` allowlist and Eve proposal types accepted by Eve's branch protection | 20 | [../eve/07-build-runbook.md](../eve/07-build-runbook.md), [../eve/02-identity-and-auth.md](../eve/02-identity-and-auth.md) |
 
 ---
 

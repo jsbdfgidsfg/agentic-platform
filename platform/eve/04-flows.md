@@ -3,8 +3,15 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
+- **Objective restated 2026-09-13; see the platform HLD**
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2; this page carries §18
+  items 12 and 14; owner the Eve owner, gate the super-admin grant, P143). The two judgement
+  lines are narrowed to the authority path; flow 3 extends to every ingested stream with
+  `reconciliation_gap` as a halt; flow 4 gains the roster check; flow 5 gains
+  `log_pipeline_silent`; flow 8 (detection and reporting) is added. Flows 1, 2, 6 and 7 are
+  unchanged.
 
-Seven things Eve actually does, end to end. Every one of them is a client-side loop: Eve
+Seven things Eve actually does, end to end — eight since 2026-09-13, when flow 8 was added. Every one of them is a client-side loop: Eve
 polls, reads, recomputes and either signs, writes a row, or calls a control endpoint. Eve
 exposes nothing over the network that takes a decision, so none of these flows starts with
 someone calling Eve — see [01-hld.md](01-hld.md). The components, identities and schedules
@@ -21,6 +28,7 @@ exists at each stage in [05-stages.md](05-stages.md).
 | 5 | Halt and demote | Any flow above crossing a declared threshold | `eve-verifier@`, or `eve-controller@` for a veto | S3 entry, invariant class only |
 | 6 | Attestation | A promotion request; bundles assembled on the daily pass | `eve-verifier@` assembles | S3 entry |
 | 7 | Blind sample draw and grading | `eve-reconciler` daily draw; a human grades in `eve-console` | `eve-verifier@` draws, a human grades | The sample from S1, Eve's draw from S3 entry |
+| 8 | Detection, evidence heartbeat and reporting (added 2026-09-13) | `eve-reconciler` on every pass; the daily export and witness push | `eve-verifier@`; `eve-export@` for the push; `eve-advisor@` for narratives | **Before the super-admin grant** |
 
 One duty of `eve-reconciler` is not a flow and is recorded here so it is not lost: the
 **monthly refresh-token exchange** that resets Google's six-month unused-token clock. It
@@ -28,7 +36,8 @@ runs on the daily pass as `eve-verifier@`, never from `eve-gate`, and an `invali
 a paging incident rather than a retryable error — see
 [02-identity-and-auth.md](02-identity-and-auth.md).
 
-Two rules run through all seven and are stated once here rather than repeated in each.
+Two rules run through all seven and are stated once here rather than repeated in each
+(and through flow 8, added 2026-09-13).
 
 **At the approval point the conservative act is refuse, not halt.** Every unresolved
 comparison in flow 1 resolves to a refusal: the plan waits for a human and the cost is
@@ -37,8 +46,11 @@ minutes of approval latency. Halting is reserved for the closed invariant-trigge
 every hiccup into an outage; a degraded Eve that refuses costs an operator an approval.
 This is an amendment to [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) item 5,
 whose "on its own judgement" is void under C12 of
-[../wall-e/14-hld-challenge.md](../wall-e/14-hld-challenge.md); it is recorded as decision
-E-7 in [09-open-decisions.md](09-open-decisions.md).
+[../wall-e/14-hld-challenge.md](../wall-e/14-hld-challenge.md) **for halting**; it is recorded
+as decision E-7 in [09-open-decisions.md](09-open-decisions.md). Narrowed 2026-09-13
+(platform HLD §13.2, P34): the void applies to the authority path — refuse, veto, halt,
+demote. Item 5's *reporting* half is reopened for the report-only reporting path
+`eve-advisor`, which may describe what no threshold names and holds no authority to act on it.
 
 **No flow has a path that raises anything.** There is no raise endpoint on
 `walle-actions` at all, Eve holds no permission to clear an override or change a ceiling,
@@ -213,7 +225,10 @@ verified 2026-09-12). A write verified against the audit event alone would be re
 **That slower figure is not the lag of the stream Eve reads, and saying so precisely is
 what keeps the budgets honest.** Eve's sink filter is
 `protoPayload.serviceName="admin.googleapis.com"` and nothing else, so `eve_workspace_logs`
-carries the Admin audit log alone. Two consequences, both verified 2026-09-12:
+carries the Admin audit log alone (qualified 2026-09-13: the sink now carries all six Workspace
+streams, [03-lld.md](03-lld.md) §13; the post-hoc attribution of Wall-E's catalogued writes
+below still reads the Admin stream, so its budgets are unchanged). Two consequences, both
+verified 2026-09-12:
 
 - **Group-member writes are Admin events.** Wall-E's F3 adds and removes go through the
   Directory API, which records `ADD_GROUP_MEMBER` and `REMOVE_GROUP_MEMBER` as
@@ -229,6 +244,11 @@ carries the Admin audit log alone. Two consequences, both verified 2026-09-12:
   Cloud Logging ([Workspace audit
   logs](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging)). So there is
   no `calendar` lag budget, because no wait could ever end.
+
+**Taken 2026-09-13** (platform HLD §13.2): the filter is widened to all six streams, at
+creation time where the sink does not yet exist, and the non-backfill gap recorded where it
+does ([07-build-runbook.md](07-build-runbook.md) Phase 7). The edition dependency stands. The
+paragraph below is the original reasoning for declining it, kept as history.
 
 **Option, not taken: widening the filter.** Adding
 `OR protoPayload.serviceName="cloudidentity.googleapis.com"` would pick up member-initiated
@@ -323,6 +343,7 @@ exist. Neither is discretionary: both are decided by the family, in code.
 | **Outputs** | The audit-completeness series in `eve.findings`, reported with **Wilson interval bounds rather than point estimates**; a daily extract in the evidence bucket; `eve.walle_audit_mirror`, the daily append-only off-project copy. |
 | **Reason codes** | `audit_row_missing` (an event with no row), `admin_event_unmatched` (a row with no event past its lag budget), `reconciliation_gap`. |
 | **Failure branch** | A gap in **either** direction halts writes with `no_writes` until reconciled. Target is 100 % audit completeness. |
+| **Extended 2026-09-13** (platform HLD §13.2) | The input widens from the Admin stream to **every ingested stream**: the six-stream sink and `eve_workspace_reports`, the Reports API poll by actor ([03-lld.md](03-lld.md) §13). Against it: `walle_audit` **and the band-B audit rows** of `walle-actions-super`. Any robot-attributed event in any stream with no matching row within its lag budget is `reconciliation_gap` and a halt — `no_writes`, and `halt_all` on the P-SA lanes. From the observe-and-report sitting, before the super-admin grant. |
 
 Two things about this flow are deliberate and both are about who owns the evidence.
 
@@ -385,6 +406,11 @@ Five distinct comparisons share one pass:
 5. **Operator-list reconciliation**, daily, against `roleAssignments.list`. The committed
    operator list — each operator's admin role, families and OU reach — is reconciled against
    what Google says they actually hold, which is the mechanism decision 28 asks for.
+6. **The super-admin roster check** (added 2026-09-13; platform HLD §13.1 item 5), daily,
+   from Eve's own credential: `roleAssignments.list` and `users.list` with `isAdmin`, diffed
+   against the committed roster, plus the Reports-privilege holders. A new super admin or
+   admin role holder is `role_assignment_added`, a lost one `role_assignment_missing`; both
+   severity 1, in both directions ([03-lld.md](03-lld.md) §14). Before the super-admin grant.
 
 Two more assertions ride along, both cheap and both structural:
 
@@ -414,7 +440,7 @@ Two more assertions ride along, both cheap and both structural:
 | **Trigger** | A declared threshold in `thresholds.yaml` crossed by flow 2, 3 or 4. There is no discretionary halt: every control call site is parameterised by a row of `thresholds.yaml` and carries a code from `reasons.yaml`. |
 | **Inputs** | The finding that fired, its threshold row, the epochs read, `oncall.yaml`. |
 | **Outputs** | `POST /v1/control/halt {mode, reason}` or `POST /v1/control/demote {family, trigger, to_level, reason}`, one call per cell; a `config_versions` audit row per call; a notification to `walle-operators@`; a row in `eve.pages` if it paged. |
-| **Reason codes** | The control-plane class: `control_plane_divergence`, `audit_claim_divergence`, `ladder_drift`, `epoch_regression`, `google_contract_drift`, `reconciliation_gap`, `evidence_stalled`, `eve_key_unavailable`, `disagreement_rate`, `false_refusal_rate`, `registry_mismatch`, `no_operator_window`. |
+| **Reason codes** | The control-plane class: `control_plane_divergence`, `audit_claim_divergence`, `ladder_drift`, `epoch_regression`, `google_contract_drift`, `reconciliation_gap`, `evidence_stalled`, `eve_key_unavailable`, `disagreement_rate`, `false_refusal_rate`, `registry_mismatch`, `no_operator_window`. Added 2026-09-13: `log_pipeline_silent`, `role_assignment_added`, `role_assignment_missing`, and the detection catalogue's rule ids ([03-lld.md](03-lld.md) §6, §14). |
 | **Failure branch** | If the control call itself fails, the condition persists and Wall-E's own absence sweepers act on it independently of Eve — which is the point of making them absence-shaped. |
 
 **One call per cell, and the seam named rather than denied.**
@@ -436,6 +462,14 @@ watching Google's log from acting on what it sees (decision E-6).
 **Nothing here clears.** Eve returning from an outage clears no halt, restores no level and
 resumes no plan. Only an operator clears `no_autonomous`, and that is one authenticated call
 with no decision record, because clearing a halt is not raising a level.
+
+**`log_pipeline_silent`, added 2026-09-13** (P97). When the evidence itself goes silent — no
+`eve_workspace_logs` rows for 60 minutes in business hours (240 outside), Eve's token returning
+`invalid_grant`, or the witness push missing — Eve sets `no_autonomous` for every agent it
+verifies and `halt_all` on `walle-actions` and `walle-actions-super`, and pages severity 1.
+Silence is what a super admin can manufacture, so the halt is the default state of silence. A
+human clears it with one call, and every clear is a report about the administrator, sent to
+the second human as sole recipient (flow 8).
 
 ### The three rate-based demotions
 
@@ -535,11 +569,45 @@ absence-only and why the blind sample, not Eve, is the precision input.
 project, separate credential, separate key, no shared IAM. Its independence from the ladder
 owner is not. The same human may write `thresholds.yaml`, approve the pull request that sets
 a cell to `eve_authority: binding`, and grade the blind sample — and, until topology
-decision 52's owner groups exist, holds all four projects. Decision 11's second grader
+decision 52's owner groups exist, holds all four projects (decision 52 reopened 2026-09-13 as
+blocking for the super-admin grant). Decision 11's second grader
 and decision 37's second reviewer in
 [../wall-e/09-open-decisions.md](../wall-e/09-open-decisions.md) are what this design rests
 on, and E-13 in [09-open-decisions.md](09-open-decisions.md) puts the grader's name at S3,
 not S4: no `WRITE_HIGH` cell reaches `eve_authority: binding` without one.
+
+---
+
+## Flow 8 — Detection, evidence heartbeat and reporting
+
+Added 2026-09-13 (platform HLD §13.1 item 5, §13.2; §18 items 14 and 15). The mechanisms are
+specified in [03-lld.md](03-lld.md) §13–§15; this is the loop.
+
+| | |
+|---|---|
+| **Trigger** | Every `eve-reconciler` pass (the Reports API poll on the post-hoc cadence, detection and heartbeat hourly, the roster daily); the daily export job for the witness push. |
+| **Inputs** | The six-stream `eve_workspace_logs`, `eve_workspace_reports`, `walle_audit` and the band-B audit rows, the committed roster, the detection catalogue and `thresholds.yaml` from `eve/config`, `oncall.yaml`. |
+| **Outputs** | `eve.findings`; `eve.incidents` rows; `eve.pages` rows with recipient, channel, delivery result and acknowledgement; `POST /v1/control/halt` for a severity-1 rule or `log_pipeline_silent`; the daily export and heartbeat row in the witness. |
+| **Reason codes** | `reconciliation_gap`, `log_pipeline_silent`, `role_assignment_added`, `role_assignment_missing`, the catalogue's rule ids. |
+| **Failure branch** | If Eve itself stops, its heartbeat stops: the witness's absence alarm pages the second human out of band, and `walle-actions`' `eve_last_seen` absence policy fires at 15 minutes. A failed page is re-paged to the `oncall.yaml` secondary and then the incident commander. |
+
+1. **Detect.** Reconcile every robot-attributed event in every stream; evaluate the catalogue
+   (tenant-integrity rules at severity 1, out-of-family writes at severity 1, baselines at
+   2–3, prompt-to-action divergence); diff the roster; check the heartbeats.
+2. **Act, only in the lowering direction.** A severity-1 finding or `log_pipeline_silent` halts
+   through the existing control endpoint, exactly as flow 5. K5 and K6 stay human acts on a
+   two-person rota.
+3. **Record.** Write the `eve.incidents` row (targets as ids, evidence pointers), link it to
+   the SIEM case (P100).
+4. **Page** per the severity table of [03-lld.md](03-lld.md) §15: severity 1 to the second
+   human and the desk in parallel through the witness channels; severity 2 by PagerDuty and
+   email; reports about the administrator out of band to the second human **as sole
+   recipient**.
+5. **Narrate, report-only.** Where built, `eve-advisor` reads the incident through authorised
+   views, writes a narrative to `eve_advice` and may page at severity 2 inside the budget,
+   citing the deterministic finding. Nothing it writes returns to steps 1–4.
+6. **Export.** `eve-export@` exports the day and pushes it, with the heartbeat row, to the
+   witness.
 
 ---
 
@@ -552,10 +620,14 @@ Stated here because a flow document is where someone would look for them.
   three.
 - **No flow executes a Workspace write.** `eve@<domain>` holds read privileges only, at
   every stage, forever, and there is no domain-wide delegation anywhere in this design.
-- **No flow passes through a model.** Neither Eve identity holds any `aiplatform.*`
-  permission, the image lockfile is CI-scanned against a denylist of model SDKs, and a
-  runtime import test asserts the same. The signature cannot be produced by a language model
-  because the process cannot reach one and its identity could not authenticate to one.
+- **No flow on the authority path passes through a model.** Neither Eve identity holds any
+  `aiplatform.*` permission, the image lockfile is CI-scanned against a denylist of model SDKs,
+  a runtime import test asserts the same, and since 2026-09-13 a project-level
+  `restrictServiceUsage` denylist keeps `aiplatform.googleapis.com` out of `EVE_PROJECT`. The
+  signature cannot be produced by a language model because the process cannot reach one and
+  its identity could not authenticate to one. Narrowed 2026-09-13 (was: "No flow passes
+  through a model"): step 5 of flow 8 is the one model-permitted step, in
+  `EVE_ADVISOR_PROJECT`, and it is report-only — no flow reads its output (P34).
 - **No flow speaks an agent protocol.** Every call in every diagram above is plain
   authenticated REST or a Google API. A safety interlock that runs through a conversation is
   not an interlock.

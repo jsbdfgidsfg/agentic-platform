@@ -6,6 +6,15 @@
 - Placement updated on 2026-09-13 to the four-project topology; levels, stages, ceilings
   and numbers are unchanged. [../project-topology.md](../project-topology.md) is the
   authority for where Eve's key and the metric queries live.
+- **Objective restated 2026-09-13; see the platform HLD**
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §12.1, §13.1 item 9, §13.2
+  "Staging re-cut", §18 item 3). Wall-E holds Super Admin (register row P33). On this page:
+  §4 gains the `SUPER` and `WRITE-generic` rows and the permanent ceiling "no super-admin-class
+  operation is ever autonomous"; §5 says where work outside the families goes (bands B and C);
+  §7 gains the super-admin grant as a gate with its own checklist, Eve's observe-and-report
+  layer before it, and loses every line that relied on a custom role; §10 gains the CI
+  assertion that neither new row appears in any `playbook.uses`; §11's user-creation paragraph
+  is rewritten. Levels, trigger classes, dwell, ratchet and every number are unchanged.
 
 This is the step-by-step enablement plan and the control that goes with it. Every number
 here is an opinionated default meant to be tuned in the decision record that opens each
@@ -69,13 +78,33 @@ same review as a change to the protected-principal check, plus a security sign-o
 | WRITE_HIGH, reversible | **L3** | **L4** | **L4** | **L0** |
 | WRITE_HIGH, irreversible | **L3** | **L2** | **L2** | **L0** |
 | External recipients, any operation | **L3** | **L2** | **L2** | **L0** |
+| `SUPER` — band B at tier `SUPER`, uncatalogued super-admin-class work (added 2026-09-13) | **L3, two-person** | **L0** | **L0** | **L0** |
+| `WRITE-generic` — band B at tier `WRITE` (added 2026-09-13) | **L3** | **L0** | **L0** | **L0** |
 
-Three permanent statements, said plainly:
+**Added 2026-09-13 (platform HLD §12.1, §13.1 items 1 and 9).** The last two rows are not
+catalogue families; they are the generic lane `/v1/execute-generic` on `walle-actions-super`
+(band B), whose Admin SDK methods a committed table maps to `READ` / `WRITE` / `SUPER`
+([01-hld.md](01-hld.md) §"The three bands"). Band B takes the `chat` trigger only
+(`principal.type == human`), so every other trigger is L0. At `SUPER` the requester is a
+human super admin and the approver a **different** human super admin, with a change-ticket
+reference and `hold_minutes` before execution. Unlike the rows above, these two cannot be
+raised by a code change and a security sign-off: they are fixed by `ladder.schema` as
+`code: true` rows (spelled `WRITE_GENERIC` in the schema,
+[../agentic-platform/05-registry-and-autonomy-contract.md](../agentic-platform/05-registry-and-autonomy-contract.md)
+§9.2 and §9.5), and the platform validator refuses a config in which they differ. CI also
+asserts that no operation of either row appears in any playbook's `uses`, so neither can be
+reached by a scheduled, event or inbox run. Band C (console-only work) has no row: nothing
+executes there, and a human does the work.
 
-- **`WRITE_HIGH` never reaches L5 on any trigger, at any stage.** A suspended user or a
+Three permanent statements, said plainly (the first widened 2026-09-13):
+
+- **`WRITE_HIGH` never reaches L5 on any trigger, at any stage, and no super-admin-class
+  operation is ever autonomous: `SUPER` and `WRITE-generic` stay at L3 on chat and L0
+  everywhere else, permanently, in code.** A suspended user or a
   changed group membership is exactly the case where a second independent signature costs
   minutes and prevents incidents. If a case genuinely needs it later, the honest path is a
-  decision record that re-tiers that one operation, not raising the ceiling.
+  decision record that re-tiers that one operation, not raising the ceiling. No such path
+  exists for the two band-B rows.
 - **T3 never produces a write.** Anything derived from mailbox content is a proposal.
 - **Free-text outbound is never autonomous.** Autonomous runs may use `notify.operators`,
   whose recipients come from config and whose body is a template. `gmail.send` with a
@@ -99,6 +128,15 @@ Three permanent statements, said plainly:
 | **F9 Own mailbox** | `gmail.label` | yes | L5 | inverse label |
 | **F10 Rollback** | `run.rollback` | — | **L3 permanently** | — |
 | **F8 Later** | data transfer, archive, group create | mostly no | enters at L0, own mini-ladder | decide per operation |
+
+**Added 2026-09-13: work outside these families** (platform HLD §13.1, "The three bands").
+The families above are band A: the declared intended purpose and the only band that can
+climb. F8 stays the hook through which a new operation joins the catalogue, at L0, on its own
+mini-ladder. Until an operation is catalogued, super-admin-level work a human asks for goes
+through band B at the tier the committed method table gives it (the §4 `SUPER` and
+`WRITE-generic` rows: chat L3, never autonomous), or through band C, where Wall-E returns
+console steps to a human super admin and watches for the matching admin event. The
+hard-denied list of [06](06-security-guardrails.md) is refused in all three bands.
 
 **F6 deserves its explanation.** Restoring access is a security decision, not hygiene. It
 is the rollback path for F5, and a system that can suspend autonomously but needs a human
@@ -143,6 +181,38 @@ Read it as a canary rollout: each family enters a trigger class at L1, sits at e
 for at least its dwell, and never skips. `event` lags `scheduled` by one stage; `inbox`
 lags by two and stops at proposals.
 
+### The super-admin grant — a gate, not a stage (added 2026-09-13)
+
+Staging re-cut by the platform HLD §13.2 and §0.4. The day `walle@` receives Super Admin
+(register row P33) is **not** a row in the table above and not a runbook phase. It is a gate
+with its own checklist: the Tier P line of platform HLD §0.4, listed with owners in
+[../agentic-platform/12-open-decisions.md](../agentic-platform/12-open-decisions.md) §4. That
+register orders its gates, and "before the super-admin grant" comes before "before Wall-E's
+Stage 1". The grant therefore falls between S0 and S1's first real write. What the robot holds
+before the grant is set in [02](02-identity-and-auth.md) (platform HLD §18 item 1; *tbd* there).
+**Corrected 2026-09-13 (review-findings pass): the grant precedes Stage 0.** S0's F1 reads —
+admin changes, licences by SKU, admin-role holders — need an admin privilege, the only Wall-E
+role left is Super Admin (the retired `Wall-E — Reader` is not re-created as an interim role), and
+Wall-E is a Tier P-SA agent, which runs nothing against the tenant until its tier line is green
+(platform HLD §0.4). So the order is: Eve's observe-and-report layer live and drilled → the
+grant → S0 on the narrow client, with every write family at L1 → S1. Before the grant the robot
+exists, is licensed and hardened, holds no admin role and reads nothing; the tenant is watched
+by Eve's observe-and-report layer only. This is the position of [02](02-identity-and-auth.md)
+"When Super Admin is granted", [SETUP.md](SETUP.md) Phase 2 and §6.1, and
+[ARCHITECTURE.md](ARCHITECTURE.md) §0; the sentence above is kept as history.
+
+| Before the grant — live and drilled | Owner in the platform RACI |
+|---|---|
+| **Eve's observe-and-report layer**: Eve's organisation-level sink widened to all six Workspace streams; the Reports API polled by actor; the tenant-integrity rules; the witness mirror and paging from `org-witness`; `eve.incidents` | Eve owner |
+| The second human outside the Wall-E administration line, named, owning `eve-owners@` | platform owner, IT security |
+| SIEM with 24x7 acknowledgement and the super-admin detection set (platform HLD §7.3) | IT security |
+| Two human super admins, with the robot never the recovery one; account hygiene and K6 (platform HLD §13.1 items 6–7) | platform owner |
+| The two lists signed (P29); the signed deviation (P33); the perimeter decision (P3); penetration test; DPIA started; works council informed | owner, security reviewer, DPO |
+
+Eve's **gate** layer is unchanged: observe mode at S3, load-bearing at S4, with the
+seeded-fault exit. The layer that must exist before the grant is the one that **reports**
+misbehaviour. The layer that **approves** plans comes later.
+
 ### S0 — Eyes
 
 | | |
@@ -153,7 +223,7 @@ lags by two and stops at proposals.
 | **The reporting channel is not on the ladder** | `notify.operators`, sending a templated message to a config-fixed operator address, is how a run reports at all — including a shadow run. Putting it inside F2 and then setting F2 to L1 would have meant Stage 0 could not tell anyone what it had shadowed. It is therefore **outside the ladder and outside the write budget**, and its recipients are config, never model output. Stage 2's "first autonomous write" is F2 to a *space or list*, which is a different thing. |
 | **Scope** | Reads: whole tenant, rate-limited. Shadow write plans: pilot OU only. Daily write budget: 0 — and shadow items **evaluate** that cap without consuming it, or every shadow item would be denied for budget before its level could force a dry run, and Stage 0 would generate no evidence at all. |
 | **Operators** | The ladder owner alone. |
-| **Controls that must be live first** | Custom role, read-only privileges only, OU-scoped · robot account hardened, interactive-login alert firing · action service with catalogue, policy chain, durable budgets, write-ahead audit · ladder config v1 with everything at L1 · halt flags and the K0–K5 chain, drilled once with times recorded · dispatcher with per-job enable and budget · shadow grading sheet. |
+| **Controls that must be live first** | *Reversed 2026-09-13 — was "Custom role, read-only privileges only, OU-scoped"; no such role exists for a super-admin robot (platform HLD "What this reverses").* Read-only at S0 is enforced by the ladder (every write family L1), by the hard-denied list in the policy chain, and by the narrow OAuth client's scopes on `walle-actions`. What the robot's account holds before the grant is fixed in [02](02-identity-and-auth.md) · *corrected 2026-09-13: the super-admin grant is passed before S0 starts (§7 "The super-admin grant"), so Eve's observe-and-report layer is live and drilled, not being built* · robot account hardened, interactive-login alert firing · action service with catalogue, policy chain, durable budgets, write-ahead audit · ladder config v1 with everything at L1 · halt flags and the K0–K5 chain, drilled once with times recorded · dispatcher with per-job enable and budget · shadow grading sheet. |
 | **Exit criteria** | ≥ 20 shadow runs covering every write family, each item graded, **≥ 95 % graded correct** · **zero** hard-invariant denials from autonomous runs (`protected_principal`, `operation_not_allowed`, bad approval) · zero requests without an audit row, verified by reconciling Cloud Logging against BigQuery · injection regression suite passes · K0 measured under 60 s, K5 measured · question formally put to the DPO and to employee representative bodies, where your jurisdiction has them · decision record for S1 signed. |
 
 ### S1 — Hands held
@@ -165,7 +235,7 @@ lags by two and stops at proposals.
 | **Levels** | F3, F4, F5, F7 at **L3 on chat**; the same families stay L1 on scheduled. |
 | **Scope** | Writes only inside the pilot OU allowlist. Max 10 objects per request. Business hours. Daily write budget 10. |
 | **Operators** | The ladder owner plus one or two named Workspace admins. |
-| **Controls first** | Pre-state capture on every write · the inverse table implemented and **every inverse exercised on test accounts in a game day** · verification by re-read · group classification list published · role extended with update privileges only. |
+| **Controls first** | Pre-state capture on every write · the inverse table implemented and **every inverse exercised on test accounts in a game day** · verification by re-read · group classification list published · *Reversed 2026-09-13 — was "role extended with update privileges only".* Now: the super-admin grant gate above is passed. Nothing on Google's side narrows the write privilege, so the pilot OU allow-list, `SAFE_USER_FIELDS` and the hard-denied list are hard invariants in the policy chain, tested by the denial suite. The gate change first executes in the sandbox Workspace tenant ([decision 29](09-open-decisions.md), platform HLD §3.1 nonprod row) · the band-B two-person surface live before any band-B request is accepted. |
 | **Exit criteria** | ≥ 50 executions across ≥ 3 families by ≥ 2 operators · **zero unintended changes**, defined as a change reverted within 7 days and attributed to Wall-E error rather than changed intent · zero executions against a protected principal (denials are fine, executions are not) · a rollback deliberately exercised end to end · for each family to be promoted, shadow precision ≥ 95 % over four consecutive weekly runs · decision record. |
 
 ### S2 — Proposals
@@ -185,7 +255,7 @@ lags by two and stops at proposals.
 | **Purpose** | The first autonomous `WRITE_HIGH` — with a human approving the batch. This is where the toil genuinely goes away, and it is the stage to sit in longest. |
 | **Levels** | Scheduled write families at **L3 batch**: the run plans, freezes, and waits; one operator approves the whole plan; each item is re-read before it executes. Event: F1 L5, F2 L2. Inbox opens at L1 for reads. |
 | **Scope** | Max 10 objects per run rising to 25 after 20 clean runs · OU allowlist · group class `low` only · business hours, last write at 16:00 · daily write budget 25 · canary: a new family applies to 20 % of targets for its first 10 runs. |
-| **Controls first** | Batch approval bound to the plan hash · per-item re-read and skip-on-change · rollback plan generated at plan time, but executed only on a **fresh** human approval against **fresh** pre-state — a week-old approval is bound to a pre-state hash that is stale by definition · **Eve running in observe mode**, producing verdicts that are logged and graded but not enforced. This is Eve's own shadow stage. |
+| **Controls first** | Batch approval bound to the plan hash · per-item re-read and skip-on-change · rollback plan generated at plan time, but executed only on a **fresh** human approval against **fresh** pre-state — a week-old approval is bound to a pre-state hash that is stale by definition · **Eve running in observe mode**, producing verdicts that are logged and graded but not enforced. This is Eve's own shadow stage. *(Qualified 2026-09-13: this is the shadow stage of Eve's gate layer only. Eve's observe-and-report layer has been live since before the grant; see "The super-admin grant — a gate, not a stage".)* |
 | **Exit criteria** | ≥ 50 approved `WRITE_HIGH` items, ≤ 2 % rejected for Wall-E error, verification ≥ 99.5 % with **zero drift** · **Eve acceptance test passed**: Eve observed ≥ 30 days, agreed with human verdicts ≥ 95 %, and caught ≥ 95 % of deliberately seeded faults in a chaos exercise · approval SLA met ≥ 80 % of the time, otherwise the rota is not ready and S4 would just build a queue · kill-switch drill within 30 days · decision record signed by **two humans**. |
 
 ### S4 — Eve gates
@@ -202,8 +272,8 @@ lags by two and stops at proposals.
 | | |
 |---|---|
 | **Levels** | F5 suspend reaches L4 with a 2-hour hold, **and only when the trigger is a system of record** — an HR feed or a human admin's own suspension event, never free text and never inbox. Everything else sits at its earned level. |
-| **Rhythm** | Weekly: read every `WRITE_HIGH` row, five minutes well spent. Monthly: kill-switch drill, rollback drill, regenerate the ladder-state page. Quarterly: Mo's proposals reviewed, budgets and OU scope re-decided, and **privileges the catalogue no longer needs are removed from the custom role**. |
-| **What never changes** | The ceilings in §4 · the never-list in [06](06-security-guardrails.md) · humans raise, machines lower · a new operation enters at L0 and walks its own mini-ladder. |
+| **Rhythm** | Weekly: read every `WRITE_HIGH` row, five minutes well spent. Monthly: kill-switch drill, rollback drill, regenerate the ladder-state page. Quarterly: Mo's proposals reviewed, budgets and OU scope re-decided, and **privileges the catalogue no longer needs are removed from the custom role**. *Reversed 2026-09-13: a super admin has no privilege to prune.* The quarterly pruning becomes three checks. Catalogue operations and band-B method-table rows unused in the quarter are removed. The two OAuth clients' scope sets are compared with what the catalogue and band B used. The super-admin roster is reviewed against the committed roster (a roster check, not a role diff; platform HLD §13.1 item 5, P68). |
+| **What never changes** | The ceilings in §4, including the `SUPER` and `WRITE-generic` rows · the two lists (hard-denied; band B only), which replaced the never-list in [06](06-security-guardrails.md) on 2026-09-13 · humans raise, machines lower · a new operation enters at L0 and walks its own mini-ladder. |
 
 ## 8. Metrics the ladder is argued from
 
@@ -225,7 +295,7 @@ reader's project. Never as jobs in Wall-E's project ([../project-topology.md](..
 | **Run reliability** | runs reaching a terminal state within budget | ≥ 99 % | < 97 %: `no_autonomous` for that playbook |
 | **Eve post-hoc latency** | time to independent verification of an L5 write | ≤ 60 min p99 | Breach: promotions frozen. > 4 h: L5 cells drop to L4 |
 | **Approval latency** | human time-to-verdict | p50 < 4 business hours | Not a Wall-E demotion; it blocks stage exit |
-| **Audit completeness** | Workspace admin-audit events by the robot with a matching audit row | 100 % | < 100 %: halt writes until reconciled |
+| **Audit completeness** | Workspace admin-audit events by the robot with a matching audit row. *Widened 2026-09-13 (platform HLD §13.2, §13.3):* events by the robot in every stream Eve ingests, matched against `walle_audit` or a band-B audit row. Robot admin events with no matching catalogue or band-B operation are counted separately (target 0, severity 1) | 100 % | < 100 %: halt writes until reconciled |
 | **Drill freshness** | days since the last kill-switch drill | ≤ 30 | Stale: CI refuses every promotion |
 
 **The error budget for a wrong autonomous write is zero.** It is an incident and a
@@ -249,7 +319,10 @@ Config lives in `walle/config/ladder.yaml`. CI refuses the merge if a level went
 without a link to an `accepted` decision file, if the level exceeds a ceiling, if a
 WRITE_HIGH promotion lacks a second named approver, if an override for that cell exists
 and the pull request does not reference its incident, if the dwell rule in §6 is not
-satisfied, or if the last drill recorded in Firestore is older than 30 days.
+satisfied, or if the last drill recorded in Firestore is older than 30 days. Added
+2026-09-13 (platform HLD §13.1 item 9): CI also refuses the merge if any operation of the
+`SUPER` or `WRITE-generic` rows appears in any playbook's `uses`, or if either row in
+`ladder.yaml` differs from its schema-fixed value.
 
 **The gate cannot be part of what it gates.** One pull request could otherwise change the
 ladder, the ceiling module and the validator together, and CI would happily check the new
@@ -292,9 +365,17 @@ Users → Create and Delete at "never", and an earlier draft of this table contr
 by listing user create as a future family. The role does not carry the privilege; adding
 it is a design change, not a promotion.
 
+*Rewritten 2026-09-13 (platform HLD §13.1):* the account now holds Super Admin, so it
+**does** have the privilege, and Google refuses nothing. Only the catalogue and the ladder
+hold user creation back. Deleting an admin is on the hard-denied list and refused in every
+lane. Deleting a non-admin user is reachable only through band B at tier `SUPER`. Creating a
+user is not a catalogue family. Until a decision record catalogues it through F8 at L0, a
+human can ask for it only through band B, at the tier the committed method table in
+[03](03-lld.md) assigns. It is never a promotion.
+
 | Assumption | Where it bites | Decision |
 |---|---|---|
-| A sandbox OU with synthetic accounts can be created, plus one small real pilot OU | Every stage's scope limit, and S1 in particular — without a sandbox the first real writes land on real users | 5 |
+| A sandbox OU with synthetic accounts can be created, plus one small real pilot OU. *Qualified 2026-09-13:* the sandbox is a separate Workspace tenant, never an OU, because Super Admin cannot be limited to an OU (decision 29; P40). The pilot OU stays, as an allow-list enforced in code | Every stage's scope limit, and S1 in particular — without a sandbox the first real writes land on real users | 5, 29 |
 | Business hours are Europe/Paris, Mon–Fri, last write 16:00 | Every autonomous gate, hold windows, the weekend suspension block | 15 |
 | At least one more Workspace admin joins `walle-operators@` by S1, and a second approver is named by S3 | S3 and every L4/L5 promotion. A one-person rota also makes approval latency the binding constraint | 11 |
 | Google Chat is available as the approval and digest surface | The proposal queue and hold-window veto | 14 |

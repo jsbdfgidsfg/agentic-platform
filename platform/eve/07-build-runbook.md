@@ -4,6 +4,20 @@
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
 - Last executed: **never**
+- **Objective restated 2026-09-13; see the platform HLD**
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2–§13.3; this runbook
+  carries §18 items 13, 14, 15 and 17; owner the Eve owner; gates the super-admin grant and
+  Wall-E's Stage 1, P143). Added: a pre-grant **observe-and-report sitting** (Phase 10b) — the
+  Reports API poll, the detection catalogue, the roster check, the evidence heartbeat, the
+  reporting contract, `eve-export@` and the daily export to the witness; the six-stream sink
+  (Phase 7); the widened read set (Phase 8); the `eve_quality` dataset with dataset-level
+  `READER` to `mo-metrics@` and the validator custodian **made by this runbook**;
+  `eve.incidents` and `eve.seeded_fault_runs`; the HSM protection level on `eve-approval`
+  (Phase 11). The "no `userByEmail` entry for `mo-metrics@` on `eve` — ever" check is narrowed
+  to the non-quality datasets. `grades_eve` is written by the platform approval surface, not by
+  anything this runbook builds. Qualified 2026-09-13 (review-findings pass): its dataset is
+  proposed as `eve_grades` in `VALIDATOR_PROJECT`, made by the validator custodian, with no
+  Eve grant (topology rows 45–46, [09-open-decisions.md](09-open-decisions.md) E-21).
 
 ## When to use this
 
@@ -15,12 +29,15 @@ three separate sittings separated by months, not one build:
 | **Eve v0** | S0 | 1 to 6 | Eve's GCP project, one service account, the `eve` dataset, twelve scheduled queries and one absence alert. **No robot account, no OAuth client, no token, no secret, no KMS key, no allowlist entry, no Eve process.** |
 | **The sink** | S2 | 7 | Eve's own organisation-level admin-log sink, writing into Eve's project. Still no Eve process. |
 | **Eve onboarding** | S3 entry | 8 to 10 | `eve@<domain>`, three GCP service accounts, the secrets, the locked evidence bucket, `eve/config`, `eve-reconciler`, `eve-console`. Eve can **halt and demote**. Eve cannot sign. |
-| **Eve gates** | S4 entry | 11 | The `eve-approval` KMS key, its PEM exported before first use, `eve-gate`, and Wall-E's side of the change. Eve can sign an approval for cells marked `eve_authority: binding`. |
+| **Eve gates** | S4 entry | 11 | The `eve-approval` KMS key (HSM), its PEM exported before first use, `eve-gate`, and Wall-E's side of the change. Eve can sign an approval for cells marked `eve_authority: binding`. |
+| **Observe-and-report** (added 2026-09-13) | **Before Wall-E's super-admin grant**, at whatever stage that falls | 7 (widened), 8, 9, the jobs and schedules of 10, then 10b | `eve@` with the widened read set, the six-stream sink, the Reports API poll, the detection catalogue, the roster check, the evidence heartbeat, `eve.incidents` and paging, `eve-export@` and the witness push, `eve_quality`. Eve can **halt** on the tenant-integrity class, `reconciliation_gap` and `log_pipeline_silent`, and report. Eve cannot sign. If the grant comes after S3 entry, Phase 10b is simply added to that sitting. |
 
 Phase 12 is not a stage. It is the two things that must be true at every stage: the
 teardown guard, and the denial suite Eve's side authors.
 
-**Nothing in phases 1 to 7 gates anything.** Eve v0 is scheduled queries a human reads
+**Nothing in phases 1 to 7 gates anything** (qualified 2026-09-13: unless the super-admin grant
+is due, in which case the observe-and-report sitting above halts and reports before any ladder
+stage asks it to). Eve v0 is scheduled queries a human reads
 weekly. Executing phases 1 to 6 changes no autonomy level, consumes no Workspace licence
 and grants no credential. That is deliberate: through S2 the pilot carries no dormant Eve
 credential, no unused key and no allowlist entry, so an Eve that is never built costs
@@ -42,6 +59,11 @@ can state in numbers how much approval burden it avoids.
 | [E-18](09-open-decisions.md) — the threshold numbers | Phase 10 | `thresholds.yaml` is stubbed from Phase 4 so v0 and the controller read the same values, but the numbers are calibrated on measured data at S2. Wiring a control call to an uncalibrated threshold is how a buggy Eve halts the programme during the stage the programme is trying to prove itself. |
 | [E-13](09-open-decisions.md) — the second grader | Before the S3 exit gate | No `WRITE_HIGH` cell reaches `eve_authority: binding` without one. |
 | [E-3](09-open-decisions.md) — `items_hash` in the signed field list | Before Wall-E's approve endpoint is built | Retrofitting a signed field means re-issuing every stored approval. |
+| [E-2](09-open-decisions.md) — the second human outside the Wall-E line (added 2026-09-13) | The observe-and-report sitting | Reopened as blocking for the super-admin grant: without that person there is no witness administrator, no parallel recipient and no sole recipient for reports about the administrator. |
+| P14 — the witness organisation's domain, edition and billing (IT security; added 2026-09-13) | Phase 10b | Without the witness the push has no destination and the absence alarm lives only inside the tenant's organisation, which a super admin can reach. |
+| P17 — Workspace BigQuery export into the witness (added 2026-09-13) | Eve S2 | If yes, a dataset in `EVE_WITNESS_PROJECT` and a severity-1 rule on the export's "turned off" event; if no, the SecOps export stays the only copy of Gmail and the streams Cloud Logging never receives. |
+| P34 and P19 — the reporting path and its AI Act class (added 2026-09-13) | Phase 10b's `eve-advisor` step | Without P34 no `eve-advisor` build; without P19 it may not page. The rest of Phase 10b does not wait. |
+| P30 — the validator custodian's `READER` on `eve_quality` (added 2026-09-13) | Phase 10b | Without it Eve-targeting bundles stay advisory `incident_note` only. |
 
 ### Access you need, and where to get it early
 
@@ -89,7 +111,7 @@ export GEMINI_PROJECT="<gemini-project-id>"
 # only as the grantee of a dataset-level READER on the mirror's dataset, from S4.
 export MO_PROJECT="<mo-project-id>"
 export SA_MO_METRICS="mo-metrics@${MO_PROJECT}.iam.gserviceaccount.com"
-export EVE_MIRROR_DS="eve_mirror"          # Assumption: name tbd, topology decision 51. Phase 11.
+export EVE_MIRROR_DS="eve_audit_mirror"    # renamed 2026-09-13 from the Assumption eve_mirror, which is the witness dataset's name (topology decision 51, row 32). Phase 11.
 
 # ---- derived ---------------------------------------------------------------
 export SA_EVE_V0="eve-v0@${EVE_PROJECT}.iam.gserviceaccount.com"
@@ -101,6 +123,16 @@ export EVE_EVIDENCE="gs://${EVE_PROJECT}-eve-evidence"
 export EVE_KEYS="${EVE_EVIDENCE}/keys"     # a prefix, not a second bucket. See Phase 11.
 export EVE_AR="${REGION}-docker.pkg.dev/${EVE_PROJECT}/eve"
 export EVE_RECEIPTS_DS="eve_receipts"      # Assumption: name tbd, topology decision 48. Phase 11.
+
+# ---- added 2026-09-13, platform HLD section 13.2-13.3; Phase 10b ------------------
+export EVE_ADVISOR_PROJECT="<eve-advisor-project-id>"   # under fld-controllers
+export EVE_WITNESS_PROJECT="<witness-project-id>"       # in org-witness, P14; IT security
+export SA_EVE_EXPORT="eve-export@${EVE_PROJECT}.iam.gserviceaccount.com"
+export SA_EVE_ADVISOR="eve-advisor@${EVE_ADVISOR_PROJECT}.iam.gserviceaccount.com"
+export SA_VALIDATOR="<validator-custodian-service-account>"   # VALIDATOR_PROJECT; tbd there
+export EVE_QUALITY_DS="eve_quality"
+export EVE_ADVICE_DS="eve_advice"
+export EVE_ADVISOR_VIEWS_DS="<advisor-views-dataset>"   # name tbd (HLD section 18 item 25)
 
 echo "EVE_PROJECT=$EVE_PROJECT WALLE_PROJECT=$WALLE_PROJECT FOLDER_ID=$FOLDER_ID REGION=$REGION DOMAIN=$DOMAIN"
 ```
@@ -177,6 +209,12 @@ gcloud services list --enabled --project="$EVE_PROJECT" --format='value(config.n
 gcloud services list --enabled --project="$EVE_PROJECT" \
   --format='value(config.name)' | grep -c '^aiplatform.googleapis.com$'
 # expect: 0
+
+# added 2026-09-13 (platform HLD CP5): the project-level restrictServiceUsage denylist,
+# set by the factory on EVE_PROJECT itself (never on fld-controllers, whose other child,
+# EVE_ADVISOR_PROJECT, needs the API). Eve's runbook verifies it; it does not set it.
+gcloud org-policies describe gcp.restrictServiceUsage --project="$EVE_PROJECT" --effective
+# expect: a denied value aiplatform.googleapis.com. Absent = stop; report to the platform owner.
 ```
 
 Then assert the property that the whole project boundary exists for — that Wall-E's
@@ -319,7 +357,8 @@ bq --location="$BQ_LOCATION" mk --dataset \
   "${EVE_PROJECT}:eve"
 
 # 34560000 seconds = 400 days. Assumption: 400 days pending decision E-14.
-for T in findings verdicts attestations review_queue grades_blind pages walle_audit_mirror; do
+# incidents and seeded_fault_runs added 2026-09-13 (platform HLD section 13.2-13.3; 03-lld section 9)
+for T in findings verdicts attestations review_queue grades_blind pages walle_audit_mirror incidents seeded_fault_runs; do
   bq mk --table \
     --time_partitioning_field=ts \
     --time_partitioning_type=DAY \
@@ -377,7 +416,7 @@ not 01:00**: see Phase 4.
 ```bash
 bq ls --format=prettyjson "${EVE_PROJECT}:eve" | python3 -c \
   "import json,sys;[print(t['tableReference']['tableId'], t['type']) for t in json.load(sys.stdin)]"
-# expect the seven tables, all TABLE
+# expect the nine tables, all TABLE (seven before 2026-09-13)
 
 bq show --format=prettyjson "${EVE_PROJECT}:eve.walle_audit_mirror" \
   | python3 -c "import json,sys;d=json.load(sys.stdin);print(d['timePartitioning'])"
@@ -584,6 +623,15 @@ that assert the "never raises" property directly.
 
 ### Phase 7 — Eve's organisation-level admin-log sink
 
+**Widened 2026-09-13** (platform HLD §13.2; §18 item 13). The sink carries **all six** Cloud
+Logging Workspace streams, not the Admin stream alone, still with **no actor exclusion**, and
+it stays independent of the platform's aggregated sinks by design
+([../agentic-platform/08-data-logging-retention-sovereignty.md](../agentic-platform/08-data-logging-retention-sovereignty.md)
+§3.2). It is created at S2 **or before the super-admin grant, whichever comes first**. A filter
+widened after creation does not backfill, so the widened filter goes in at creation time;
+where the sink already exists with the Admin-only filter, record the date of the change as the
+start of Eve's copy of the other five streams.
+
 **Why this is at S2 and not S3.** Eve reconciles against **this** copy of Google's admin
 audit log, never against `walle_workspace_logs` in Wall-E's project, which sits inside
 Wall-E's teardown blast radius and whose actor exclusion Wall-E controls. Creating the sink
@@ -623,7 +671,7 @@ table. Run the three commands in this order.
 
 ```bash
 bq --location="$BQ_LOCATION" mk --dataset \
-  --description="Google's admin audit log, Eve's independent copy. No actor exclusion." \
+  --description="Google's Workspace audit logs, six streams, Eve's independent copy. No actor exclusion." \
   "${EVE_PROJECT}:eve_workspace_logs"
 
 # 34560000 seconds = 400 days. Assumption: 400 days pending decision E-14.
@@ -636,7 +684,14 @@ gcloud logging sinks create eve-workspace-audit \
   --organization="$ORG_ID" \
   --include-children \
   --use-partitioned-tables \
-  --log-filter='protoPayload.serviceName="admin.googleapis.com"'
+  --log-filter='protoPayload.serviceName=("admin.googleapis.com" OR "cloudidentity.googleapis.com" OR "login.googleapis.com" OR "oauth2.googleapis.com") OR logName:"organizations/'"${ORG_ID}"'/logs/cloudaudit.googleapis.com%2Faccess_transparency"'
+# Widened 2026-09-13 (was: protoPayload.serviceName="admin.googleapis.com").
+# Service names verified 2026-09-13 (https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging):
+# admin = admin.googleapis.com; enterprise groups = cloudidentity.googleapis.com;
+# login AND SAML = login.googleapis.com; OAuth token = oauth2.googleapis.com.
+# Assumption: the Access Transparency clause - that page names no service for it; confirm
+# against the first rows (verify step 5) and correct the clause before relying on it.
+# OAuth token, SAML and Access Transparency are edition-conditional (tenant edition tbd).
 
 export EVE_SINK_WRITER="$(gcloud logging sinks describe eve-workspace-audit \
   --organization="$ORG_ID" --format='value(writerIdentity)')"
@@ -678,7 +733,8 @@ a reconciliation join.
 # 1. the filter carries NO actor exclusion
 gcloud logging sinks describe eve-workspace-audit --organization="$ORG_ID" \
   --format='value(filter)'
-# expect exactly: protoPayload.serviceName="admin.googleapis.com"
+# expect exactly the six-stream filter of the create command above
+# (before 2026-09-13: protoPayload.serviceName="admin.googleapis.com")
 # if it contains principalEmail!=... the sink is wrong: delete and recreate
 
 # 2. --include-children actually took
@@ -712,6 +768,18 @@ bq query --use_legacy_sql=false --project_id="$EVE_PROJECT" \
 # Substitute _PARTITIONTIME for `timestamp` if step 3 reported no partitioning field.
 ```
 
+```bash
+# 5. added 2026-09-13: every stream the edition carries is arriving. Login, SAML and the
+#    Data Access half of OAuth token land in a separate Data Access table Logging creates;
+#    list the dataset and read both tables.
+bq ls "${EVE_PROJECT}:eve_workspace_logs"
+# expect: the activity table and a data_access table (exact names as Logging created them)
+# then, per table, GROUP BY protopayload_auditlog.serviceName over the last two days
+# expect: admin.googleapis.com, cloudidentity.googleapis.com, login.googleapis.com,
+#         oauth2.googleapis.com, and an Access Transparency entry if the edition has them.
+#         A stream the edition should carry but that is absent is a finding, not a pass.
+```
+
 Make a trivial admin change in the console and confirm it lands within minutes. Then have
 Wall-E make one — a shadow run is enough — and confirm **that** lands too. Check 4 passing
 with only human actors in it is the failure this phase exists to prevent.
@@ -740,6 +808,9 @@ credential alone.
 **Before starting, re-read [E-16](09-open-decisions.md).** If
 [decision 26](../wall-e/09-open-decisions.md) has come back saying a keyless service account
 can hold a custom admin role with no domain-wide delegation, most of Phase 8 disappears.
+Reworded 2026-09-13: decision 26 is closed for Wall-E by fact (P33) and open for Eve only; E-16
+now also fixes the widened read set before this consent, and when the super-admin grant comes
+first these phases run in the observe-and-report sitting, not at S3 entry.
 
 ### Phase 8 — The Workspace half
 
@@ -758,15 +829,18 @@ Every step here is a **manual console step**. There is no gcloud for any of it.
    | Organisational units → Read | yes |
    | Reports → Audit read, Usage read | yes |
    | Admin roles → Read | yes |
+   | Domain settings → read; customer settings → read (added 2026-09-13, E-16) | yes — exact privilege names resolved with `privileges.list` on the tenant, *tbd* until run |
+   | Every Reports application the poll reads (added 2026-09-13) | yes, through Reports → Audit read |
    | **Any write privilege, at any stage, ever** | **no** |
    | **License Management** | **no** — see below |
-   | Security settings, Domain settings, Vault, eDiscovery | **no**, never |
+   | Security settings, Vault, eDiscovery, any content privilege | **no**, never (Domain settings moved to *read: yes* above on 2026-09-13; read only) |
 
    Assign it **customer-scoped**. Reports and Groups privileges cannot be unit-scoped
    anyway, and Eve's job is tenant-wide observation.
 3. **Hardening**, identical to Wall-E's robot: 2SV enforced, hardware key only, its own key
    in the same safe, **separately labelled**. No recovery email, no recovery phone, no code
-   fallback. Short session length. Not a super admin, ever.
+   fallback. Short session length. Not a super admin, ever — required by the objective of
+   2026-09-13, and asserted daily by Eve's own roster check.
 4. **The login rule.** Admin console → Rules → a second reporting rule, same shape as
    Wall-E's, on **any login** with actor `eve@<domain>`, routed to you and to
    `walle-operators@`. Leave the event type unfiltered: a run of failed logins is as
@@ -791,8 +865,10 @@ Every step here is a **manual console step**. There is no gcloud for any of it.
    | `admin.directory.group.readonly` | The same for groups |
    | `admin.directory.orgunit.readonly` | OU allowlist checks |
    | `admin.directory.rolemanagement.readonly` | `roleAssignments.list` for the daily operator-list reconciliation, and to know which groups carry admin roles |
-   | `admin.reports.audit.readonly` | Targeted trigger corroboration |
+   | `admin.reports.audit.readonly` | Targeted trigger corroboration; since 2026-09-13 also the Reports API poll by actor across every application (Phase 10b) |
    | `admin.reports.usage.readonly` | Metric series |
+   | `admin.directory.domain.readonly` (added 2026-09-13) | Domain settings as state, for the roster and tenant-integrity checks |
+   | `admin.directory.customer.readonly` (added 2026-09-13) | Customer settings as state |
    | `openid`, `userinfo.email` | So the bootstrap can verify **which** account consented — the check that stops you storing your own credentials by accident |
 
    **`apps.licensing` is dropped.** [SETUP.md](../wall-e/SETUP.md) Phase 15, before
@@ -819,7 +895,10 @@ python bootstrap/verify_token.py --project="$EVE_PROJECT" --region="$REGION" \
   --secret=eve-refresh-token --secret-version="$EVE_TOKEN_VERSION" \
   --expect-account="$EVE_ROBOT"
 # expect: account = eve@<domain>; a users.list succeeds; a users.update fails 403;
-#         the scope set matches the table above EXACTLY, apps.licensing absent.
+#         the scope set matches the table above EXACTLY - ten scopes since 2026-09-13 -
+#         apps.licensing absent, no content scope, no cloud-identity.policies scope
+#         (the Policy API is super-admin-only; Eve is never one);
+#         users.get on eve@ returns isAdmin false.
 # The script exits non-zero on any mismatch.
 ```
 
@@ -923,6 +1002,17 @@ for M in "$SA_EVE" "$SA_EVE_VERIFIER" "$SA_EVE_CONSOLE"; do
     --member="serviceAccount:${M}" --role=roles/run.invoker
 done
 ```
+
+**Added 2026-09-13: the halt path onto `walle-actions-super`** (platform HLD §18 item 25;
+[08-contract-changes.md](08-contract-changes.md) CC-34). Wall-E's runbook grants
+`roles/run.invoker` on the Cloud Run service `walle-actions-super` to Eve's halt identity,
+service-level, and that service's in-app control list admits it to the halt endpoint only.
+Item 25 names `eve-controller@`; page 07 §7 has `eve-reconciler` (`eve-verifier@`) issue the
+`log_pipeline_silent` halt — which identity is *tbd* for the reconcile pass. **Decided
+2026-09-13 (review-findings pass): both, halt path only** — `eve-controller@` for halts raised
+at the approval point, `eve-verifier@` for every reconciler-limb halt of [03-lld.md](03-lld.md)
+§14 ([../project-topology.md](../project-topology.md) row 27; platform HLD §18 item 25, extended). Verify it with
+check 6, extended below; do not make it from Eve's side.
 
 [E-12](09-open-decisions.md) exists because an earlier wording said `datastore.viewer`
 was Eve's only project-level role while the runbook granted `agentregistry.viewer` as
@@ -1044,6 +1134,12 @@ done
 # mirror's dataset, from S4 — Phase 11, topology row 18) is likewise dataset-level and
 # never appears in the project policy; Phase 12's drift job expects exactly it from S4
 # and fails on any other Mo principal, or on the same one before S4.
+# Extended 2026-09-13: the Mo list gains mo-metrics@ READER on eve_quality (Phase 10b,
+# from Wall-E's Stage 1), and the expected foreign set gains the validator custodian on
+# eve_quality, eve-advisor@ on its view dataset and eve_advice, platform-drift@'s
+# folder-inherited securityReviewer, factory-apply@ only under an active approved
+# ent-factory-singleton PAM grant, and the SDP discovery service agent. All dataset- or
+# folder-level; none appears in the project policy; anything else fails.
 
 # 3. no Eve identity holds ANY project-level role in Wall-E's project — the mirror
 #    image of Wall-E's check_project_roles (reads WALLE_PROJECT's policy: human owner,
@@ -1080,6 +1176,14 @@ gcloud storage buckets describe "$EVE_EVIDENCE" \
 gcloud run services describe walle-actions --project="$WALLE_PROJECT" --region="$REGION" \
   --format='value(spec.template.spec.containers[0].env)' | tr ';' '\n' \
   | grep CONTROL_CALLER_ALLOWLIST
+
+# 6b. added 2026-09-13: the halt-path invoker on walle-actions-super, and nothing broader
+gcloud run services get-iam-policy walle-actions-super --project="$WALLE_PROJECT" \
+  --region="$REGION" --flatten='bindings[].members' \
+  --format='table(bindings.role,bindings.members)'
+# expect: roles/run.invoker for eve-controller@ and eve-verifier@ (CC-34, topology row 27,
+# both halt path only, decided 2026-09-13), and no other Eve identity (never eve-console@,
+# eve-v0@, eve-export@ or eve-advisor@)
 ```
 
 Checks 1 and 2 are the ones to re-run after every future IAM change, in both directions,
@@ -1234,6 +1338,9 @@ gcloud iap web add-iam-policy-binding \
   --project="$EVE_PROJECT" --region="$REGION" \
   --resource-type=cloud-run --service=eve-console \
   --member="group:${OPERATORS}" --role=roles/iap.httpsResourceAccessor
+# Changed 2026-09-13 (platform HLD section 13.2): the audience becomes a dedicated group
+# (name tbd) instead of ${OPERATORS}; its membership change is a severity-1 rule (SA-09).
+# Substitute that group here once named.
 
 export EVE_CONSOLE_URL="$(gcloud run services describe eve-console \
   --project="$EVE_PROJECT" --region="$REGION" --format='value(status.url)')"
@@ -1345,6 +1452,198 @@ thresholds were.
 
 ---
 
+### Phase 10b — The observe-and-report layer, before the super-admin grant
+
+Added 2026-09-13 (platform HLD §0.4, §13.1 item 5, §13.2, §13.3; §18 items 13–15 and 17). **Run
+this before Wall-E's account receives Super Admin**, at whatever ladder stage that falls, after
+Phases 7 (widened), 8, 9 and the jobs and schedules of Phase 10. The seeded-fault fixtures,
+the blind view and everything of Phase 11 do not wait for it and are not needed by it.
+
+**Preconditions.** [E-2](09-open-decisions.md)'s second human outside the Wall-E line is named
+and holds `eve-owners@`; the witness organisation exists (P14: IT security created the tenant,
+`EVE_WITNESS_PROJECT`, a bucket with a retention lock, the dataset `eve_mirror`, the severity
+1/2 notification channels to individuals); `EVE_ADVISOR_PROJECT` exists if the reporting path is
+being built (the factory makes it, P142 — not this runbook).
+
+**1. The Reports API poll by actor.** A dataset for the results, bounded before anything
+writes, then a new `reports` entrypoint of the same reconciler image on its own schedule:
+
+```bash
+bq --location="$BQ_LOCATION" mk --dataset \
+  --description="Reports API activities.list by actor: walle@, eve@, every super admin on the roster" \
+  --default_partition_expiration=34560000 \
+  "${EVE_PROJECT}:eve_workspace_reports"
+
+bq show --format=prettyjson "${EVE_PROJECT}:eve_workspace_reports" > /tmp/ewr.json
+SA="$SA_EVE_VERIFIER" python3 - <<'PY'
+import json, os
+d = json.load(open('/tmp/ewr.json'))
+d.setdefault('access', []).append({"role": "WRITER", "userByEmail": os.environ['SA']})
+json.dump(d, open('/tmp/ewr.json', 'w'))
+PY
+bq update --source=/tmp/ewr.json "${EVE_PROJECT}:eve_workspace_reports"
+
+# Assumption: every 5 minutes, like the post-hoc pass; the per-application lag budgets in
+# thresholds.yaml (03-lld section 7) are tbd and calibrated at S2.
+run_pass eve-reports reports "*/5 * * * *"
+```
+
+The poll calls `activities.list` with `userKey` set to each actor's primary email, one call per
+application in `thresholds.yaml`'s `evidence.reports_poll` list, with `eve@`'s token and the
+`admin.reports.audit.readonly` scope it already holds. It is the route that survives "Share data
+with Google Cloud services" being switched off, which is why it exists.
+
+**2. The detection catalogue, the roster and the heartbeat.** Three committed artefacts in
+`eve/config`, human-merged with the second human as a required reviewer: the detection rule
+file beside `reasons.yaml` (file name *tbd*) with a fixture per rule; the committed super-admin
+roster, signed by the security reviewer; and the new `thresholds.yaml` rows (`evidence`,
+`reconciliation`, `roster`, `reporting`). The hourly and daily passes of Phase 10 evaluate them;
+no new job. The tenant-integrity rules carry the SIEM's ids `SA-01`…`SA-09` so the two
+evaluators can be compared. The H-1 absence alarm is two policies: one in `EVE_PROJECT` built
+from the platform's monitoring baseline module ([../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md)
+§4; metric and exact policy *tbd* at build), and one in the witness on the mirrored heartbeat
+table, created by the witness administrators. Windows: 60 minutes in business hours, 240
+outside; the witness push 26 hours.
+
+**3. The reporting contract.** `eve.incidents` and `eve.pages` exist from Phase 3 with the
+columns of [03-lld.md](03-lld.md) §9; `oncall.yaml` gains `primary`, `secondary` (outside the
+Wall-E line) and per-severity timeouts, and the K5/K6 rota section. Wire the severity-1 route to
+the witness channels and the severity-2 route to PagerDuty and email, per
+[03-lld.md](03-lld.md) §15; the report-about-the-administrator route goes to the second human
+only.
+
+**4. `eve-export@` and the daily export to the witness** (P107; one identity per duty).
+
+```bash
+gcloud iam service-accounts create eve-export --project="$EVE_PROJECT" \
+  --display-name="Eve daily export and witness push"
+
+gcloud projects add-iam-policy-binding "$EVE_PROJECT" \
+  --member="serviceAccount:${SA_EVE_EXPORT}" --role=roles/bigquery.jobUser
+
+# READER on eve (the access array, as in Phase 3)
+bq show --format=prettyjson "${EVE_PROJECT}:eve" > /tmp/eve.json
+SA="$SA_EVE_EXPORT" python3 - <<'PY'
+import json, os
+d = json.load(open('/tmp/eve.json'))
+entry = {"role": "READER", "userByEmail": os.environ['SA']}
+if entry not in d.setdefault('access', []):
+    d['access'].append(entry)
+json.dump(d, open('/tmp/eve.json', 'w'))
+PY
+bq update --source=/tmp/eve.json "${EVE_PROJECT}:eve"
+
+# read the locked bucket; create-only under exports/, the same condition form as ladder/
+gcloud storage buckets add-iam-policy-binding "$EVE_EVIDENCE" \
+  --member="serviceAccount:${SA_EVE_EXPORT}" --role=roles/storage.objectViewer
+gcloud storage buckets add-iam-policy-binding "$EVE_EVIDENCE" \
+  --member="serviceAccount:${SA_EVE_EXPORT}" --role=roles/storage.objectCreator \
+  --condition='expression=resource.name.startsWith("projects/_/buckets/'"${EVE_PROJECT}"'-eve-evidence/objects/exports/"),title=exports-prefix-only'
+```
+
+Provided by others, verified here, never made from Eve's side: dataset-level `READER` on
+`walle_audit` for `${SA_EVE_EXPORT}` by Wall-E's runbook (CC-35); and, **in the witness
+organisation, by the witness administrators**, `roles/bigquery.dataEditor` on `eve_mirror` and
+`roles/storage.objectCreator` on the witness bucket for `${SA_EVE_EXPORT}` — the only
+cross-organisation grants, with the witness's own `iam.allowedPolicyMemberDomains` listing the
+tenant's customer id for this principal only. Deploy the export as a Cloud Run job running as
+`${SA_EVE_EXPORT}`, with the same resource-scoped `serviceAccountUser` grant as Phase 10, on a
+daily schedule off the hour. It writes newline-delimited JSON with a `MANIFEST.json` per table
+per day under `exports/<project>/<dataset>/<table>/dt=YYYY-MM-DD/`, then pushes the day and a
+heartbeat row to the witness ([../agentic-platform/08-data-logging-retention-sovereignty.md](../agentic-platform/08-data-logging-retention-sovereignty.md)
+§5.4).
+
+**5. The `eve_quality` dataset and its two readers, made by this runbook** (platform HLD §13.3;
+P30). Authorised views only, no free-text columns, over `findings`, `verdicts`, `attestations`,
+`pages`, `incidents` minus narrative, and `seeded_fault_runs`; never `grades_blind` or
+`review_queue_blind`.
+
+```bash
+bq --location="$BQ_LOCATION" mk --dataset \
+  --description="Eve quality: authorised views for Mo and the validator custodian. No free text." \
+  "${EVE_PROJECT}:${EVE_QUALITY_DS}"
+
+# one view per source table, explicit column lists, no free-text column (schemas: 03-lld section 9)
+# e.g. incidents minus narrative:
+bq mk --use_legacy_sql=false --view \
+  "SELECT severity, rule, actor, targets, recipients, ack_ts, ack_by, resolution, case_id, ts
+   FROM \`${EVE_PROJECT}.eve.incidents\`" \
+  "${EVE_PROJECT}:${EVE_QUALITY_DS}.incidents"
+# ... findings, verdicts, attestations, pages, seeded_fault_runs likewise; column names follow
+# the committed schemas and are tbd until those files exist.
+
+# authorise each view on eve: a 'view' entry per view in eve's access array, as in Phase 11 step 2
+
+# dataset-level READER to mo-metrics@ and the validator custodian — nothing on eve itself
+bq show --format=prettyjson "${EVE_PROJECT}:${EVE_QUALITY_DS}" > /tmp/eq.json
+A="$SA_MO_METRICS" B="$SA_VALIDATOR" python3 - <<'PY'
+import json, os
+d = json.load(open('/tmp/eq.json'))
+for sa in (os.environ['A'], os.environ['B']):
+    entry = {"role": "READER", "userByEmail": sa}
+    if entry not in d.setdefault('access', []):
+        d['access'].append(entry)
+json.dump(d, open('/tmp/eq.json', 'w'))
+PY
+bq update --source=/tmp/eq.json "${EVE_PROJECT}:${EVE_QUALITY_DS}"
+```
+
+Mo's and the custodian's query jobs run and are billed in their own projects; there is no
+binding in `MO_PROJECT` for this. Gate for this step: Wall-E's Stage 1 (P143); it may run
+earlier.
+
+**6. The reporting path's two grants — only if P34 is decided and the `eve-advisor` build is
+approved; paging additionally waits on P19.** In `EVE_PROJECT`: a dataset `${EVE_ADVISOR_VIEWS_DS}`
+of authorised views over `eve.*`, `eve_workspace_logs` and the report tables, no free-text
+columns, each authorised on its source; `READER` on it to `${SA_EVE_ADVISOR}`; a dataset
+`${EVE_ADVICE_DS}` with `WRITER` (dataset-level `bigquery.dataEditor`) to `${SA_EVE_ADVISOR}` and
+**no entry for any control-path identity**. The job, its model access and its project are the
+factory's and the Eve owner's build in `EVE_ADVISOR_PROJECT`, not steps of this runbook.
+
+**Verify.**
+
+```bash
+# 1. the poll writes rows for the robot, and they include applications the sink lacks
+bq query --use_legacy_sql=false --project_id="$EVE_PROJECT" \
+  'SELECT application, COUNT(*) n FROM `eve_workspace_reports.activities`
+   WHERE ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY) GROUP BY 1'
+# table and column names follow the committed schema (tbd); expect rows for walle@'s shadow runs
+
+# 2. eve_quality readers: exactly mo-metrics@ and the custodian, plus Eve's own owners
+bq show --format=prettyjson "${EVE_PROJECT}:${EVE_QUALITY_DS}" \
+  | python3 -c "import json,sys;[print(a) for a in json.load(sys.stdin)['access']]"
+
+# 3. on eve and every non-quality dataset: no userByEmail entry for mo-metrics@ or the custodian
+for DS in eve eve_workspace_logs eve_workspace_reports "$EVE_RECEIPTS_DS"; do
+  bq show --format=prettyjson "${EVE_PROJECT}:${DS}" 2>/dev/null \
+    | python3 -c "import json,sys;print([a for a in json.load(sys.stdin).get('access',[]) if 'mo-' in json.dumps(a) or '$SA_VALIDATOR' in json.dumps(a)])"
+done
+# expect: [] each time (the mirror's dataset from S4 is the one Mo exception, Phase 11)
+
+# 4. no control-path identity on eve_advice (if built)
+bq show --format=prettyjson "${EVE_PROJECT}:${EVE_ADVICE_DS}" 2>/dev/null \
+  | grep -Ec 'eve-controller|eve-verifier|eve-console'
+# expect: 0
+
+# 5. eve-export@ holds create-only on exports/ and nothing destructive
+gcloud storage buckets get-iam-policy "$EVE_EVIDENCE" --flatten='bindings[].members' \
+  --filter="bindings.members:${SA_EVE_EXPORT}" --format='table(bindings.role,bindings.condition.title)'
+# expect: objectViewer; objectCreator with exports-prefix-only. No objectAdmin, no delete.
+```
+
+**The drill (gate item G-7 of [05-stages.md](05-stages.md)).** On the sandbox tenant: a
+tenant-integrity event by the robot's twin halts both lanes and pages the second human and the
+desk in parallel through the witness channels; a roster change pages in both directions;
+withholding the sink's rows past the window fires `log_pipeline_silent`; a withheld export fires
+the witness alarm; a halt clear reaches the second human only. Record the drill in the witness.
+
+**Rollback.** Delete the `eve-reports` schedule and the export job; remove the dataset access
+entries added here; ask the witness administrators to remove their two grants. The locked
+bucket keeps what was exported, which is the point. Rolling this phase back **re-opens the
+super-admin gate**: Wall-E must not hold Super Admin without it.
+
+---
+
 ## S4 entry — Eve gates
 
 ### Phase 11 — The key, the PEM, `eve-gate`, and Wall-E's edits
@@ -1364,8 +1663,18 @@ gcloud kms keyrings create eve --location="$REGION" --project="$EVE_PROJECT"
 gcloud kms keys create eve-approval \
   --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
   --purpose=asymmetric-signing \
-  --default-algorithm=ec-sign-p256-sha256
+  --default-algorithm=ec-sign-p256-sha256 \
+  --protection-level=hsm
 ```
+
+**HSM, added 2026-09-13** (platform HLD §8 "approval-authority keys … HSM protection level";
+P118 sets `constraints/cloudkms.allowedProtectionLevels = HSM` at `fld-agentic-platform`, so a
+software key is refused anyway). `--protection-level` takes `software`, `hsm`,
+`hsm-single-tenant`, `external` or `external-vpc` and defaults to `software` (verified
+2026-09-13, [gcloud kms keys create](https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/create)).
+Everything else about the key — algorithm, one signer, the PEM exported before first use,
+disable never destroy — is unchanged. HSM key versions are priced per version; the amount is
+*tbd* (platform HLD §0.5).
 
 **Export the PEM before first use.** Not after the first signature, not at the end of the
 phase — before the key is ever used. A stored approval whose key version has since been
@@ -1560,8 +1869,10 @@ M-5), so Wall-E's deployers cannot rewrite the evidence Mo argues from. The gran
 dataset-level `READER`, made by Eve's owner, on **the mirror's dataset only** — and a
 dataset-level `READER` covers every table in the dataset, so the mirror leaves `eve` first
 (which holds `verdicts`, `findings` and the blind tables) for a dataset of its own,
-`${EVE_MIRROR_DS}` (`Assumption:` `eve_mirror`, name *tbd*, decision 51). This is the one
-entry of a second carve-out list, next to the three Wall-E ones; the drift job of Phase 12
+`${EVE_MIRROR_DS}` (`eve_audit_mirror`, named 2026-09-13; it was `Assumption:` `eve_mirror`,
+renamed because `eve_mirror` is the witness's dataset in `EVE_WITNESS_PROJECT`, decision 51). This is the one
+entry of a second carve-out list, next to the three Wall-E ones (two entries since 2026-09-13:
+`eve_quality` is the second, Phase 10b); the drift job of Phase 12
 expects exactly it from S4 and fails on any other Mo principal, or on this one before S4.
 
 ```bash
@@ -1589,6 +1900,10 @@ json.dump(d, open('/tmp/mirror.json', 'w'))
 EOF
 bq update --source=/tmp/mirror.json "${EVE_PROJECT}:${EVE_MIRROR_DS}"
 # expect, on eve itself: no userByEmail entry for mo-metrics@ — ever.
+# Narrowed 2026-09-13 (platform HLD section 18 item 17): "ever" holds for eve and every
+# non-quality dataset (eve_workspace_logs, eve_workspace_reports, the receipts dataset, the
+# advisor datasets). mo-metrics@ holds dataset-level READER on exactly two Eve datasets: this
+# mirror's dataset from S4, and eve_quality from Wall-E's Stage 1 (Phase 10b step 5).
 bq show --format=prettyjson "${EVE_PROJECT}:eve" \
   | python3 -c "import json,sys;print([a for a in json.load(sys.stdin)['access'] if 'mo-' in json.dumps(a)])"
 # expect: []
@@ -1630,10 +1945,11 @@ at creation into both places, and old versions **disabled, never destroyed** ins
 **Verify.**
 
 ```bash
-# 1. algorithm and location
+# 1. algorithm, location and protection level
 gcloud kms keys describe eve-approval --keyring=eve --location="$REGION" \
-  --project="$EVE_PROJECT" --format='value(purpose,versionTemplate.algorithm)'
-# expect: ASYMMETRIC_SIGN  EC_SIGN_P256_SHA256
+  --project="$EVE_PROJECT" \
+  --format='value(purpose,versionTemplate.algorithm,versionTemplate.protectionLevel)'
+# expect: ASYMMETRIC_SIGN  EC_SIGN_P256_SHA256  HSM   (HSM added 2026-09-13)
 
 # 2. exactly two principals on the key, with exactly those two roles
 gcloud kms keys get-iam-policy eve-approval --keyring=eve --location="$REGION" \
@@ -1784,6 +2100,13 @@ the additional ones Eve's build owns. The numbering is this document's own.
 | **EVE-13** | An Eve image built with any denylisted model dependency in its lockfile | CI build fails |
 | **EVE-14** | Either Eve identity holding any `aiplatform.*` permission | CI IAM assertion fails |
 | **EVE-15** | A display name containing bidirectional overrides or zero-width characters reaching a veto notification | Canonicalised before comparison **and** before display: control characters stripped, whitespace collapsed, length capped, markdown escaped |
+| **EVE-16** (added 2026-09-13) | `eve-advisor@` writes to `eve.verdicts`, `eve.incidents` directly or `eve/config`, or calls any action service | Denied: it holds `dataEditor` on `eve_advice` only, no invoker, no git write |
+| **EVE-17** (added 2026-09-13) | Any control-path identity reads `eve_advice` | Denied; CI assertion on the access list fails |
+| **EVE-18** (added 2026-09-13) | `eve-approval` created or re-created without `--protection-level=hsm` | Refused by the folder constraint `cloudkms.allowedProtectionLevels`; Phase 11 verify 1 fails |
+| **EVE-19** (added 2026-09-13) | The sink's rows withheld past the H-1 window, or Eve's token revoked | `log_pipeline_silent`: `no_autonomous` for Eve's agents and `halt_all` on `walle-actions` **and** `walle-actions-super`; severity-1 page through the witness; a human clear reported to the second human only |
+| **EVE-20** (added 2026-09-13) | A robot-attributed event in a non-Admin stream with no `walle_audit` or band-B row | `reconciliation_gap`, halt |
+| **EVE-21** (added 2026-09-13) | A fourth super admin added, or a roster account's role removed | `role_assignment_added` / `role_assignment_missing`, severity 1, in both directions |
+| **EVE-22** (added 2026-09-13) | `mo-metrics@` or the validator custodian queries any Eve dataset other than `eve_quality` (and, for `mo-metrics@` from S4, the mirror) | Denied |
 
 EVE-3, EVE-12, EVE-13 and EVE-14 are the four mechanical enforcements of the deterministic
 boundary expressed as tests. They are the ones to re-run after every IAM change and every
@@ -1815,6 +2138,9 @@ you.
 | 8 | Browser, clean profile | The one interactive consent, as `eve@<domain>`, with the frozen scope list |
 | 10 | GCP | Add the notification channel for `walle-operators@` to the absence policy |
 | 11 | git | Merge the pull request that sets a cell's `eve_authority: binding` — two distinct approving reviewers, neither the author |
+| 10b (added 2026-09-13) | Witness tenant (IT security) | Create `org-witness`, `EVE_WITNESS_PROJECT`, the retention-locked bucket and `eve_mirror`; grant `eve-export@` its two create-only roles; set the severity 1/2 notification channels to individuals (SMS, mobile app, PagerDuty/webhook); Access Approval and Access Transparency on |
+| 10b (added 2026-09-13) | Workspace Admin | Confirm `eve@`'s role carries the domain and customer settings read privileges resolved with `privileges.list`, and no write |
+| 10b (added 2026-09-13) | Workspace Admin | Create the `eve-console` IAP audience group (name *tbd*); its membership changes are a severity-1 rule |
 
 The password and the hardware key go into the corporate vault and the safe. Neither value
 appears in this wiki, in a ticket, or in a chat message — only the statement that they
@@ -1875,6 +2201,13 @@ in the skeleton this page was written from is `tbd` rather than assumed.
 | An authorized view must live in a **different dataset** than the dataset its query reads, and the two datasets must be in the same regional location; a principal querying it needs `dataViewer` on the view's dataset and nothing on the source (verified 2026-09-13) | [Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views) |
 | `gcloud resource-manager folders get-iam-policy FOLDER_ID` reads a folder's IAM policy and takes `--flatten`, `--filter` and `--format` (verified 2026-09-13); a project-level `get-iam-policy` does not show bindings inherited from the folder | [gcloud resource-manager folders get-iam-policy](https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/folders/get-iam-policy) |
 | Firestore supports IAM Conditions scoped to one or more databases; the per-database condition **expression is unverified** (topology decision 44) | [Firestore IAM](https://docs.cloud.google.com/firestore/docs/security/iam) |
+| `activities.list` accepts `applicationName` values including `admin`, `login`, `token`, `saml`, `groups`, `groups_enterprise`, `user_accounts`, `rules`, `context_aware_access`, `gcp`, `drive`, `vault`, `takeout`, `admin_data_action`, `data_studio`; scope `admin.reports.audit.readonly`; `userKey` may be a primary email (verified 2026-09-13) | [activities.list](https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list) |
+| `admin.directory.domain.readonly` and `admin.directory.customer.readonly` are Directory API scopes (verified 2026-09-13) | [Directory API scopes](https://developers.google.com/workspace/admin/directory/v1/guides/authorizing) |
+| `privileges.list` is `GET …/customer/{customer}/roles/ALL/privileges` with `admin.directory.rolemanagement.readonly` (verified 2026-09-13) | [privileges.list](https://developers.google.com/workspace/admin/directory/reference/rest/v1/privileges/list) |
+| Only a super administrator can use the Cloud Identity Policy API (verified 2026-09-13) — so Eve reads no settings state through it | [Policy API overview](https://docs.cloud.google.com/identity/docs/concepts/overview-policies) |
+| Workspace audit service names in Cloud Logging: admin `admin.googleapis.com`, enterprise groups `cloudidentity.googleapis.com`, login and SAML `login.googleapis.com`, OAuth token `oauth2.googleapis.com`; Access Transparency's service name is not stated on the page (verified 2026-09-13) | [Workspace audit logs](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging) |
+| `gcloud kms keys create --protection-level` takes `software`, `hsm`, `hsm-single-tenant`, `external`, `external-vpc`, default `software` (verified 2026-09-13) | [gcloud kms keys create](https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/create) |
+| `gcloud org-policies describe CONSTRAINT --project=PROJECT_ID --effective` describes a project's effective policy (verified 2026-09-13) | [gcloud org-policies describe](https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/describe) |
 
 **Deliberately unverified, and must stay so:** Agent Gateway availability in
 `europe-west1`; whether group-management privileges honour OU scoping; whether licence
@@ -1894,3 +2227,4 @@ egress control until the first is answered is VPC Service Controls plus a host a
 - [../project-topology.md](../project-topology.md) — the four projects, which runbook makes each cross-project grant, and decisions 42–52
 - [../wall-e/07-build-runbook.md](../wall-e/07-build-runbook.md) and [../wall-e/SETUP.md](../wall-e/SETUP.md) — Wall-E's equivalents
 - [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) — the contract this runbook builds against
+- [../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2–§13.3 and [../agentic-platform/08-data-logging-retention-sovereignty.md](../agentic-platform/08-data-logging-retention-sovereignty.md) §5.4 — the observe-and-report layer, `eve_quality` and the daily export (2026-09-13)

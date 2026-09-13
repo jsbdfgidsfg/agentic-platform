@@ -6,6 +6,18 @@
 - Placement updated on 2026-09-13 to the four-project topology; the inventory below is
   `WALLE_PROJECT`'s only. [../project-topology.md](../project-topology.md) is the
   authority for every grant that crosses a project.
+- **Objective restated 2026-09-13; see the platform HLD**
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.1, §12 and §18 items 2 and
+  10). The robot holds Super Admin ([02](02-identity-and-auth.md)), so this page gains: the
+  **three bands** and a second service `walle-actions-super` with `/v1/execute-generic` and
+  `/v1/handoff`; the **hard-denied list** and the **tier-`SUPER` two-person list**; the
+  **protected-self rule**; **Discovery-pinned validation** with the `chat`-only rule for band B;
+  **band-B audit rows** carrying both humans and the Discovery revision; `walle_audit` on the
+  platform **`audit.schema`** with the **correlation contract**; `ladder.yaml` on
+  **`ladder.schema`**; and Wall-E's **`agent-manifest.yaml`**. Everything the objective does not
+  overturn — the interface of `walle-actions`, the approval rules, Eve's asymmetric signature, the
+  taint bit, the fail-closed control plane, playbooks, the policy chain's order, durable counters,
+  errors — stands as written. Reversals are dated in place.
 
 Written so that someone other than you could build it. Where this contradicts an earlier
 draft, this document wins and the reason is stated.
@@ -14,18 +26,20 @@ draft, this document wins and the reason is stated.
 
 | Resource | Name | Notes |
 |---|---|---|
-| Project | `WALLE_PROJECT` (tbd; `PROJECT` inside the setup script and runbook) | Wall-E only: one `reasoningEngine`, its two services, three secrets, Firestore, `walle_audit`, `walle_workspace_logs`, the topics. Under `FOLDER_ID` beside `GEMINI_PROJECT` (the app), `EVE_PROJECT` and `MO_PROJECT`. Nothing of Eve's, Mo's or the app's is created here — [../project-topology.md](../project-topology.md) §2. |
+| Project | `WALLE_PROJECT` (tbd; `PROJECT` inside the setup script and runbook) | Wall-E only: one `reasoningEngine`, its three services (`walle-actions`, `walle-actions-super`, `walle-dispatcher`; two until 2026-09-13), five secrets (three until 2026-09-13), Firestore, `walle_audit`, `walle_workspace_logs`, the topics. Under `FOLDER_ID` beside `GEMINI_PROJECT` (the app), `EVE_PROJECT` and `MO_PROJECT`. Nothing of Eve's, Mo's or the app's is created here — [../project-topology.md](../project-topology.md) §2. |
 | Region | `europe-west1` | **Verified**: Agent Runtime, Sessions and Memory Bank are GA there with EU at-rest residency. |
-| Service account | `walle-actions@` | Runs the action service. Only reader of the credential secrets. |
+| Service account | `walle-actions@` | Runs the band-A action service. Only reader of the **narrow** credential secrets and the HMAC key. |
+| Service account | `walle-actions-super@` (added 2026-09-13) | Runs `walle-actions-super`. Only reader of the **broad** credential secrets. Reads nothing of `walle-actions@`'s. |
 | Service account | `walle-agent@` | Runs the agent. Reads no secret. |
 | Service account | `walle-dispatcher@` | Invokes the agent. |
-| Cross-project bindings on Wall-E's resources | `eve-controller@EVE_PROJECT`, `mo-analyst@MO_PROJECT`, `mo-metrics@MO_PROJECT`, `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine` | No Eve, Mo or app identity is created here — `eve-controller@` is created in `EVE_PROJECT` by Eve's runbook. Wall-E's inventory records only the resource-level grants it makes to them: `roles/run.invoker` on `walle-actions`, dataset-level `roles/bigquery.dataViewer` on `walle_audit` (and `walle_workspace_logs` for `mo-metrics@`), `walleEngineQuery` on the engine for the app's service agent. Never a project-level role. The full list: [../project-topology.md](../project-topology.md) §3. |
-| Cloud Run | `walle-actions` | Auth required. Ingress: see the note below. |
+| Cross-project bindings on Wall-E's resources | `eve-controller@EVE_PROJECT`, `mo-analyst@MO_PROJECT`, `mo-metrics@MO_PROJECT`, `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine` | No Eve, Mo or app identity is created here — `eve-controller@` is created in `EVE_PROJECT` by Eve's runbook. Wall-E's inventory records only the resource-level grants it makes to them: `roles/run.invoker` on `walle-actions`, dataset-level `roles/bigquery.dataViewer` on `walle_audit` (and `walle_workspace_logs` for `mo-metrics@`), `walleEngineQuery` on the engine for the app's service agent. Never a project-level role. Added 2026-09-13 (platform HLD §18 item 25): `roles/run.invoker` on `walle-actions-super` for `eve-controller@EVE_PROJECT` and (review-findings pass, 2026-09-13) `eve-verifier@EVE_PROJECT`, halt path only, and per-service `run.invoker` on each `/v1/control/halt` for the platform's `platform-drift@CORE_PROJECT`; **no** Mo identity on `walle-actions-super`. The full list: [../project-topology.md](../project-topology.md) §3. |
+| Cloud Run | `walle-actions` | Band A. Auth required. Ingress: see the note below. |
+| Cloud Run | `walle-actions-super` (added 2026-09-13) | Bands B and C. Auth required, same ingress rule as `walle-actions`, own service account, own secrets, same policy library and hard-denied list from the same commit. No Scheduler or Pub/Sub target. |
 | Cloud Run | `walle-dispatcher` | Auth required. Targets of Scheduler and Pub/Sub push. |
 | Agent Runtime | `wall-e` | `reasoningEngines` resource, ADK 2.8, `min_instances=0` |
 | Firestore (native) | `europe-west1` | Ladder config, halt flags, counters, approvals, idempotency |
-| Secret Manager | 3 regional secrets in `europe-west1`: `walle-oauth-client`, `walle-refresh-token`, `walle-confirm-hmac` | See [02](02-identity-and-auth.md). Eve's secrets and key are in `EVE_PROJECT`, not here |
-| BigQuery dataset | `walle_audit`, EU | 6 tables, partitioned, with expiry. Cross-project readers hold **dataset-level** `roles/bigquery.dataViewer`, never project-level: `eve-controller@EVE_PROJECT` (and `eve-v0@` at S0), `mo-metrics@MO_PROJECT`; their jobs run and are billed in the reader's project. **No Mo authorised view is ever authorised on this dataset** — Mo's views in `MO_PROJECT.walle_metrics_views` are authorised on `walle_metrics` inside `MO_PROJECT` ([../project-topology.md](../project-topology.md) §3 row 9, an anti-grant) |
+| Secret Manager | 5 regional secrets in `europe-west1`: `walle-oauth-client`, `walle-refresh-token` (narrow, read by `walle-actions@`), `walle-super-oauth-client`, `walle-super-refresh-token` (broad, read by `walle-actions-super@`; added 2026-09-13), `walle-confirm-hmac` | See [02](02-identity-and-auth.md). Eve's secrets and key are in `EVE_PROJECT`, not here |
+| BigQuery dataset | `walle_audit`, EU | Since 2026-09-13 on the platform **`audit.schema`** (§"Storage"): the eight contract tables plus the agent extension table `generic_requests`, insert-only, partitioned by day, with expiry (six tables until 2026-09-13). Cross-project readers hold **dataset-level** `roles/bigquery.dataViewer`, never project-level: `eve-controller@EVE_PROJECT` (and `eve-v0@` at S0), `mo-metrics@MO_PROJECT`; their jobs run and are billed in the reader's project. **No Mo authorised view is ever authorised on this dataset** — Mo's views in `MO_PROJECT.walle_metrics_views` are authorised on `walle_metrics` inside `MO_PROJECT` ([../project-topology.md](../project-topology.md) §3 row 9, an anti-grant) |
 | BigQuery dataset | `walle_workspace_logs`, EU | Destination of the organisation sink `walle-audit-bq`, nothing excluded. Same dataset-level reader for `mo-metrics@MO_PROJECT`; `eve-verifier@EVE_PROJECT` proposed under decision 47 |
 | Pub/Sub | `walle-events`, `walle-triggers` | Eve and Mo consume the first through subscriptions created in `EVE_PROJECT` and `MO_PROJECT`; the creating identity needs `pubsub.topics.attachSubscription`, which `roles/pubsub.subscriber` bound **on the topic** carries — never project-wide. Target state per [C30](14-hld-challenge.md), no grant at Stage 0 (decision 45) |
 | Cloud Scheduler | one job per playbook, all created **paused** | Enabled per ladder stage |
@@ -48,7 +62,8 @@ the right to call *every* endpoint, including `/v1/control/demote`. Under four p
 those bindings are made **on the `walle-actions` service** in `WALLE_PROJECT` to foreign
 service-account emails; the allowlist below is the only place a foreign identity's reach
 is narrowed below `run.invoker`. The claim that the agent "has no IAM on the control
-endpoints" was therefore false as built. Two mechanisms, both required:
+endpoints" was therefore false as built. Two mechanisms, both required (a third, for the
+second service, added 2026-09-13):
 
 1. **A per-endpoint caller allowlist inside the service**, keyed on the verified identity
    claim of the caller's ID token: `email` for a service account or a human, `sub` or the
@@ -60,10 +75,28 @@ endpoints" was therefore false as built. Two mechanisms, both required:
    (plans, ladder), never the control list — [../project-topology.md](../project-topology.md) §3.1.
 2. **Operators need a binding at all.** Grant `roles/run.invoker` to `walle-operators@`
    so a human can present `gcloud auth print-identity-token`, or the andon cord has no
-   handle.
+   handle. **Qualified 2026-09-13:** the platform rule is that no human holds `run.invoker` on
+   an action service directly; the CLI path impersonates `walle-operators-caller@` and the
+   approval page exposes halt, demote and K4 as buttons
+   ([../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md)
+   §6.4–6.5, [12](12-agent-identity.md) §5.1). The andon cord keeps its handle; the binding
+   moves to that caller identity.
+3. **Added 2026-09-13 — the allowlist of `walle-actions-super`**, generated like the first from
+   the manifest's `invokers` block and from nothing else. `/v1/execute-generic` and
+   `/v1/handoff`: the agent's identity only. `/v1/generic/{id}/approve`: the
+   `walle-approvals-super` IAP surface's own service account only (name *tbd*), which forwards
+   the IAP-asserted approver. `/v1/generic/{id}/veto`: that surface and the band-A approval surface.
+   `/v1/control/halt`: `eve-controller@EVE_PROJECT` and `platform-drift@CORE_PROJECT` — and for
+   Eve, **no other endpoint** on this service. Extended 2026-09-13 (review-findings pass):
+   `eve-verifier@EVE_PROJECT` on the halt endpoint too, because Eve's reconciler limb raises the
+   super-admin-lane halts ([../project-topology.md](../project-topology.md) row 27; Eve 03 §14);
+   it holds no other endpoint here either. Never `walle-dispatcher@`, never any Mo identity,
+   never `eve-console@`. The denial suite asserts each refusal.
 
 Splitting the control plane onto a second Cloud Run service with its own IAM is the
-stronger version of the same idea, and is [decision 18](09-open-decisions.md).
+stronger version of the same idea, and is [decision 18](09-open-decisions.md). **Decided
+2026-09-13 (platform HLD §13.1 item 3): it lands now**, as `walle-actions-super`, because the
+scope split needs two readers; the control endpoints of band A stay on `walle-actions`.
 
 ### APIs to enable
 
@@ -87,7 +120,12 @@ These are `WALLE_PROJECT`'s. `discoveryengine.googleapis.com` is also the app's 
 ## Action service — interface
 
 One endpoint for execution, so the policy gate is structurally impossible to bypass, plus
-a small set of plan, control and read endpoints.
+a small set of plan, control and read endpoints. **Since 2026-09-13 one execution endpoint per
+lane**: `/v1/execute` on `walle-actions` (band A), `/v1/execute-generic` on `walle-actions-super`
+(band B), and `/v1/handoff` on `walle-actions-super` (band C, which executes nothing). Each runs
+the same hard-denied check from the same library before anything else it does.
+
+**`walle-actions` (band A)** — unchanged:
 
 | Method | Path | Caller | Purpose |
 |---|---|---|---|
@@ -101,6 +139,24 @@ a small set of plan, control and read endpoints.
 | GET | `/v1/ladder` | anyone authorised | Effective levels, config version, halt state |
 | GET | `/v1/operations` | agent | Catalogue introspection; the agent's tools are generated from this |
 | GET | `/healthz` | — | Liveness plus last successful audit write |
+
+**`walle-actions-super` (bands B and C)** — added 2026-09-13:
+
+| Method | Path | Caller | Purpose |
+|---|---|---|---|
+| POST | `/v1/execute-generic` | agent only | Submit one band-B request. Validates, maps the tier, runs the hard-denied list and the requester rule, captures pre-state, and returns `approval_required` — **never** `ok` on first call, because the lane is permanently L3 |
+| POST | `/v1/generic/{id}/approve` | the `walle-approvals-super` IAP surface only (`SUPER`); the band-A approval surface for `WRITE`. **Never the agent**, never Eve | Release a pending request; binds the approver's IAP identity to the canonical request hash; starts `hold_minutes` for `SUPER`; returns 202, executes asynchronously after the hold |
+| POST | `/v1/generic/{id}/veto` | the approval surfaces (any operator). Not Eve: Eve's reach on this service is halt only (platform HLD §18 item 25), and a halt during the hold cancels every pending execution | Cancel during the hold window |
+| GET | `/v1/generic/{id}` | the approval surfaces | Read a pending request with its pre-state, tier, Discovery revision and both humans |
+| POST | `/v1/handoff` | agent only | Band C: hard-denied check, then return console steps and open a watch |
+| POST | `/v1/control/halt` | `eve-controller@EVE_PROJECT`, `platform-drift@CORE_PROJECT`, the approval surfaces | Set or clear a halt mode on this service (clearing is human-only, as on `walle-actions`) |
+| GET | `/healthz` | — | Liveness plus last successful audit write |
+
+There is no `/v1/plans`, no demote and no ladder endpoint on `walle-actions-super`: it has no
+ladder to lower. There is no `/v1/operations` either; the agent's band-B tool is one fixed
+schema `(api, version, resource, method, path_params, body)` and its band-C tool is
+`(route_id, params)` against the committed route table `walle/config/handoff_routes.yaml`, both
+validated by code; console steps are rendered from the committed route, never from model text.
 
 ### `POST /v1/execute`
 
@@ -149,6 +205,60 @@ Approval required:
 ```
 
 Refused: `{ "status": "denied", "reason": "level_off", "detail": "...", "audit_id": "..." }`
+
+### `POST /v1/execute-generic` (band B, added 2026-09-13)
+
+```jsonc
+{
+  "api": "admin",                      // the Discovery API name
+  "version": "directory_v1",           // must match a pinned Discovery document (see "Band B")
+  "resource": "orgunits",
+  "method": "insert",
+  "path_params": { "customerId": "my_customer" },
+  "body": { "name": "<new OU>", "parentOrgUnitPath": "/<parent>" },
+  "principal": {
+    "type": "human",                   // anything else is refused: generic_trigger_not_chat
+    "id": "<requesting human super admin, admin account>"
+  },
+  "trigger_class": "chat",             // T0 only, in code
+  "ticket_ref": "<change ticket>",     // mandatory at tier SUPER
+  "decision_ref": null,                // mandatory when the target is a natural-person account at WRITE or SUPER (P125)
+  "accept_no_pre_state": false,        // may be set only by the approver, never by the agent
+  "run_id": "r-2026-09-13-0042",
+  "idempotency_key": "r-2026-09-13-0042#1"
+}
+```
+
+Response — always one of `approval_required` or `denied` on submission:
+
+```jsonc
+{
+  "status": "approval_required",
+  "request_id": "g-7d1e...",
+  "tier": "SUPER",                     // READ | WRITE | SUPER, from the committed method table
+  "required_from": "different_human_super_admin",   // WRITE: "operator"
+  "canonical_request_sha256": "…",     // RFC 8785 canonical JSON of the whole request, SHA-256
+  "discovery_revision": "<revision string of the pinned document>",
+  "pre_state": { "via": "orgunits.get", "result": "not_found" },
+  "hold_minutes": 30,                  // tbd; the SUPER default is a committed value, never set by the request
+  "expires_at": "2026-09-13T15:10:00Z"
+}
+```
+
+### `POST /v1/handoff` (band C, added 2026-09-13)
+
+```jsonc
+{
+  "route_id": "security.2sv.enforcement",   // from walle/config/handoff_routes.yaml; unknown route refused
+  "params": { "org_unit": "/<OU>" },
+  "principal": { "type": "human", "id": "<requesting human super admin>" },
+  "run_id": "r-2026-09-13-0043"
+}
+```
+
+Response: `{ "status": "handoff", "handoff_id": "h-…", "steps": ["…"], "watch": { "application":
+"admin", "event_names": ["…"], "window_hours": 24 }, "audit_id": "…" }`, or `denied` with a
+hard-denied reason. The watch later closes the audit row as `verified` or `not_seen`.
 
 ### Why an approval id, and why the agent can never carry it
 
@@ -232,6 +342,31 @@ families:
     notify: per_step
 ```
 
+**Adopted 2026-09-13: the file is on the platform `ladder.schema`**
+([../agentic-platform/05-registry-and-autonomy-contract.md](../agentic-platform/05-registry-and-autonomy-contract.md)
+§9.3). The shape above is the pre-contract form, kept because Stage 0's decision record cites it;
+from the first contract-validated deploy the file reads as below, keyed on `agent_id`, validated by
+the platform validator against the manifest ceilings (§"`agent-manifest.yaml` for Wall-E") and the
+platform defaults. Family parameters the schema does not own (`max_objects_per_run`,
+`ou_allowlist`, `group_classes_allowed`, business hours, budgets) move to `walle/config/families.yaml`
+beside it, validated by Wall-E's own CI.
+
+```yaml
+contract_version: "1.0.0"
+agent_id: walle                        # the register row's id; the dataset walle_audit follows it
+config_version: 1                      # monotone; stamped on every audit row (was the string version above)
+ceilings_sha: "…"                      # the compiled ceiling artefact this config was validated against
+cells:
+  - {family: F3, trigger: T0, level: L1, hold_minutes: 30, notify: per_step}   # stage 0: nothing executes
+  - {family: F3, trigger: T1, level: L1, hold_minutes: 30, notify: per_step}
+  # a cell absent from the file is L0 ; a cell above its ceiling fails CI ; no cell for trigger `agent`
+  # no cell may name BB-GENERIC or BB-SUPER: those rows are code (chat L3, others L0) and the
+  # validator refuses to see them in a ladder file
+overrides: []                          # written by the ladder API (POST /v1/ladder/lower), never by a PR
+decision_record: decisions/2026-09-20-walle-stage-0.md
+evidence: null                         # required for any raise above L2; recomputed by the validator
+```
+
 The effective level for one item is:
 
 ```
@@ -287,7 +422,15 @@ fail-open:
 
 ## Operation catalogue
 
-Nothing executes that is not registered. Each entry: name, risk tier, reversibility, the
+**Qualified 2026-09-13** (platform HLD §13.1, decision 27 re-cut as "which lane"). "Nothing
+executes that is not registered" stays true **for band A and for autonomy**: the table below is
+the Stage-0 catalogue, the **declared intended purpose**, and the only band that can climb the
+ladder. It is no longer the whole of what Wall-E can execute on a human's prompt: band B executes
+uncatalogued Admin SDK requests, never above L3, and band C executes nothing (§"The three bands").
+The catalogue grows by the F8 mini-ladder as before; a frequent band-B method is a candidate for
+a catalogued operation, never the reverse.
+
+Nothing in band A executes that is not registered. Each entry: name, risk tier, reversibility, the
 scope it needs, a Pydantic parameter model with `extra="forbid"`, a handler, a **pre-state
 reader**, an **expected post-state predicate**, and an **inverse** where one exists.
 
@@ -335,6 +478,168 @@ CI asserts `ou_destination_allowlist` is a subset of every family's `ou_allowlis
 Risk tiers are static properties of an operation. Rate limits per tier: READ 120/min,
 WRITE_LOW 20/min, WRITE_HIGH 5/min, **enforced durably** (see below).
 
+### The three bands (added 2026-09-13)
+
+The band is a property of the **operation requested**, decided by code before anything runs; the
+reasoning layer cannot pick a lane. The table with its grading is platform HLD §13.1 and
+[01-hld.md](01-hld.md) §"The three action bands"; what follows is how each lane is built.
+
+| Band | Service and endpoint | Credential | Levels | Executes |
+|---|---|---|---|---|
+| **A** catalogued autonomous work | `walle-actions` `/v1/execute`, `/v1/plans` | narrow client | the ladder per (family, trigger); `WRITE_HIGH` never L5 | yes, per level |
+| **B** uncatalogued super-admin work | `walle-actions-super` `/v1/execute-generic` | broad client | **permanently L3**, `chat` only; tier `SUPER` two-person; every other trigger L0 — code, not config | yes, once, after approval and hold |
+| **C** console-only work | `walle-actions-super` `/v1/handoff` | none used to write; the broad client reads Reports to verify | none | **no** — a human super admin does the step |
+
+Routing rules, enforced in code and asserted by the denial suite:
+
+- A request on `/v1/execute-generic` whose `(api, version, resource, method)` is covered by a
+  catalogue operation is refused `a:use_catalogue`: band B cannot be used to escape the ladder,
+  the taint declaration or the inverse of a catalogued operation.
+- A request on `/v1/handoff` whose route has an API that writes it is refused `a:api_available`:
+  band C cannot be used to avoid the two-person approval of band B.
+- Neither `BB-GENERIC` nor `BB-SUPER` ever appears in any `playbook.uses`; CI fails the merge,
+  and `walle-dispatcher@` holds no invoker on `walle-actions-super`.
+
+### Band B — the generic lane, Discovery-pinned (added 2026-09-13)
+
+**Input.** `(api, version, resource, method, path_params, body)` plus principal, `ticket_ref`,
+`decision_ref` and idempotency (§"`POST /v1/execute-generic`"). `path_params` carries every
+parameter the method declares, path and query alike, each checked against its declared
+`location`; the tuple keeps the HLD's names.
+
+**Discovery-pinned validation.** The service validates only against Discovery documents
+**committed** to `walle/config/discovery/`, one file per `<api>.<version>.<revision>.json`, fetched
+by CI from Google's Discovery service (the Admin SDK documents on 2026-09-13 are
+`https://admin.googleapis.com/$discovery/rest?version=directory_v1`, `…=datatransfer_v1` and
+`…=reports_v1`; others as the method table names them). The Discovery REST description carries a
+`revision` field, "the revision of the API"; the service records it on every row. The service
+never fetches a document at runtime. Validation, fail-closed at every step:
+
+1. `(api, version)` is pinned; `resource.method` exists in that document.
+2. Every `required` parameter is present; no parameter the method does not declare; each value
+   matches its declared type, pattern and enum.
+3. `body` validates against the method's `request` schema, resolved through `$ref`, with
+   **`extra=forbid`** at every depth (an undeclared property is refused, not dropped); read-only
+   properties in the body are refused.
+4. The method appears in the committed **method table** `walle/config/generic_methods.yaml`; a
+   method absent from it is refused `a:method_not_tiered`. A method present in a newer revision but
+   not in the table is therefore unreachable until reviewed.
+5. The canonical request — RFC 8785 canonical JSON of the whole validated tuple — is hashed with
+   SHA-256; that hash is what the approval binds and what the audit row carries.
+
+Pinning changes are a pull request: a weekly CI job fetches each document, and a changed
+`revision` opens a PR with the schema diff and every added or changed method; merging needs two
+reviewers, one of them the security reviewer, who also tiers any new method. A Discovery change
+Google ships under the same revision is caught because the committed file's SHA-256 is compared by
+the same job.
+
+**The method table.** One row per reachable method: `tier` (`READ` / `WRITE` / `SUPER`), the
+`pre_state` read (`get`/`list` method and the path parameters it reuses), the `target` extractor
+(which parameters name a principal, group, OU, role, domain, client or setting), and the `hard_denied`
+predicate that applies. Rules the table must satisfy, checked by CI:
+
+- Anything touching admin roles, security, domains, billing, OAuth or API controls is `SUPER`.
+- A method whose target can be a natural-person account at `WRITE` or `SUPER` requires
+  `decision_ref` ([../agentic-platform/10-eu-ai-act.md](../agentic-platform/10-eu-ai-act.md) §3.1.2, P125).
+- Code owners of the table and of the hard-denied predicates are the security reviewer, **outside
+  the agent repository's owner line** (the Art. 6(3) boundary enforced in code, platform HLD
+  §13.1 item 13); Wall-E's owner cannot widen either alone.
+
+Illustrative rows (the list of record is the committed file, *tbd* until decision 3's list 2 is
+signed):
+
+| `api.version` `resource.method` | Tier | Pre-state | Note |
+|---|---|---|---|
+| `admin.directory_v1` `orgunits.insert` / `orgunits.patch` / `orgunits.delete` | `SUPER` | `orgunits.get` | the tier-`SUPER` two-person list; an OU is a policy carrier |
+| `admin.directory_v1` `users.delete` | `SUPER` | `users.get` (`isAdmin`, `isDelegatedAdmin`) | non-admins only; an admin target is `irreversible_denied` |
+| `admin.directory_v1` `groups.delete` | `SUPER` | `groups.get` + classification | a `security`-class group is `self_modification_denied` |
+| `admin.directory_v1` `roles.insert`, `roleAssignments.insert` | `SUPER` | `roles.get` / `roleAssignments.list` | below Super Admin and without admin-role-management privileges only |
+| `admin.directory_v1` `domains.insert` | `SUPER` | `domains.list` | |
+| `admin.datatransfer_v1` `transfers.insert` | `SUPER` | `transfers.list` | no inverse |
+| `admin.directory_v1` `users.update` outside `SAFE_USER_FIELDS` on a non-admin | `WRITE` | `users.get` | e.g. aliases, custom schema fields; recovery fields stay `posture_change_denied` |
+| `admin.directory_v1` `users.makeAdmin` | — | — | **hard-denied**, never in the table as reachable |
+
+**The `chat`-only rule.** The lane accepts `principal.type == "human"` on trigger class `chat`
+(T0) only; anything else is refused `a:generic_trigger_not_chat` before validation. The caller
+allowlist already admits only the agent; this rule is the second, independent check that no
+scheduled, event, inbox, `eve` or `agent` principal reaches the broad credential. A tainted chat
+session may still submit — the ceiling is already L3 — and the approval card shows `tainted`
+prominently.
+
+**Requester, approver, hold.** Tier `WRITE`: requester in `walle-operators@` (re-checked live),
+one approver on the band-A approval surface. Tier `SUPER`: requester a human super admin by a
+**live, fail-closed** `users.get` `isAdmin` on `walle-actions-super`'s own credential, read-only (corrected 2026-09-13: the band-B lane never holds the narrow token) (`a:requester_not_super_admin`);
+approver a **different** human super admin on `walle-approvals-super` (`a:approver_is_requester`),
+live-checked the same way at approval time; `ticket_ref` mandatory (`a:ticket_missing`); a
+`hold_minutes` window after approval during which any operator can veto and any halt cancels. The
+robot as requester or approver is `p:escalation_denied`. Both humans go on the audit row.
+
+**Pre-state and reversibility.** The method table's read runs before the approval card is built;
+no read defined, or a read that fails, is `a:no_pre_state` unless the **approver** explicitly
+accepts it on the card (never the agent, never the requester). There is no inverse: every band-B
+write is recorded `reversible: false` and the card says so.
+
+**Execution.** At release the worker re-runs, in order: halt check, the hard-denied list against
+a **fresh** target resolution, protected principals with a forced refresh, the requester and
+approver checks, the pre-state read (a changed pre-state is `a:state_changed`, skipped and
+reported), then consumes the nonce, writes `in_flight`, executes **once** with the broad token,
+verifies by re-reading the same resource, and writes the row. Eve's reconciler expects the
+matching admin event within five minutes; none is a `reconciliation_gap`. Rate limit and daily
+budget for the lane: *tbd*, durable counters like band A.
+
+### Band C — the handoff lane (added 2026-09-13)
+
+`/v1/handoff` accepts a `route_id` from `walle/config/handoff_routes.yaml` (committed, same code
+owners as the method table). Each route names: the console path and the steps as text with typed
+placeholders; the Reports application and event names the watch expects (committed beside Eve's
+"records nothing" list — a route whose effect Google does not log carries `watch: none` and the
+response says "not verifiable" rather than "verified"); the window; and the `hard_denied`
+predicate. The service runs the hard-denied check **first** — a route or parameter set that falls
+on the list is refused (`p:posture_change_denied` / `p:escalation_denied`, severity-1 page), never
+turned into steps — then returns the steps to the requesting human super admin, opens a watch on
+`reports.activities.list`, and closes the audit row `verified` or `not_seen`. The service never
+opens a browser, never drives the console, and holds no session: an interactive login on `walle@`
+is severity 1 whatever the reason.
+
+### The hard-denied list (added 2026-09-13)
+
+Denied **in every lane** — bands A, B and the band-C handoff — before the ladder is consulted,
+whoever asks and however many approve. A hit is a hard invariant: denial, audit row, breaker trip
+on the lane, severity-1 page. The list is decision 4 re-ratified as **P29** and signed by the
+owner; the five reasons are the platform's closed vocabulary (platform HLD §13.1 item 2); the
+mapping of item to reason is this page's.
+
+| Item | Reason | Also enforced by Google |
+|---|---|---|
+| Any write whose **target** is `walle@`: its account, OU membership, admin status, roles, security settings, tokens, application-specific passwords, backup codes, groups (the protected-self rule, §"Protected principals") | `p:self_modification_denied` | MPA for role assignment (P66) |
+| The robot's OU `/Automation/Service Identities` and its settings | `p:self_modification_denied` | — |
+| `eve@`, Eve's custom role and its assignment, Eve's OAuth client's trust | `p:self_modification_denied` | MPA for role assignment |
+| The control groups — `walle-operators@`, `walle-protected@`, `walle-super-approvers@`, `eve-owners@`, `ge-admins@`, `platform-approvers@`, the `mo-*` groups — and any group whose computed closure reaches one | `p:self_modification_denied` | — |
+| The two OAuth clients (trust, scopes, consent) | `p:self_modification_denied` | — |
+| The activity rules that alert on the robot; "Share data with Google Cloud services"; the SecOps export setting; the organisation sinks | `p:posture_change_denied` | — |
+| `users.makeAdmin` (any target, any `status`); any `roleAssignments.insert` of Super Admin or of a role carrying admin-role management; any MPA approval by the robot | `p:escalation_denied` | MPA for role assignment (`Assumption:` covers `makeAdmin`) |
+| **Other admins' security settings and backup codes**: on any super admin or delegated admin, `twoStepVerification.turnOff`, `verificationCodes.generate` / `.invalidate` / `.list`, `tokens.delete`, `asps.delete`, `users.signOut`, password or recovery-field changes | `p:posture_change_denied` | MPA for 2SV and account recovery settings |
+| The super-admin self-recovery setting; the multi-party approval setting (P66); DWD | `p:posture_change_denied` | MPA for DWD |
+| `users.delete` of any admin; deletion of the tenant account | `p:irreversible_denied` | — |
+| Any spend not on the tier-`SUPER` list below (billing and subscription changes) | `p:money_denied` | — |
+
+Targets are resolved **by immutable id**, not by the string in the request: an alias, a
+secondary email, a nested group or a renamed OU resolves to the same protected id, and a
+resolution that fails is a denial. The list lives in one library shared by both services, pinned
+by commit in each image; CI fails if the two images carry different commits.
+
+### The tier-`SUPER` two-person list (added 2026-09-13)
+
+Everything else the old never-list of [06](06-security-guardrails.md) excluded is **reachable only
+through band B at tier `SUPER`**, under the rules of §"Band B": OU create, rename, move and delete;
+user delete of non-admins; group delete (never `security` class); admin-role create or assign
+below Super Admin and without admin-role management; domain add; data transfer; licence purchases
+where an API exists (`Assumption:` none exists for a direct customer on 2026-09-13, so the row is
+empty until one is tiered). Each carries: requester a human super admin, a different human super
+admin approving, a ticket reference, a hold window, no inverse, and the full canonical request with
+both humans on the audit row. None is ever autonomous: `SUPER` rows are chat L3 and L0 on every
+other trigger, in code.
+
 ## Playbooks
 
 A playbook is what an autonomous run executes. It is not a prompt.
@@ -371,21 +676,34 @@ Rules the service enforces, not the prompt:
 ## The policy engine
 
 Order of evaluation. Any failure denies, writes an audit row, and — for the first four —
-is treated as a hard invariant breach that trips the breaker.
+is treated as a hard invariant breach that trips the breaker. This is `walle-actions`' chain
+(band A). Since 2026-09-13 `walle-actions-super` runs the same library: steps 1 (halt), 4
+(hard-denied list and protected principals), 9 (rate limit), 11 (approval verification), 12
+(idempotency) and 13 (execute, verify, audit) unchanged; steps 2, 3, 5, 7 and 10 replaced by the
+Discovery validation, the requester rule, the lane's budgets and the fixed L3 of §"Band B"; step 6
+applied where the method table names an OU-bearing target; step 8 not applicable (humans only). Both services read the **same** Firestore control document at step 1, so a halt set through either `/v1/control/halt` — including an operator's halt on `walle-actions` — stops both lanes at once; the human andon cord reaches band B without any human holding `run.invoker` on `walle-actions-super` (stated 2026-09-13).
 
 1. **Halt check.** Firestore control doc: `run`, `no_autonomous`, `no_writes`, `halt_all`.
 2. **Catalogue lookup.** Unknown operation → denied.
 3. **Parameter validation.** Pydantic, `extra="forbid"`.
-4. **Protected principals.** See below.
+4. **Hard-denied list, then protected principals.** The hard-denied list (§"The hard-denied
+   list", added 2026-09-13) runs first on the resolved target ids; then the protected-principal
+   check. See below.
 5. **Principal check.** Humans must be in the operators group, or in `walle-readers@` for
    READ operations, verified through the Directory API, failing closed. The readers group
    exists so that reporting can be widened — someone who may ask "what changed last week"
    without being able to cause any write. Note that widening it means also sharing the
    agent with it in Gemini Enterprise, which is a separate act; membership alone grants
    nothing if the person cannot reach the agent. Machine principals must match the
-   trigger class the request claims.
+   trigger class the request claims. Added 2026-09-13: in band B this step is the requester
+   rule — `WRITE` a live operator, `SUPER` a live human super admin — and it is the whole
+   story, because membership of `walle-operators@` would otherwise grant every operator a super
+   admin's reach by proxy.
 6. **Scope.** Target's `orgUnitPath` must be in the family's OU allowlist. Group targets
-   must be in an allowed class.
+   must be in an allowed class. **Qualified 2026-09-13:** this check is now **code only** —
+   Workspace no longer refuses an out-of-scope write at its end, because Super Admin cannot be
+   OU-scoped — so it is tested by the denial suite as a hard-invariant candidate and backed by
+   Eve's reconciliation, not by a role assignment.
 7. **Budgets.** Per-run object cap, per-family daily write budget, tenant-wide daily cap,
    and novelty caps over rolling **7-day and 30-day** windows, not just per hour — a
    per-hour cap does nothing against a slow drip. Durable counters.
@@ -425,6 +743,31 @@ Refuse any write whose target is a super admin, a delegated admin, the robot its
 robot's OU, a member of `walle-protected@`, or a **group** that grants an admin role or
 controls Wall-E, Eve or Mo.
 
+**Qualified 2026-09-13 — the rule with a super-admin robot.** The objective's "any super-admin
+action" collides with this rule for actions on other admins; the platform HLD resolves it with
+the two lists (§13.1 item 2, P29), and this page applies it per lane:
+
+| Target | Band A | Band B | Band C |
+|---|---|---|---|
+| The robot itself (the **protected-self rule**, below) | denied, hard-denied | denied, hard-denied | refused, hard-denied |
+| `eve@`, Eve's role, the control groups, the two OAuth clients | denied, hard-denied | denied, hard-denied | refused, hard-denied |
+| Any admin's security settings, backup codes, recovery fields; deletion of any admin; `makeAdmin` on anyone | denied, hard-denied | denied, hard-denied | refused, hard-denied |
+| Other writes on a super admin or delegated admin (e.g. a profile field, an admin-role assignment below Super Admin on a delegated admin) | denied `p:protected_principal` (unchanged) | tier **`SUPER`** only, two-person, whatever the method table says for a non-admin target | steps returned to the human, who acts under their own account |
+| A member of `walle-protected@` | denied `p:protected_principal` | tier `SUPER` only | steps returned |
+
+**The protected-self rule.** The robot is a super admin, so `directory.admins.list` and
+`isAdmin` return it: it is protected twice, by the admin check and by name. The rule is precise
+about what "targeting the robot" means, because band A legitimately writes the robot's **own
+resources**: F9 labels its own mailbox, F2/F2b send from it. A write is self-targeting — and
+hard-denied, `p:self_modification_denied` — when its **target principal** resolves to `walle@`'s
+immutable id through any Directory, Licensing, Groups Settings, Data Transfer, Chrome Policy or
+Cloud Identity method (account, OU, admin status, roles, tokens, application-specific passwords,
+backup codes, 2SV, recovery fields, group memberships, licence) or when it changes either OAuth
+client. A Gmail, Calendar or Chat call acting **as** the robot on its own mailbox, calendar or
+spaces is not self-targeting and stays governed by its family. A request whose requester or
+approver is `walle@` is `p:escalation_denied`. The robot is on the committed floor list (below)
+and is a protected principal under its own N7 rule ([06](06-security-guardrails.md)).
+
 Defects seen in a first implementation of this check, all of which matter:
 
 - It ran on **reads** too, so "who is the super admin?" was denied. Apply to writes only.
@@ -441,9 +784,14 @@ Defects seen in a first implementation of this check, all of which matter:
   `includeDerivedMembership`, paginate explicitly, and deny on truncation.
 - It ran the admin enumeration under an **organisational-unit-scoped role**, which
   returns only admins inside the pilot unit — often none — and an empty result read as
-  success. The read must be customer-scoped.
+  success. The read must be customer-scoped. **Moot for Wall-E since 2026-09-13**: a super
+  admin's read is customer-wide by construction. The defect stays recorded because the same
+  failure mode applies to any future robot that holds a scoped role, and the empty-result-is-a-denial
+  rule stays.
 
 **The floor assertion.** A static list of known super-admin addresses is committed to git.
+Since 2026-09-13 it is the committed roster of [02](02-identity-and-auth.md) §"The roster rule" —
+`sa-1-admin@`, `sa-2-admin@` **and `walle@` itself** — plus `eve@` and the control groups.
 The computed protected set must be a **superset** of it, or every directory write is
 denied with `protection_incomplete`, as a hard invariant. This is what turns a silent
 truncation into a loud refusal, and it is the difference between a control and a hope. A
@@ -482,7 +830,96 @@ minutes would break post-execution verification), and keys on the caller's expli
 
 ### BigQuery `walle_audit`, partitioned by `ts`, clustered by `operation`
 
+**Adopted 2026-09-13: `walle_audit` is `<agent_id>_audit` on the platform `audit.schema`**,
+contract `1.0.0`, `agent_id: walle`
+([../agentic-platform/05-registry-and-autonomy-contract.md](../agentic-platform/05-registry-and-autonomy-contract.md)
+§9.4; platform HLD §12.3). The contract owns the column names and meanings of its tables; Wall-E
+extends with `a_` columns and never redefines a contract column. The six-table layout below it is
+kept as the pre-contract record, with where each old column went.
+
 | Table | Purpose | Key columns beyond the obvious |
+|---|---|---|
+| `actions` | One row per request, every lane | the contract columns listed below, plus Wall-E's `a_` extension |
+| `runs` | One row per run | terminal state, counts, budget consumed, tokens, `cost_micros`, `trace_id` from the dispatcher's `traceparent` (T1–T3) or the engine's own trace (T0) so a Model Armor finding joins to the run |
+| `plans` | Frozen plans with per-item pre-state | `plan_hash`, `rollback_hash` |
+| `approvals` | Every approval and refusal, band A and band B | who (surrogate), when, how long they took, verdict, reason code; for band B `SUPER` **two rows per request**, requester's submission and approver's release, each with its live super-admin check result and timestamp |
+| `verifications` | Post-execution comparison | enum `verified` / `verified_partial` / `drift` / `not_verified` (the contract's; Wall-E's earlier `unverifiable` maps to `not_verified`) |
+| `config_versions` | Every ladder change | version, sha, decision file, deployer, origin `human`/`eve`/`breaker` |
+| `ladder_events` (contract, added 2026-09-13) | Every raise, lowering, override and requalification | cell, from, to, actor surrogate, decision record, evidence hash |
+| `grades` (contract, added 2026-09-13) | Evidence copy of the shadow and blind grades Firestore `grades/` holds live | run, item, grader surrogate, verdict, sample id |
+| `generic_requests` (Wall-E extension, added 2026-09-13) | One row per band-B request and per band-C handoff | `request_id`, `a_band`, the **full canonical request** (fields named in the committed redaction list — passwords, backup codes, secrets — replaced by their SHA-256 before storage; the hash of the unredacted canonical form is `request_hash`), the pinned Discovery file's name and SHA-256, the method table row, the pre-state snapshot (redacted like `params_redacted`) and its hash, the handoff `route_id` and watch result |
+
+**The `actions` columns, contract part** (05 §9.4), and where Wall-E's pre-contract columns went:
+
+| Contract column | Wall-E source / former column |
+|---|---|
+| `contract_version`, `agent_id` (`walle`), `env` | constant per deploy |
+| `ts`, `run_id`, `invocation_id`, `trace_id`, `plan_id` | the correlation contract (below); `invocation_id` and `trace_id` are new on this table |
+| `principal_type` | former `principal_type`; Wall-E's `scheduler` becomes the contract's `job` |
+| `principal_surrogate`, `on_behalf_of_surrogate` | former `principal_id`, `on_behalf_of`, now HMAC surrogates; the mapping lives in one private table with one writer (location *tbd*, the `walle_metrics_private` pattern) |
+| `trigger_class` | from former `trigger_id`, which stays as `a_trigger_id` |
+| `family`, `operation`, `risk_tier` | former `family`, `operation`, `risk`; band B writes `BB-GENERIC` or `BB-SUPER` and the method as `api.version.resource.method` |
+| `request_hash` | new: RFC 8785 canonical JSON, SHA-256 — for band B the hash the approval binds |
+| `decision` | former `decision`, on the contract enum (`ok shadow proposal approval_required pending_eve denied drift skipped heartbeat`); former `dry_run = true` is `shadow` |
+| `denial_reason` | former `denial_reason`, namespaced per §"Denial reasons" |
+| `level`, `config_version`, `ceilings_sha` | unchanged |
+| `fp_prompt_sha256`, `fp_model_pin`, `fp_framework_version`, `fp_armor_template_version` | former `prompt_hash`, `model_id`, plus the two new members |
+| `pre_state_hash`, `post_state_hash`, `verification` | unchanged, contract enum |
+| `approval_id`, `approver_surrogates` | former `approval_id`, `approver`; **two entries for a two-person decision** — for band B `SUPER`, `[requester, approver]` in that order, both human super admins |
+| `tainted`, `halt_epoch`, `override_epoch` | unchanged |
+| `armor_findings` | former `content_flags` and `screen_state` |
+| `ws_insert_ids` | new: the Workspace audit `insertId`s the write produced |
+| `cost_micros`, `latency_ms`, `error_class` | former `latency_ms`, `error_class`; cost new on this table |
+
+**Wall-E's `a_` extension on `actions`:** `a_trigger_id`, `a_catalogue_version`,
+`a_playbook_version`, `a_approval_latency_ms`, `a_params_redacted`, `a_result_summary`,
+`a_screen_state`, `a_ws_unique_qualifiers`; and, added 2026-09-13 for the lanes, **`a_band`**
+(`A` / `B` / `C`), `a_service` (`walle-actions` / `walle-actions-super`), `a_api`,
+`a_api_version`, `a_resource`, `a_method`, `a_method_tier` (`READ` / `WRITE` / `SUPER`),
+**`a_discovery_revision`** (the `revision` of the pinned document), `a_discovery_file_sha256`,
+`a_ticket_ref`, `a_decision_ref`, `a_hold_minutes`, `a_accept_no_pre_state` (and who accepted),
+`a_reversible` (always `false` in band B), `a_requester_admin_check` and
+`a_approver_admin_check` (result and timestamp of each live `isAdmin` read), `a_route_id`,
+`a_watch_result` (`verified` / `not_seen` / `not_verifiable`).
+
+**A band-B row is complete only with both humans and the Discovery revision.** The schema check
+refuses a deploy whose band-B writer can emit a row with `a_band = B` and any of
+`approver_surrogates` (fewer than two entries at `SUPER`), `a_discovery_revision`, `request_hash`
+or `a_ticket_ref` (at `SUPER`) null; the validator's golden fixtures include one such row that
+must fail.
+
+### The correlation contract, applied to Wall-E
+
+Added 2026-09-13 from
+[../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md)
+§5 (platform HLD §7.4). Every `actions` row, in every lane, carries these keys; the schema
+validator refuses a deploy whose audit writer omits one; a row without `invocation_id` or `run_id`
+is a severity-3 `audit_gap`; a robot-attributed Workspace event with no row is Eve's
+`reconciliation_gap` and a halt.
+
+| Key | Where Wall-E gets it | Written by |
+|---|---|---|
+| `agent_id` | the deployed config (`walle`) | both action services |
+| `invocation_id` | the engine's invocation, passed on every `/v1/*` call to either service; for T1–T3 the dispatcher's | both action services stamp it |
+| `run_id` | the dispatcher for T1–T3; for T0 the action service's per-session `run_id` (§"The agent" — the session is the run), which the engine echoes | the action service |
+| `trace_id` | the dispatcher's `traceparent` (T1–T3); the engine's own trace for T0 | the action service |
+| human `sub` (surrogate) | the Gemini Enterprise `StreamAssist` Data Access entry's authenticated principal, forwarded by the engine as a surrogate; the approver's IAP-asserted identity on the approval surface, recorded separately | `principal_surrogate`, `approver_surrogates` |
+| `audit_id` / `plan_id` / `request_id` | the action service | itself |
+| Workspace `insertId` and `uniqueQualifier` | on verify-by-re-read, matched by actor `walle@`, method, target and a ±120 s window; `null` with reason `not_seen` if none; for band C the watch's match | `ws_insert_ids`, `a_ws_unique_qualifiers` |
+| `config_version`, `ceilings_sha`, fingerprint tuple | the deployed config and manifest | the action service |
+
+The four "one request end to end" queries of 07 §5 run against this table unchanged; the second
+("from a Workspace event: … `insertId` → the audit row that claims it") is the SIEM's SA-07 and
+Eve's reconciliation, and it now covers band-B rows as well as band A.
+
+Retention: 400 days by default, subject to your retention policy — [decision 17](09-open-decisions.md).
+Since 2026-09-13 the row of record is R1 of
+[../agentic-platform/08-data-logging-retention-sovereignty.md](../agentic-platform/08-data-logging-retention-sovereignty.md)
+§5 (the Art. 12 log, export locked).
+
+The pre-contract layout, as written until 2026-09-13 (history):
+
+| Table (pre-contract) | Purpose | Key columns beyond the obvious |
 |---|---|---|
 | `actions` | One row per request | `principal_type`, `principal_id`, `on_behalf_of`, `run_id`, `plan_id`, `trigger_id`, `family`, `risk`, `level`, `tainted`, `content_flags` (list of `filter:confidence` from the content screen), `screen_state` (`screened` / `skipped`), `config_version`, `ceilings_sha`, `catalogue_version`, `playbook_version`, `prompt_hash`, `model_id`, `decision`, `denial_reason`, `dry_run`, `pre_state_hash`, `post_state_hash`, `verification`, `approval_id`, `approver`, `approval_latency_ms`, `params_redacted`, `result_summary`, `latency_ms`, `error_class` |
 | `runs` | One row per run | terminal state, counts, budget consumed, tokens, cost, `trace_id` from the dispatcher's `traceparent` so a Model Armor finding joins to the run |
@@ -490,8 +927,6 @@ minutes would break post-execution verification), and keys on the caller's expli
 | `approvals` | Every approval and refusal | who, when, how long they took, verdict, reason code |
 | `verifications` | Post-execution comparison | `verified` / `drift` / `unverifiable` |
 | `config_versions` | Every ladder change | version, sha, decision file, deployer, origin `human`/`eve`/`breaker` |
-
-Retention: 400 days by default, subject to your retention policy — [decision 17](09-open-decisions.md).
 
 Three rules about the audit trail:
 
@@ -502,7 +937,13 @@ Three rules about the audit trail:
   which put email body excerpts into BigQuery. Store ids and counts. Redact query strings
   and the `fields` map of a user update.
 - The action service's service account gets **insert-only** rights on the dataset. It must
-  not be able to delete its own evidence.
+  not be able to delete its own evidence. Since 2026-09-13 that is **both** service accounts,
+  `walle-actions@` and `walle-actions-super@`, each insert-only; neither can update or delete a
+  row the other wrote.
+- **Added 2026-09-13: the request is evidence, the result is not.** "Never store payloads" still
+  governs results and pre-state. A band-B request is stored whole in `generic_requests` because it
+  is the Art. 12 record of what two humans approved; secrets inside it never are (the redaction
+  list above), and the row is on R1's retention.
 - The dataset lives in `WALLE_PROJECT`. Its cross-project readers — `eve-controller@EVE_PROJECT`
   (and `eve-v0@` at S0), `mo-metrics@MO_PROJECT`, the validator custodian's identity — hold
   **dataset-level** `roles/bigquery.dataViewer` and run their jobs in their own projects.
@@ -556,10 +997,37 @@ vocabulary defined here and nowhere else.
 | `state_changed`, `lease_held` | no | Someone else got there first |
 | `audit_unavailable` | no | No evidence, no action |
 
-A hard invariant denies, writes an audit row, **and trips the breaker** for that family —
+**Added 2026-09-13.** On `audit.schema` every reason is namespaced: the platform vocabulary is
+`p:<reason>`, Wall-E's extension `a:<reason>`. The existing reasons map as follows —
+`p:protected_principal`, `p:level_off`, `p:level_no_execute`, `p:actor_not_authorised`,
+`p:halted`; every other row above becomes `a:<same string>`. `p:hard_denied` is the platform
+family name in 05 §9.4; its closed sub-vocabulary is the five reasons below (platform HLD §13.1
+item 2), and aligning the two spellings in `audit.schema.json` is a contract patch owned by the
+platform owner (*tbd*). New reasons:
+
+| Reason | Hard invariant | Meaning |
+|---|---|---|
+| `p:self_modification_denied` | yes, severity 1, every lane | Target is the robot, its OU, `eve@`, Eve's role, a control group or an OAuth client (§"The hard-denied list") |
+| `p:escalation_denied` | yes, severity 1, every lane | `makeAdmin`, a Super Admin or admin-role-management assignment, an MPA approval by the robot, the robot as requester or approver |
+| `p:posture_change_denied` | yes, severity 1, every lane | Another admin's security settings or backup codes, self-recovery, MPA, DWD, audit-log sharing, SecOps export, sinks, activity rules |
+| `p:irreversible_denied` | yes, severity 1, every lane | Deletion of any admin or of the tenant account |
+| `p:money_denied` | yes, severity 1, every lane | Spend not on the tier-`SUPER` list |
+| `a:use_catalogue` | no | A band-B request for an operation the catalogue covers |
+| `a:api_available` | no | A band-C route for something an API writes |
+| `a:generic_trigger_not_chat` | yes (band B) | A band-B request from anything but a human on `chat` |
+| `a:discovery_not_pinned`, `a:discovery_validation_failed`, `a:method_not_tiered` | no | Unpinned `(api, version)`; parameters or body fail the pinned schema (`extra=forbid`); a method absent from the method table |
+| `a:requester_not_super_admin`, `a:approver_is_requester`, `a:ticket_missing`, `a:decision_ref_missing` | no | The band-B requester rule failed, fail-closed when the live check cannot run |
+| `a:no_pre_state` | no | No pre-state read, and the approver did not accept that explicitly |
+| `a:route_unknown` | no | A handoff `route_id` not in the committed table |
+
+A hard invariant denies, writes an audit row, **and trips the breaker** for that family (for
+band B, for the lane) —
 except `protected_principal` arising from a **human chat request**, which is an ordinary,
 correct refusal. An operator asking about someone who turns out to be a delegated admin
-must not halt the programme.
+must not halt the programme. **Added 2026-09-13:** that exception does **not** extend to the
+five hard-denied reasons — a human asking in chat for `makeAdmin` or for another admin's backup
+codes trips the breaker and pages, because under Super Admin the operator prompting is the
+escalation path Eve reports on.
 
 ## Errors never carry upstream text
 
@@ -586,6 +1054,14 @@ as though it were something else.
 - **Tools are generated from `/v1/operations`**, not hand-written. A hand-written tool set in a
   first implementation exposed 12 of 16 catalogue operations and never sent `dry_run`, so a
   flow the design depended on could not happen. Generation makes drift impossible.
+- **Added 2026-09-13: two more tools, fixed, not generated.** `request_generic` takes exactly
+  `(api, version, resource, method, path_params, body)` and calls `/v1/execute-generic`;
+  `request_handoff` takes `(route_id, params)` and calls `/v1/handoff`. Neither can carry a
+  level, an approval, an approver, `accept_no_pre_state` or a lane choice the service would
+  honour; the service decides the band from the operation (§"The three bands"). Both tools are
+  offered only in interactive mode; a job envelope never lists them, and the service refuses them
+  anyway (`a:generic_trigger_not_chat`). The system instruction adds that the agent must never
+  suggest, script or attempt any Admin console automation under the robot's session.
 - Two entry modes in one deployment: interactive (`user_id` = the human's email) and job
   (`user_id` = `job:<playbook>`, message = a structured envelope carrying `run_id`,
   playbook version and budget).
@@ -628,3 +1104,243 @@ as though it were something else.
 `config_versions` so Mo can attribute a behaviour change to a model change. Not every
 newest model has EU residency — check the per-model table before pinning.
 [Decision 6](09-open-decisions.md).
+
+## `agent-manifest.yaml` for Wall-E
+
+Added 2026-09-13 (platform HLD §12.2 and §18 item 10). Lives at `contract/agent-manifest.yaml` in
+Wall-E's repository, is validated by the one platform validator
+([../agentic-platform/05-registry-and-autonomy-contract.md](../agentic-platform/05-registry-and-autonomy-contract.md)
+§9.2 and §9.6), hashed into the register row as `manifest_sha`, and compiled by CI into the ceiling
+module both action services load (`ceilings_sha`). Every field the contract names is present;
+values nobody has decided are *tbd* and fail the admission gate until they are set, which is the
+intent. Ceilings are the platform defaults tightened by [05](05-autonomy-ladder.md) §4–§5 and by
+the EU AI Act level caps of
+[../agentic-platform/10-eu-ai-act.md](../agentic-platform/10-eu-ai-act.md) §3.1.2 — never looser
+than any of the three.
+
+```yaml
+contract_version: "1.0.0"
+identity:
+  agent_id: walle                      # ^[a-z][a-z0-9-]{2,30}$ ; dataset walle_audit, groups walle-*@ follow it
+  tier: P-SA                           # the super-admin singleton (platform HLD §11.3) ; register privilege: super_admin
+  owner_group: walle-owners@           # factory-made
+  env: prod                            # the nonprod manifest (sandbox tenant, decision 29) carries the same ceilings
+  principal: "principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/WALLE_PROJECT_NUMBER/locations/europe-west1/reasoningEngines/ENGINE_ID"
+
+families:
+  # ---- band A: the catalogue (the declared intended purpose) ----
+  - id: F1
+    description: reads of directory, groups, OUs, admins, reports, licences, the robot's own mailbox and calendar
+    risk_tier: READ
+    reversible: true
+    inverse: none
+    pre_state: none
+    taint_fields: [user.name, user.organizations, user.locations, user.relations, group.name,
+                   group.description, orgunit.description, calendar.summary, calendar.description,
+                   calendar.location, chat.text, mail.headers, mail.body, audit.parameters.value,
+                   upstream_error]
+  - id: F2
+    description: notify.operators, templated, recipients from config
+    risk_tier: WRITE_LOW
+    reversible: false
+    inverse: none
+    pre_state: snapshot                # template id and the recipient set resolved from config
+    taint_fields: []
+  - id: F2b
+    description: free-text gmail.send, chat.message.send, calendar.event.create (treated as irreversible)
+    risk_tier: WRITE_LOW
+    reversible: false
+    inverse: none
+    pre_state: snapshot
+    taint_fields: [recipients, subject, body, text, summary, description]
+  - id: F3
+    description: group member add/remove, group class low
+    risk_tier: WRITE_HIGH
+    reversible: true
+    inverse: directory.group.member.remove   # and .add for a remove ; exact, from pre-state
+    pre_state: predicate:membership_absent
+    taint_fields: [member_email, group_email]
+  - id: F3b
+    description: group member add/remove, group class access
+    risk_tier: WRITE_HIGH
+    reversible: true
+    inverse: directory.group.member.remove
+    pre_state: predicate:membership_absent
+    taint_fields: [member_email, group_email]
+  - id: F4
+    description: directory.user.update within SAFE_USER_FIELDS (never orgUnitPath)
+    risk_tier: WRITE_HIGH
+    reversible: true
+    inverse: directory.user.update     # restore the captured fields
+    pre_state: snapshot
+    taint_fields: [name, organizations, phones, locations, relations]
+  - id: F4b
+    description: directory.user.move_ou with typed from_ou/to_ou and ou_destination_allowlist
+    risk_tier: WRITE_HIGH
+    reversible: true
+    inverse: directory.user.move_ou    # move back, only if the origin is inside the allowlist
+    pre_state: predicate:ou_equals_from_ou
+    taint_fields: []
+  - id: F5
+    description: directory.user.suspend(true), on a decision taken elsewhere (decision_ref, P125)
+    risk_tier: WRITE_HIGH
+    reversible: true
+    inverse: directory.user.suspend#false   # lives in F6 by design (restore is capped lower) ; the validator's
+                                            # same-family inverse rule needs a named exception — tbd, platform owner
+    pre_state: predicate:user_active
+    taint_fields: []
+  - id: F6
+    description: directory.user.suspend(false), restoring access
+    risk_tier: WRITE_HIGH
+    reversible: true
+    inverse: directory.user.suspend#true
+    pre_state: predicate:user_suspended
+    taint_fields: []
+  - id: F7
+    description: licensing.assignment delete / insert / patch
+    risk_tier: WRITE_HIGH
+    reversible: true
+    inverse: licensing.assignment.insert    # re-insert the recorded SKU
+    pre_state: snapshot
+    taint_fields: []
+  - id: F9
+    description: gmail.label on the robot's own mailbox (not self-targeting, 03 protected-self rule)
+    risk_tier: WRITE_LOW
+    reversible: true
+    inverse: gmail.label               # remove the label
+    pre_state: snapshot
+    taint_fields: [mail.headers, mail.body]
+  - id: F10
+    description: run.rollback, always a fresh human approval against fresh pre-state
+    risk_tier: WRITE_HIGH
+    reversible: false
+    inverse: none
+    pre_state: snapshot
+    taint_fields: []
+  # F8 (data transfer, archive, group create) is absent: a new family enters at L0 with its own entry
+  # ---- band B: the generic lane on walle-actions-super (never in any playbook.uses ; CI asserts) ----
+  - id: BB-GENERIC
+    description: band-B requests whose method table tier is READ or WRITE ; the lane has one level, L3
+    risk_tier: WRITE_GENERIC           # the HLD's "WRITE-generic"
+    reversible: false                  # no inverse in band B, ever
+    inverse: none
+    pre_state: snapshot                # the method table's get/list ; a:no_pre_state unless the approver accepts
+    taint_fields: [body, path_params, upstream_error]
+  - id: BB-SUPER
+    description: band-B requests whose method table tier is SUPER (the tier-SUPER two-person list)
+    risk_tier: SUPER
+    reversible: false
+    inverse: none
+    pre_state: snapshot
+    taint_fields: [body, path_params, upstream_error]
+  # band C (/v1/handoff) executes nothing and is not a family ; its routes are walle/config/handoff_routes.yaml
+
+trigger_classes:                       # exactly T0..T3 ; names and numbers fixed by the schema
+  - {id: T0, name: chat}
+  - {id: T1, name: scheduled}
+  - {id: T2, name: event}
+  - {id: T3, name: inbox}              # proposals only, permanently ; code: true
+
+ceilings:                              # permanent maxima ; ladder.yaml cells sit at or below
+  F1:  {T0: L5, T1: L5, T2: L5, T3: L5, agent: L5}
+  F2:  {T0: L4, T1: L4, T2: L4, T3: L2, agent: L0}   # EU AI Act cap L4
+  F2b: {T0: L3, T1: L2, T2: L2, T3: L0, agent: L0}   # free-text outbound never autonomous ; external recipients force approval
+  F3:  {T0: L3, T1: L4, T2: L4, T3: L0, agent: L0}
+  F3b: {T0: L3, T1: L3, T2: L3, T3: L0, agent: L0}
+  F4:  {T0: L3, T1: L4, T2: L4, T3: L0, agent: L0}
+  F4b: {T0: L3, T1: L3, T2: L3, T3: L0, agent: L0}
+  F5:  {T0: L3, T1: L3, T2: L4, T3: L0, agent: L0}   # L4 only on a T2 event from the HR system of record (10 §3.1.2)
+  F6:  {T0: L3, T1: L3, T2: L3, T3: L0, agent: L0}   # permanently human
+  F7:  {T0: L3, T1: L4, T2: L4, T3: L0, agent: L0}   # L4 for suspended targets only, in code ; F7-inactive L3 until P18
+  F9:  {T0: L5, T1: L5, T2: L4, T3: L2, agent: L0}
+  F10: {T0: L3, T1: L3, T2: L3, T3: L0, agent: L0}   # permanently human
+  BB-GENERIC: {T0: L3, T1: L0, T2: L0, T3: L0, agent: L0, code: true}
+  BB-SUPER:   {T0: L3, T1: L0, T2: L0, T3: L0, agent: L0, code: true, two_person: true}
+  # permanent statements, in code: WRITE_HIGH never L5 ; T3 never produces a write ; no super-admin-class
+  # operation is ever autonomous on any trigger (platform HLD §12.1, §13.1 item 9)
+
+protected_principals:                  # ids the agent may never target ; resolved to immutable ids at validation
+  - walle@                             # the protected-self rule
+  - "ou:/Automation/Service Identities"
+  - eve@
+  - walle-operators@
+  - walle-protected@
+  - walle-super-approvers@
+  - walle-owners@
+  - eve-owners@
+  - ge-admins@
+  - platform-approvers@
+  - "group:mo-*"
+  - "roster:super_admins"              # sa-1-admin@, sa-2-admin@ and walle@ from the committed roster (02)
+  - "computed:delegated_admins"        # isDelegatedAdmin, transitive group expansion, floor-asserted
+  # platform-appended at validation, not editable: eve@, the control groups, the robot accounts, every *-owners@
+
+hard_denied:                           # refused in every lane, before the ladder ; reason in brackets (03 §"The hard-denied list")
+  - "any write whose target principal is walle@ or its OU [self_modification_denied]"
+  - "eve@, Eve's role and its assignment, Eve's OAuth client trust [self_modification_denied]"
+  - "the control groups and any group whose closure reaches one [self_modification_denied]"
+  - "the two OAuth clients: trust, scopes, consent [self_modification_denied]"
+  - "activity rules alerting on the robot; Share data with Google Cloud services; the SecOps export setting; the organisation sinks [posture_change_denied]"
+  - "users.makeAdmin [escalation_denied]"
+  - "roleAssignments.insert of Super Admin or of a role carrying admin-role management [escalation_denied]"
+  - "any multi-party approval by the robot; the robot as requester or approver [escalation_denied]"
+  - "other admins' security settings, backup codes, tokens, recovery fields [posture_change_denied]"
+  - "super-admin self-recovery; the multi-party approval setting; domain-wide delegation [posture_change_denied]"
+  - "users.delete of any admin; deletion of the tenant account [irreversible_denied]"
+  - "spend not on the tier-SUPER list [money_denied]"
+
+egress: []                             # the engine's gateway allows its two action services, its Sessions endpoint and the
+                                       # platform's APIs only ; no Admin SDK or other *.googleapis.com Workspace host, ever
+
+capabilities:
+  code_execution: false
+
+peers: []                              # no A2A or MCP peer ; a peer would be principal type agent, L0 for every write
+
+invokers:                              # plain REST ; never an agent principal ; the in-app allowlists are generated from here
+  halt: [eve-controller@EVE_PROJECT, eve-verifier@EVE_PROJECT, platform-drift@CORE_PROJECT]   # on walle-actions and on walle-actions-super ; eve-verifier@ added 2026-09-13 (topology row 27)
+  approve: [eve-controller@EVE_PROJECT]                             # L4 on walle-actions only ; never on walle-actions-super
+  # human surfaces (IAP, the operators' caller identity, walle-approvals-super) are the agent's own operators'
+  # surface ; their service accounts are named by the factory (tbd) ; read_invokers on walle-actions: mo-analyst@, eve-console@
+
+stores:
+  - {name: walle_audit, kind: bigquery, class: evidence, retention_row: R1, recovery_class: R-A}   # audit.schema ; insert-only ; READER to eve-controller@, mo-metrics@, the validator custodian
+  - {name: walle_workspace_logs, kind: bigquery, class: evidence, retention_row: R3, recovery_class: R-A}   # re-homed as a log view under P104, tbd with the topology edit
+  - {name: walle-content-logs, kind: log_bucket, class: content, retention_row: R6, recovery_class: none}
+  - {name: walle-firestore, kind: firestore, class: control, retention_row: R10, recovery_class: R-B}
+  - {name: walle-secrets, kind: secret_manager, class: secret, retention_row: none, recovery_class: R-K}   # five regional secrets ; rotation per 09
+
+data_classes: [evidence, content, control, secret]
+recovery_class: R-B                    # the agent's control plane ; per-store classes above (HLD §12.2)
+
+compliance:
+  ai_act_entry: 10-eu-ai-act.md#wall-e
+  ai_act_class: annex_iii_adjacent
+  purpose_sha256: "tbd"                # SHA-256 of 10 §3.1.1's paragraph ; equal in the row, the card and the description (P125)
+  art_50:
+    template_ids: ["tbd"]              # notify.operators templates carrying the AI-system disclosure
+    header_value: "tbd"
+    text_sha256: "tbd"
+  tisax_class: confidential            # Assumption: until the ISMS signs the mapping (P20)
+  register_row: register/walle.yaml
+  input_data_relevance:
+    T0: "an operator's or human super admin's request plus directory, group, licence and audit reads in scope"
+    T1: "directory and licence reads of the playbook's pinned selection; no HR feed"
+    T2: "Workspace admin audit events and, for F5, the HR system of record's decision event"
+    T3: "the robot's own mailbox, attacker-controlled; proposals only"
+
+fingerprint:                           # any change resets every cell above L3
+  prompt_sha256: "tbd"
+  model_pin: "tbd"                     # decision 6 ; EU residency checked per model
+  framework_version: adk-2.9.0         # google-adk 2.9.0, 2026-09-10 (platform HLD §19)
+  armor_template_version: "tbd"        # the P-SA template with the hard-denied vocabulary detectors
+
+verifier: eve
+metric_pack: [full, eve-quality]
+audit_dataset: walle_audit
+```
+
+What the validator must refuse on this file, beyond §9.2's rules: a `BB-GENERIC` or `BB-SUPER` row with any value but the one shown (code rows);
+any `playbook.uses` naming a `BB-*` family; a `hard_denied` or `protected_principals` list that
+drops an entry; a non-empty `egress`; an `approve` invoker on `walle-actions-super`; and a
+`verifier` other than `eve` at Tier P-SA.

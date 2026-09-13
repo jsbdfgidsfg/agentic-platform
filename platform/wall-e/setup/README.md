@@ -2,7 +2,9 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13 — four GCP projects ([../../project-topology.md](../../project-topology.md)). The script and the self-test implement the four-project placement as of 2026-09-13; the section "Topology change 2026-09-13" records what landed and the two spikes still open.
+- Last reviewed: 2026-09-13
+- Objective restated 2026-09-13; see the platform HLD ([../../agentic-platform/01-hld.md](../../agentic-platform/01-hld.md) "What this reverses and what it costs", §13.1, §18 item 5). Reversed 2026-09-13: the robot holds **Super Admin** (P33); Wall-E's two custom roles are retired, the "Google refuses at its end" paragraph is deleted, `verify`'s robot checks are inverted, and a second OAuth client and service (`walle-actions-super`) are added. Changed on this page: the opening paragraph, "Run it", the manual step table (M2C, M5S, M7), "What `verify` asserts", "Where this differs from the documents", "Not implemented".
+- Earlier: 2026-09-13 — four GCP projects ([../../project-topology.md](../../project-topology.md)). The script and the self-test implement the four-project placement as of 2026-09-13; the section "Topology change 2026-09-13" records what landed and the two spikes still open.
 
 Executes [SETUP.md](../SETUP.md), the 21-phase runbook (18 numbered phases plus
 12b, 12c and 13b), as far as a script honestly can. SETUP.md is authoritative: where it and ARCHITECTURE.md disagree,
@@ -11,11 +13,23 @@ page.
 
 **It stops at Stage 0, and no autonomous write is possible when it finishes.**
 Every write family is at L1 (shadow) on chat and scheduled triggers and L0 on
-event and inbox triggers, the daily write budget is 0, and the custom admin role
-this creates contains no write privilege at all. The Stage 1 write role is
-created and assigned to nobody, so even a total failure of every control in the
-action service leaves Workspace refusing the call at Google's end. Assigning it
-needs a dated decision record, not a command.
+event and inbox triggers, the daily write budget is 0, band B is permanently L3
+with a two-person rule at tier `SUPER`, and band C only hands console steps to a
+human.
+
+**Rewritten 2026-09-13.** Until that date this paragraph promised that the
+script's custom role held no write privilege and that Workspace itself would
+refuse a write if the action service failed. That property does not exist any
+more and the promise is deleted, as the platform HLD requires
+([../../agentic-platform/01-hld.md](../../agentic-platform/01-hld.md) §13.1 "Placement"): the robot holds
+**Super Admin** (decision P33), which cannot be limited to an organisational
+unit and cannot be held by a service account, so the action services are the
+only gate and the consented scopes the only Google-enforced ceiling. The script
+creates no Wall-E role, **never grants Super Admin itself** (`users.makeAdmin` and
+a Super Admin role assignment are on the hard-denied list), and offers the grant
+only as manual step M2C once `SUPER_ADMIN_GRANT_DECISION` names the signed
+record of the tier gate. Before that, `verify` asserts the robot is **not** a
+super admin; after it, that it **is**, with the hygiene set and the roster rule.
 
 
 Before the first subcommand, work through [PREREQUISITES.md](../PREREQUISITES.md): the roles,
@@ -27,9 +41,10 @@ in place, with the check that proves each one. `./walle preflight` tests only a 
 ```bash
 cp walle.env.example ~/.walle-env && $EDITOR ~/.walle-env   # fill in every <...>
 ./walle preflight            # tools, permissions, config, manual step list
-./walle workspace            # phases 1 and 2
-./walle gcp                  # phases 6, 7, 8 — WALLE_PROJECT only, created with --folder
-./walle consent              # phase 9   — the one interactive step
+./walle workspace            # phases 1 and 2 — Eve's read-only role; M2C (the Super Admin grant) only at the tier gate
+./walle gcp                  # phases 6, 7, 8 — WALLE_PROJECT only; since 2026-09-13 the manual fallback of the factory call
+./walle consent              # phase 9   — the one interactive sitting: client 1 (narrow)
+./walle consent --super      # phase 9   — same sitting: client 2 (broad), refused without SUPER_SCOPES_DECISION
 ./walle armor                # phase 12c — Model Armor, inspect-only; BEFORE deploy
 ./walle spike                # phase 12b step 3 — the Agent Identity spike; BEFORE deploy
 ./walle rollback --phase 12b #   then delete the throwaway spike engine
@@ -72,7 +87,8 @@ Every subcommand is independently re-runnable: each create is a get-or-create,
 and nothing is deleted outside `teardown`, which makes you type the project id.
 Fill `~/.walle-env` in as each phase produces a value — `PROJECT_NUMBER` (Wall-E's
 own), `GEMINI_PROJECT_NUMBER` (the app project's, at D8 / phase 6),
-`REFRESH_TOKEN_VERSION`, `ACTIONS_URL`, `DISPATCHER_URL`, `ENGINE_ID` — because
+`REFRESH_TOKEN_VERSION`, `SUPER_REFRESH_TOKEN_VERSION` (2026-09-13),
+`ACTIONS_URL`, `SUPER_ACTIONS_URL` (2026-09-13), `DISPATCHER_URL`, `ENGINE_ID` — because
 a missing value expands to an empty string and produces a deployed resource that
 is wrong rather than a command that fails.
 
@@ -80,6 +96,14 @@ Phases 10 to 14 need the Wall-E repository at `WALLE_REPO` (schemas, the two
 service sources, `agent/deploy.py`, `config/ladder.yaml`,
 `config/deploy_ladder.py`, `tests/denials.py`). Phases 1 to 8 do not, and doing
 them early surfaces the tenant surprises while the code is being written.
+
+**Since 2026-09-13 three things this script does by hand are the platform's** ([../SETUP.md](../SETUP.md) Phases 6, 11 and 12b):
+Phase 6 is a factory call ([../../agentic-platform/02-landing-zone-and-tiers.md](../../agentic-platform/02-landing-zone-and-tiers.md) §3.3–§3.4), so
+`walle gcp`'s project, API and service-account half is the manual fallback, used only while the factory does not exist and recorded as a dated exception;
+Phase 11's two organisation sinks become the platform's aggregated sinks, `to-triggers-walle` and the view `platform_logs_views.walle_workspace_logs` in `LOGGING_PROJECT`
+([../../agentic-platform/08-data-logging-retention-sovereignty.md](../../agentic-platform/08-data-logging-retention-sovereignty.md) §3), so the sinks `deploy` creates are the interim fallback, deleted before Stage 1;
+and Phase 12b's project-level `walle-deny-agents` becomes the folder policy `deny-agents-platform`
+([../../agentic-platform/04-identity-and-privileged-access.md](../../agentic-platform/04-identity-and-privileged-access.md) §3), so the deny policy `deploy` creates is the fallback too (`--skip-deny-policy` once the folder policy lists this project).
 
 ## The identity, Model Armor and registry phases (12b, 12c, 13b)
 
@@ -214,12 +238,14 @@ no verifier (M3, M5, M6, M10) is therefore the only thing standing between
 | M0 | addition | This script needs its own OAuth client to reach the Admin SDK as you. SETUP.md does phases 1 and 2 in the console, so it never needs one. It must never be the robot's client: one client, one token. | yes, the file is read |
 | M1 | 1 | The account passwords. This script never prints or writes a secret, so it creates accounts with a random password it forgets. You set the real one in the console and it goes straight to the vault. | partly: recovery email and phone absence |
 | M2A | 3 | Security-key registration, on its own. Prompted by `walle workspace`. | yes, `isEnrolledIn2Sv`, **before M2B is printed** |
+| M2C | 2 (gate), added 2026-09-13 | **The Super Admin grant**, offered only when `SUPER_ADMIN_GRANT_DECISION` names the signed P33 record: the platform's P-SA tier gate green, at least two human super admins (one outside the Wall-E administration line) with the robot on `SUPER_ADMIN_ROSTER`, multi-party approval on, self-recovery Off at the top OU. One human super admin assigns, a different one approves under multi-party approval. Never done by this script or by the robot's credential; the reverse is K6, also human-only. | yes, the robot's `isAdmin` and its role assignments against the roster (`verify_super_admin_grant`) |
 | M2B | 3 | 2SV enforcement, security key only, scoped to the service OU. Split from M2A because the order matters and only a split step makes it enforceable: enforcing hardware-key-only on an account with no key registered locks it out permanently, and by then every fallback is gone. | yes, `isEnforcedIn2Sv` |
 | M3 | 4 | The login reporting rule, under **Rules**, not Alert Center. The Alert Center API needs domain-wide delegation, which this design does not do, anywhere, ever. | **no API exists.** Check by eye |
 | M4 | 5 | "Share data with Google Cloud services" is a tenant-wide console toggle. Prompted by `walle workspace`, not `walle deploy`: SETUP.md puts Phase 5 before Phase 6, the toggle takes up to 24 h to produce rows, and the login half must be resolved before Phase 9. | yes, by querying the org-level log for both `admin.googleapis.com` and `login.googleapis.com`. Neither log visible yet is `SKIP` (probably enabled less than 24 h ago); one visible and one missing is a failure |
 | M5 | 9 | The OAuth consent screen and the OAuth client are console objects. Internal + In production, or refresh tokens expire after seven days. | **no** |
-| M6 | 9 | Marking the client Trusted in API controls. The Gmail scopes are "restricted" and your tenant's own API controls can cut an untrusted client off weeks later, with an error that looks nothing like the cause. | **no** |
-| M7 | 9 | The consent itself is interactive by design. The script drives it but **prints the URL and waits**: a desktop OAuth flow opens the machine's *default* browser, which is signed in as you, and the grant then lands on a super admin with none of the role constraints. That is SETUP.md §7.1, the most likely single mistake in the runbook. The script calls `userinfo` afterwards and refuses to store the token if the account that consented is not the robot. | partly: the consent flow itself checks the account through `userinfo` and the exact scope set, and prints the version number. The manual block is operator-attested |
+| M5S | 9, added 2026-09-13 | The robot's **second** OAuth client (client 2, broad) for `walle-actions-super`, on the same consent screen, in the same sitting; its JSON goes to `walle-super-oauth-client` through `consent --super --store-client PATH`. `SUPER_SCOPES` must equal the signed broad list named by `SUPER_SCOPES_DECISION`; `cloud-platform` is refused. | **no** |
+| M6 | 9 | Marking the client Trusted in API controls (both clients since 2026-09-13). The Gmail scopes are "restricted" and your tenant's own API controls can cut an untrusted client off weeks later, with an error that looks nothing like the cause. | **no** |
+| M7 | 9 | The consent itself is interactive by design. The script drives it but **prints the URL and waits**: a desktop OAuth flow opens the machine's *default* browser, which is signed in as you, and the grant then lands on your own admin account. Since 2026-09-13 the robot has the same privilege, so the damage is to **attribution and detection**: every action is logged under your name, and the reconciliation and the super-admin detection set, which key on the robot and its two client ids, see nothing. That is SETUP.md §7.1, the most likely single mistake in the runbook. The script calls `userinfo` afterwards and refuses to store the token if the account that consented is not the robot. | partly: the consent flow itself checks the account through `userinfo` and the exact scope set, and prints the version number. The manual block is operator-attested |
 | M8 | 13 | Gemini Enterprise agent registration. It happens **in `GEMINI_PROJECT`** (`GEMINI_APP_ID`, `GEMINI_APP_LOCATION`), not in `PROJECT`. The REST surface for it is `v1alpha` and its shape is not stable, so SETUP.md's console steps are what this prints. The engine-level `walleEngineQuery` binding for `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine` in `WALLE_PROJECT` is made by `deploy` (`lock_engine_iam`, Phase 12), not by `register`, which only tells the operator it must already be in place; Google's documented project-level `roles/discoveryengine.serviceAgent` fallback is applied by `deploy` only when the config key `GEMINI_ACCESS_SPIKE_RESULT` points at a recorded `{"verdict":"fail"}` from the decision-42 spike, and `verify`'s `engine_two_principals` then tolerates that one binding. | yes where the alpha listing answers, targeting `GEMINI_PROJECT` and the app's location, never `PROJECT`; otherwise it says it cannot |
 | M9 | 16 | A monitoring notification channel. An alert policy with no channel is a dashboard. | yes |
 | M10 | 18 | The Stage 0 decision record is a document, and writing it is the point. Printed by `walle verify` and gated by `walle stage0`. | no |
@@ -227,7 +253,7 @@ no verifier (M3, M5, M6, M10) is therefore the only thing standing between
 
 ## What `verify` asserts
 
-Thirty-seven named checks, each pass/fail on its own, exit non-zero on any
+Forty-two named checks on 2026-09-13 (thirty-seven before the super-admin changes; `CHECKS` in the script is the authority), each pass/fail on its own, exit non-zero on any
 failure. The nine from Phases 12b, 12c and 13b: `agent_identity_effective`
 (`spec.effectiveIdentity` starts with `agents.global.org-`, or the recorded
 fallback file exists); `engine_no_span_content`
@@ -243,9 +269,11 @@ live extension is not `failOpen: true`); `dispatcher_uses_stream_query` (no
 `exactly_one_engine`, which the spike engine makes fail until it is rolled
 back. The older twenty-eight: The security invariants among them: the agent service account can read
 no secret and no KMS key, counting bindings inherited from the key ring and the
-project; the Stage 0 role holds nothing beyond the resolved read set; the robot
-holds **exactly one** role assignment, customer-scoped, and the Stage 1 write
-role is assigned to nobody; the secrets are regional and the service pins a
+project; rewritten 2026-09-13: **Eve's** role holds nothing beyond its resolved read set
+(`eve_role_is_read_only`), and the robot holds **no** role before the tier gate and
+**exactly one**, Super Admin, after it, with no retired Wall-E role still assigned
+(`role_assignments`; until that date: one customer-scoped reader role and the Stage 1
+write role assigned to nobody); the secrets are regional and the service pins a
 version **number** that still exists and is `ENABLED`, never `latest`; every
 committed PEM under `contracts/eve-public-keys/` carries a `BEGIN PUBLIC KEY`
 header (`kms_separation`: a header check, not a parse — a real EC P-256 parse is
@@ -257,7 +285,8 @@ shape is Eve's runbook's assertion; `project_roles`: no identity from
 and no `eve-*` or `mo-*` service account exists there (both assertions live in
 that one check; the decision-42 fallback for the Gemini project's service agent
 is tolerated by `engine_two_principals`, not here); the action service cannot delete BigQuery audit data; the
-Pub/Sub sink excludes the robot principal and the BigQuery sink does not;
+trigger sink excludes the robot principal and the log copy does not (`sink_actor_exclusion`; on the
+interim organisation sinks until the platform's `to-triggers-walle` replaces them, 2026-09-13);
 exactly **two** principals can query the engine — `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine`
 (the app project's number, never `PROJECT_NUMBER`) and `walle-dispatcher@`,
 no Eve identity (SETUP.md Phase 12, C10) — and no project- or
@@ -275,6 +304,39 @@ verifier at their full cross-project addresses and neither read-only caller
 `mo-analyst@` at theirs and neither of them is on the control list
 (`read_caller_allowlist`); and both Cloud Run services require authentication.
 
+**Added or inverted on 2026-09-13 for the super-admin robot** ([../../agentic-platform/01-hld.md](../../agentic-platform/01-hld.md) §13.1 items 2, 3, 6 and 10):
+`robot_hardening_and_roster` — inverted: until that date it failed if the robot was a super admin; now the
+super-admin state must match the tier gate (a super admin once `SUPER_ADMIN_GRANT_DECISION` is on file, not
+one before), the hygiene set holds (no recovery email or phone, 2SV enrolled and enforced, in the robot OU),
+and the roster rule holds (at least two human super admins, Eve's robot never one, the robot never a recovery
+address, the live roster equal to `SUPER_ADMIN_ROSTER` in both directions). Self-recovery Off, multi-party
+approval and session control are not readable with this script's scopes and are the platform drift job's
+Policy API read. `robot_credentials_scoped` — each token's granted scopes equal its client's list;
+`no_cloud_platform_scope` — neither client's list carries `cloud-platform` (the CI assertion);
+`hard_denied_list` — the hard-denied list is data with a closed reason vocabulary and every target resolves;
+`secret_readers_split` — the narrow pair is read by `walle-actions@` only and the broad pair
+(`walle-super-oauth-client`, `walle-super-refresh-token`) by `walle-actions-super@` only;
+`super_service_allowlists` — `walle-actions-super` pins a version number, reads only the broad pair, and
+its allowlists are exactly the agent and `eve-controller@` (halt), with no dispatcher and no Mo.
+
+**Changed on the review-findings pass of 2026-09-13.** `robot_credentials_scoped` refreshes each token
+**without** a `scope` parameter (`refresh_unnarrowed`) and compares the `scope` field of Google's refresh
+response with the reviewed list; until then it passed the expected list to google-auth, which narrowed the
+token to it, so an extra or `cloud-platform` scope could never be seen. An empty `SUPER_SCOPES` with a stored
+broad token now FAILs up front. `super_service_allowlists` compares both ways: `EXEC_CALLER_ALLOWLIST` is the
+agent only (plus the agent-identity claim once the spike is on file), `CONTROL_CALLER_ALLOWLIST` is exactly
+`eve-controller@` and `eve-verifier@` (halt only, [../../project-topology.md](../../project-topology.md)
+row 27), and `run.invoker` is exactly the agent, those two and `SUPER_EXTRA_INVOKERS`; any extra or missing
+member FAILs. HD-15 adds `directory.users.update`/`patch` on an admin target when the body touches a password
+or recovery field or `suspended` (`Assumption:` confirmed by the P29 signature). `walle denials` requires
+`DOMAIN`, `SVC_OU`, `EVE_ROBOT` and `PROTECTED` and refuses an unresolved target. `role_assignments` no longer
+asserts Eve's role when her role or account is absent (FAIL after the grant, a stated gap before it). The roster
+rule FAILs after the grant on a human super admin without enrolled and enforced 2SV. A non-empty
+`SUPER_ADMIN_GRANT_DECISION` or `SUPER_SCOPES_DECISION` naming a missing file is a config error. `walle
+workspace` refuses to offer M2C unless `SUPER_ADMIN_ROSTER` already lists the robot. `walle registry` reads
+the **shared** registry in `CORE_PROJECT` (P71) and builds only the egress gateway in Wall-E's project; the
+per-project steps survive behind `REGISTRY_LOCAL_FALLBACK_DECISION`.
+
 One check asks Google rather than Wall-E: `no_robot_writes_at_google` queries
 the organisation-level Workspace admin audit log for rows attributed to the
 robot. That log records changes only, so any row is a write. It is the check
@@ -291,13 +353,14 @@ containing "permission" and "denied" that reads exactly like the resource
 refusing. Those checks now report `SKIP` with a loud INCONCLUSIVE message
 instead of a green PASS on a broken system.
 
-It also runs SETUP.md Phase 9's fourth check, the one people skip: it builds the
-robot's credential from the pinned secret version, confirms the account, proves
-a `users.list` succeeds, and proves a `users.update` against a **sandbox**
-account is refused 403. At Stage 0 the role is read-only, so a write must fail
-at Google's end; if it succeeds, the Workspace layer is not the second
-enforcement point the design claims it is. That probe is the only Workspace
-write `verify` ever attempts, it only ever names a sandbox account, it asks
+**Retired 2026-09-13: SETUP.md Phase 9's fourth check.** Until that date `verify`
+built the robot's credential from the pinned secret version, confirmed the
+account, proved a `users.list` succeeded, and proved a `users.update` against a
+**sandbox** account was refused 403, because the custom role was read-only. Under
+Super Admin that write succeeds, so the probe would be an unaudited robot write
+that proves nothing; the Workspace layer is no longer a second enforcement point
+and `robot_credentials_scoped` checks the granted scopes instead. When it ran, that probe was the only Workspace
+write `verify` ever attempted, it only ever names a sandbox account, it asks
 first unless `--yes`, and it is skipped entirely under `--dry-run` — it is a
 real Admin SDK write, and a robot-attributed admin event would also break the
 Phase 18 checklist's "zero rows attributed to $ROBOT" box. (Phases 1 and 2 make
@@ -364,7 +427,7 @@ failures.
   observable, which is the reason SETUP.md wants it recorded either way.
 - **Eve's `Eve — Verifier` Workspace role is still created in `workspace`, and
   `consent --eve` is retired.** The role is a tenant-level object, not a GCP
-  resource, so creating it alongside Wall-E's roles still means one pass over
+  resource, so creating it in `workspace` (alongside Wall-E's roles until 2026-09-13, alone since) still means one pass over
   the privilege catalogue and one console sitting; Eve's runbook Phase 8 then
   finds it present. Everything else the old Phase 15 did — Eve's OAuth client,
   consent, `eve-refresh-token` and `eve-oauth-client` — is a GCP resource and
@@ -376,14 +439,25 @@ failures.
   step 5 does not ask for. Denial test 17 requires a write targeting `$ROBOT` or
   anything in `$SVC_OU` to be refused as `protected_principal`, so the runtime
   protected set has to cover them. Deliberate, and wider than the runbook says.
-- **Write privileges are classified by an allowlist, not a denylist.** A
-  substring denylist misses `USERS_ALL`, `GROUPS_ALL`,
+- **Write privileges are classified by an allowlist, not a denylist**, and since
+  2026-09-13 only for **Eve's** read-only role: Wall-E has no custom role to
+  classify. A substring denylist misses `USERS_ALL`, `GROUPS_ALL`,
   `ORGANIZATION_UNITS_ALL`, `ADMIN_APIS_ALL`, `SUPER_ADMIN` and `USER_SECURITY`
   — the whole-service and total grants, none of which carries a write-shaped
-  marker. Anything not on the resolved Stage 0 read list counts as a write.
+  marker. Anything not on the resolved read list counts as a write, and a
+  write privilege resolved into Eve's role stops the run. (Until 2026-09-13 the
+  list was "the resolved Stage 0 read list" of `Wall-E — Reader`.)
 - **A pre-existing admin role with different privileges is a refusal**, not a
   warning. `ensure_role` used to warn and then hand the role to `phase_2_roles`,
-  which assigned it to the robot customer-scoped.
+  which assigned it to the robot customer-scoped. Since 2026-09-13 this applies to
+  Eve's role; a leftover `Wall-E — Reader` or `Wall-E — Operator (Stage 1)` is
+  reported, never deleted by `workspace`, and `role_assignments` fails while it is
+  assigned (`rollback --phase 2` removes the assignment).
+- **The floor list and the roster, since 2026-09-13.** The robot is on the floor
+  list (as before) and, after the grant, on `SUPER_ADMIN_ROSTER` too: it is a
+  protected principal under its own N7 rule, and a write targeting it is
+  `self_modification_denied` in every lane. The script never grants Super Admin,
+  never calls `users.makeAdmin`, and never makes the robot an approver.
 - **The Model Armor floor commands do not run `gcloud config set
   api_endpoint_overrides/modelarmor`.** That property is persistent, and once
   set it also redirects the regional `templates create` on the next re-run of
@@ -460,14 +534,15 @@ is granted until one lands).
   The script counts engines before and after and fails loudly if a second one
   appears, which catches a `deploy.py` that ignores the contract.
 - **The licence probe from Phase 9's verification.** SETUP.md asks for one
-  `licensing.licenseAssignments.listForProduct` call with the robot's credential,
-  expecting 403 because License Management is indivisible and is withheld until
-  Stage 1. It is one call and it closes "still to verify" item 1 in
+  `licensing.licenseAssignments.listForProduct` call with the robot's credential.
+  Since 2026-09-13 the expectation is rows after the grant (Super Admin holds
+  License Management); until then it was 403, because License Management was
+  indivisible and withheld from the custom role until Stage 1. It is one call and it closes "still to verify" item 1 in
   [09-open-decisions.md](../09-open-decisions.md). It is not implemented here,
   but `walle consent` now prints the exact command at the one moment it is
   cheap — while the credential is in hand — and records a note to carry the
-  answer into the build log. If it returns rows, the Phase 2 role carries a
-  privilege it should not.
+  answer into the build log. After the grant, a 403 means the scope or the grant
+  is not what was consented.
 - **The runbook's remaining behavioural verify steps.** Phase 12's smoke
   tool-count match, Phase 11's verify steps 1, 2, 4 and 5, and the K0–K5
   stopwatch drills are still done by hand from SETUP.md. Phase 13's

@@ -3,6 +3,13 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
+- **Objective restated 2026-09-13; see the platform HLD**
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2; this page carries §18
+  items 12, 14 and 15; owner the Eve owner, gate the super-admin grant, P143). "Eve has no
+  judgement" is narrowed to Eve's authority path; the failure table gains the super-admin
+  cases (evidence silenced, Eve disabled from inside the tenant, the reporting path wrong or
+  compromised); paging conditions 5 and 6 are filled; every severity 1/2 page now reaches the
+  second human outside the Wall-E line.
 
 This page states what happens when each part of Eve is wrong, missing or hostile, and what
 this design does **not** close. It is the page a security reviewer should read first, and
@@ -18,8 +25,10 @@ do when it is broken is done by two deterministic sweepers and one passive stamp
 The second sentence is the bias, and it is deliberately not the one
 [08](../wall-e/08-team-eve-mo.md) item 5 asks for. Item 5's "halting, on its own judgement,
 with a documented bias toward halting when uncertain" is void under
-[C12](../wall-e/14-hld-challenge.md) — Eve has no judgement, it has thresholds — and a
-literal bias toward halting would make a degraded Eve the outage. Two rules replace it, both
+[C12](../wall-e/14-hld-challenge.md) — Eve's *authority* path has no judgement, it has
+thresholds (narrowed 2026-09-13 from "Eve has no judgement": the report-only reporting path
+`eve-advisor` may reason, P34, and holds no authority) — and a literal bias toward halting
+would make a degraded Eve the outage. Two rules replace it, both
 rows of `thresholds.yaml`:
 
 - **At the approval point, every unresolved comparison resolves to refuse.** The plan waits
@@ -76,7 +85,7 @@ audit log cannot reach the key. See [02-identity-and-auth.md](02-identity-and-au
 | **`walle-actions` is compromised and lies to Eve** | Five recomputations catch it before signature — the plan hash, the per-item pre-state, the **independent level re-derivation**, the `ceilings_sha` comparison, and the protected/scope checks. The surviving case is a service that shows Eve plan A and executes plan B. It is bounded by the create-only frozen-plan collection and by post-hoc reconciliation against Eve's **own** copy of Google's log, which catches the substitution within one reconciler tick plus admin-event lag — roughly 10–25 minutes — at which point `admin_event_unmatched` or `post_state_mismatch` halts writes. The residual is one batch, detected in under half an hour, on operations reversible by construction. |
 | **Eve's signature is invalid, or an approval arrives from an identity not in the operators group** | Denied with `bad_approval` or `approver_is_agent`, a hard invariant; the breaker trips; it pages as an impersonation attempt. The `approvals` row carries `eve_key_version`, so verification survives key destruction against the archived PEM — and the stored signature plus that PEM is the only artefact proving `walle-actions` did not mint the approval itself ([C48](../wall-e/14-hld-challenge.md)). |
 | **An operator vetoes a plan Eve approved** | Veto wins, unconditionally. The run is cancelled, both are notified, an incident note is written, and the item enters the blind sample pool at the next draw regardless of rate — a veto is the strongest available signal about Eve's precision. |
-| **Google's audit event has not landed** | Never reported as `unverifiable` for lag alone. **Current state is the primary evidence** and is read immediately, so the 60-minute SLA is measured on the state check and is always meetable. The audit event is the *attribution* evidence, and it comes from one stream only — the Admin audit log, the only thing Eve's sink filter carries. `Assumption:` a lag budget of 15 minutes, for both the `admin` and the `groups` row, because Wall-E's group-member writes go through the Directory API and land as `GROUP_SETTINGS` / `ADD_GROUP_MEMBER` / `REMOVE_GROUP_MEMBER` under `applicationName=admin`. The Groups *application's* slower published lag is not this stream's. A verdict at T+60 min is `verified_state_only`, upgraded to `verified` when the event lands on the 6-hour deep pass, and escalated to `reconciliation_gap` only if nothing has landed by T+6 h. A slow log is a wait; a missing event is still caught. |
+| **Google's audit event has not landed** | Never reported as `unverifiable` for lag alone. **Current state is the primary evidence** and is read immediately, so the 60-minute SLA is measured on the state check and is always meetable. The audit event is the *attribution* evidence, and it comes from one stream only — the Admin audit log, the only thing Eve's sink filter carries (qualified 2026-09-13: the sink now carries six streams; attribution of catalogued writes still reads the Admin stream). `Assumption:` a lag budget of 15 minutes, for both the `admin` and the `groups` row, because Wall-E's group-member writes go through the Directory API and land as `GROUP_SETTINGS` / `ADD_GROUP_MEMBER` / `REMOVE_GROUP_MEMBER` under `applicationName=admin`. The Groups *application's* slower published lag is not this stream's. A verdict at T+60 min is `verified_state_only`, upgraded to `verified` when the event lands on the 6-hour deep pass, and escalated to `reconciliation_gap` only if nothing has landed by T+6 h. A slow log is a wait; a missing event is still caught. |
 | **Google writes no audit log for the family at all** | Workspace **Calendar has no Cloud Logging audit stream**, so the calendar half of F2b can never be attributed from `eve_workspace_logs` ([Workspace audit logs](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging), verified 2026-09-12). Such items are recorded `verified_state_only` with reason `no_audit_stream`, **permanently** — never upgraded, never escalated to `reconciliation_gap` against a stream that does not exist. This is a declared, permanent limit on independence, the same treatment `licence_event_only` gets below, and it is carried in every attestation touching the family. It is dead config today: F2b's ceiling is L2, which has no autonomous execution to verify. |
 | **Eve cannot verify a licence change** | Eve's role carries no License Management privilege and `apps.licensing` is dropped ([C13](../wall-e/14-hld-challenge.md)), so F7 is verified from Google-written licence events and recorded `verified_partial` with reason `licence_event_only`. This is a declared, permanent limit on independence for F7 at L4, carried in every F7 attestation. F7 at L4 takes a **20 %** blind sample rather than the standard rate, and any F7 `unverifiable` is a hard stop rather than a budgeted 2 %. If the `isOuScopable` check on licence privileges comes back negative, the honest recommendation is that F7 stays at L3. |
 | **A T2 trigger is forged or replayed** | Eve refuses any event-triggered item whose trigger cannot be corroborated against Google's own copy — the BigQuery row by `insertId`, or `activities.list` by a unique qualifier — with `trigger_uncorroborated`, plus `no_autonomous` for that trigger class. This is what stops Eve co-signing a laundered suspension. |
@@ -90,6 +99,11 @@ audit log cannot reach the key. See [02-identity-and-auth.md](02-identity-and-au
 | **A scheduled query silently inherits a departing human's credentials** | Cannot happen: every transfer config is created with an explicit `--service_account_name`, and CI asserts it. BigQuery scheduled queries otherwise default to the creating user's credentials (verified 2026-09-12, [Scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries)), and an evidence series that runs as the person who administers Wall-E is not independent and dies when they leave. |
 | **A human bypasses all three agents and uses the Admin console** | Legitimate and expected. Eve sees a human-attributable event and a robot-attributable gap of zero, which is correct; reconciliation is keyed on events attributable to the robot. |
 | **All three agents are unavailable** | Nothing happens. That is the correct outcome, and the one the whole design is arranged to make the default. |
+| **The evidence goes silent** (added 2026-09-13) — "Share data with Google Cloud services" switched off, a sink re-filtered, Eve's token returning `invalid_grant` | `log_pipeline_silent` (heartbeat H-1: no `eve_workspace_logs` rows for 60 minutes in business hours, 240 outside): `no_autonomous` for every agent Eve verifies and `halt_all` on `walle-actions` and `walle-actions-super`, severity 1 to the second human and the desk. The Reports API poll is independent of the sharing switch and keeps reading. The alarm also lives in the witness, so deleting it inside the tenant does not silence it. Clearing is one human call and a report about the administrator ([03-lld.md](03-lld.md) §14). |
+| **Wall-E's super-admin credential turns on Eve** (added 2026-09-13) — suspends `eve@`, revokes Eve's token, removes Eve's role, grants itself Organization Administrator and redeploys `eve-gate`, deletes `EVE_PROJECT` | Every one of these is hard-denied in every Wall-E lane and a severity-1 tenant-integrity or SG-* rule in the SIEM and in Eve's catalogue. Inside the tenant's organisation this is **detection, not prevention**: the witness sees `EVE_PROJECT`'s deletion within fifteen minutes and the absence of evidence, and pages out of band; it does not see a forged approval. K6 (a human removes Super Admin from the robot) is the switch that survives a token already minted. The structural end state is P15 ([01-hld.md](01-hld.md) structural choice 1). |
+| **The witness push does not arrive** (added 2026-09-13) | Heartbeat H-4, 26 hours: severity 1 from the witness to the second human; runbook RB-03 of [../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md). A manifest mismatch in the evidence-bucket export is severity 2 and holds any promotion citing that day. |
+| **The super-admin roster changes** (added 2026-09-13) | The daily roster check raises `role_assignment_added` or `role_assignment_missing`, severity 1 in both directions, `halt_all` on the P-SA lanes; K5/K6 remain human acts on the two-person rota. |
+| **The reporting path is wrong or compromised** (added 2026-09-13) | Bounded by construction: `eve-advisor@` holds no signer, no invoker, no secret, and nothing it writes is read by `eve-gate`, `eve-reconciler` or either action service. The worst it can do is page at severity 2 inside the budget, write a misleading narrative, or stay silent — and silence costs nothing the control path relies on. A narrative never replaces the deterministic finding it cites; a model-pin change resets its paging thresholds (P123). |
 
 ## When Eve is compromised
 
@@ -122,12 +136,17 @@ that can write Wall-E's audit dataset.
 **Detection.** More than three Eve-originated demotions in one hour is itself severity 2 and
 pages — the same rule [05](../wall-e/05-autonomy-ladder.md) §8 already applies to automatic
 demotions. Beyond that, detection of a compromised Eve rests on the blind human sample and
-the operator veto, not on Eve.
+the operator veto, not on Eve. Added 2026-09-13: also on the SIEM's independent evaluation of
+the same tenant-integrity rules (the desk's and the verifier's firing are compared, page 07
+§6.2 and §14), on `grades_eve` written by the platform approval surface, and on Mo's Eve
+quality pack with its source rule that numbers about Eve never come from `eve.verdicts` alone
+(platform HLD §13.3).
 
 **Containment, in order:**
 
 1. **Revoke `roles/run.invoker`** on `walle-actions` from `eve-controller@` and
-   `eve-verifier@`. The binding sits on a service in `WALLE_PROJECT`, so the revocation is
+   `eve-verifier@` — and, since 2026-09-13, on `walle-actions-super` from its Eve holder (the
+   halt path of platform HLD §18 item 25). The binding sits on a service in `WALLE_PROJECT`, so the revocation is
    made there: by a human holding `run.admin` on `walle-actions` (Wall-E's operator), or by
    `walle_setup.py`'s containment path — Eve's identities cannot revoke their own binding,
    and nothing in `EVE_PROJECT` can. Every L4 step then stalls closed — plans stay at `pending_eve`, the
@@ -204,6 +223,13 @@ Eve, so Eve's own noise is measured and gated like any other metric: every page 
 a week from one reason code raises a ticket titled `threshold suspect: <code>` whose fix is a
 pull request against `thresholds.yaml`.
 
+**Qualified 2026-09-13** (platform HLD §13.2; the reporting contract of [03-lld.md](03-lld.md)
+§15). Eve is no longer read by one person: every severity 1 and 2 page goes to the second human
+outside the Wall-E line in parallel with the desk, reports about the administrator go to the
+second human alone, and `eve.pages` records recipient, channel, delivery result and
+acknowledgement. The budget rule above is now the platform's RP-6; a verifier over budget for
+two weeks has its severity-2 rules reviewed, never silenced.
+
 The design declares a page budget and **six** paging conditions; everything else Eve emits is
 a ticket or a line in the daily digest. The budget number itself is *tbd* — it is one of the
 `thresholds.yaml` numbers E-18 defers to S2 calibration on measured data. Four of the six
@@ -215,7 +241,13 @@ conditions are named by this design:
 | 2 | An invalid Eve signature, or an approval from an identity not in `walle-operators@` — `bad_approval`, `approver_is_agent` | `walle-actions` | Hard invariant, breaker trips, paged as an impersonation attempt. |
 | 3 | More than three Eve-originated demotions in one hour | `eve-reconciler` finding, raised by the ladder | Severity 2. |
 | 4 | An Eve approval later overturned | `walle-actions` / operator | Severity 2 in [05](../wall-e/05-autonomy-ladder.md) §9. `Assumption:` a severity 2 pages; the severity table states the automatic response and the follow-up, not the notification channel. |
-| 5–6 | *tbd* | — | Fixed with the rest of `thresholds.yaml` at S2 calibration (E-18). Recording the two empty slots is deliberate: a budget with unnamed members is not a budget. |
+| 5 | Posture change by any actor — Sharing options, the SecOps export, activity rules, API controls, OAuth app trust, DWD, 2SV, SSO, super-admin self-recovery, session settings (filled 2026-09-13 from SA-03) | `eve-reconciler`, mirrored from the SIEM rule | Severity 1. The event names for the Sharing options and export settings are unverified until observed on the sandbox tenant; until then the absence alarms are the detector ([../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md) §6.2, §17). |
+| 6 | Any `login.googleapis.com` event for `walle@` or `eve@` — an interactive robot login (filled 2026-09-13 from SA-04) | `eve-reconciler`, mirrored from the SIEM rule | Severity 1. Was "*tbd* — fixed at S2 calibration (E-18)"; the two slots are named now and the budget **number** stays *tbd* at S2. |
+
+Added 2026-09-13, outside the budget because they are severity 1 and never budgeted:
+`log_pipeline_silent`, the tenant-integrity rules, `reconciliation_gap` over any stream, and
+the roster check in either direction ([03-lld.md](03-lld.md) §14). The reporting path's
+severity-2 pages are inside the budget.
 
 Everything else — drift findings, `verified_partial` verdicts, deferred-lag re-checks,
 ordinary refusals, the daily reconciliation extract — is a ticket or the digest. In
@@ -227,7 +259,9 @@ refuse is that it costs an approval, and an approval is a queue item, not an int
 The one thing a solo administrator's controller cannot do is cover a holiday, and this is the
 part of the design most likely to be quietly dropped, so it is written as a mechanism.
 
-`oncall.yaml`, in Eve's own configuration repository, declares coverage. Then:
+`oncall.yaml`, in Eve's own configuration repository, declares coverage — since 2026-09-13 a
+primary, a secondary outside the Wall-E line and per-severity timeouts, and it is the platform
+rota file ([03-lld.md](03-lld.md) §15). Then:
 
 1. **48 hours before an uncovered period**, Eve warns in the daily digest.
 2. **At the start of the uncovered period**, Eve sets `no_autonomous` with reason
@@ -281,10 +315,19 @@ than narrowed away. Each one is a place where an honest reviewer should push.
    `thresholds.yaml`, approving the pull request that sets `eve_authority: binding`, and
    grading the blind sample. [Decision 37](../wall-e/09-open-decisions.md)'s second reviewer
    and [decision 11](../wall-e/09-open-decisions.md)'s second grader are the load-bearing
-   assumptions under every independence claim in this design.
+   assumptions under every independence claim in this design. Qualified 2026-09-13: under a
+   super-admin Wall-E the independence from Wall-E is itself structural only against Wall-E's
+   project principals and detective against its credential ([01-hld.md](01-hld.md) structural
+   choice 1), and the second human outside the Wall-E line is a precondition of the grant
+   (E-2 reopened), not only an S3 exit condition.
 
 Limits 4 and 5 are the two that a reviewer should weigh hardest, because they are the two
 that a well-built Eve cannot fix. They are organisational, and they are open.
+
+The declared limits of watching a super admin — detective independence inside the
+organisation, "anything wrong" ending where enumeration ends, the "records nothing" list, and
+settings state Eve cannot read — were added on 2026-09-13 beside these five, not into them; they
+are in [01-hld.md](01-hld.md) "What this design does not close" and [03-lld.md](03-lld.md) §13.
 
 ## Related pages
 

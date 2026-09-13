@@ -3,6 +3,17 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
+- **Objective restated 2026-09-13; see the platform HLD**
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2–§13.3; this page carries
+  §18 items 13 and 17; owner the Eve owner, gates the super-admin grant and Wall-E's Stage 1,
+  P143). Wall-E holds Super Admin (P33). On this page: `eve@`'s read privilege and scope set are
+  widened before the one-sitting consent (E-16), still with no content scope; E-16 is reworded
+  now that decision 26 is closed for Wall-E by fact; two identities are added (`eve-export@`,
+  `eve-advisor@`); the Mo grant row gains dataset-level `READER` on `eve_quality` for
+  `mo-metrics@` and the validator custodian, made by Eve's runbook; `eve-controller@` gains
+  `run.invoker` on `walle-actions-super` for the halt path (and, decided the same day,
+  `eve-verifier@`, which raises the reconciler's halts — topology row 27); `eve-approval` is HSM; E-2 is
+  reopened as blocking for the grant. `eve@` stays a read-only role, **never Super Admin**.
 
 Every principal Eve involves, what it holds, and why each boundary is where it is. The
 short version: Eve holds exactly one privileged capability — a Cloud KMS
@@ -20,13 +31,15 @@ page names the grants Eve holds and makes, and points there for the full table.
 | Principal | Kind | Where | Holds | May call | Must never |
 |---|---|---|---|---|---|
 | `eve-v0@<eve-project>` | GCP service account | `EVE_PROJECT` | `bigquery.dataViewer` on `walle_audit` (dataset-level `READER` in `WALLE_PROJECT`, made by Wall-E's runbook, CC-22); `dataEditor` on `eve`; `bigquery.jobUser` in `EVE_PROJECT` | Nothing | Hold a Workspace credential, a key, or any endpoint access |
-| `eve-controller@<eve-project>` | GCP service account, attached to the `eve-gate` job | `EVE_PROJECT` | `cloudkms.signer` on `eve-approval`; `secretAccessor` on Eve's two secrets; `run.invoker` on the `walle-actions` service in `WALLE_PROJECT` (service-level, made by Wall-E's runbook); **no project-level role in `WALLE_PROJECT`** — `EVE_PROJECT_ROLES` in Wall-E's script is empty since 2026-09-13, `agentregistry.viewer` is dropped (topology decision 43) and `datastore.viewer` is not granted: Eve reads plans through `GET /v1/plans/{id}` with `run.invoker`, and the Firestore discovery read of `plans/{id}` at `state == pending_eve` is **absent until topology decision 44 lands** — either `datastore.viewer` under an IAM Condition scoped to Wall-E's `(default)` database ([Firestore IAM](https://docs.cloud.google.com/firestore/docs/security/iam), expression unverified) or the list endpoint of CC-33. `bigquery.dataViewer` on `walle_audit` (dataset-level, `WALLE_PROJECT`, Wall-E's runbook); `bigquery.jobUser` **in Eve's own project** | `GET /v1/plans`, `GET /v1/runs`, `GET /v1/ladder`, `GET /healthz`, approve, veto, halt, demote | Execute any Workspace operation. Raise any level, clear an override, change a ceiling. Read any Wall-E secret or signing key. Hold **any** `aiplatform.*` permission, in particular `reasoningEngines.query`. |
+| `eve-controller@<eve-project>` | GCP service account, attached to the `eve-gate` job | `EVE_PROJECT` | `cloudkms.signer` on `eve-approval`; `secretAccessor` on Eve's two secrets; `run.invoker` on the `walle-actions` service in `WALLE_PROJECT` (service-level, made by Wall-E's runbook); **no project-level role in `WALLE_PROJECT`** — `EVE_PROJECT_ROLES` in Wall-E's script is empty since 2026-09-13, `agentregistry.viewer` is dropped (topology decision 43) and `datastore.viewer` is not granted: Eve reads plans through `GET /v1/plans/{id}` with `run.invoker`, and the Firestore discovery read of `plans/{id}` at `state == pending_eve` is **absent until topology decision 44 lands** — either `datastore.viewer` under an IAM Condition scoped to Wall-E's `(default)` database ([Firestore IAM](https://docs.cloud.google.com/firestore/docs/security/iam), expression unverified) or the list endpoint of CC-33. `bigquery.dataViewer` on `walle_audit` (dataset-level, `WALLE_PROJECT`, Wall-E's runbook); `bigquery.jobUser` **in Eve's own project** | `GET /v1/plans`, `GET /v1/runs`, `GET /v1/ladder`, `GET /healthz`, approve, veto, halt, demote. Added 2026-09-13 (platform HLD §18 item 25): `roles/run.invoker` on the Cloud Run service `walle-actions-super` in `WALLE_PROJECT`, service-level, **halt path only** — the in-app control list of that service carries no other endpoint for it; made by Wall-E's runbook | Execute any Workspace operation. Raise any level, clear an override, change a ceiling. Read any Wall-E secret or signing key. Hold **any** `aiplatform.*` permission, in particular `reasoningEngines.query`. |
 | `eve-verifier@<eve-project>` | GCP service account, attached to the `eve-reconciler` job | `EVE_PROJECT` | Everything `eve-controller@` holds **except `cloudkms.signer`**; plus `storage.objectCreator` on the evidence bucket | The control and read endpoints; never approve | Sign. The process that parses attacker-writable strings out of Google's audit log must not be able to reach the key. |
-| `eve-console@<eve-project>` | GCP service account | `EVE_PROJECT` | `dataViewer` on `eve`; `objectViewer` on the attestation bucket; `run.invoker` on `walle-actions` in `WALLE_PROJECT` (service-level, Wall-E's runbook; its paths come from the read-endpoint allowlist, not the control list) | `GET /v1/plans`, `GET /v1/ladder` | Approve, veto, halt, demote. Hold a Workspace credential. |
-| `eve@<domain>` | Workspace user | Workspace, `/Automation/Service Identities` | Custom role `Eve — Verifier`, customer-scoped, read privileges only; eight read-only OAuth scopes; own hardware key; member of `walle-protected@` | Admin SDK Directory and Reports, read | Hold any write privilege at any stage, ever. Be impersonated — there is no domain-wide delegation anywhere. |
+| `eve-console@<eve-project>` | GCP service account | `EVE_PROJECT` | `dataViewer` on `eve`; `objectViewer` on the attestation bucket; `run.invoker` on `walle-actions` in `WALLE_PROJECT` (service-level, Wall-E's runbook; its paths come from the read-endpoint allowlist, not the control list). Its human audience behind IAP becomes a dedicated group (name *tbd*) whose membership change is severity 1 (2026-09-13, SA-09) | `GET /v1/plans`, `GET /v1/ladder` | Approve, veto, halt, demote. Hold a Workspace credential. Write `grades_eve`. |
+| `eve-export@<eve-project>` (added 2026-09-13, platform HLD §13.2, P107) | GCP service account, attached to the export job | `EVE_PROJECT` | dataset-level `READER` on `eve`; `storage.objectViewer` on Eve's locked bucket and `storage.objectCreator` on its `exports/` prefix (IAM Condition, create-only); dataset-level `READER` on `walle_audit` in `WALLE_PROJECT`, made by Wall-E's runbook; in the witness organisation exactly two resource-level grants made by the witness administrators — `roles/bigquery.dataEditor` on `eve_mirror` and `roles/storage.objectCreator` on the witness bucket | Nothing on any action service | Reconcile, sign, halt. Delete or overwrite anything. Hold any other grant outside `EVE_PROJECT`. One identity per duty: the exporter is never the reconciler |
+| `eve-advisor@<eve-advisor-project>` (added 2026-09-13, platform HLD §13.2, P34) | GCP service account, the reporting path | `EVE_ADVISOR_PROJECT` | dataset-level `READER` on the authorised-view dataset in `EVE_PROJECT` that fronts `eve.*`, `eve_workspace_logs` and the report tables (never on the source datasets); `roles/bigquery.dataEditor` on the dataset `eve_advice` in `EVE_PROJECT` only; both made by Eve's runbook; the model permissions of its own project | Nothing on any action service | Hold `cloudkms.signer`, `run.invoker`, `secretAccessor` or any write to `eve/config`. Be read by `eve-gate`, `eve-reconciler`, `walle-actions` or `walle-actions-super` |
+| `eve@<domain>` | Workspace user | Workspace, `/Automation/Service Identities` | Custom role `Eve — Verifier`, customer-scoped, read privileges only; read-only OAuth scopes — eight as first designed, ten after the widening of 2026-09-13 (below); own hardware key; member of `walle-protected@` | Admin SDK Directory and Reports, read | Hold any write privilege at any stage, ever. Be a super admin, ever. Be impersonated — there is no domain-wide delegation anywhere. |
 | Wall-E's CI identity (`CI_DEPLOYER` in Wall-E's config) | CI | `WALLE_PROJECT` | `storage.objectCreator` on Eve's evidence bucket in `EVE_PROJECT`, under an IAM Condition on the `ladder/` prefix — bucket-level, made by Eve's owner; carve-out 3 of topology decision 48 | Publish a ladder artefact | Overwrite or delete an artefact. Hold any other permission in Eve's project. |
 | `walle-actions@` | GCP service account | `WALLE_PROJECT` | `cloudkms.publicKeyViewer` on the one key `eve-approval` in `EVE_PROJECT` (key-level, fallback only; carve-out 1 of decision 48); `bigquery.dataViewer` on the authorized view `verdict_receipts`, which lives in its own dataset in `EVE_PROJECT` (name *tbd*, decision 48), authorized on the `eve` dataset — **no access to `eve` itself** (carve-out 2). Query jobs for that read run in `WALLE_PROJECT` under `walle-actions@`'s existing `jobUser` there | Nothing of Eve's beyond those two reads | Hold `signer`, `signerVerifier` or `cryptoOperator` on Eve's key — impossible, since the key is not in its project. Read a verdict's content; the view exposes `(run_id, item, verdict_ts)` and nothing else. |
-| Wall-E's deployers | Human plus CI | `WALLE_PROJECT` | **No project-level role in `EVE_PROJECT`, and none on `FOLDER_ID`.** Exactly three resource-level grants to Wall-E principals exist in `EVE_PROJECT`: CI `objectCreator` on the `ladder/` prefix of the evidence bucket; `walle-actions@` `publicKeyViewer` on `eve-approval` (fallback only); `walle-actions@` `dataViewer` on the `verdict_receipts` authorized view. A fourth Wall-E grant is a drift failure. A **second carve-out list**, for Mo, has exactly one entry: `mo-metrics@${MO_PROJECT}` dataset-level `READER` on the mirror's dataset, from S4, made by Eve's owner (topology row 18, decision 51) — a Mo principal at S4 is expected, not flagged; any other Mo principal, or the same one before S4 or on any other resource, is a drift failure | — | Appear in `EVE_PROJECT`'s or `FOLDER_ID`'s IAM policy. Asserted daily by Eve's own drift job; Wall-E's drift job asserts the mirror image from inside `WALLE_PROJECT` only (topology decision 46). |
+| Wall-E's deployers | Human plus CI | `WALLE_PROJECT` | **No project-level role in `EVE_PROJECT`, and none on `FOLDER_ID`.** Exactly three resource-level grants to Wall-E principals exist in `EVE_PROJECT`: CI `objectCreator` on the `ladder/` prefix of the evidence bucket; `walle-actions@` `publicKeyViewer` on `eve-approval` (fallback only); `walle-actions@` `dataViewer` on the `verdict_receipts` authorized view. A fourth Wall-E grant is a drift failure. A **second carve-out list**, for Mo, has exactly one entry: `mo-metrics@${MO_PROJECT}` dataset-level `READER` on the mirror's dataset, from S4, made by Eve's owner (topology row 18, decision 51) — a Mo principal at S4 is expected, not flagged; any other Mo principal, or the same one before S4 or on any other resource, is a drift failure. **Extended 2026-09-13** (platform HLD §13.3, §18 items 17 and 25): the Mo list gains a second entry, `mo-metrics@${MO_PROJECT}` dataset-level `READER` on `eve_quality`, made by **Eve's runbook** from Wall-E's Stage 1, with no binding in `MO_PROJECT`; the validator custodian holds the same grant (P30). The full expected foreign set is in "The two properties re-verified" below | — | Appear in `EVE_PROJECT`'s or `FOLDER_ID`'s IAM policy. Asserted daily by Eve's own drift job; Wall-E's drift job asserts the mirror image from inside `WALLE_PROJECT` only (topology decision 46). |
 
 Nothing in this table exists at Stage 0 except `eve-v0@`. See
 [05-stages.md](05-stages.md) for what is deliberately absent and when each principal is
@@ -38,7 +51,7 @@ created; the ordered steps are in [07-build-runbook.md](07-build-runbook.md).
 flowchart LR
   subgraph WS["Google Workspace tenant"]
     EROB["eve@domain — custom role 'Eve — Verifier', customer-scoped, read privileges only"]
-    GLOG["Google-written admin audit record"]
+    GLOG["Google-written audit record — six Cloud Logging streams and the Reports API applications"]
   end
 
   subgraph EVEP["Eve's GCP project, EVE_PROJECT"]
@@ -46,14 +59,30 @@ flowchart LR
     EC["eve-controller@ — the eve-gate job"]
     EV["eve-verifier@ — the eve-reconciler job"]
     ECN["eve-console@ — IAP-fronted console"]
-    KEY["Cloud KMS key 'eve-approval' — ASYMMETRIC_SIGN, EC_SIGN_P256_SHA256"]
+    KEY["Cloud KMS key 'eve-approval' — ASYMMETRIC_SIGN, EC_SIGN_P256_SHA256, HSM"]
     SEC["Secret Manager, regional — 'eve-oauth-client', 'eve-refresh-token'"]
     BUCK["Evidence bucket — locked 400-day retention"]
     DS["BigQuery dataset 'eve'"]
+    EXP["eve-export@ — the daily export and witness push"]
+    EQ["BigQuery dataset 'eve_quality' — authorised views"]
+    EADV["BigQuery datasets: authorised views for the advisor; 'eve_advice'"]
+  end
+
+  subgraph EAP["EVE_ADVISOR_PROJECT"]
+    ADV["eve-advisor@ — reporting path, report-only"]
+  end
+
+  subgraph WITP["org-witness, EVE_WITNESS_PROJECT"]
+    WM["eve_mirror dataset and retention-locked bucket"]
+  end
+
+  subgraph MOP["MO_PROJECT and VALIDATOR_PROJECT"]
+    MOM["mo-metrics@ and the validator custodian"]
   end
 
   subgraph WALLEP["Wall-E's GCP project, WALLE_PROJECT"]
     WA["walle-actions@"]
+    WAS["walle-actions-super — Cloud Run service"]
     FS["Firestore — plans, overrides, ladder"]
     AUD["BigQuery 'walle_audit'"]
     REG["Agent Registry"]
@@ -83,12 +112,21 @@ flowchart LR
   WA -->|"dataViewer on the verdict_receipts view dataset only, not on eve"| DS
   WA -.->|"FORBIDDEN — never signer, signerVerifier or cryptoOperator"| KEY
   DEP -.->|"FORBIDDEN — no project-level role in EVE_PROJECT, none on FOLDER_ID"| EVEP
+  EC -->|"run.invoker on walle-actions-super, halt path only (2026-09-13)"| WAS
+  EV -->|"run.invoker on walle-actions-super, halt path only (2026-09-13)"| WAS
+  EXP -->|"dataset READER on eve; objectCreator on exports/"| BUCK
+  EXP -->|"dataEditor and objectCreator, made by the witness administrators"| WM
+  ADV -->|"READER on authorised views; dataEditor on eve_advice only"| EADV
+  MOM -->|"dataset READER on eve_quality, made by Eve's runbook"| EQ
 
   linkStyle 20,21 stroke:#b00020,stroke-width:2px,stroke-dasharray:6 4;
 ```
 
 The two dotted red edges are the two grants this design exists to make impossible rather
-than merely forbidden. Both are structural: the key is not in Wall-E's project, so no
+than merely forbidden. The six edges added after them on 2026-09-13 are the cross-boundary
+grants the platform HLD adds (§18 item 25): the halt path onto `walle-actions-super`, the
+export and witness push, the reporting path's view and write, and Mo's and the custodian's
+quality read. Both are structural: the key is not in Wall-E's project, so no
 project owner there can grant themselves `useToSign` on it, and Wall-E's deployers hold no
 project-level role in Eve's project or on its folder, so there is nothing for them to
 escalate from — the three resource-level grants that do exist are create-only,
@@ -136,6 +174,14 @@ The project boundary buys four things that IAM hygiene inside one project cannot
 4. **The forbidden edges become drawable.** A reviewer can check the claim by reading one
    IAM policy, not by reasoning about seventeen role bindings.
 
+**Qualified 2026-09-13** (platform HLD §13.2). All four are structural against Wall-E's
+project principals and deployers. Against Wall-E's **super-admin** credential (P33), which
+can grant itself Organization Administrator on the tenant's organisation, they are
+**detective**: a super admin who reaches that role can re-grant the key or redeploy the gate,
+and what sees it is the SIEM's super-admin set, Eve's tenant-integrity rules and the absence
+alarms. The structural part of Eve's independence is the witness organisation; see
+[01-hld.md](01-hld.md) structural choice 1.
+
 **E-1 was answered yes on 2026-09-13**; the paragraph that follows is kept as the record
 of the rejected variant. Had the answer been no, the single-project variant still works:
 offline pinned-PEM verification still prevents key substitution, and the denial tests still
@@ -159,6 +205,13 @@ at all. So the boundary is built now, and the fact that it is notional until
 [decision 11](../wall-e/09-open-decisions.md)'s second human exists is written down here
 rather than narrowed away. Folding Eve back into Wall-E's project "for now" is pre-refused.
 This is decision **E-2**, due before S4, and it is the largest open risk in the set.
+
+**Reopened 2026-09-13 as blocking for the super-admin grant** (platform HLD §0.3, §0.4,
+§13.2; P1, P14, P98, P137; topology decision 52 reopened with it). The owner of `eve-owners@`
+is a **second human outside the Wall-E administration line** (IT security), named before the
+grant: administrator of the witness organisation, required reviewer on `eve/config`, parallel
+recipient of every severity 1/2 page and sole recipient of reports about the administrator's
+own actions. Eve's *build* still does not wait for that person; the grant does.
 
 ## Two runtime identities, not one
 
@@ -192,13 +245,14 @@ could make the world look however it wants to the verifier.
 |---|---|---|
 | Org unit | `/Automation/Service Identities`, the same OU as Wall-E's robot | Every setting below applies without touching real users |
 | Admin role | Custom role `Eve — Verifier`, **customer-scoped**, read privileges only | Customer scope is required: Reports privileges cannot be OU-scoped, and Eve's whole value is tenant-wide reads |
-| Role privileges | Users read, Groups read, Organisational units read, Admin roles read, Reports audit read, Reports usage read | Resolved against the tenant with `privileges.list` — Google publishes no complete catalogue, so the console labels are not to be trusted |
+| Role privileges | Users read, Groups read, Organisational units read, Admin roles read, Reports audit read, Reports usage read. **Widened 2026-09-13, before the consent (E-16; platform HLD §13.2):** plus read of domain settings and customer settings, and every Reports application the poll reads; security and API-controls state only where an API exists that a non-super-admin can read (none found — see the scopes below); no content privilege | Resolved against the tenant with `privileges.list` — Google publishes no complete catalogue, so the console labels are not to be trusted (`privileges.list` verified 2026-09-13: `GET …/customer/{customer}/roles/ALL/privileges`, scope `admin.directory.rolemanagement.readonly`, [privileges.list](https://developers.google.com/workspace/admin/directory/reference/rest/v1/privileges/list)). The exact privilege names are *tbd* until that call is run on the tenant |
 | Write privileges | **None, at any stage, forever** | The role does not grow with the ladder the way Wall-E's does. This is the one privilege table in the set with no future column |
+| Super Admin | **Never** — required by the objective of 2026-09-13 ("She won't have super admin access") | Eve controls a super-admin robot without being one; its reach is read-only and it acts only through the control endpoints |
 | 2-step verification | Enforced, **hardware key only**, its own key in the same safe, separately labelled | A shared key would make the two robots one identity in practice |
 | Recovery options | None | Removes the social-engineering path |
 | Password | Long, random, in the corporate vault, never in the wiki | — |
 | Session length | Short, no "remember device" | — |
-| Login activity rule | Its own rule, actor `eve@<domain>`, unfiltered event type, action = email to the platform owner and `walle-operators@`, severity high | After bootstrap, an interactive login to this account is by definition an incident |
+| Login activity rule | Its own rule, actor `eve@<domain>`, unfiltered event type, action = email to the platform owner and `walle-operators@`, severity high. Added 2026-09-13: also severity 1 in the SIEM (SA-04) and in Eve's tenant-integrity rules, paging the second human | After bootstrap, an interactive login to this account is by definition an incident |
 | Protected-principal membership | Member of `walle-protected@`, and written into the committed floor list | Wall-E can never target Eve's account with a write; the floor list makes a silent truncation of the protected set a loud refusal |
 | Licence | One spare Workspace licence | The largest recurring cost line in the whole design, and what buys the independent read |
 
@@ -223,6 +277,40 @@ openid
 ```
 
 Eight scopes, all read-only.
+
+**Widened 2026-09-13, before the one-sitting consent (E-16; platform HLD §13.2).** Two scopes
+are added, so the consented set is **ten**, all read-only:
+
+```
+https://www.googleapis.com/auth/admin.directory.domain.readonly
+https://www.googleapis.com/auth/admin.directory.customer.readonly
+```
+
+Both verified 2026-09-13 in the Directory API scope list
+([authorizing](https://developers.google.com/workspace/admin/directory/v1/guides/authorizing)).
+They let the roster and tenant-integrity checks read domain and customer settings — a domain
+added by band B, a customer-level change — as state, not only as events. Three things are
+deliberately **not** added:
+
+- **No Reports scope beyond `admin.reports.audit.readonly`.** The Reports API poll by actor
+  across `admin`, `login`, `token`, `saml`, `groups`, `groups_enterprise`, `user_accounts`,
+  `rules`, `context_aware_access`, `gcp`, `drive`, `vault`, `takeout`, `admin_data_action`,
+  `data_studio` and the other documented applications uses that one scope (verified
+  2026-09-13, [activities.list](https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list)).
+  Drive, Vault or Takeout *activity* is metadata about who touched what, not content.
+- **No Cloud Identity Policy API scope.** The Policy API reads security and API-controls
+  settings, but "only a super administrator can use" it (verified 2026-09-13,
+  [Policy API overview](https://docs.cloud.google.com/identity/docs/concepts/overview-policies)),
+  and Eve is never a super admin. Eve sees those settings **change** through their admin
+  events and never reads their current state; that limit is declared in
+  [01-hld.md](01-hld.md) "What this design does not close".
+- **No device or Chrome management scope.** `Assumption:` context-aware-access policy changes
+  are observed through the `context_aware_access` and `admin` Reports applications; a
+  read-only API for access-level state readable by a non-super-admin is not identified this
+  pass and is *tbd*.
+
+The rule that decides the rest stands: **no content scope** — the objective needs metadata
+about who touched what, not the content.
 
 - `admin.directory.rolemanagement.readonly` is required, not optional: Eve reconciles the
   operator list against `roleAssignments.list` daily, and cannot classify which groups
@@ -303,6 +391,14 @@ Two further causes from Google's list are read precisely here:
 
 ### Whether any of this survives decision 26
 
+**Reworded 2026-09-13.** [Decision 26](../wall-e/09-open-decisions.md) is **closed for
+Wall-E by fact** (platform decision P33): a service account can hold any Workspace admin role
+except Super Admin, so Wall-E's super-admin principal is a user account. The question
+survives **for Eve only**, as E-16, because Eve's role is a read-only custom role, which a
+service account can hold. Its gate moves with the consent: before the one-sitting consent,
+which is now before the super-admin grant; and it must be answered together with the widened
+privilege and scope set above. What follows is the original framing.
+
 [Decision 26](../wall-e/09-open-decisions.md) asks whether the admin principal can be a
 **keyless service account holding the custom role with no domain-wide delegation**. Google
 documents that any role except Super Admin can be assigned to a service account without
@@ -344,6 +440,7 @@ never recorded in this wiki or anywhere else outside Secret Manager.
 |---|---|---|
 | Location | Key ring `eve`, key `eve-approval`, `europe-west1`, **in `EVE_PROJECT`** | Wall-E's runbook before 2026-09-13 created it on Wall-E's `walle` ring in `${PROJECT}`; since 2026-09-13 it is ring `eve` in `EVE_PROJECT` ([../project-topology.md](../project-topology.md) §2); see [08-contract-changes.md](08-contract-changes.md) |
 | Purpose and algorithm | `ASYMMETRIC_SIGN` / `EC_SIGN_P256_SHA256` | Reads back exactly that way from `gcloud kms keys describe`; it is a Stage-0 exit assertion in Wall-E's runbook |
+| Protection level (added 2026-09-13) | **`HSM`** | Platform HLD §8 ("approval-authority keys … HSM protection level") and P118 (`constraints/cloudkms.allowedProtectionLevels = HSM` at `fld-agentic-platform`). Created with `gcloud kms keys create … --protection-level=hsm`; allowed values `software`, `hsm`, `hsm-single-tenant`, `external`, `external-vpc`, default `software` (verified 2026-09-13, [gcloud kms keys create](https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/create)). A software key would be refused by the folder constraint |
 | Signing role | `roles/cloudkms.signer` to `eve-controller@` **only** | Exactly `cloudkms.cryptoKeyVersions.useToSign` plus three read permissions ([Cloud KMS permissions and roles](https://docs.cloud.google.com/kms/docs/reference/permissions-and-roles), verified 2026-09-12) |
 | Verification role | `roles/cloudkms.publicKeyViewer` to `walle-actions@<WALLE_PROJECT>`, bound **on this one key** in `EVE_PROJECT` — cross-project, fallback path only — and nothing more; the pinned PEM is the primary path and needs no cross-project KMS grant at all | Carries `cryptoKeyVersions.viewPublicKey` and **no** signing permission (same source) |
 | Roles that must never appear on `walle-actions@` | `roles/cloudkms.signerVerifier`, `roles/cloudkms.cryptoOperator` | Both carry `useToSign` (same source). A project- or key-ring-level grant of either is a build failure: it could mint an Eve approval |
@@ -418,6 +515,8 @@ requests and verifies them; it never makes them. The complete cross-project tabl
 | Grant | Level | Held by | Made by | Note |
 |---|---|---|---|---|
 | `roles/run.invoker` on `walle-actions` | Service | `eve-controller@`, `eve-verifier@`, `eve-console@` (`EVE_PROJECT`) | Wall-E's runbook, Phase 10 loop | Per *service*, not per path — see the allowlist below. This list is not exhaustive for the service: `mo-analyst@<MO_PROJECT>` also holds `run.invoker` on `walle-actions`, for the two read endpoints only (Mo's set, topology row 8) |
+| `roles/run.invoker` on `walle-actions-super` (added 2026-09-13) | Service | `eve-controller@`; `eve-verifier@` (added the same day) | Wall-E's runbook (platform HLD §18 item 25) | **Halt path only**: the in-app control list of `walle-actions-super` carries no other endpoint for it. Open for the reconcile pass: page 07 §7 has `eve-reconciler` (identity `eve-verifier@`) set `halt_all` on both lanes for `log_pipeline_silent`, while item 25 names `eve-controller@` only — which identity holds this grant is *tbd*. **Decided 2026-09-13 (review-findings pass): both `eve-controller@` and `eve-verifier@` hold this grant, halt path only** ([../project-topology.md](../project-topology.md) row 27). The reconciler limb (`eve-verifier@`) raises every super-admin-lane halt of §14 of [03-lld.md](03-lld.md) (`reconciliation_gap`, the tenant-integrity rules, `log_pipeline_silent`); `eve-gate` (`eve-controller@`) keeps it for halts it raises at the approval point. Routing reconciler halts through `eve-gate` was rejected: it would put the parser of attacker-writable log strings next to the signer. |
+| `roles/bigquery.dataViewer` on the `walle_audit` dataset (added 2026-09-13) | Dataset | `eve-export@` | Wall-E's runbook (P107; a new topology §3 row) | The daily export's one read in `WALLE_PROJECT` |
 | `roles/datastore.viewer` | — | **nobody** | Not made. `EVE_PROJECT_ROLES` in Wall-E's script is `()` since 2026-09-13 (CC-26 superseded); SETUP Phase 6 refuses the line | Was the E-12 exception through which `eve-gate` discovered work. **No Firestore read exists today**; the replacement is topology decision 44 — the same role under an IAM Condition scoped to Wall-E's `(default)` database (expression unverified), or the list endpoint of CC-33. Eve's discovery path is blocked at S3 entry until one lands |
 | `roles/agentregistry.viewer` | — | **nobody** | Not made. Dropped by Wall-E's Phase 13b and `registry` (topology decision 43) | No resource-level form exists and no Eve duty needs it: Eve holds Wall-E's committed endpoint URL in `eve/config` and asserts the card from `GET /healthz` or not at all |
 | `roles/bigquery.dataViewer` on the `walle_audit` **dataset** | Dataset | `eve-v0@`, `eve-controller@`, `eve-verifier@` | Wall-E's runbook (CC-22, `add_dataset_access` keyed on `EVE_PROJECT`), provided since 2026-09-13; `eve-v0@` at S0, the other two at S3 entry | Never project-level `dataViewer`, which would be a lateral path into Wall-E's project |
@@ -475,6 +574,29 @@ test suite only. There is no fault-injection or test-mode path reachable in any 
 image, on either side; the seeded-fault exercise uses a separate sandbox deployment and
 dataset.
 
+## Grants Eve's runbook makes to principals outside `EVE_PROJECT` (added 2026-09-13)
+
+The mirror image of the table above: grants **on Eve's resources** to foreign principals,
+each made by Eve's runbook ([07-build-runbook.md](07-build-runbook.md)) and each a row the
+platform HLD §18 item 25 adds to [../project-topology.md](../project-topology.md) §3.
+
+| Grant | Level | Held by | Made by | Gate | Note |
+|---|---|---|---|---|---|
+| `READER` on `eve_quality` | Dataset | `mo-metrics@MO_PROJECT` | Eve's runbook | Wall-E's Stage 1 | Authorised views, no free-text columns; never `grades_blind` or `review_queue_blind`; **no binding in `MO_PROJECT`**. Mo reads; Eve reads nothing Mo writes; Mo is never Eve's grader (platform HLD §13.3) |
+| `READER` on `eve_quality` | Dataset | the validator custodian (`VALIDATOR_PROJECT`) | Eve's runbook | Wall-E's Stage 1; until it lands, Eve-targeting bundles are advisory `incident_note` only (P30) | Re-derives every Eve metric a promotion or a Mo proposal cites |
+| — on `eve_grades` (`grades_eve`), `VALIDATOR_PROJECT` (added 2026-09-13, review-findings pass) | Dataset | **no Eve identity** | the validator custodian, not Eve's runbook | Wall-E's Stage 1 | Proposed location ([09-open-decisions.md](09-open-decisions.md) E-21; [../project-topology.md](../project-topology.md) rows 45–46): the approval surface's grading identity writes it insert-only, `mo-metrics@` reads it; Eve neither reads nor writes the grades of its own verdicts |
+| `READER` on the mirror's dataset | Dataset | `mo-metrics@MO_PROJECT` | Eve's owner | S4 | Unchanged (topology row 18, decision 51) |
+| `READER` on the authorised-view dataset fronting `eve.*`, `eve_workspace_logs` and the report tables (name *tbd*) | Dataset | `eve-advisor@EVE_ADVISOR_PROJECT` | Eve's runbook | the `eve-advisor` build (P34, P19) | Never on the source datasets |
+| `roles/bigquery.dataEditor` on `eve_advice` | Dataset | `eve-advisor@EVE_ADVISOR_PROJECT` | Eve's runbook | the `eve-advisor` build | The only write the reporting path holds; no control-path identity reads this dataset |
+| `objectCreator` on `ladder/`; `publicKeyViewer` on `eve-approval`; `dataViewer` on the receipts dataset | as above | Wall-E principals | Eve's owner | S3 / S4 | The three carve-outs of topology decision 48, unchanged |
+
+Two grants cross the other way, **out of the tenant's organisation**, and are made by the
+witness administrators on witness resources, never by Eve's runbook: `eve-export@` →
+`roles/bigquery.dataEditor` on `eve_mirror` and `roles/storage.objectCreator` on the
+retention-locked witness bucket in `EVE_WITNESS_PROJECT`. No witness principal holds any grant
+in the tenant's organisation, so `iam.allowedPolicyMemberDomains` in the tenant needs no
+witness exception (platform HLD §13.2, §3.3).
+
 ## Why neither Eve identity can reach a model
 
 No language model may produce an Eve approval. That is
@@ -502,6 +624,12 @@ rather than by policy:
 An Eve signature cannot be produced by an LLM loop because the process cannot reach a model
 and its identity could not authenticate to one if it could.
 
+**Added 2026-09-13.** The section stays true for the two runtime identities and gains a
+project-level absence: a `gcp.restrictServiceUsage` denylist on `aiplatform.googleapis.com`
+set on `EVE_PROJECT` itself (platform HLD CP5). `eve-advisor@` in `EVE_ADVISOR_PROJECT` may
+reach a model (P34) and is outside this section by construction: it holds no signer, no
+invoker and no secret, and nothing it writes is read by either runtime identity.
+
 ### Egress
 
 `Assumption:` until Agent Gateway availability in `europe-west1` is confirmed, Eve's egress
@@ -510,6 +638,10 @@ control is VPC Service Controls plus a host allowlist: `walle-actions`,
 `bigquery.googleapis.com`, `firestore.googleapis.com`, `storage.googleapis.com`.
 `aiplatform.googleapis.com` is deliberately never registered. Agent Gateway availability in
 that region is **unverified** and stays so; this is decision **E-19**, due before S4.
+**Closed 2026-09-13 by platform decision P3** (perimeter model by two spikes, with P81 and
+P89): the gateway-or-perimeter question is now the platform's, and `run.allowedIngress` and
+the controller folder's policies follow it; until P3's spikes pass, the host allowlist above
+is Eve's interim and `aiplatform.googleapis.com` stays unregistered.
 
 ## The two properties re-verified after every IAM change
 
@@ -536,7 +668,15 @@ So:
   `EVE_PROJECT`'s IAM policy nor in `FOLDER_ID`'s — enumerating exactly the three
   resource-level carve-outs and failing on a fourth. These are the three rows
   [C11](../wall-e/14-hld-challenge.md)'s residual added; they move from Wall-E's job to
-  Eve's.
+  Eve's. **Extended 2026-09-13** (platform HLD §4.7, §18 item 25): the drift job's expected
+  set of foreign principals in `EVE_PROJECT` is enumerated rather than capped at three — the
+  three Wall-E carve-outs; `mo-metrics@` on the mirror's dataset from S4 and on `eve_quality`;
+  the validator custodian on `eve_quality`; `eve-advisor@` on its view dataset and on
+  `eve_advice`; `platform-drift@CORE_PROJECT`'s folder-level `roles/iam.securityReviewer`,
+  inherited (the named exception to decision 48); `factory-apply@CICD_PROJECT` **only while a
+  matching approved `ent-factory-singleton` PAM grant is active** (P142); and the Sensitive Data
+  Protection discovery service agent (P108). Any principal outside that set fails, as a fourth
+  Wall-E principal did.
 - **Wall-E's drift job** asserts only what is visible in `WALLE_PROJECT`: `walle-actions@`
   holds no KMS signing role anywhere in its own policy, the pinned PEM set matches
   `contracts/eve-public-keys/`, no Eve or Mo identity holds a write role or any
@@ -553,7 +693,9 @@ outside that repository. A single pull request cannot widen Wall-E and loosen Ev
 Not for Wall-E, not for Eve, not for Mo, at any stage. `eve@<domain>` holds its own
 consented refresh token and is never impersonated by anything. Mo holds no Workspace
 credential at all; its GCP identities (`mo-metrics@`, `mo-analyst@`, `mo-narrator@`) live in
-`MO_PROJECT`, and none of them holds anything in `EVE_PROJECT`.
+`MO_PROJECT`, and none of them holds anything in `EVE_PROJECT` — narrowed 2026-09-13: except
+`mo-metrics@`'s two dataset-level reads (the mirror from S4, `eve_quality` from Wall-E's
+Stage 1), neither of which is a credential, a write or a project-level role.
 
 This is worth restating in Eve's set rather than inheriting it, because Eve is exactly the
 place where DWD would look attractive: a verifier that has to read the whole tenant is the
@@ -574,6 +716,10 @@ a verifier.
 | A PEM exists for every key version | Teardown guard, before `--destroy-key-versions` is offered | Teardown |
 | No Wall-E deployer appears in `EVE_PROJECT`'s IAM policy nor in `FOLDER_ID`'s (inherited bindings are invisible to a project-level read), and no Wall-E principal holds anything in `EVE_PROJECT` beyond the three resource-level carve-outs | Eve's daily drift job | Daily |
 | No `aiplatform.*` permission on either Eve identity | CI IAM-policy assertion | Every build |
+| `aiplatform.googleapis.com` denied on `EVE_PROJECT` by a project-level `restrictServiceUsage` denylist (added 2026-09-13) | Eve's drift job; SG-04 in the SIEM | Daily; on change |
+| `eve-approval` protection level is `HSM` (added 2026-09-13) | Phase 11 verify; the folder constraint refuses anything else | At creation; drift daily |
+| `eve@`'s consented scope set equals the ten-scope set exactly, no content scope, `apps.licensing` absent; `eve@` is not a super admin (added 2026-09-13) | Phase 8 token verification; Eve's roster check (`users.list` `isAdmin`) | Onboarding; daily |
+| No control-path identity holds a read on `eve_advice`; `eve-advisor@` holds nothing but its two dataset grants (added 2026-09-13) | CI assertion on the dataset access lists; Eve's drift job | Every build; daily |
 
 The verification commands themselves are in [07-build-runbook.md](07-build-runbook.md);
 what happens when one of these checks fires is in
@@ -586,6 +732,7 @@ what happens when one of these checks fires is in
 - [05-stages.md](05-stages.md) — when each identity, secret and key comes into existence
 - [08-contract-changes.md](08-contract-changes.md) — the edits this page forces on Wall-E's runbook and setup code
 - [09-open-decisions.md](09-open-decisions.md) — E-1 (answered), E-2, E-9, E-12, E-16, E-19
+- [../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2–§13.3 — the two paths, the witness, `eve_quality` (2026-09-13)
 - [../project-topology.md](../project-topology.md) — the four projects, every cross-project grant, and decisions 42–52
 - [../wall-e/02-identity-and-auth.md](../wall-e/02-identity-and-auth.md) — Wall-E's equivalent, and the source of the no-DWD argument
 - [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) — the contract between the three agents

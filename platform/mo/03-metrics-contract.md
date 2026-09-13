@@ -3,13 +3,20 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
+- Objective restated 2026-09-13; see the platform HLD
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3, §11.1, §18 item 21).
+  §7 now carries the **metric pack per tier** (§7.1), audit completeness as the **headline
+  Wall-E metric** with the uncatalogued-event count (§7.2), and the **Eve quality pack** with
+  its source rule as assertion A10 (§7.3). Wall-E's arithmetic below is unchanged.
 - Scope: the arithmetic Mo computes, in enough detail that the CI validator and an auditor
   read the same thing and get the same numbers. Everything on this page is computed by
   committed SQL in `config/metrics/*.sql`, parameterised by `config/metrics/gates.yaml`, and
   re-executable by anyone holding dataset-level read on `${WALLE_PROJECT}.walle_audit` and
   `bigquery.jobs.create` in a project of their own — never a project-level role in
   `WALLE_PROJECT`. Mo's own SQL runs in `MO_PROJECT` and names Wall-E's tables fully
-  qualified ([`../project-topology.md`](../project-topology.md)).
+  qualified ([`../project-topology.md`](../project-topology.md)). Since 2026-09-13 the Eve
+  quality pack (§7.3) is re-executable by anyone holding dataset-level read on
+  `${EVE_PROJECT}.eve_quality` as well — the validator custodian once P30 lands.
 - Companion pages: [README.md](README.md), [01-hld.md](01-hld.md),
   [02-identity-and-access.md](02-identity-and-access.md),
   [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md),
@@ -38,6 +45,10 @@ see [02-identity-and-access.md](02-identity-and-access.md).
 
 The organising property of the whole design applies to every figure defined below: **it is
 re-derivable from `walle_audit` alone, and the gate re-derives it rather than believing it.**
+Qualified 2026-09-13 (platform HLD §13.3): that holds for Wall-E's pack. A figure in the Eve
+quality pack is re-derivable from `eve_quality` and Wall-E's `walle_audit`, under the source
+rule of §7.3, and the gate re-derives it only once the custodian's `READER` on `eve_quality`
+exists (P30); until then it is reported, never cited as evidence.
 A promotion pull request carries the metric, the value, the exact SQL at a pinned commit, the
 window, the fingerprint, the sample size and the sample seed; the validator runs that SQL
 itself and refuses the merge if one value differs. Mo's numbers are never trusted. They are
@@ -326,15 +337,56 @@ the SQL share a misunderstanding.
 | A7 | No published row carries an email-shaped string | The suppression rule, [§14](#14-the-suppression-rule) |
 | A8 | No published group-by cell has a count between 1 and 4 | Re-identification by small cell |
 | A9 | No cell carries more than one `ladder_events` demotion row attributable to the same `decided_block_id` | A retired block firing a second demotion — [§4](#4-the-gates)'s `DM → RH → NR` loop |
+| A10 (added 2026-09-13) | **The source rule.** No published Eve-pack value marked `evidence_eligible` has a lineage that lacks every independent source — `grades_eve`, `seeded_fault_runs`, golden-replay results, Wall-E's `eve_last_seen` — and in particular none computed from `eve.verdicts` alone ([§7.3](#73-the-eve-quality-pack)) | A number about Eve that only Eve's own live process vouches for, cited as if independent |
+| A11 (added 2026-09-13) | **The differential check.** For each of the ten metrics and window, Mo's `scorecard` value is diffed against Eve v0's `eve.findings` (read through `eve_quality`); a difference sets `metric_divergence` on the Eve scorecard | Two independently pinned computations of the same metric disagreeing — the second implementation [01-hld.md](01-hld.md) declined to build, obtained from Eve's v0 (platform HLD §13.3) |
 
-A1–A6 and A9 are correctness assertions; A7 and A8 are disclosure assertions and are the
-mechanism behind [§14](#14-the-suppression-rule). All nine are failures of the run, not
-warnings: a metrics run that cannot assert its own output does not publish it, and the watermark then
+A1–A6, A9 and A10 are correctness assertions; A7 and A8 are disclosure assertions and are the
+mechanism behind [§14](#14-the-suppression-rule). All ten are failures of the run, not
+warnings — except A11, which is a reporting assertion: a divergence is an **Eve finding** and
+a flag on the Eve scorecard, never a failed run, because either side may be the one that is
+wrong: a metrics run that cannot assert its own output does not publish it, and the watermark then
 ages, which is itself restrictive — see [06-failure-modes.md](06-failure-modes.md).
 
 ---
 
 ## 7. The ten metrics the ladder is argued from
+
+Restructured 2026-09-13 (platform HLD §13.3, §11.1): the ten metrics below are **Wall-E's
+pack**, the first instance of a per-agent metric pack. §7.1 says which pack each tier gets,
+§7.2 is Wall-E's pack with audit completeness as its headline, and §7.3 is the Eve quality
+pack. Every row of every pack is keyed on `agent_id`, because there is one Mo per platform.
+
+### 7.1 The metric pack per tier
+
+The tier model is the platform's ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)
+§11.1; [../agentic-platform/05-registry-and-autonomy-contract.md](../agentic-platform/05-registry-and-autonomy-contract.md)
+§9.8). Mo reads the platform `audit.schema`, so any agent that implements it gets the pack its
+tier names; a pack is a per-agent `gates.yaml` and a set of committed metric SQL, validated by
+the one platform validator against golden fixtures per pack.
+
+| Tier | Pack | Grading hour | Human cost (platform HLD §11.1) |
+|---|---|---|---|
+| **C** classical | cost, reliability | none | 0 |
+| **R** read tools | + Model Armor `MATCH_FOUND` rate, drift, freshness | none | ≈ 0.5 h/month |
+| **W** write agents | + the full pack: a ladder pack in the shape of §7.2, blind grading, the gates of §4 | `max(10 %, 5 items/week)` per cell | ≈ 1 h/week per agent from a named human who is not the playbook owner, + approvals; the Tier W cap by grading capacity is P25 |
+| **P** privileged (P-SA: Wall-E) | + the Eve quality pack of §7.3 for the agent's verifier | as W | ≈ 3 h/week + bought desk + a second super admin on the rota |
+| **X** AGI-class | + evaluation gates (research-grade) | undefined | undefined |
+
+Two notes. The platform's "≈ 1 h/week" is a per-agent planning figure; for Wall-E at S4
+volume this page computes **at least two hours a week** of blind grading
+([§13.3](#133-coverage-is-itself-a-metric)), and the larger number is the one Wall-E's cost
+report carries. And a pack is chosen by the register's `tier`, never by Mo: Mo cannot move an
+agent to a lighter pack.
+
+### 7.2 Wall-E's pack — the ten metrics, audit completeness first
+
+**Audit completeness is the headline Wall-E metric** (platform HLD §13.3, dated 2026-09-13).
+With Wall-E holding Super Admin the tenant no longer refuses an out-of-role call, enforcement
+sits in the action service alone, and the one number that sees an action outside the
+catalogue and outside band B is the join of Google's admin log to Wall-E's own rows. It is
+printed first on the scorecard and in the digest, together with metric **9b**, the separate
+count of robot admin events that match **no** catalogue operation and **no** band-B operation.
+The table keeps its numbering so every existing reference holds.
 
 Thirty-day rolling window, evaluated hourly, clamped to the retention floor. Definitions and
 thresholds are [05](../wall-e/05-autonomy-ladder.md) §8's, reproduced here with the exact
@@ -358,7 +410,8 @@ shape for all of them.
 | 6 | **Run reliability** | Runs reaching a terminal state within budget, from `runs` | ≥ 99 % | Below 97 %: `no_autonomous` for that playbook | `agg_reliability_playbook` |
 | 7 | **Eve post-hoc latency** | p99 time from an L5 write to Eve's independent verification | ≤ 60 min p99 | Breach: promotions frozen. Above 4 h: L5 cells drop to L4 | `agg_eve_latency` |
 | 8 | **Approval latency** | p50 human time-to-verdict, in **business hours** on the `Europe/Paris` calendar | p50 < 4 business hours | **Blocks stage exit.** Excluded from every promotion and demotion predicate | `agg_approval_latency` |
-| 9 | **Audit completeness** | Workspace admin-audit events by the robot, from `${WALLE_PROJECT}.walle_workspace_logs`, with a matching `${WALLE_PROJECT}.walle_audit` row — a cross-project join under two dataset-level `READER`s | 100 % | Below 100 %: halt writes until reconciled | `agg_audit_completeness` |
+| 9 | **Audit completeness — the headline** | Workspace admin-audit events by the robot, from `${WALLE_PROJECT}.walle_workspace_logs`, with a matching `${WALLE_PROJECT}.walle_audit` row — a cross-project join under two dataset-level `READER`s. *Qualified 2026-09-13 (P104, P107, topology row 40): the events side is the view `${LOGGING_PROJECT}.platform_logs_views.walle_workspace_logs`, read under `READER` on `platform_logs_views` made by the factory* | 100 % | Below 100 %: halt writes until reconciled | `agg_audit_completeness` |
+| 9b | **Uncatalogued robot admin events** (added 2026-09-13) | Count of admin-audit events whose actor is the robot account and which match **no** band-A catalogue `actions` row and **no** band-B `/v1/execute-generic` audit row (the band-B row carries both humans and the Discovery revision, platform HLD §13.1), across every admin event type — including `DELEGATED_ADMIN_SETTINGS` (for example `ASSIGN_ROLE`) and `SECURITY_SETTINGS` | **0** | Any one: **severity 1** — halted and paged by Eve's reconciler and the SIEM's super-admin detection set (platform HLD §13.2), never by Mo; Mo reports it first | `agg_uncatalogued_admin_events` ◇ |
 | 10 | **Drill freshness** | Days since the last kill-switch drill, from the write-ahead `drills` table | ≤ 30 days | Stale: CI refuses **every** promotion | `agg_drill_freshness` |
 
 Those ten `agg_*` views are ten of the **sixteen** supporting aggregates. The other six carry
@@ -374,11 +427,27 @@ queries of [07-build-runbook.md](07-build-runbook.md) Phase Mo-4 populate these 
 Notes the implementation must carry, each of which is a place where a plain reading of §8
 would produce the wrong number:
 
+- **Metric 9b is reported, not enforced, by Mo.** The halt on an uncatalogued write belongs to
+  Eve and the SIEM, which read Google's streams themselves; Mo's count is the measurement over
+  the window and the trend, and a count above zero is also an entry on the coverage map
+  ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §1.6). The admin log records
+  role assignments as `ASSIGN_ROLE` under type `DELEGATED_ADMIN_SETTINGS` and security changes
+  under type `SECURITY_SETTINGS`, both under `applicationName=admin`
+  ([Delegated admin settings events](https://developers.google.com/workspace/admin/reports/v1/appendix/activity/admin-delegated-admin-settings),
+  [Security settings events](https://developers.google.com/workspace/admin/reports/v1/appendix/activity/admin-security-settings),
+  both verified 2026-09-13). `Assumption:` `walle_workspace_logs` carries every admin event type
+  for the robot actor; which streams Eve's sink and the evidence lake hold is Eve's set's and
+  the platform's (platform HLD §18 item 13). `agg_uncatalogued_admin_events` is a seventeenth
+  aggregate of Wall-E's pack; "sixteen" elsewhere in this set predates it.
 - **Metric 1's closed list is exactly ten codes** — `operation_not_allowed`,
   `protected_principal`, `protection_incomplete`, `bad_approval`, `approval_already_used`,
   `approver_is_agent`, `level_bypass`, `control_plane_unavailable`, `selection_not_declared`,
   `ou_destination_not_allowed` — taken from [03](../wall-e/03-lld.md)'s denial vocabulary and
-  nowhere else. `protected_principal` from human chat is the control working correctly, is an
+  nowhere else. Qualified 2026-09-13: with a super-admin robot, `ou_destination_not_allowed` and
+  `protected_principal` are enforced by the action service's code, not by Google refusing an
+  out-of-role call (platform HLD "What this reverses"); the hard-denied-list and band-B codes
+  Wall-E's `03` gains (platform HLD §18 item 2) join this list when they land, by a
+  `gates.yaml`-class pull request. `protected_principal` from human chat is the control working correctly, is an
   audit row and nothing else, and counting it would halt the programme for asking a question.
 - **Metric 4 needs a column that does not exist.** [05](../wall-e/05-autonomy-ladder.md) §8
   says an operation whose desired state already held is a no-op, "recorded and excluded", and
@@ -401,6 +470,74 @@ would produce the wrong number:
   footnote that Google's log proves the robot acted and never who asked
   ([14](../wall-e/14-hld-challenge.md) C43): the human attribution comes from Wall-E's own
   rows, and that half is not independently checkable.
+- **Metric 7 is Wall-E's ladder gate, not an Eve quality metric.** It says how late Eve's
+  post-hoc verification is for Wall-E's L5 cells; whether Eve's verdicts are *right* is §7.3.
+
+### 7.3 The Eve quality pack
+
+Added 2026-09-13 (platform HLD §13.3; the gaps are in `.agent-work/review/mo-both-agents.md`,
+outside the wiki). The pack for Eve as Wall-E's Tier P verifier. Each row is keyed
+`agent_id = eve` and, where it is per cell, on the Wall-E `(family, trigger)` cell the verdict
+was about — the cell the 30-day cross rule of
+[04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.6 is written against
+(`Assumption:` that keying). Computed by T0 as `mo-metrics@`, from `eve_quality` in
+`EVE_PROJECT` and from `walle_audit`, under the dataset-level `READER`s in
+[02-identity-and-access.md](02-identity-and-access.md) §2.1. Nothing in this pack is read by
+Eve: **Eve keeps its own fast drop to advisory on its own number**, and Mo reports any
+divergence between its number and Eve's as an Eve finding.
+
+| # | Metric | How Mo computes it | Independent source (the source rule) | Target | Breach → | Sole source |
+|---|---|---|---|---|---|---|
+| E1 | **False-refusal rate** | Eve refusals a human grader marked wrong ÷ Eve refusals graded, with the Wilson lower and upper bounds of [§3.1](#31-wilson-score-interval) (the same UDFs, the same `z`) | `grades_eve`, joined to `eve_quality.verdicts` | Eve's own disagreement threshold in `thresholds.yaml` ([../eve/06-failure-modes.md](../eve/06-failure-modes.md)); Mo uses the same number, not its own | Mo reports; a Mo bound over Eve's threshold while Eve has not dropped to advisory is an Eve finding (`eve_incident_note`) | `agg_eve_false_refusal` ◇ |
+| E2 | **Wrong-accept count** | Eve approvals a human grader or an operator veto found wrong, per cell and window. A count, not a rate | `grades_eve`; Wall-E's `ladder_events` and veto rows | **0** | Each one is severity 2 by Wall-E's §9 table, enforced elsewhere; Mo reports the count and the trend | `agg_eve_wrong_accept` ◇ |
+| E3 | **Agreement** | Raw agreement and Gwet's AC1 between Eve's verdict and the human grade; Cohen's κ reported and never gated, as [§10](#10-grading-rules) | `grades_eve` | *tbd* — reported, not gated | — | `agg_eve_agreement` ◇ |
+| E4 | **Pages versus budget** | Pages per reason code per week against the page budget | `eve_quality.pages`, marked `self_reported` (below) | The budget in `thresholds.yaml`, *tbd* (E-18) | Above budget: an `eve_threshold_tighten` or `eve_incident_note` proposal, never a loosening on this number alone | `agg_eve_pages` ◇ |
+| E5 | **Time-to-verdict** | p50 and p99 from plan freeze to Eve's verdict | plan freeze from `walle_audit.plans`; verdict time from `eve_quality.verdicts` | *tbd* | Reported | `agg_eve_time_to_verdict` ◇ |
+| E6 | **Time-to-acknowledge** | p50 and p99 from page to human acknowledgement, per severity | `eve_quality.pages` acknowledgement columns, marked `self_reported` until corroborated by the pager's record | Per the severity-to-channel table (platform HLD §13.2) | Reported; `not_computable` until the acknowledgement columns land (platform HLD §18 item 15) | `agg_eve_time_to_ack` ◇ |
+| E7 | **Availability** | Share of the window in which Wall-E's passive stamp saw Eve | Wall-E's `eve_last_seen` in `walle_audit` — never Eve's own heartbeat | *tbd* | Reported | `agg_eve_availability` ◇ |
+| E8 | **Seeded-fault catch** | Faults caught ÷ faults injected at the last run, per `eve_config_version`; the negative controls reported separately | `eve_quality.seeded_fault_runs` (monthly and on every `eve_config_version` change) | All faults caught, no negative control fired | A missed fault is an Eve finding and a coverage-map entry | `agg_eve_seeded_faults` ◇ |
+| E9 | **`metric_divergence`** | Assertion A11 over the ten metrics against Eve v0's `eve.findings` | Mo's own `walle_audit` computation | none | An Eve finding | `agg_eve_divergence` ◇ |
+
+**The source rule, as an assertion query (A10).** Numbers about Eve come from `grades_eve`,
+`seeded_fault_runs`, golden-replay results and Wall-E's passive `eve_last_seen` — **never from
+`eve.verdicts` alone**, because a compromised Eve writes false receipts and a Mo that scored
+self-reported verdicts would be scoring Eve's own account of itself. This page's rendering of
+the rule (`Assumption:` the column names): every Eve-pack row carries `source_tables
+ARRAY<STRING>`, stamped by the committed SQL and checked by CI review against the SQL's `FROM`
+clauses, and `evidence_eligible BOOL`; a row whose sources include none of the four
+independent ones is `self_reported`, is shown on the Eve scorecard with that label, and can
+never be `evidence_eligible`.
+
+```sql
+-- A10: the source rule. Runs after every Eve-pack query; ASSERT fails the job.
+ASSERT (
+  SELECT COUNT(*) FROM `walle_metrics.eve_scorecard`
+  WHERE agent_id = 'eve'
+    AND evidence_eligible
+    AND NOT EXISTS (
+      SELECT 1 FROM UNNEST(source_tables) t
+      WHERE REGEXP_CONTAINS(t, r'(^|\.)(grades_eve|seeded_fault_runs|golden_replay_results)$')
+         OR t LIKE '%.walle_audit.%')
+) = 0 AS 'an evidence-eligible number about Eve has no independent source';
+```
+
+`walle_metrics.eve_scorecard` and `golden_replay_results` are ◇ names this page fixes; the
+dataset takes its agent-neutral name before Stage 0
+([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.7). The stamp is only as
+good as CI review of the query text. A stronger form reads the job metadata instead —
+`INFORMATION_SCHEMA.JOBS_BY_USER.referenced_tables`, the tables a non-cached query job actually
+referenced, which needs `bigquery.jobs.list` on `MO_PROJECT`
+([JOBS_BY_USER view](https://docs.cloud.google.com/bigquery/docs/information-schema-jobs-by-user),
+verified 2026-09-13); `mo-metrics@` holds only `jobUser` today, so that form is *tbd* with its
+grant.
+
+**What this pack is not.** Mo is **not Eve's grader**: humans grade Eve's verdicts into
+`grades_eve`, written by the platform approval surface and not by `eve-console`, on a blind
+sample the approval surface draws. Mo does not set `eve_authority`, does not lower Eve and does
+not read `grades_blind` or `review_queue_blind`. Until the validator custodian holds `READER`
+on `eve_quality` (P30), every figure here is reported and none is cited as evidence: Eve bundles
+are advisory `eve_incident_note` only, stated in their heading. Golden fixtures for E1's bounds
+and E5/E6's percentiles join `config/metrics/fixtures/**` before P30's gate opens.
 
 ---
 
@@ -488,7 +625,11 @@ After **any automatic demotion**, all three of the following before re-raising:
 hold and is not silently absorbed: it sets `review_verdict = false_positive` with a named
 reviewer and a `review_ref`, and Mo publishes a **breaker false-positive rate** from those
 rows. When that rate rises, the finding is about Eve or about the metric, and Mo's pull
-request targets the **metric definition** or opens an Eve finding — never the ladder. That is
+request targets the **metric definition** or opens an Eve finding — never the ladder.
+Qualified 2026-09-13: Mo may now also propose an Eve threshold change — an
+`eve_threshold_tighten`, or an `eve_threshold_loosen` under its two-reviewer, cooling and
+30-day rules ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.6) — and it is
+still never a ladder change. That is
 the whole of E35's review path, and it is why the review verdict is a column rather than a
 conversation.
 
@@ -884,7 +1025,8 @@ authenticated reviewers at L4 and L5.
 
 ## 16. The `scorecard` row
 
-One row per `(family, trigger, fingerprint_sha, as_of_hour)` in
+One row per `(agent_id, family, trigger, fingerprint_sha, as_of_hour)` — `agent_id` added
+2026-09-13, one Mo per platform — in
 `${MO_PROJECT}.walle_metrics.scorecard`, snapshotted daily into
 `${MO_PROJECT}.walle_metrics_archive.scorecard_YYYYMMDD` — the dated, citable object a
 decision file points at and an auditor replays against. The citable object is
@@ -899,6 +1041,7 @@ enum come from the design itself.
 |---|---|---|
 | `as_of` | `DATE` | **The partitioning column** of every table in `walle_metrics`, including this one. The day `as_of_hour` falls in |
 | `as_of_hour` | `TIMESTAMP` | The hour the row was computed for; the `MERGE` key with `cell` and `fingerprint_sha` |
+| `agent_id` | `STRING` | Added 2026-09-13. The register's immutable id (platform `audit.schema`); part of the `MERGE` key and of every cell, so two agents' packs never share a row |
 | `family`, `trigger` | `STRING` | The cell, per R1 |
 | `fingerprint_sha` | `STRING` | [§11.1](#111-the-fingerprint); `partial_fingerprint` flag if the four missing columns have not landed |
 | `current_level`, `target_level` | `STRING` | Deployed level from `ladder_events`; what `ladder.yaml` says it should be |
@@ -966,6 +1109,7 @@ is a `gates.yaml`-class pull request.
 | `reliability_below_gate` ◇ | Run reliability below 97 % |
 | `eve_latency_breach` ◇ | Eve post-hoc latency above 60 min p99, from S4 only |
 | `audit_incomplete` ◇ | Audit completeness below 100 % |
+| `uncatalogued_admin_event_present` ◇ (added 2026-09-13) | Metric 9b above zero in the window |
 | `stale_evidence` | Any source outside its freshness bound |
 | `window_clamped` ◇ | The window was clamped to the retention floor |
 | `fingerprint_reset` ◇ | The sample reset because the fingerprint changed; carries old and new and the surviving `n` |
@@ -992,5 +1136,6 @@ back, or pushed forward, by how long a human took to answer.
 | Minimum reporting cell size 5, and who may read `walle_metrics` | [§14](#14-the-suppression-rule) | 44 |
 
 Numbering is **provisional**: [09-open-decisions.md](../wall-e/09-open-decisions.md) currently
-ends at decision 41 and Eve's set may claim the next numbers. See
+ends at decision 41, and 42–52 are claimed by [`../project-topology.md`](../project-topology.md)
+§8; platform decisions continue as P1.. (qualified 2026-09-13). See
 [08-open-decisions.md](08-open-decisions.md).

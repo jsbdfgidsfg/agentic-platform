@@ -6,6 +6,19 @@
 - 2026-09-13: placement only. `PROJECT_ID` and `PROJECT_NUMBER` below are `WALLE_PROJECT`'s;
   Eve's and Mo's reads of Wall-E's datasets are named as cross-project grants per
   [../project-topology.md](../project-topology.md). No screen, threshold or control changed.
+- **Objective restated 2026-09-13; see the platform HLD** ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
+- **Framing, 2026-09-13: this is a platform chapter seeded here.** It was written for Wall-E's
+  engine; the platform promotes its layer table, the tool-result finding, the template design and
+  the sanitize-log alerts to platform rules in
+  [../agentic-platform/06-gateways-model-armor-perimeter.md](../agentic-platform/06-gateways-model-armor-perimeter.md)
+  (§3, the template standard per tier) and platform HLD §6.2. The floors (organisation, folder,
+  tier, and the factory-generated project floor) and the sanitize-log sink are **platform
+  controls**, applied by the platform's Terraform, never by an agent's script; the templates stay
+  **per agent**, generated from the tier standard, and an agent owner may only tighten them.
+  Where this chapter and page 06 disagree on a platform control, page 06 wins; this chapter stays
+  the authority for Wall-E's injection surface and its own two templates. Wall-E is Tier P-SA, so
+  its response template carries the **hard-denied vocabulary detectors** (§4, §5 step 2b, added
+  2026-09-13).
 - Maturity: **design. Nothing is built and nothing is enabled.**
 - Product facts: verified on 2026-09-08 and 2026-09-09 against Google Cloud documentation
   and the `google-adk` 2.8.0 source. Each carries its launch stage. Where the research could
@@ -76,7 +89,15 @@ tainted run takes the inbox column, or L3 on chat. Every such string is canonica
 it reaches a model or an approval card: control characters, bidirectional overrides and
 zero-width characters stripped, whitespace collapsed, length capped, markdown escaped. Error
 text never comes back. Writes take explicit targets from a fixed catalogue, inside a pinned
-selection, inside a playbook allowlist. The agent cannot mint or post an approval. All of
+selection, inside a playbook allowlist. *Qualified 2026-09-13 (platform HLD
+[§13.1](../agentic-platform/01-hld.md)): that sentence now holds for band A only. Band B
+(`/v1/execute-generic` on `walle-actions-super`) takes a generic request that is not from the
+catalogue; it is validated against the pinned Discovery document, accepted on the `chat` trigger
+only, and permanently L3 and two-person at tier `SUPER`. Both lanes refuse the same hard-denied
+list before anything reaches Google. Band B's request body is therefore an injection surface the
+catalogue does not narrow; the P-SA response template's hard-denied vocabulary detectors (below)
+do not see that body, so the controls on it stay in code: the hard-denied list, the Discovery
+validation and the two humans on every band-B card.* The agent cannot mint or post an approval. All of
 that is in [03-lld.md](03-lld.md) and it is what stops an injection from becoming an
 incident. It is deterministic and it does not care whether the injection was clever.
 
@@ -252,7 +273,53 @@ inspect to block is a change to what Wall-E refuses.
 | Responsible AI: hate, harassment, dangerous, sexually explicit | On, `MEDIUM_AND_ABOVE` | On, same | An admin agent that narrates employee data has no business producing any of these. Google's default is medium and above | GA |
 | CSAM | Applied by default, cannot be turned off | Same | Not a decision | GA |
 | Image screening | Off | Off | Preview, US and EU multi-region only, and Wall-E takes no images | Preview |
-| Sensitive Data Protection, advanced, with a de-identify template | `tbd` | `tbd` | Would let the sanitize **log** copy carry masked names instead of raw ones. Worth deciding with the data-protection position in section 6. The inline enforcement path blocks rather than de-identifies in any case | GA |
+| Sensitive Data Protection, advanced, with a de-identify template | `tbd` | `tbd` | Would let the sanitize **log** copy carry masked names instead of raw ones. Worth deciding with the data-protection position in section 6. The inline enforcement path blocks rather than de-identifies in any case. **Decided 2026-09-13 for the fleet** (P85, [../agentic-platform/06-gateways-model-armor-perimeter.md](../agentic-platform/06-gateways-model-armor-perimeter.md) §3.3): on at Tier W and above with one fleet-wide de-identify template; Wall-E is Tier P-SA, so on | GA |
+| **Custom detectors for the hard-denied vocabulary** (added 2026-09-13, Tier P-SA only) | Off | **On**, through the advanced configuration's inspect template — see below | A second, Google-side screen on the reasoning layer's **output** for the exact strings the two lists of [platform HLD §13.1](../agentic-platform/01-hld.md) item 2 forbid. **Detection-grade**: the enforcement is the action service's hard-denied list | GA (Model Armor advanced SDP; SDP custom infoTypes) |
+
+**The P-SA response template: hard-denied vocabulary detectors.** Added 2026-09-13 ([platform HLD §6.2](../agentic-platform/01-hld.md), §3.1 row `fld-agents-p-sa`; page 06 §3.3, P85).
+A super-admin credential sits behind the action service, so a steered turn that names
+`users.makeAdmin` or a control group is the most dangerous text the model can produce. The
+action service refuses it in every lane whatever the model says; this detector makes the same
+attempt visible at Google's end, on the ingress gateway's response path, before the answer
+reaches the human caller. It does **not** see the agent's tool call to the action service, which
+is REST egress the gateway's Model Armor does not screen ([13](13-agent-interconnection.md) §7.3),
+nor a band-B request body; that is why it is detection-grade and the refusal stays in code. Facts, read 2026-09-13:
+
+- Model Armor's Sensitive Data Protection setting is **either** basic **or** advanced — the two
+  are mutually exclusive fields of `SdpFilterSettings`
+  ([REST reference](https://docs.cloud.google.com/model-armor/reference/rest/v1/projects.locations.templates);
+  [overview](https://docs.cloud.google.com/model-armor/overview)). Advanced mode references a
+  Sensitive Data Protection inspect template, optionally a de-identify template
+  (`--advanced-config-inspect-template`, `--advanced-config-deidentify-template` on
+  [`gcloud beta model-armor templates create`](https://docs.cloud.google.com/sdk/gcloud/reference/beta/model-armor/templates/create)).
+  So on the P-SA response template the inspect template must **re-list the six infoTypes basic
+  mode covers** — `CREDIT_CARD_NUMBER`, `US_SOCIAL_SECURITY_NUMBER`, `FINANCIAL_ACCOUNT_NUMBER`,
+  `US_INDIVIDUAL_TAXPAYER_IDENTIFICATION_NUMBER`, `GCP_CREDENTIALS`, `GCP_API_KEY`
+  ([infoType reference](https://docs.cloud.google.com/sensitive-data-protection/docs/infotypes-reference))
+  — or switching on the detectors silently drops the credential screen. Every infoType in the
+  de-identify template must also be in the inspect template.
+- An inspect template carries `customInfoTypes`, each a `dictionary.wordList.words` list or a
+  `regex.pattern`; dictionary words match case-insensitively
+  ([custom dictionary detectors](https://docs.cloud.google.com/sensitive-data-protection/docs/creating-custom-infotypes-dictionary)).
+- If the SDP templates sit in another project, the Model Armor service agent needs
+  `roles/dlp.user` and `roles/dlp.reader` on that project
+  ([manage templates](https://docs.cloud.google.com/model-armor/manage-templates)).
+
+| Custom infoType | Kind | Content | Owner of the list |
+|---|---|---|---|
+| `WALLE_HARD_DENIED_METHOD` | dictionary | `makeAdmin`, `roleAssignments` | security reviewer signs; the list is generated from the committed hard-denied table, never typed twice |
+| `WALLE_PROTECTED_IDENTITY` | regex | the robot's and Eve's addresses, `walle@` and `eve@` on the tenant domain (domain *tbd*, [decision 2](09-open-decisions.md)) | same |
+| `WALLE_CONTROL_GROUP` | dictionary plus regex | `walle-operators@`, `walle-protected@`, `eve-owners@`, `ge-admins@`, `platform-approvers@`, and the `mo-` group family | same |
+| `WALLE_OAUTH_CLIENT` | dictionary | the display names of the two OAuth clients (*tbd*, decision 2) | same |
+
+The infoType names in the first column are this chapter's proposal, *tbd* at build. What the
+detector costs: the model legitimately narrating a refusal ("I cannot call makeAdmin") matches
+too, so the template follows the same flip rule as every other filter — inspect-only until the
+benign corpus has been run through it, blocking only when the measured false-block rate is under
+the threshold. In either mode a match is a `MATCH_FOUND` finding in Security Command Center and
+the SIEM, and one regression-suite case per string proves each detector fires. It adds no
+denial reason (the table at the top of this chapter still holds): the refusal is the action
+service's.
 
 **Start in `INSPECT_ONLY` and measure before blocking.** The GA `gcloud` track creates
 `INSPECT_AND_BLOCK` templates only. `INSPECT_ONLY` needs `gcloud beta` or the REST field
@@ -385,6 +452,48 @@ gcloud beta model-armor templates create walle-ingress-response \
   --template-metadata-log-sanitize-operations \
   --template-metadata-custom-llm-response-safety-error-code=400 \
   --template-metadata-custom-llm-response-safety-error-message='Response blocked by content policy'
+```
+
+**Step 2b. The P-SA response template with the hard-denied vocabulary detectors.** Added
+2026-09-13; GA surfaces, commands not yet run. The inspect template's home follows page 06 §3.3
+(the fleet's SDP templates in `CORE_PROJECT`, same location as the Model Armor template); if it
+lives outside `WALLE_PROJECT`, grant `roles/dlp.user` and `roles/dlp.reader` there to
+`WALLE_PROJECT`'s Model Armor service agent. `SDP_PROJECT`, the domain and the client display
+names are placeholders.
+
+```bash
+# 1. The inspect template: the six basic-mode infoTypes plus the custom vocabulary.
+curl -s -X POST \
+  "https://dlp.googleapis.com/v2/projects/SDP_PROJECT/locations/europe-west1/inspectTemplates" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" \
+  -d '{"templateId":"walle-psa-response-inspect","inspectTemplate":{"inspectConfig":{
+        "infoTypes":[{"name":"CREDIT_CARD_NUMBER"},{"name":"US_SOCIAL_SECURITY_NUMBER"},
+                     {"name":"FINANCIAL_ACCOUNT_NUMBER"},{"name":"US_INDIVIDUAL_TAXPAYER_IDENTIFICATION_NUMBER"},
+                     {"name":"GCP_CREDENTIALS"},{"name":"GCP_API_KEY"}],
+        "customInfoTypes":[
+          {"infoType":{"name":"WALLE_HARD_DENIED_METHOD"},"dictionary":{"wordList":{"words":["makeAdmin","roleAssignments"]}}},
+          {"infoType":{"name":"WALLE_PROTECTED_IDENTITY"},"regex":{"pattern":"(walle|eve)@DOMAIN_REGEX"}},
+          {"infoType":{"name":"WALLE_CONTROL_GROUP"},"dictionary":{"wordList":{"words":["walle-operators","walle-protected","eve-owners","ge-admins","platform-approvers"]}}},
+          {"infoType":{"name":"WALLE_CONTROL_GROUP_MO"},"regex":{"pattern":"mo-[a-z0-9-]+@"}},
+          {"infoType":{"name":"WALLE_OAUTH_CLIENT"},"dictionary":{"wordList":{"words":["NARROW_CLIENT_DISPLAY_NAME","BROAD_CLIENT_DISPLAY_NAME"]}}}]}}}'
+# If the fleet de-identify template is attached, every infoType it names must also be listed above.
+
+# 2. The response template uses advanced SDP instead of basic (the two are mutually exclusive),
+#    inspect-only until the flip rule is met.
+gcloud beta model-armor templates create walle-ingress-response \
+  --location=europe-west1 --project=PROJECT_ID \
+  --pi-and-jailbreak-filter-settings-enforcement=enabled \
+  --pi-and-jailbreak-filter-settings-confidence-level=medium-and-above \
+  --malicious-uri-filter-settings-enforcement=enabled \
+  --advanced-config-inspect-template=projects/SDP_PROJECT/locations/europe-west1/inspectTemplates/walle-psa-response-inspect \
+  --rai-settings-filters="$RAI" \
+  --template-metadata-enforcement-type=inspect-only \
+  --template-metadata-log-sanitize-operations \
+  --template-metadata-custom-llm-response-safety-error-code=400 \
+  --template-metadata-custom-llm-response-safety-error-message='Response blocked by content policy'
+# This replaces the step 2 response template for Wall-E; the prompt template is unchanged.
+# Verify: one regression-suite case per string returns MATCH_FOUND on the sdp filter, and a
+# credential string still does.
 ```
 
 **Step 3. Run the regression suite against the template directly.** GA. Record
@@ -520,6 +629,13 @@ client.agent_engines.create(
 ```
 
 **Step 10. Floor settings.** GA. Conformance first, inline second, logging third.
+
+Superseded as a Wall-E step on 2026-09-13 ([platform HLD §6.2](../agentic-platform/01-hld.md), P84;
+page 06 §3.2): floors are owned by IT security and applied by the platform's Terraform — the
+organisation, folder and tier floors as template conformance, and inline enforcement through a
+factory-generated `Custom` project floor on `WALLE_PROJECT`, `INSPECT_AND_BLOCK` always at P-SA,
+written only under PAM; any other project floor write is severity-1 drift. `./walle armor` keeps
+only Wall-E's templates. The commands below stay as the record of what the platform applies.
 
 ```bash
 # Floor administration needs roles/modelarmor.floorSettingsAdmin and this endpoint override.

@@ -3,6 +3,8 @@
 ## Status
 - Owner: the platform owner (admin)
 - Last reviewed: 2026-09-13
+- Objective restated 2026-09-13; see the platform HLD
+  ([agentic-platform/01-hld.md](agentic-platform/01-hld.md) §2 and §18 item 26).
 - Maturity: pointer page since 2026-09-13. The security baseline of the tenant app — project and
   folder, administration, location and retention, identity provider, user population, feature
   toggles, console Model Armor, agent admission and revocation, the egress gateway, connectors,

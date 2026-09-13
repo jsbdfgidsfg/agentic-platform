@@ -4,6 +4,12 @@
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
 - Last executed: **never**
+- **Objective restated 2026-09-13; see the platform HLD** ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
+  Wall-E's robot holds **Super Admin**, granted at the platform's tier gate and never by a phase of
+  this runbook (platform HLD §0.4, §13.1). Phase 1 steps 3, 5 and 6 and its Verify, Phase 3's
+  Verify, the denial suite, Phase 5's sinks and Phase 9's switches carry dated lines; the rest
+  stands. The executable procedure, [SETUP.md](SETUP.md), is edited separately (platform HLD §18
+  item 5).
 - Topology: four GCP projects since 2026-09-13 — `GEMINI_PROJECT`, `WALLE_PROJECT`,
   `EVE_PROJECT`, `MO_PROJECT`, all under `FOLDER_ID`. [../project-topology.md](../project-topology.md)
   is the authority for where every resource lives and how each grant crosses a project.
@@ -30,7 +36,11 @@ Stage 1 decision record.
   IAM rights on those projects, or a named owner of each who makes them.
 - **All five blocking decisions closed** ([09](09-open-decisions.md) 1 to 5), not just
   naming and scopes. In particular decision 5 — the organisational units — because Phase 1
-  assigns a role scoped to a pilot unit that may not exist yet.
+  assigns a role scoped to a pilot unit that may not exist yet. Qualified 2026-09-13: no
+  unit-scoped role is assigned any more; the pilot OU survives only as the allow-list in the
+  action service, and a **sandbox tenant** (not a sandbox OU) is required before Stage 1,
+  because Super Admin cannot be limited to an organisational unit (decision 29 → platform HLD
+  §3.1 nonprod row).
 - The **complete scope list** (decision 3). Scopes freeze at consent, and changing them
   means re-running Phase 3 and the trusted-client step with it.
 - Names (decision 2). The consent screen shows the app name to the robot.
@@ -59,17 +69,29 @@ export ROBOT=walle@$DOMAIN            # tbd
    units).
 2. Create the robot user `$ROBOT` in that OU. Long random password into a password
    vault (`Assumption:` one exists). No recovery email, no recovery phone.
-3. Enforce 2SV, hardware key only. Put the key in a safe.
+3. Enforce 2SV, hardware key only. Put the key in a safe. Updated 2026-09-13: **two** hardware
+   keys, named custodians, a witnessed custody record; 2SV enforced by the tenant's own policy on
+   the OU (Google's admin-2SV mandate is an edition-scoped rollout, not a universal rule); super-admin
+   self-recovery **Off at the top organisational unit**, drift-checked; the Gemini Enterprise
+   service toggle off on this OU ([platform HLD §4.6](../agentic-platform/01-hld.md), §13.1 item 6).
 4. Create groups: `walle-operators@`, `walle-readers@`, `walle-protected@`.
    Add yourself to the first two. Add every super admin to `walle-protected@`.
-5. Create the custom admin role `Wall-E — Reader` with **read privileges only**: Users
-   read, Groups read, OU read, Reports audit and usage read, Admin roles read. No
-   licence management — it is a single indivisible privilege with no read-only half, so
-   granting it now would hand Wall-E assign and revoke during the stage whose premise is
-   that it cannot write.
-6. Assign that role **customer-scoped**, not scoped to a unit. Stage 0's value is
-   tenant-wide reporting, and Groups and Reports privileges cannot be unit-scoped anyway.
-   The **write** role comes at Stage 1 and *is* unit-scoped. Two assignments, not one.
+5. **Reversed 2026-09-13.** The earlier step read: create the custom admin role `Wall-E — Reader`
+   with read privileges only (Users, Groups, OU, Reports audit and usage, Admin roles read; no
+   licence management, a single indivisible privilege with no read-only half). No custom admin
+   role is created for Wall-E any more. The robot's privilege is **Super Admin**, assigned by a
+   human super admin **at the platform's tier gate**, on the day every row of its P line is green,
+   with Workspace multi-party approval already on and the decision record
+   `decisions/2026-09-13-wall-e-holds-super-admin.md` (P33) signed — never as a step of this
+   runbook ([platform HLD §0.4](../agentic-platform/01-hld.md), §13.1). What the account holds
+   for Stage 0's reads before that day is set by the rewritten
+   [02-identity-and-auth.md](02-identity-and-auth.md) (platform HLD §18 item 1); *tbd* here.
+6. **Reversed 2026-09-13.** The earlier step read: assign that role customer-scoped, with a
+   unit-scoped write role at Stage 1, "two assignments, not one". There is no role-assignment
+   ladder under Super Admin, and no Workspace-side scope: the pilot OU is enforced only by the
+   action service's allow-list. Instead: put `$ROBOT` on the committed **floor list** of
+   protected principals and confirm at least two human super admins exist on separate admin
+   accounts, neither of them `$ROBOT`, and that `$ROBOT` is never the recovery super admin.
 7. Admin console → **Rules** (not Alert Center, which is where alerts are read): create a
    reporting rule on **any login** to `$ROBOT`, routed to you and to `walle-operators@`.
    Availability depends on the Workspace edition — confirm it, because this is the single
@@ -79,9 +101,17 @@ export ROBOT=walle@$DOMAIN            # tbd
    and it needs no credential.
 
 **Verify.** Sign in as `$ROBOT` once in the clean profile: 2SV is enforced. The login
-alert fires within minutes. `$ROBOT` cannot open Security settings in the Admin console.
+alert fires within minutes. Rewritten 2026-09-13 (the earlier check read "`$ROBOT` cannot open
+Security settings in the Admin console", which is false for a super admin): super-admin
+self-recovery is Off at the top OU and no child OU or configuration group re-enables it; the
+robot has no recovery email or phone; two human super admins exist besides it; `$ROBOT` is on
+the floor list. After the grant, the check inverts to the denial suite's: "`$ROBOT` is a super
+admin, on the floor list, and every super-admin-class request is denied in the catalogue lane"
+(platform HLD §13.1 item 10).
 
 **Rollback.** Suspend `$ROBOT`, delete the role assignment. Nothing else has been built.
+Qualified 2026-09-13: after the grant, removing Super Admin is K6 (`users.makeAdmin` with
+`status: false`, by a human super admin).
 
 ---
 
@@ -94,6 +124,11 @@ This phase creates **`WALLE_PROJECT` only**, under `FOLDER_ID`. `GEMINI_PROJECT`
 created by their own runbooks under the same folder, and must exist before the
 cross-project grants below are made. Nothing of Eve's, Mo's or the app's is created here
 ([../project-topology.md](../project-topology.md) §2).
+
+Qualified 2026-09-13: on the platform this phase becomes one factory call — the `agent-project`
+module makes `WALLE_PROJECT` under `fld-agents-p-sa`, applied by `factory-apply@CICD_PROJECT`
+only under an approved `ent-factory-singleton` grant ([platform HLD §3.2](../agentic-platform/01-hld.md),
+§4.3, P142). The commands below stay as the record of what the module must produce.
 
 ```bash
 gcloud projects create $PROJECT --folder=$FOLDER_ID   # --folder or --organization, never both
@@ -276,11 +311,21 @@ the check that stops you accidentally storing your own credentials.
 ```bash
 python bootstrap/verify-token.py
 # prints: account=walle@domain, scopes=[...], a users.list call succeeds,
-#         and a users.update call fails with 403 (no write privilege yet)
+#         and the consented scopes equal the committed list, with no cloud-platform
+# Rewritten 2026-09-13: the script no longer attempts a direct users.update and no
+# longer expects a 403. Under Super Admin Google refuses nothing; a direct write
+# would simply execute.
 ```
 
-The second half of that check matters: at this phase the role is read-only, so a write
-attempt **must** fail at Google's end.
+**Rewritten 2026-09-13.** The earlier text read: "at this phase the role is read-only, so a
+write attempt **must** fail at Google's end." That property no longer exists at any stage — the
+consented scope set is the only Google-enforced ceiling left, and it is checked here instead.
+The "no write at Stage 0" guarantee is the ladder's L1 in the action service, proved by the
+Phase 4 denial suite and not by a Workspace refusal. This phase consents the **narrow** client
+read by `walle-actions`; the broad client read by `walle-actions-super` is consented in the same
+sitting on the same hardware key, with its scope list fixed by decision 3 re-opened (*tbd*),
+`cloud-platform` in neither, checked in CI against the consent screen ([platform HLD §13.1](../agentic-platform/01-hld.md)
+item 3).
 
 **Rollback.** Revoke the app at `https://myaccount.google.com/permissions` as `$ROBOT`,
 and delete the secret version.
@@ -369,6 +414,9 @@ python tests/denials.py
 | 21 | Any response body echoes an upstream error string | fails — errors are a closed enum |
 | 22 | `eve-controller@EVE_PROJECT` calls `/v1/execute` | 403 — a foreign `run.invoker` reaches only its allowlisted paths |
 | 23 | `mo-analyst@MO_PROJECT` calls `/v1/control/demote` or `/v1/ladder` | 403 |
+| 24 | Any write targeting `$ROBOT` itself (added 2026-09-13) | `denied: self_modification_denied`, breaker trip, severity 1 |
+| 25 | Any `users.makeAdmin`, in any lane (added 2026-09-13) | `denied: escalation_denied`, severity 1 |
+| 26 | A super-admin-class request in the catalogue lane (added 2026-09-13) | denied; the operation exists only in band B |
 
 Test 12 is the one that proves budgets are durable rather than per-process. Run it with
 `--min-instances=2`.
@@ -417,6 +465,14 @@ attributed to the system rather than to the robot — so the dispatcher also enf
 
 Grant the sink's writer identity `pubsub.publisher`, then subscribe the dispatcher with a
 dead-letter policy.
+
+**Re-homed 2026-09-13** ([platform HLD §7.1](../agentic-platform/01-hld.md), P104;
+[../agentic-platform/08-data-logging-retention-sovereignty.md](../agentic-platform/08-data-logging-retention-sovereignty.md) §3.2):
+neither organisation sink above stays Wall-E's. The trigger sink becomes `to-triggers-walle` in
+`LOGGING_PROJECT` with the same filter and the same robot exclusion, and `walle_workspace_logs`
+becomes an authorised view over the central copy; the organisation-level
+`logging.configWriter` this phase needed disappears. The filters and the reason for two of them
+stand. Gate: before Wall-E's Stage 1.
 
 **Verify.** Make a trivial admin change in the console; within a minute the dispatcher logs
 the event and **drops it** (no playbook is enabled yet). A duplicate delivery of the same
@@ -566,6 +622,8 @@ promotions when the last recorded drill is older than 30 days.
 | K3 | Remove `run.invoker` from `walle-agent@`, confirm chat fails | — |
 | K4 | The service revokes its own refresh token at Google | seconds. **Measure honestly, and do not accept a pass by luck:** disabling a secret version proves nothing, because `versions/latest` falls back to the previous still-valid version, and an access token already issued stays valid for up to an hour regardless. Revocation is the only thing that stops a running instance now. |
 | K5 | Revoke the OAuth grant as `$ROBOT` | seconds; then re-run Phase 3 |
+| K6 (added 2026-09-13) | From the grant onward: a human super admin removes Super Admin from `$ROBOT` (`users.makeAdmin` with `status: false`), then restores it under multi-party approval | minutes; target within 60 min; pulled by the two-person rota, never by the agent owner alone; drilled quarterly with K5 |
+| K7 (added 2026-09-13) | Not Wall-E's: the platform's fleet kill on the tier folders, run by the platform owner in nonprod. **K4 is pulled before K7** in the P-SA runbook, because KF-1 makes the K4 endpoint unreachable | KF-1 under 60 s, under 5 min end to end; monthly ([platform HLD §11.4](../agentic-platform/01-hld.md)) |
 
 Write the measured times into the `drills` collection — not only into a wiki page. CI
 refuses a promotion when the last drill is older than 30 days, so it needs somewhere to
@@ -599,6 +657,8 @@ is governed by [05-autonomy-ladder.md](05-autonomy-ladder.md), not by this runbo
   granted. Always pair the two in one maintenance window.
 - **Never grant the robot the `cloud-platform` scope.** It would bind the Workspace
   credential to your organisation's GCP session-control policy and expire it unpredictably.
+  Since 2026-09-13 the stronger reason: on a super-admin account a `cloud-platform` token is a
+  path into the GCP organisation. It is in neither OAuth client, and CI checks both.
 - The Reports API push channel, if you ever use it, expires after six hours and does not
   auto-renew. Prefer the Cloud Logging sink, which does not have this problem.
 - `min_instances=1` on Agent Runtime bills around the clock. Start at 0.

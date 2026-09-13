@@ -3,6 +3,10 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
+- Objective restated 2026-09-13; see the platform HLD
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3, §18 item 23). The S5
+  privilege-pruning text is rewritten for a super-admin robot — privilege pruning is a roster
+  check, not a role diff — and the Eve reads and artefacts are placed in the tables below.
 
 ## What this page is for
 
@@ -32,12 +36,13 @@ the same decision: see [§ Trust does not grow with age](#trust-does-not-grow-wi
 | Stage | What exists | What it is trusted with |
 |---|---|---|
 | **Before Phase 1** | `config/metrics/toil_baseline.csv` and four weeks of measured baseline toil for the top three admin tasks. Nothing else of Mo | Nothing. It is a measurement humans take, and it exists before Wall-E does because [decision 38](../wall-e/09-open-decisions.md)'s denominator cannot be reconstructed afterwards |
-| **S0 — Eyes** | The project `MO_PROJECT`, created under `FOLDER_ID` with billing linked and APIs enabled; in it, the four datasets `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` (the surrogate mapping alone, no reader) and `walle_metrics_views` (views only); `mo-metrics@${MO_PROJECT}` with grants that do not exist in any runbook today, split in two — the in-project ones (`jobUser`, `WRITER` on the four datasets) from Mo's runbook, and two cross-project dataset-level `READER`s on `walle_audit` and `walle_workspace_logs` in `WALLE_PROJECT` from Wall-E's runbook, keyed on `MO_PROJECT`; ~12 scheduled queries committed as `config/metrics/*.sql` under `ladder.yaml`'s reviewers; `gates.yaml`; the golden fixtures and assertion queries; the daily snapshot. **This is "Eve v0", and it is Mo's T0 — there is no later handover because there is no later replacement.** No reporter job, no drop box, no model, no Pub/Sub, no Firestore, no action-service access. `MO_PRINCIPAL` resolves to `mo-analyst@${MO_PROJECT}`; Phase 13b's project-level `roles/agentregistry.viewer` on `WALLE_PROJECT` is dropped or made resource-level ([02-identity-and-access.md](02-identity-and-access.md) §6) | Producing the numbers the S0 exit criteria are read from. A human reads them and signs the S1 decision record; nothing automatic consumes them. Every cell reports `insufficient_data` — the write budget is 0 and no sample approaches 35 — and **no S0 or S1 exit criterion cites Mo's verdict**. What S0 buys is that the definitions are fixed and version-controlled before the first item is graded, which is C18's own instruction |
+| **S0 — Eyes** | The project `MO_PROJECT`, created under `FOLDER_ID` with billing linked and APIs enabled; in it, the four datasets `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` (the surrogate mapping alone, no reader) and `walle_metrics_views` (views only); `mo-metrics@${MO_PROJECT}` with grants that do not exist in any runbook today, split in two — the in-project ones (`jobUser`, `WRITER` on the four datasets) from Mo's runbook, and two cross-project dataset-level `READER`s on `walle_audit` and `walle_workspace_logs` in `WALLE_PROJECT` from Wall-E's runbook, keyed on `MO_PROJECT`; ~12 scheduled queries committed as `config/metrics/*.sql` under `ladder.yaml`'s reviewers; `gates.yaml`; the golden fixtures and assertion queries; the daily snapshot. **This is "Eve v0", and it is Mo's T0 — there is no later handover because there is no later replacement** (qualified 2026-09-13: Eve's own v0 survives beside it as a differential check, see "S0" below). No reporter job, no drop box, no model, no Pub/Sub, no Firestore, no action-service access. `MO_PRINCIPAL` resolves to `mo-analyst@${MO_PROJECT}`; Phase 13b's project-level `roles/agentregistry.viewer` on `WALLE_PROJECT` is dropped or made resource-level ([02-identity-and-access.md](02-identity-and-access.md) §6) | Producing the numbers the S0 exit criteria are read from. A human reads them and signs the S1 decision record; nothing automatic consumes them. Every cell reports `insufficient_data` — the write budget is 0 and no sample approaches 35 — and **no S0 or S1 exit criterion cites Mo's verdict**. What S0 buys is that the definitions are fixed and version-controlled before the first item is graded, which is C18's own instruction |
 | **S1 — Hands held** | Adds, all in `MO_PROJECT`: `mo-analyst@`, the authorised-view layer, the `mo-reporter` job on a weekly schedule, the freshness absence alert with its channel, the cost report and the S1 stop-or-continue document — plus the one cross-project `roles/run.invoker` on `walle-actions` in `WALLE_PROJECT`, made from Wall-E's runbook | One decision, and it is a **value** decision rather than a safety one: the dated stop-or-continue review at S1 exit, measured toil saved against operating cost including human hours. Nothing about a level |
 | **S2 — Proposals** | Adds the scorecard view and page, `ladder-state.md` regeneration, the regression explanation, the grading worklist, the capability-gap ranking, and the weekly plan-hash recomputation. **At S2 exit:** the drop box, CI ingestion, the bot author, and the validator's recompute check. Graded samples first approach 35 on the highest-volume cells. The **back-test** runs here | Telling the ladder owner which cells are close and why, and telling graders what to grade. Verdicts are informational: no promotion cites Mo yet. Proposals are restricted by the template set to **non-ladder** changes — catalogue additions, playbook selection queries, prompt changes, cap changes. A second grader must exist by now, because a `WRITE_HIGH` cell cannot pass L2 without 20 % blind double-grading — **earlier than [decision 11b](../wall-e/09-open-decisions.md) assumes**, a scheduling conflict Mo surfaces rather than resolves |
+| **Wall-E's observe-and-report layer and grant gate** (added 2026-09-13) | Eve's observe-and-report layer arrives before the super-admin grant (platform HLD §13.2), and with it `eve_quality`. From then: Mo's `READER` on `eve_quality` (Eve's runbook), the Eve quality pack in T0, assertions A10 and A11, the Eve scorecard, and the misbehaviour taxonomy and coverage map — first edition before Wall-E's Stage 1 (P143). `Assumption:` this lands between Mo's S1 and S2 on the calendar; it is gated on Eve's layer, not on a Mo stage | Reporting only. Every Eve figure is advisory and every Eve bundle is `eve_incident_note` until the validator custodian holds `READER` on `eve_quality` (P30). Nothing Mo computes about Eve is read by Eve |
 | **S3 — Batch approval** | The full pipeline, with Mo's **acceptance test** in progress. The blind sampler runs in preparation for L4, **with the CI-published weekly seed and its append-only per-week seed file in force from entry**. The Spans dataset link is created in `WALLE_PROJECT` by a human holding `roles/observability.editor` there, and `mo-metrics@${MO_PROJECT}` gets a cross-project dataset-level `READER` on it (a spike, topology decision 49). Eve is in observe mode and Mo excludes Eve's verdicts from precision entirely | The S3 entry decision is the first that may carry a recomputed evidence block, and the first promotion pull request assembled from a bundle. Mo's verdict is still not the gate — the validator's recomputation is. Authoring promotion pull requests **up to L3**; `WRITE_HIGH` cells stay hard-blocked above L2 until a second grader is named |
 | **S4 — Eve gates** | Blind-sample hardening: verdict suppression in the worklist, agreement reporting. The weekly seed is already in force from S3. `agg_eve_latency` becomes computable. Precision for any L4/L5 cell switches to the blind sample **only**. The E35 review path goes live. Optionally `mo-narrator` and the model-family comparison | Being the only route by which L4/L5 precision exists at all. L4 promotion evidence, with two distinct authenticated approving reviewers and a validator recomputation. `WRITE_HIGH` never reaches L5 on any trigger at any stage, and Mo has no template that emits a ceiling change |
-| **S5 — Steady state** | Quarterly rhythm: proposals reviewed, budgets, caps and OU scope re-decided, the demand ranking read for catalogue additions, and the privilege-pruning query — catalogue operations with zero invocations in 90 days — feeding the quarterly removal of privileges the custom role no longer needs | The same as S4. **Mo never accumulates authority with age**; there is no version of Mo whose output is not a proposal. That is deliberate: the one agent that may use a model freely is the one whose ceiling never rises |
+| **S5 — Steady state** | Quarterly rhythm: proposals reviewed, budgets, caps and OU scope re-decided (the OU allow-list is enforced by the action service's code since the robot holds Super Admin), the demand ranking read for catalogue additions, and the **pruning query** — catalogue operations with zero invocations in 90 days, and the super-admin roster check's findings — feeding the quarterly removal of catalogue operations and the review of who holds admin privilege. Rewritten 2026-09-13: there is no custom role to prune; privilege pruning is a **roster check**, not a role diff | The same as S4. **Mo never accumulates authority with age**; there is no version of Mo whose output is not a proposal. That is deliberate: the one agent that may use a model freely is the one whose ceiling never rises |
 
 ## When each component arrives
 
@@ -63,6 +68,10 @@ the components themselves in [01-hld.md](01-hld.md); the commands in
 | The CI-published weekly seed and the append-only per-week seed file | **S3**, with the sampler — never later than the first blind draw |
 | The proposal drop box | S2 exit |
 | The validator's recompute check | S2 exit. The §10 ladder gates themselves exist from S0, for Wall-E's own promotions |
+| Mo's `READER` on `eve_quality` in `EVE_PROJECT`, made by Eve's runbook (added 2026-09-13) | With Eve's observe-and-report layer, before the super-admin grant; the Eve quality pack, A10, A11 and the Eve scorecard with it |
+| The misbehaviour taxonomy and coverage map (added 2026-09-13) | First edition before Wall-E's Stage 1 (P143) |
+| The validator custodian's `READER` on `eve_quality` (added 2026-09-13) | P30 — recommended now; until then Eve bundles are advisory |
+| The Art. 72 post-market monitoring plan for Wall-E (added 2026-09-13) | S2, with the artefact set it names ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §1.8) |
 | The linked Spans dataset (`_AllSpans`), in `WALLE_PROJECT` | S3, created once by a human holding `roles/observability.editor` in `WALLE_PROJECT` — never by Mo — with a cross-project dataset `READER` for `mo-metrics@${MO_PROJECT}` (spike, decision 49) |
 | T2 — `mo-narrator` | S4, and it is legitimate never to build it ([decision 49](08-open-decisions.md)) |
 
@@ -105,6 +114,15 @@ pinned to `eve-v0@` — and either way one more cross-project dataset-level `REA
 cost, the duplicated arithmetic and the risk of two divergent answers to the same §8
 threshold have to be argued for. Nothing in either design settles it, and neither page should be read as having
 settled it. It belongs in the next stage decision record, not in a reconciliation of prose.
+
+**Decided at platform level on 2026-09-13** (platform HLD §13.3, "Eve v0 and Mo T0"): both
+survive, as a differential check. Two independently pinned computations of the same ten
+metrics from the same `walle_audit` are the second implementation this design declined to
+build for cost; assertion A11 diffs Mo's scorecard against `eve.findings`, read through
+`eve_quality`, and sets `metric_divergence` on the Eve scorecard
+([03-metrics-contract.md](03-metrics-contract.md) §6, §7.3). The paragraph above is kept as the
+record of the conflict; the dated decision file is still owed, and M-11 (d) and change 20 in
+[08-open-decisions.md](08-open-decisions.md) carry the grant it needs.
 
 Nothing at S0 or S1 is gated on a Mo verdict, and that is stated as an exit-criterion
 property rather than left to be inferred. At S0 the daily write budget is 0, shadow items
@@ -227,26 +245,50 @@ on it.
 At every point in S4: `WRITE_HIGH` never reaches L5 on any trigger at any stage, and Mo has
 no proposal template that emits a ceiling change.
 
-### S5 — the quarterly rhythm and the privilege-pruning query
+### S5 — the quarterly rhythm and the pruning query
+
+**Rewritten 2026-09-13 for a super-admin robot** (platform HLD "What this reverses and what it
+costs", §13.1, §13.2). The text before that date fed "the quarterly removal of privileges the
+custom role no longer needs": each catalogue operation unused for 90 days was a candidate for
+removing the privileges it needed from the custom admin role. Wall-E now holds Super Admin,
+which cannot be narrowed to a set of privileges or scoped to an organisational unit, so there
+is no role to diff and no privilege to remove from one. Privilege pruning becomes a **roster
+check**: who holds admin privilege, against who should.
 
 S5 adds no new authority and one new query. The quarterly rhythm in
 [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §7 — proposals reviewed,
-budgets, caps and OU scope re-decided, privileges the catalogue no longer needs removed from
-the custom role — is the rhythm Mo feeds, with two inputs:
+budgets, caps and OU scope re-decided — is the rhythm Mo feeds, with three inputs:
 
 - **The capability-gap demand ranking**, which says which catalogue additions are actually
   being asked for.
-- **The privilege-pruning query**: catalogue operations with **zero invocations in 90 days**.
-  Each such operation is a candidate for removal from the catalogue, and each removal is a
-  candidate for removing the privileges it needed from the custom admin role. The query
-  produces the candidate list and nothing else. Mo does not edit the role, does not edit the
-  catalogue, and does not open the pull request itself; the list is read by a human at the
-  quarterly review, and any change travels the ordinary bundle-to-pull-request path in
-  [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md).
+- **The pruning query**: catalogue operations with **zero invocations in 90 days**. Each is a
+  candidate for removal from the catalogue — which still shrinks what Wall-E may do
+  autonomously and under band A, because the catalogue is the declared intended purpose and the
+  only band that can be autonomous. `Assumption:` where a removal leaves a scope on the narrow
+  band-A OAuth client that no remaining catalogue operation uses, that scope is named beside it
+  as a candidate for the narrow client's consented set — the one Google-enforced ceiling left
+  (platform HLD §13.1 item 3); whether to re-consent is the Wall-E owner's decision.
+- **The roster summary**: over the quarter, the outcomes of Eve's daily super-admin roster
+  check — the robot, the human super admins, and any other holder of an admin role — read as
+  counts and dated findings from `eve_quality.findings`, never as a list of people in a Mo
+  artefact. A holder outside the expected roster is a severity-1 finding in Eve's reporting path
+  the day it happens; Mo's contribution is the quarterly view: how many roster findings, how
+  long each stood, and whether the expected roster itself (at least two human super admins,
+  the robot never the only or the recovery super admin) still held throughout. *Aligned
+  2026-09-13 (review-findings pass) to P68 ([../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md)
+  §8.1; [../wall-e/02-identity-and-auth.md](../wall-e/02-identity-and-auth.md) "The roster rule"): the
+  expected roster is **exactly** the committed one — two human super admins, one outside the
+  Wall-E administration line, plus the robot — with a third human only as a dated hand-over
+  exception, so Mo's quarterly view flags what Eve's daily check flags as severity 1.*
 
-The privilege-pruning query is the one place where Mo's output shrinks Wall-E's reach rather
-than growing it, which is why it is the only S5 addition and why it needs no new stage
-argument.
+Both produce a candidate list and nothing else. Mo does not edit the catalogue, the OAuth
+client, any admin role or the roster, and does not open the pull request itself; the lists are
+read by a human at the quarterly review, and any catalogue change travels the ordinary
+bundle-to-pull-request path in [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md).
+Whether Wall-E keeps Super Admin at all is decision P33, not a Mo query.
+
+The pruning query is still the one place where Mo's output shrinks Wall-E's reach rather than
+growing it, which is why it is the only S5 addition and why it needs no new stage argument.
 
 ## Trust does not grow with age
 
@@ -307,6 +349,7 @@ compressed.
 | S2 exit | Drop box, CI ingestion, bot author, the validator's recompute and sample re-draw — of which ~3 days belong to the **validator custodian**, not to Mo's budget | 5–8 |
 | S3 | Spans link (one-off, in `WALLE_PROJECT`, by a human with `roles/observability.editor` there) and the cross-project `READER` on it, acceptance harness including the seeded-fabrication exercise | 3–4 |
 | S4 | Blind-sample hardening, optional narrator | 3–5 |
+| With Eve's observe-and-report layer (added 2026-09-13) | The Eve quality pack, A10 and A11, the Eve scorecard, the coverage map's first edition, the Eve fixtures | *tbd* — not in the 24–37 below, which predates Mo's Eve remit |
 
 Total in Mo's own budget: `Assumption:` **24–37 person-days**, none on the critical path to
 S0 or S1. The rows sum to 29–43; the ~2 days of baseline measurement are a human measurement
@@ -391,8 +434,9 @@ as a number rather than as a feeling.
 ## What is still undecided about the staging
 
 Provisional numbering — [../wall-e/09-open-decisions.md](../wall-e/09-open-decisions.md)
-currently ends at decision 41, and the numbers below are assigned in
-[08-open-decisions.md](08-open-decisions.md) when both this set and Eve's land.
+currently ends at decision 41, 42–52 are claimed by the topology, and the numbers below are
+Mo's set-local rows in [08-open-decisions.md](08-open-decisions.md) (`M-1`…`M-11`); qualified
+2026-09-13, platform decisions continue as P1...
 
 | Decision | Bears on which stage | Due |
 |---|---|---|

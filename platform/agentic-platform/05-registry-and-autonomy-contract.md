@@ -507,6 +507,8 @@ ceilings:                          # permanent maxima per (family, trigger) ; co
   F3: {T0: L4, T1: L4, T2: L3, T3: L2, agent: L0}   # each cell <= the platform default for the tier/reversibility
   # rows the schema fixes and the validator refuses to see edited (code: true):
   #   any family with risk_tier SUPER:         every trigger L3, two-person, never in a playbook
+  #     corrected 2026-09-13 (review-findings pass) to the HLD's form (HLD §12.1, §13.1 item 9):
+  #     T0 (chat) L3 two-person, every other trigger L0, the agent column L0; never in a playbook
   #   any family with risk_tier WRITE_GENERIC: T0 L3, every other trigger L0
   #   the agent column:                        L5 for READ families, L0 for every other family
 protected_principals:              # ids the agent may never target ; the platform appends its own
@@ -642,7 +644,7 @@ C18 for the interval gate):
 | Parameter | Platform default | Tighten means | Source |
 |---|---|---|---|
 | Ceilings by (risk tier, reversibility, trigger) | `wall-e/05` §4's table: READ L5 everywhere; WRITE_LOW reversible L5/L5/L4/L2; WRITE_LOW irreversible L5 templated or L3 free text / L4 templated / L4 templated / L2; WRITE_HIGH reversible L3/L4/L4/L0; WRITE_HIGH irreversible L3/L2/L2/L0; external recipients L3/L2/L2/L0 | lower | `wall-e/05` §4 |
-| Permanent statements | `WRITE_HIGH` never L5; T3 never produces a write; free-text outbound never autonomous; **`SUPER` permanently L3 with a two-person rule and never in a playbook**; `WRITE_GENERIC` chat L3, every other trigger L0 | — (code) | HLD §12.1 |
+| Permanent statements | `WRITE_HIGH` never L5; T3 never produces a write; free-text outbound never autonomous; **`SUPER` permanently L3 with a two-person rule and never in a playbook** (on `chat` only; every other trigger L0 — stated 2026-09-13 to match HLD §13.1 item 9); `WRITE_GENERIC` chat L3, every other trigger L0 | — (code) | HLD §12.1 |
 | The `agent` column | READ L5, every write L0 | — (code) | `wall-e/13` §5.4, HLD §12.1 |
 | One notch, one family, on evidence; no skipping above L3 | R3 | — | `wall-e/05` §1 |
 | Dwell | L1→L2 2 weeks, L2→L3 2 weeks, L3→L4 4 weeks, L4→L5 6 weeks; the clock restarts after a demotion | longer | `wall-e/05` §6 |

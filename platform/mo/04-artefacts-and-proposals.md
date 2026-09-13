@@ -3,8 +3,16 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
+- Objective restated 2026-09-13; see the platform HLD
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3, §18 item 22). Added on
+  that date: the misbehaviour taxonomy and coverage map as the first Eve artefact (§1.6), the
+  Eve scorecard (§1.7), the Art. 72 plan per high-risk system (§1.8), the `eve/config` path
+  allowlist (§3.2), the closed Eve proposal type set (§3.5) with its reviewer rules and the
+  30-day cross rule (§3.6), and agent-neutral names — the drop box is `mo-proposals` (§3.7).
+  The title keeps "five" because Wall-E's five are unchanged.
 
-Mo was built backwards from five things a human reads. Everything else in the design —
+Mo was built backwards from five things a human reads — Wall-E's five; since 2026-09-13 also
+the Eve and compliance artefacts of §1.6–§1.8. Everything else in the design —
 the metric queries, the authorised views, the three identities, the drop box — exists
 because one of these five needs it. This page says exactly what each one contains, on what
 schedule, for whom, at which path; then it follows a proposal from the moment `mo-reporter`
@@ -30,7 +38,10 @@ is in [05-staging.md](05-staging.md).
 also the drop box's path allowlist. These design pages live at `platform/mo/`; the two are
 different directories in different repositories and the distinction is deliberate. If the
 artefact directory is ever moved, the allowlist string moves with it, in the same pull
-request, and that pull request is not one Mo may author.
+request, and that pull request is not one Mo may author. The same `Assumption:` covers the
+paths added on 2026-09-13 — `platform/eve/mo/**` for the Eve artefacts and
+`platform/<agent>/mo/art72-plan.md` for each Art. 72 plan — which follow Wall-E's pattern and
+are fixed when Mo-8 creates the directories.
 
 ---
 
@@ -43,6 +54,9 @@ request, and that pull request is not one Mo may author.
 | 3 | Weekly digest | `platform/wall-e/mo/digest-YYYY-Www.md` | Monday 08:00 Europe/Paris | `walle-operators@` | S2 |
 | 4 | Regression explanation | `platform/wall-e/mo/regression-<cell>-<date>.md` | On a detected change point, not on a calendar | The ladder owner | S2 |
 | 5 | Monthly cost report | `platform/wall-e/mo/cost-YYYY-MM.md` | Monthly | Decision 38's stop-or-continue review | **S1** |
+| 6 | Misbehaviour taxonomy and detector coverage map — **the first Eve artefact** (added 2026-09-13) | `platform/eve/mo/coverage-map.md` | First edition before Wall-E's Stage 1 (P143); regenerated on every `eve_config_version` change and after every seeded-fault run | The Eve owner, the security reviewer | Before Wall-E's Stage 1 |
+| 7 | Eve scorecard — the Eve quality pack (added 2026-09-13) | `platform/eve/mo/scorecard.md` | Weekly reporter run | The Eve owner | When `eve_quality` exists |
+| 8 | Art. 72 post-market monitoring plan, one per high-risk system (added 2026-09-13) | `platform/<agent>/mo/art72-plan.md` | On every stage decision; re-cut when the Commission's Art. 72(3) template is adopted | The AI compliance owner | S2 for Wall-E |
 
 The cost report is first because it is the artefact that answers whether any of this should
 continue, and [decision 38](../wall-e/09-open-decisions.md) sets that review at S1 exit.
@@ -151,6 +165,55 @@ The artefact decision 38's stop-or-continue review is read from. Contents:
 Grading hours appear here as well as in the digest, deliberately: the review that decides
 whether the programme continues should see that it is stalled on human attention rather than
 on safety, if that is what is true.
+
+### 1.6 The misbehaviour taxonomy and coverage map — the first Eve artefact
+
+Added 2026-09-13 (platform HLD §13.2, §13.3). Improving Eve starts from knowing what Eve is
+supposed to catch. With Wall-E holding Super Admin, the misbehaviour Eve must report is no
+longer bounded by a role: role grants, security settings, DWD, API controls, data-region and
+retention changes, sinks and audit-log sharing, the robot acting on itself or on Eve, and any
+admin event outside the catalogue and band B are all reachable by the credential. This page is
+the list of those classes and, per class, the detector that would see it.
+
+| Column | Contents |
+|---|---|
+| Class | One misbehaviour class of a super-admin Wall-E, from the platform's hard-denied list and detection catalogue (platform HLD §13.1 item 2, §7.3) and the public agent-threat taxonomy the catalogue is scored against (P21, *tbd*) |
+| Detector | Each that applies: an Eve seeded fault; a Wall-E breaker or policy-chain denial; Eve's reconciliation of Google's streams; the SIEM's super-admin detection set; or **none** |
+| Evidence the detector fired | The last `seeded_fault_runs` row for that class and `eve_config_version`, or `never exercised` |
+| Latency | The detector's lag budget as Eve's set declares it, and Mo's measured E5/E6 where computable ([03-metrics-contract.md](03-metrics-contract.md) §7.3) |
+| Gap | `covered`, `covered, never exercised`, or `uncovered` |
+
+Every `uncovered` or `never exercised` row is an item on the **Eve-improvement backlog**, and
+the only proposals Mo may attach to it are the Eve types of §3.5 — a `seeded_fault_addition`
+for a class with a detector but no fault, an `eve_incident_note` for a class with no detector.
+Mo names the gap; a human designs the detector. A non-zero metric 9b count
+([03-metrics-contract.md](03-metrics-contract.md) §7.2) is always an entry here. The map is
+aggregate: class names and counts, never a person, and it follows the suppression rule.
+
+### 1.7 The Eve scorecard
+
+Added 2026-09-13. The human face of the Eve quality pack
+([03-metrics-contract.md](03-metrics-contract.md) §7.3): per Wall-E cell, the false-refusal
+Wilson bounds, the wrong-accept count, agreement, pages versus budget, time-to-verdict,
+time-to-acknowledge, availability from Wall-E's stamp, the seeded-fault catch at the last run,
+and `metric_divergence`. Each figure carries its source and, where the source rule says so,
+the label `self_reported`. Until the validator custodian holds `READER` on `eve_quality`
+(P30), the page opens with the fixed line "Advisory — not re-derivable by the validator yet".
+Eve reads nothing on it.
+
+### 1.8 The Art. 72 post-market monitoring plan, per high-risk system
+
+Added 2026-09-13 ([../agentic-platform/10-eu-ai-act.md](../agentic-platform/10-eu-ai-act.md)
+§4.4; platform HLD §14.1). For each agent the register marks high-risk, Mo's artefacts **are**
+the post-market monitoring plan, and this page is the plan's text: one paragraph naming the
+artefacts (the scorecard with audit completeness first, `ladder-state.md`, the digest, the
+regression explanation, the cost report, and for a Tier P agent the Eve scorecard and coverage
+map), their cadence, their reader, and the two feeds the artefacts receive from outside Mo —
+every Art. 73 assessment outcome and every Art. 86 explanation request. Owner: the Mo owner;
+reader: the AI compliance owner. It is regenerated as a pull request like every other artefact,
+and re-cut into the Commission's Art. 72(3) template when that is adopted (date unverified,
+per page 10). A silent Mo is severity 2 on that page, which is why the plan names the
+freshness alert as its liveness control.
 
 ---
 
@@ -298,7 +361,7 @@ without it, so it appears on Mo's line in the S1-exit review rather than in a fo
 sequenceDiagram
     autonumber
     participant T1 as "mo-reporter, as mo-analyst, in MO_PROJECT"
-    participant BOX as "Drop box walle-mo-proposals, in MO_PROJECT"
+    participant BOX as "Drop box mo-proposals, in MO_PROJECT"
     participant CI as "CI ingestion"
     participant BOT as "Bot author, not Mo"
     participant VAL as "Validator, owned outside the repo, in its custodian's project"
@@ -340,7 +403,7 @@ sequenceDiagram
 
 ### 3.1 The bundle contract
 
-One object per bundle in `walle-mo-proposals`, a bucket in `MO_PROJECT`, written by
+One object per bundle in `mo-proposals` (renamed 2026-09-13, §3.7), a bucket in `MO_PROJECT`, written by
 `mo-analyst@${MO_PROJECT}` with `roles/storage.objectCreator` and nothing else. Verified 2026-09-12: that role "Allows users
 to create objects. Does not give permission to view, delete, or **overwrite** objects"
 ([IAM roles for Cloud Storage](https://docs.cloud.google.com/storage/docs/access-control/iam-roles)).
@@ -372,8 +435,14 @@ empty field is a rejection at ingestion, not a warning.
 | `scorecard_sha256` | The SHA-256 of the scorecard row `mo-metrics@` published | A bundle citing a hash that was never published is rejected before the recompute even runs |
 | `snapshot_name` | The `${MO_PROJECT}.walle_metrics_archive.scorecard_YYYYMMDD` snapshot the claim points at, project-qualified | The dated, citable object an auditor replays against, rather than a mutable table |
 
+**For an Eve bundle (added 2026-09-13)** the same fields apply, with `metric` drawn from the
+Eve quality pack, the SQL reading `eve_quality` and `walle_audit` fully qualified, and every
+cited value `evidence_eligible` under assertion A10; `Assumption:` the bundle additionally
+declares its target repository (`config` or `eve/config`), which ingestion checks against the
+allowlist the diff falls under.
+
 The whole block is re-executable by anyone holding dataset-level read on
-`${WALLE_PROJECT}.walle_audit` and job rights in a project of their own, holding no binding
+`${WALLE_PROJECT}.walle_audit` (and, for an Eve bundle, on `${EVE_PROJECT}.eve_quality`) and job rights in a project of their own, holding no binding
 of any kind in `MO_PROJECT`, and with no cooperation from Mo. The SQL names every table
 fully qualified, and declares the two interval functions as `CREATE TEMP FUNCTION` from the
 committed text ([03-metrics-contract.md](03-metrics-contract.md) §3), so it resolves from
@@ -392,9 +461,24 @@ before a pull request exists**:
 | `config/catalogue/**` | Catalogue **additions**. Never the risk tiers — see [§7](#7-mo-may-not-propose-changes-to-its-own-gating-layer) |
 | `platform/wall-e/mo/**` | Mo's own artefacts |
 | `platform/wall-e/ladder-state.md` | The regenerated ladder-state page |
+| `platform/eve/mo/**` (added 2026-09-13) | The Eve artefacts of §1.6 and §1.7, and `eve_incident_note` |
+| `platform/<agent>/mo/art72-plan.md` (added 2026-09-13) | The Art. 72 plan of §1.8, one per high-risk system |
+
+**In Eve's repository, `eve/config` — added 2026-09-13** (platform HLD §13.3). Exactly two
+paths, and only through the Eve proposal types of §3.5:
+
+| Allowed path in `eve/config` | What Mo may change there |
+|---|---|
+| `thresholds.yaml` | A threshold row, through `eve_threshold_tighten` or `eve_threshold_loosen` only |
+| `seeded_faults/**` | A new fault fixture, through `seeded_fault_addition` only — additions, never an edit or a removal |
+
+**Never**, in any type, at any stage: `predicates/`, `ceilings.py`, `reasons.yaml`,
+`oncall.yaml`, or the `eve_authority` field. Those are Eve's gating and reporting layer and stay
+human-authored; a bundle touching one is refused at ingestion, before CI.
 
 Anything else is refused at ingestion: the ceiling module, the policy chain, the catalogue's
-risk tiers, the validator, `config/metrics/**` and `config/metrics/gates.yaml`. That makes
+risk tiers, the validator, `config/metrics/**` and `config/metrics/gates.yaml`, and every
+`eve/config` path not in the second table. That makes
 [05](../wall-e/05-autonomy-ladder.md) §10's "the gate cannot be part of what it gates"
 enforced **twice** — once at the bucket, once in CI — and the two enforcements are owned by
 different people.
@@ -460,6 +544,11 @@ asserts, and never accepts prose as evidence. Its identity holds dataset-level `
 | `redesign_required` on the family — two demotions in 90 days, excluding reviewed false positives | This design, §8 error budgets | Refused until the redesign lands |
 | One pull request touching more than one of `ladder.yaml`, `config/metrics/*.sql`, `config/metrics/fixtures/**`, `config/metrics/gates.yaml`, the ceiling module, the policy chain, the catalogue risk tiers, the validator | This design, change 13 | Refused |
 | The "Why worth it" line, for any L3→L4 `WRITE_HIGH` promotion | C34 | Refused if absent |
+| An Eve bundle other than `eve_incident_note` while the custodian holds no `READER` on `eve_quality` (added 2026-09-13) | Platform HLD §13.3, P30 | Refused: Eve bundles are advisory until the gate can re-derive them |
+| An Eve bundle citing a value that is not `evidence_eligible` under A10 (added 2026-09-13) | Platform HLD §13.3 | Refused: a number about Eve that only Eve vouches for is not evidence |
+| An `eve_threshold_loosen` for a cell within 30 days after a `promote` on the same cell — or a `promote` within 30 days after a merged `eve_threshold_loosen` on that cell (added 2026-09-13) | Platform HLD §13.3; §3.6 | Refused; the validator reads both repositories' merge history |
+| An `eve_threshold_loosen` without two distinct authenticated reviewers including the decision-37 security reviewer, a decision record, and five business days' cooling since the bundle was opened (added 2026-09-13) | Platform HLD §13.3; §3.6 | Refused |
+| An `eve_threshold_tighten` whose diff moves any row in the loosening direction (added 2026-09-13) | §3.6 | Refused: it is a loosening and needs that type |
 
 **Two of those rows changed shape, and each closes something specific.**
 
@@ -504,11 +593,60 @@ Mo's acceptance test.
 | `ladder_state_regen` | `platform/wall-e/ladder-state.md` | S2 | The regenerated page, as a pull request |
 | `incident_note` | A note under `platform/wall-e/mo/**` | S2 | How a finding Mo may not act on reaches a human — including the E35 breaker-false-positive route |
 
+**The Eve proposal types — a closed set of their own, added 2026-09-13** (platform HLD §13.3).
+An Eve bundle declares exactly one of these and no other; a Wall-E type in an Eve bundle, or an
+Eve type in a Wall-E bundle, is rejected at ingestion.
+
+| Type | What it changes | Reviewers | First available | Notes |
+|---|---|---|---|---|
+| `eve_threshold_tighten` | A row of `eve/config/thresholds.yaml`, **monotone-restrictive** only — a change that can only produce more refusals, more pages or shorter lag budgets | One | S2 exit, and beyond advisory only once P30 lands | The validator refuses a diff that moves any row the other way. `Assumption:` the direction of each row is declared by Eve's set with the threshold numbers (E-18). `eve/config` otherwise requires two reviewers ([../eve/09-open-decisions.md](../eve/09-open-decisions.md), decision 37 row); whether branch protection admits one for this type is Eve's set's to reconcile, and until it does the stricter two apply |
+| `eve_threshold_loosen` | A row of `thresholds.yaml` in the loosening direction | **Two**, distinct and authenticated, one of them the decision-37 security reviewer; Eve's second reviewer is neither the ladder owner nor Mo's CI operator | S2 exit, only once P30 lands | Full evidence block, a decision record, five business days' cooling, and the 30-day cross rule of §3.6 |
+| `seeded_fault_addition` | A new fixture under `eve/config/seeded_faults/**` | The reviewers `eve/config` already requires | S2 exit | Additive only. Usually opened from a `covered, never exercised` row of the coverage map |
+| `eve_incident_note` | A note under `platform/eve/mo/**` | — (a note, not a change) | When `eve_quality` exists | The only Eve type available before P30, stated in its heading as advisory. How a Mo finding about Eve — a divergence, an uncovered class, a threshold suspect — reaches a human |
+
 Through S2 the template set is restricted to the **non-ladder** types: catalogue additions,
 playbook selection queries, prompt changes, cap changes. `promote` and `demote_proposal`
 become available at S3, which is the first stage whose entry decision may carry a recomputed
 evidence block. Mo has no template that emits a ceiling change at any stage, and
 `WRITE_HIGH` never reaches L5 on any trigger at any stage.
+
+### 3.6 The Eve proposal path: reviewer rules and the 30-day cross rule
+
+Added 2026-09-13 (platform HLD §13.3; Mo change 20 in [08-open-decisions.md](08-open-decisions.md)).
+Mo improving Eve must not become Mo steering the component that checks Wall-E, so the Eve path
+is narrower than Wall-E's in four ways.
+
+1. **Eve can lower; Mo can only propose.** Eve reads nothing Mo writes. A change to
+   `thresholds.yaml` reaches Eve only as a Mo bundle, through ingestion, the validator and a
+   human merge into `eve/config`. Eve's own fast drop to advisory stays Eve's, on Eve's number.
+2. **Tighten is cheap, loosen is not.** A monotone-restrictive tightening needs one reviewer. A
+   loosening needs the full evidence block, two distinct authenticated reviewers including the
+   decision-37 security reviewer, a decision record
+   (`wiki/decisions/YYYY-MM-DD-eve-threshold-loosen-<row>.md`, `Assumption:` name), and five
+   business days' cooling on the `Europe/Paris` calendar — the mirror of Wall-E's ratchet.
+3. **The 30-day cross rule.** The validator refuses an `eve_threshold_loosen` for a cell within
+   30 days of a Wall-E `promote` on the same cell, **in either order** — a promote within 30 days
+   after a merged Eve loosening on that cell is refused as well. A level that rises while the
+   verifier of that level is being relaxed is exactly the combination neither repository sees
+   alone, so the validator reads both repositories' merge history.
+4. **Separation of the reviewers.** Eve's second reviewer is neither the ladder owner nor the
+   person who runs Mo's CI, so the same hand cannot write a Wall-E promotion, author the Eve
+   loosening beside it and wave both through (the one-administrator concentration Eve's own
+   limit 5 names).
+
+And Mo is **never Eve's grader**: grades of Eve's verdicts are human, in `grades_eve`, written by
+the platform approval surface.
+
+### 3.7 Agent-neutral names
+
+Added 2026-09-13 (platform HLD §13.3): there is one Mo per platform, so nothing of Mo's is named
+for one agent. Resources that do not exist yet take agent-neutral names **before Stage 0**.
+
+| Was | Is | State |
+|---|---|---|
+| bucket `walle-mo-proposals` | **`mo-proposals`** | Renamed in this set on 2026-09-13; [`../project-topology.md`](../project-topology.md) rows that still spell the old name are the platform owner's edit |
+| datasets `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private`, `walle_metrics_views` | agent-neutral names keyed on `agent_id`; the platform HLD §13.3 spells the scorecard `platform_metrics.scorecard` | *tbd* — the rename touches the topology, the platform data inventory and Wall-E's set, so it lands in one pass before Stage 0; until then this set keeps `walle_metrics*` and every table carries `agent_id` |
+| artefact paths `platform/wall-e/mo/**` | `platform/<agent_id>/mo/**` per agent | Wall-E's paths are already that pattern; the Eve and Art. 72 paths above follow it |
 
 ---
 
@@ -592,7 +730,8 @@ cannot be part of what it gates.
 
 Mo may not author a diff to `config/metrics/*.sql`, `config/metrics/fixtures/**`,
 `config/metrics/gates.yaml`, the ceiling module, the policy chain, the catalogue's risk tiers,
-or the validator. Those paths are
+or the validator — nor, since 2026-09-13, to Eve's `predicates/`, `ceilings.py`, `reasons.yaml`,
+`oncall.yaml` or `eve_authority`, which are the gating layer Eve applies to Wall-E. Those paths are
 outside the drop box allowlist, so the refusal happens at ingestion, before CI, before a pull
 request exists. And per change 13, one pull request may not touch more than one of them even
 when a human authors it: a metric change costs its own reviewed pull request and cannot
@@ -629,3 +768,7 @@ author the diff: Mo raises an `incident_note` bundle and a human opens the pull 
 | Who may read `walle_metrics` and its artefacts, and the minimum cell size | [decision 35](../wall-e/09-open-decisions.md), provisional decision 44. Until it lands: `walle-operators@` and the ladder owner only, minimum cell size 5, and **no Mo artefact is synced to Drive** |
 | The git host and its admin-bypass setting | C17 records it `tbd`; provisional decision 48 |
 | The second grader, by S2 entry | Provisional decision 45 |
+| `eve_quality` exists with `mo-metrics@`'s dataset-level `READER`, made by Eve's runbook (added 2026-09-13) | Platform HLD §18 items 17 and 25; [08-open-decisions.md](08-open-decisions.md) change 20, M-11 (d) |
+| The validator custodian's `READER` on `eve_quality` (added 2026-09-13) | Platform decision P30. Until it lands, Eve bundles are `eve_incident_note` only |
+| `grades_eve`, written by the platform approval surface, and `eve.seeded_fault_runs` (added 2026-09-13) | Platform HLD §13.3, §18 item 17 |
+| The direction of every `thresholds.yaml` row, so `eve_threshold_tighten` can be checked (added 2026-09-13) | Eve's set, with E-18; *tbd* |
