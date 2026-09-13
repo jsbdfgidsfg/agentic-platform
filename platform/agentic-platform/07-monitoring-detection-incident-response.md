@@ -7,7 +7,10 @@
   detection), §13.2 (Eve's reporting contract, the witness, the second human), §0.3 (roles),
   §0.4 (the tier gate) and §14.1 (Art. 73). Nothing is built. This page answers HLD brief items
   F44–F51 and gap-register rows MON-01, MON-02, MON-03 and PS-07 of
-  [00-objective-review.md](00-objective-review.md) §4–§5.
+  [00-objective-review.md](00-objective-review.md) §4–§5, and (cited 2026-09-13) MON-06 (§3, SCC
+  Premium), MON-07 (§5, the correlation contract), MON-08 (§6, the detection catalogue), MON-09
+  (§14, SOC metrics), MON-10 (§13, tabletops) and MON-11 (the evidence register, held in
+  [10](10-eu-ai-act.md) §5 with the exports of [08](08-data-logging-retention-sovereignty.md) §5.5).
 - What this page decides: the SIEM contract and the default instance; the Security Command
   Center scope; the detection catalogue and who owns it; the super-admin detection set hosted
   outside `WALLE_PROJECT`; the pipeline heartbeats and the `log_pipeline_silent` halt; the
@@ -50,7 +53,7 @@ Three properties are held throughout, and the reader should check each section a
 1. **Independence of the store from the actor.** Every severity-1 detection about `walle@` is
    hosted in the SIEM and in `EVE_PROJECT`/`EVE_WITNESS_PROJECT`, never in `WALLE_PROJECT`;
    every severity-1 detection about a platform principal is hosted outside that principal's
-   project. A rule that lives where its subject holds owner is not a detection (HLD P6).
+   project. A rule that lives where its subject holds owner is not a detection (HLD CP6).
 2. **Absence is a signal.** Every feed has a heartbeat and every heartbeat has an absence alarm
    whose channel does not share the feed's failure domain (§7).
 3. **Nothing detection-grade stands alone.** Each rule in the catalogue names the enforcement
@@ -70,7 +73,7 @@ account inside the tenant.
 | # | Feed | Mechanism (verified 2026-09-13, §18) | Carries | Owner | Lag budget | Absence detection |
 |---|---|---|---|---|---|---|
 | F1 | Workspace events → SIEM | Admin console, Menu → Reporting → Data integrations → **Google Security Operations export**; configured with the SecOps customer id, token and instance id; needs the **Reports** administrator privilege; editions Enterprise Standard/Plus, Frontline Plus, Education Standard/Plus (tenant edition *tbd*, [../google-workspace.md](../google-workspace.md)); exports **all** supported event types (Admins, Users, Groups, OAuth, SAML, Login, Rules, Gmail, Drive, Chat, Calendar, Meet, Devices, Chrome, Takeout, Data Studio, Vault… — no selective export); only events after connection; up to 24 h before the first data | the desk's copy of everything, including the Gmail/Drive/Calendar/Chat/Meet/Chrome streams Cloud Logging never receives | a **human** Workspace administrator holding the Reports privilege configures it (never `walle@` — the export setting is on the hard-denied list, HLD §13.1 item 2); IT security owns | `Assumption:` 15 min steady-state (verify at build) | SIEM heartbeat rule H-2 (§7) |
-| F2 | Cloud Audit Logs and Workspace-in-Cloud-Logging → `LOGGING_PROJECT` → SIEM | the two aggregated sinks of [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §3.2 (aligned 2026-09-13) — `S-org` at the organisation for the Workspace audit streams (admin, groups, login, OAuth token, SAML, Access Transparency) and `S-folder` over `fld-agentic-platform` with `includeChildren`, intercepting, for the five audit families — into `LOGGING_PROJECT`, then the locked `europe-west1` evidence bucket, the identity bucket and the BigQuery dataset (HLD §7.1); the SIEM reads the `siem` log view of `platform-evidence-logs` (the `identity` view only on IT security's request); SecOps ingests Cloud Logging directly (the ingest page rendered as an index only on 2026-09-13; the mechanism — direct ingestion configured from SecOps, or a Pub/Sub sink — is **unverified this pass** and fixed at build) | every Admin Activity and Data Access entry the folder produces; the Workspace entries Google shares with Cloud Logging | platform owner | sink: seconds; SIEM: `Assumption:` 5 min | H-1 (Eve's independent copy) and H-2 |
+| F2 | Cloud Audit Logs and Workspace-in-Cloud-Logging → `LOGGING_PROJECT` → SIEM | the two aggregated sinks of [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §3.2 (aligned 2026-09-13) — `S-org` at the organisation for the Workspace audit streams (admin, groups and login on every edition; OAuth token and SAML only on Enterprise Standard/Plus, Education Standard/Plus, Voice Premier or Cloud Identity Premium; Access Transparency only on Enterprise Plus and Education — [share data with Google Cloud services](https://knowledge.workspace.google.com/admin/getting-started/share-data-with-google-cloud-services), updated 2026-09-10; the tenant edition is *tbd* and a Stage 0 precondition of this feed's completeness check, added 2026-09-13) and `S-folder` over `fld-agentic-platform` with `includeChildren`, intercepting, for the five audit families — into `LOGGING_PROJECT`, then the locked `europe-west1` evidence bucket, the identity bucket and the BigQuery dataset (HLD §7.1); the SIEM reads the `siem` log view of `platform-evidence-logs` (the `identity` view only on IT security's request); SecOps ingests Cloud Logging directly (the ingest page rendered as an index only on 2026-09-13; the mechanism — direct ingestion configured from SecOps, or a Pub/Sub sink — is **unverified this pass** and fixed at build) | every Admin Activity and Data Access entry the folder produces; the Workspace entries Google shares with Cloud Logging | platform owner | sink: seconds; SIEM: `Assumption:` 5 min | H-1 (Eve's independent copy) and H-2 |
 | F3 | SCC findings → SIEM and → pager | SecOps ingests SCC findings by default (lens, §18); independently, one **notification config** at the organisation (`gcloud scc notifications create … --pubsub-topic … --filter …`, filters as in `findings.list`) to a Pub/Sub topic in `CORE_PROJECT` whose subscriber posts to the Terraform-managed channel — **SCC does not page on its own** | ETD (incl. the eight Workspace findings), SHA + custom modules, AI Protection, Sensitive Actions, Agent Platform Threat Detection (nonprod) | organisation IT security (P11) | near-real time (Google) | H-3: a synthetic SHA custom-module finding raised weekly by the drift job and expected at the desk |
 | F4 | Agent-layer events → SIEM, **metadata only** | each action service publishes `halt.set`, `content.flagged`, `override.applied`, `run.verified`, `reconciliation_gap`, denial rows and the heartbeat row to the project's Pub/Sub topic (factory-made, HLD §3.2); ids, reason codes and hashes only — never prompt or payload; the platform's SIEM feed subscribes to every topic labelled `tier ∈ {W,P,P-SA}` | the correlation keys of §5 and the closed denial vocabulary | agent owner emits; platform owner owns the subscription | seconds | the per-agent heartbeat (§4, §7) |
 | F5 | Eve's independent copies (not a SIEM feed; the verifier's own evidence) | Eve's organisation-level sink over all six Workspace streams → `eve_workspace_logs`; Eve's Reports API poll by actor → `eve_workspace_reports`; the daily push to the witness by `eve-export@` (HLD §13.2) | what Eve reconciles against `walle_audit` | Eve owner | sink: seconds; Reports API: per-application lag budgets in `thresholds.yaml` | H-1 (in `EVE_PROJECT` and in the witness) |
@@ -172,17 +175,18 @@ Owner: IT security (decision), platform owner (the contract and the default). Ga
 
 Verified on 2026-09-13 (§18): SecOps has a **Europe multi-region** ("data resides in data centers
 within the member states of the European Union", named as Belgium, Netherlands and Finland) and
-single EU regions **`europe-west2` London, `europe-west3` Frankfurt, `europe-west6` Zurich,
-`europe-west9` Paris, `europe-west12` Turin**; there is **no `eu` location and no
+single regions **`europe-west2` London, `europe-west3` Frankfurt, `europe-west6` Zurich,
+`europe-west9` Paris, `europe-west12` Turin, `europe-central2` Warsaw** (Warsaw added
+2026-09-13; London and Zurich are outside the EU); there is **no `eu` location and no
 `europe-west1`** for SecOps; data residency is "always enabled" for SecOps; default retention
 **12 months**, extendable **to 60 months** on the purchase order (the licence defines the
-maximum; extension through SecOps support). The residency terms page rendered only partially
-(HLD §19 said the same); the region list above comes from the SCC data-residency page's SecOps
-paragraph and a second search hit and is re-verified on the order form.
+maximum; extension through SecOps support). The region list is verified on Google's SecOps
+data-residency terms page, fully readable by raw fetch on 2026-09-13 (last modified 2026-06-24;
+applies to SecOps SIEM and SOAR); an earlier pass read it truncated.
 
 | Item | Decision | Reason |
 |---|---|---|
-| Location | **Europe multi-region** | The platform's home is `europe-west1` (Belgium), which the multi-region includes; London and Zurich are outside the EU and are excluded by S1; a single region would make the SIEM the one platform store with a different residency shape from the log bucket. If the ISMS requires a nameable single site for the TISAX scope statement (P20), `europe-west3` is the fallback, recorded as a dated change |
+| Location | **Europe multi-region** | The platform's home is `europe-west1` (Belgium), which the multi-region includes; London and Zurich are outside the EU and are excluded by S1; a single region would make the SIEM the one platform store with a different residency shape from the log bucket. If the ISMS requires a nameable single site for the TISAX scope statement (P20), `europe-west3` is the fallback (`europe-west9`, `europe-west12` and `europe-central2` are the other EU single regions), recorded as a dated change |
 | Retention | Ordered at **the smallest term the order form allows that is ≥ 400 days** (`Assumption:` 24 months if terms are annual, 14 if monthly — granularity unverified; the number follows P13 if the DPO sets a different ceiling) | S2 |
 | Feeds | F1 native export; F2 direct Cloud Logging ingestion (mechanism fixed at build, §1.1); F3 default; F4 Pub/Sub | S3 |
 | Curated content | Cloud Threats and Workspace curated detections on (lens-verified categories) | free coverage the catalogue does not have to write |
@@ -203,6 +207,8 @@ not change.
 
 ## 3. Security Command Center Premium at organisation level
 
+Answers gap MON-06.
+
 Verified on 2026-09-13 (§18): SCC has three tiers, Standard, Premium and Enterprise; **the
 Enterprise tier is deprecated since 2026-05-21 and shuts down on 2027-05-21**, after which
 Enterprise organisations move to Premium automatically — so the review's claim stands and
@@ -211,26 +217,30 @@ Workspace), Security Health Analytics with custom modules, AI Protection, Sensit
 Service, Agent Platform Threat Detection and the Model Armor findings integration. AI Protection
 went GA in Enterprise on 2025-12-12 and **GA in Premium on 2026-03-05**. Agent Platform Threat
 Detection (formerly Agent Engine Threat Detection) is **Preview** (from 2025-11-17) and detects
-runtime and control-plane threats on agents deployed to Agent Runtime; its documented
-prerequisites do not mention Agent Gateway — the set's earlier finding that it is unavailable on
-a gateway-bound engine ([../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md) §2)
-is kept as the set's own verified row and re-checked at build. ETD's Workspace findings need
+runtime and control-plane threats on agents deployed to Agent Runtime. Google states the
+incompatibility outright on the Agent Runtime gateway page: "The Security Command Center Agent
+Engine Threat Detection service isn't available when Agent Gateway is enabled for an agent"
+([deploy with Agent Gateway](https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/runtime/agent-gateway-runtime-deploy),
+updated 2026-09-08; the same fact as [06](06-gateways-model-armor-perimeter.md) row G1 and
+§2.4, P82 — the earlier "re-checked at build" hedge removed 2026-09-13). ETD's Workspace findings need
 **Premium activated at the organisation level** and Workspace logs shared with Cloud Logging.
 Premium at organisation level is sold as a subscription or pay-as-you-go.
 
 | Item | Decision | Owner | Verified by | On failure |
 |---|---|---|---|---|
 | Tier and level | **Premium, organisation-level activation** (Tier C precondition, HLD §0.4); subscription vs pay-as-you-go is P11's funding question | organisation IT security (P11) | the activation shown in the console; a Workspace ETD finding observed in a drill (a 2SV toggle on a nonprod test account) | no Workspace findings, no SHA custom modules: Tier C stays closed |
-| Data residency of SCC itself | **Open — part of P94.** SCC offers `eu`, `us` and `sa` residency locations; the SCC data-residency page states that in the **`eu` location** the AI Discovery service, the Gemini inventory, **Model Armor** and SHA compliance resource counts have restricted availability (the exact restriction text is *tbd*; the page rendered as a summary). Recommendation: **`eu`**, because findings carry resource names and Workspace user identities, and the Model Armor loss is compensated by the sanitize logs already in `LOGGING_PROJECT` and the log-filter alerts of [../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md) §6 until the restriction is understood | IT security with the platform owner | the activation location; a Model Armor `MATCH_FOUND` in nonprod either appears in SCC or the log-filter alert fires | if `eu` loses Model Armor findings entirely, the log-filter path stays primary and the gap is a dated row in the compliance mapping |
+| Data residency of SCC itself | **Part of P94; corrected 2026-09-13.** SCC offers `eu`, `us` and `sa` residency locations. The data-residency page (updated 2026-09-09) restricts AI Discovery, the Gemini inventory and Model Armor **only in KSA (`sa`)**; in `eu` they are available. The one location-independent loss on Premium is the SHA **"Resources scanned" counts on the Compliance page**. Two real caveats: "Some detectors in Cloud Run Threat Detection and Container Threat Detection can't be enabled when you enable data residency", and "the Data Location terms do not apply to pre-General Availability (GA) features and services" — which covers Agent Platform Threat Detection (Preview) in nonprod. Recommendation: **`eu`**, because findings carry resource names and Workspace user identities | IT security with the platform owner | the activation location; a Model Armor `MATCH_FOUND` in nonprod appears in SCC; the enabled Cloud Run Threat Detection detector list is diffed against the expected list after activation | a detector the catalogue relies on that cannot be enabled under residency: its rule moves to the SIEM over Cloud Audit Logs and is recorded as a dated row in the compliance mapping; the Preview ATD findings are recorded in the supplier file as outside the Data Location terms |
 | Services on for `fld-agentic-platform` | ETD (all curated Cloud Threats and the eight Workspace findings: SSO Enablement Toggle, SSO Settings Changed, Strong Authentication Disabled, Two Step Verification Disabled, Account Disabled Hijacked, Disabled Password Leak, Government Based Attack, Suspicious Login Blocked); SHA plus the custom modules of HLD §4.7 (baseline drift, Cloud Run ingress, impersonation chains, keys, token-creator sprawl, dataset readers, image digests, `walle@` org-level role); AI Protection (asset inventory incl. MCP servers; Model Armor findings; Google Recommended AI Essentials posture); Sensitive Actions Service (Add Sensitive Role at the organisation, Organization Policy Changed, Remove Billing Admin — all relevant to a super admin reaching Organization Administrator); Agent Platform Threat Detection **on nonprod only** (Preview; prod engines are gateway-bound) | platform owner configures; IT security owns | a weekly synthetic SHA finding (H-3); the custom-module list diffed against git by the drift job | a missing module is a drift finding; the synthetic finding not arriving is H-3 |
 | Sensitive Actions constraint | The `_Required` and `_Default` organisation buckets stay where Google keeps them; the platform **copies** with the aggregated sink and never redirects `_Required`. Reason, verified: Sensitive Actions cannot detect if logs use CMEK or if log-bucket storage is configured outside the `global` location | platform owner | the sink configuration in Terraform | redirecting `_Required` silently blinds Sensitive Actions — refused in code review |
 | Paging | SCC does not page. One organisation-level notification config, filter `state="ACTIVE" AND severity="CRITICAL" OR severity="HIGH"` (exact filter committed), to `projects/CORE_PROJECT/topics/scc-findings`; a Cloud Run job subscribes and posts to the Terraform-managed channel (§9.2). Everything else reaches the desk through the SIEM | platform owner | the notifier's own heartbeat (a weekly synthetic finding must produce a page at the desk) | no page for a CRITICAL finding is itself a severity-2 incident |
-| Audit Manager | as HLD §7.1: ISO 27001:2022, NIST AI 600-1, Google Recommended AI Essentials monthly; scheduled runs Preview, so Cloud Scheduler or by hand until GA | platform owner | the report object in the evidence bucket, dated | a missing monthly report is a drift finding |
+| Audit Manager | as HLD §7.1, with the exact framework names of the overview page (updated 2026-09-03): "ISO 27001:2022", "NIST AI 600-1 Privacy Controls" and "Google Recommended AI Essentials - Gemini Enterprise Agent Platform" monthly — all three available only with SCC Premium or Enterprise or Assured Workloads (P94 supplies Premium). **Scheduled audits and organisation-level assessments are Preview**; folder- and project-scope assessments are not, so the monthly run targets `fld-agentic-platform` and is triggered by Cloud Scheduler or by hand until GA. Frameworks used before 2026-06-30 can no longer be run; historical reports stay readable (aligned 2026-09-13) | platform owner | the report object in the evidence bucket, dated | a missing monthly report is a drift finding |
 
 **Decision P94.** SCC Premium at organisation level with the service set above
 (Enterprise is not chosen because it is deprecated), and SCC's data-residency location —
-recommendation `eu` with the Model Armor compensations named; verify the restriction before
-activation because the location is chosen at activation. Owner: organisation IT security with
+recommendation `eu` (in `eu` only the Compliance page's resources-scanned counts are lost;
+the Model Armor compensation reasoning of an earlier draft is withdrawn, 2026-09-13); before
+activation, confirm which Cloud Run Threat Detection detectors residency disables, because the
+location is chosen at activation. Owner: organisation IT security with
 the platform owner. Gate: Tier C.
 
 ---
@@ -296,6 +306,8 @@ SIEM invariant.
 
 ## 5. The correlation contract
 
+Answers gap MON-07.
+
 Every audit row on the platform carries the keys below (HLD §7.4 and §12.3). This section says
 where each key originates, who writes it, how it reaches the SIEM and how an investigator joins
 across a tenant and an organisation. It is a contract because Mo's metrics, Eve's
@@ -337,6 +349,8 @@ Workspace event with no row is Eve's `reconciliation_gap` and a halt (HLD §13.2
 ---
 
 ## 6. The detection catalogue
+
+Answers gap MON-08 (and the platform half of EVE-03).
 
 ### 6.1 Ownership and lifecycle
 
@@ -839,6 +853,8 @@ Owner: legal and the DPO; the incident commander operates it. Gate: Stage 1 of a
 
 ## 13. Tabletop exercises
 
+Answers gap MON-10.
+
 | Item | Decision |
 |---|---|
 | Cadence | **Quarterly** until the platform has run Tier P for four consecutive quarters without a severity-1 incident caused by a control gap; **semi-annual** after that; and one **before Stage 1 of the first Tier W agent** and one **before the super-admin grant** (both gate rows) |
@@ -855,6 +871,8 @@ IT security. Gate: Stage 1 (first tabletop), the super-admin grant (the crisis s
 ---
 
 ## 14. SOC metrics
+
+Answers gap MON-09.
 
 Produced **monthly**; the platform-wide ones by the detection desk from the SIEM and the case
 system, **never** from `MO_PROJECT`; the Wall-E-scoped ones by Mo as a metric pack over
@@ -1001,9 +1019,9 @@ Verified this pass:
 - https://docs.cloud.google.com/security-command-center/docs/ai-protection-overview — GA overall; asset inventory incl. MCP servers; Model Armor findings; Google Recommended AI Essentials; Agent Platform Threat Detection Preview
 - https://docs.cloud.google.com/security-command-center/docs/concepts-sensitive-actions-overview — the seven categories; not detectable with CMEK logs or log-bucket storage outside `global`
 - https://docs.cloud.google.com/security-command-center/docs/agent-engine-threat-detection-overview — Preview; Premium/Enterprise; runtime and control-plane detectors on Agent Runtime
-- https://docs.cloud.google.com/security-command-center/docs/data-residency-support — SCC `eu`/`us`/`sa` locations; restricted availability in `eu` for AI Discovery, Gemini inventory, Model Armor, SHA compliance counts; "for Google SecOps data residency is always enabled"
+- https://docs.cloud.google.com/security-command-center/docs/data-residency-support — SCC `eu`/`us`/`sa` locations; AI Discovery, Gemini inventory and Model Armor restricted in KSA only; "Resources scanned" compliance counts restricted; some Cloud Run and Container Threat Detection detectors unavailable under residency; Data Location terms do not apply to pre-GA features (updated 2026-09-09, re-read 2026-09-13); "for Google SecOps data residency is always enabled"
 - https://docs.cloud.google.com/security-command-center/docs/activate-scc-overview — Premium at organisation level: subscription or pay-as-you-go
-- https://cloud.google.com/terms/secops/data-residency (rendered truncated on both passes of 2026-09-13) with the SecOps regions confirmed by https://security.googlecloudcommunity.com/news-announcements-9/expanding-google-secops-data-residency-5276 (Google's own announcement: Europe multi-region in EU member states — Belgium, Netherlands, Finland; `europe-west2`, `europe-west3`, `europe-west6`, `europe-west9`, `europe-west12`) and by the SecOps paragraph of https://docs.cloud.google.com/security-command-center/docs/data-residency-support — **re-verify on the order form**
+- https://cloud.google.com/terms/secops/data-residency — verified by raw fetch on 2026-09-13 (last modified 2026-06-24): Europe multi-region (EU member states) and single regions including `europe-central2` Warsaw; applies to SecOps SIEM and SOAR; earlier also confirmed by https://security.googlecloudcommunity.com/news-announcements-9/expanding-google-secops-data-residency-5276 (Google's own announcement: Europe multi-region in EU member states — Belgium, Netherlands, Finland; `europe-west2`, `europe-west3`, `europe-west6`, `europe-west9`, `europe-west12`) and by the SecOps paragraph of https://docs.cloud.google.com/security-command-center/docs/data-residency-support — **re-verify on the order form**
 - https://docs.cloud.google.com/chronicle/docs/about/data-retention (rendered as an index on both passes; the linked "Configure SIEM data retention" page returned 404 on the second pass): 12-month default; maximum raised to 60 months; extension on the purchase order through SecOps support — figures from the lens's verified table, **unverified from the primary page this pass**
 - https://knowledge.workspace.google.com/admin/reports/export-log-events-to-google-security-operations-to-monitor-insider-risk — the SecOps export: editions, console path, all event types, customer id/token/instance id, up to 24 h initial delay, Reports privilege
 - https://knowledge.workspace.google.com/admin/getting-started/share-data-with-google-cloud-services — Sharing options: Menu → Account → Account settings → Legal and compliance; super administrator; Groups Enterprise, Admin, User, OAuth, SAML, Access Transparency logs; "no new data is shared" when off
@@ -1039,7 +1057,7 @@ tenant's Workspace edition (F1's prerequisite); SecOps rule-performance metric n
 
 ## Related
 
-- [01-hld.md](01-hld.md) — the parent: §0.2 primitives (P5, P6), §0.3 roles, §0.4 the tier gate,
+- [01-hld.md](01-hld.md) — the parent: §0.2 primitives (CP5, CP6), §0.3 roles, §0.4 the tier gate,
   §4.7 the drift job, §5.3 the admission gate, §7 monitoring and detection (§7.1 feeds, §7.2
   baseline, §7.3 catalogue, §7.4 correlation, §7.5 retention, §7.6 incident response), §11.4 K7,
   §12.3 `audit.schema`, §13.1 Wall-E's compensations, §13.2 Eve's reporting contract and the

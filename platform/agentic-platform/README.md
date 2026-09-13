@@ -12,7 +12,7 @@
   without re-deriving a decision.
 - What this set is: thirteen pages (00–12). [01-hld.md](01-hld.md) is the parent; pages 02–11
   each detail one part of it and record their decisions; [12-open-decisions.md](12-open-decisions.md)
-  is the register of record, P1–P141.
+  is the register of record, P1–P143.
 - Objective: `.agent-work/OBJECTIVE.md` (outside the wiki), restated in
   [00-objective-review.md](00-objective-review.md) §1. Standing constraints that no page
   loosens: no domain-wide delegation; the language model holds no credential and cannot
@@ -77,7 +77,7 @@ The full list is [01-hld.md](01-hld.md) §16. The lines a reader most needs befo
 
 | Page | What it is | Decisions |
 |---|---|---|
-| [00-objective-review.md](00-objective-review.md) | The objective verbatim, the verdict on the documentation that existed before it, the gap register (110 gaps, 24 blocking), the 82-item brief the HLD had to answer, and the two compliance frames | — |
+| [00-objective-review.md](00-objective-review.md) | The objective verbatim, the verdict on the documentation that existed before it, the gap register (111 gaps, 24 blocking), the 82-item brief the HLD had to answer, and the two compliance frames | — |
 | [01-hld.md](01-hld.md) | The parent: thesis and six primitives, the RACI and tier gate, the charter (promises and demands), the secure Gemini Enterprise environment, landing zone, identity, registry, gateways and Model Armor, monitoring, perimeter and sovereignty, supply chain, recovery, the tier model and fleet kill switch, the autonomy contract, the three agents, EU AI Act and TISAX frames, trust boundaries, what it does not do, and what it requires of the three agent sets (§18) | P1–P34 |
 | [02-landing-zone-and-tiers.md](02-landing-zone-and-tiers.md) | The tier model in full, every folder named, project-per-agent and the factory (Fabric modules, CI identity, naming, labels, budgets, nonprod), the organisation-policy baseline and custom constraints, what is shared in `platform-core` and what stays per agent, and what is promoted from the Wall-E chapters | P35–P47 |
 | [03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) | The tenant app as the one front door: project and folder placement, administration through PAM, `eu` location and CMEK, identity provider, the user population's three gates, the feature baseline, console Model Armor, agent admission and revocation, the tenant egress gateway `gemini-egress`, connectors, audit logging, and the runbook to baseline | P48–P59 |
@@ -89,7 +89,7 @@ The full list is [01-hld.md](01-hld.md) §16. The lines a reader most needs befo
 | [09-supply-chain-secrets-recovery.md](09-supply-chain-secrets-recovery.md) | Binary Authorization and attested images, the vulnerability gate, HSM everywhere and the key project, secrets, CMEK exceptions, recovery classes and the restore-boots-halted mechanism, the code-execution tier, and AGI-class containment (what Tier X would be and why it stays closed) | P115–P124 |
 | [10-eu-ai-act.md](10-eu-ai-act.md) | The regulatory state as amended, provider and deployer roles, the classification of every system (Wall-E's Art. 6 path, F7's profiling boundary, Eve, `eve-advisor`, Mo, the tenant app), the obligation crosswalk with owner and evidence per article, the evidence register, and what "bulletproof" can mean | P125–P132 |
 | [11-tisax.md](11-tisax.md) | The target (label, level, scope), module scope, shared responsibility with Google and the supplier file, the control-by-control mapping, the super-admin deviation record, separation of duties as a counted minimum per stage, supplier onboarding and exit, assurance cadence, the risk register and the legal register | P133–P141 |
-| [12-open-decisions.md](12-open-decisions.md) | The register of record: all 141 decisions in one sequence, grouped by the gate they block, with why each matters, the recommendation, owner, where it is recorded, the disagreements between pages, and the index into Wall-E's, Eve's and Mo's registers | P1–P141 |
+| [12-open-decisions.md](12-open-decisions.md) | The register of record: all 143 decisions in one sequence, grouped by the gate they block, with why each matters, the recommendation, owner, where it is recorded, the disagreements between pages, and the index into Wall-E's, Eve's and Mo's registers | P1–P141 |
 
 Two pages outside this folder are part of the design and are pointed at, not copied:
 [../project-topology.md](../project-topology.md) (the four projects and every cross-project
@@ -164,7 +164,7 @@ policy, the log view instead of an organisation sink).
 
 | Thing | State |
 |---|---|
-| The design | complete for pages 00–12; decisions P1–P141 recorded; the reconcile pass over the platform pages (page-to-page claims in each page's "claims other pages must match" section, and §7 of the register) run on 2026-09-13 — every HLD correction carries a dated line; the agent-set changes it names are the propagation stage of HLD §18, not yet run |
+| The design | complete for pages 00–12; decisions P1–P143 recorded; the reconcile pass over the platform pages (page-to-page claims in each page's "claims other pages must match" section, and §7 of the register) run on 2026-09-13 — every HLD correction carries a dated line; the agent-set changes it names are the propagation stage of HLD §18, not yet run |
 | The organisation | one administrator, no SOC, no second super admin outside his own line, no security reviewer, no Eve owner, no DPO engaged, no ISMS names supplied (HLD §0.3) |
 | Google Cloud | no `fld-agentic-platform`, no factory, no project of the four; `GEMINI_PROJECT` exists as the tenant app's project and is to be imported |
 | Google Workspace | the tenant exists with Gemini Enterprise licences; no robot account, no robot OU, no multi-party approval, no sandbox tenant |

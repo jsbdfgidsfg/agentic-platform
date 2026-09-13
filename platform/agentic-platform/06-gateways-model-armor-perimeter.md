@@ -33,7 +33,9 @@ Every engine above Tier C is created bound to its project's **egress gateway**, 
 policy is default-deny and generated from the agent's manifest; every engine that a machine
 calls sits behind an **ingress gateway** whose Model Armor extension is fail-closed. Model Armor
 is governed as a **floor hierarchy** — an organisation floor IT security owns, a platform-folder
-floor, tier-folder floors and the P-SA floor — and as a **template standard per tier** that
+floor and tier-folder floors that govern template conformance, and a factory-written project
+floor in every agent project that carries inline enforcement (Google configures inline
+enforcement at project level only, and a project floor overrides its parents, §3.2) — and as a **template standard per tier** that
 carries what floors cannot check (Sensitive Data Protection), with every floor and template write
 alerted. The **perimeter** is two decisions taken in order: "credential holders are never
 internet-reachable" is a folder organisation policy applied the day the engine-reach spike passes
@@ -70,7 +72,8 @@ flowchart LR
     subgraph GOV["Governance, outside the agent's reach"]
         ORGF["Organisation floor (IT security)<br/>PI at HIGH or stricter + malicious URL"]
         FAPF["fld-agentic-platform floor<br/>+ Responsible AI MEDIUM + logging on"]
-        TIERF["Tier folder floors W, P, P-SA, controllers<br/>+ inline enforcement INSPECT_AND_BLOCK"]
+        TIERF["Tier folder floors W, P, P-SA, controllers<br/>template conformance at the measured level"]
+        PRJF["Project floor per agent project (Custom, privileged phase)<br/>inline enforcement INSPECT_AND_BLOCK at W+"]
         CC["Custom constraints on ReasoningEngine<br/>egress and ingress gateway allow-lists"]
         ING["run.allowedIngress folder policy<br/>held in Terraform until spike P3-1 passes"]
         REC["Reconciliation + drift job<br/>unbound engine = severity 2"]
@@ -83,10 +86,11 @@ flowchart LR
     ILB --> ACT
     EG --> EXT
     EG -. "498 / 403" .-> NEVER
-    ENG -. "generateContent screened by the floor path (fail-open)" .-> TIERF
+    ENG -. "generateContent screened by the project floor (fail-open)" .-> PRJF
     IG -. "uses" .-> TPL
     EG -. "uses, MCP and A2A payloads only" .-> TPL
     ORGF -. "conformance" .-> FAPF -. "conformance" .-> TIERF -. "conformance" .-> TPL
+    TIERF -. "content generated into" .-> PRJF
     CC -. "refuses CREATE/UPDATE without the allow-listed gateways" .-> ENG
     ING -. "refuses ingress all" .-> ACT
     REC -. "flags" .-> ENG
@@ -108,7 +112,7 @@ content finally lands for a REST tool set (§2.6), exactly as `wall-e/11` §3 fo
 |---|---|---|---|---|---|
 | Every Agent Runtime engine above Tier C is created with `agent_gateway_config` naming its project's egress gateway (`agentToAnywhereConfig.agentGateway`) and, if machine-called, its ingress gateway (`clientToAgentConfig.agentGateway`), together with `identity_type = AGENT_IDENTITY` | The factory's `agent-project` module creates both gateways and passes both names to the engine; the folder custom constraints `custom.allowlistedEgressAgentGatewaysForAgentEngine` and `custom.allowlistedIngressAgentGatewaysForAgentEngine` on `aiplatform.googleapis.com/ReasoningEngine` (CREATE, UPDATE) refuse any engine whose gateway is not in the allow-list the factory maintains (§8 row G1). The allow-list is the set of factory-made gateways, regenerated per run. `ReasoningEngine` is absent from the custom-constraint supported-services reference while the runtime page publishes the two constraints (§8 rows G1, O2) | enforcement (Google refuses the API call) — graded so once a throwaway engine has been refused in nonprod after the dry-run window; until that record exists, the CI check is the control and the grade is detection (reconcile pass, 2026-09-13; HLD §3.3, [02](02-landing-zone-and-tiers.md) §4.3 CC-1) | platform owner (constraint), CI identity (factory) | the daily reconciliation job lists engines and compares `agentGatewayConfig` to the register; the drift job diffs the constraint | an engine without a binding is a **severity 2** finding, unpublished within one business day (HLD §5.2); a constraint write outside a change window is a detection (§4.4 of the HLD) |
 | One egress gateway and one ingress gateway per project-region; all engines in a project-region share them | Google's rule (§8 row G1); the platform's project-per-agent rule (HLD §3.1) makes the shared gateway an agent-private gateway | enforcement (by construction) | platform owner | the factory refuses a second engine in a project unless the manifest declares a multi-engine agent with one policy | a second engine in a project inherits the first's policy — which is why the factory refuses it |
-| The engine is created after 2026-04-29 and without revisions | Google refuses binding to older engines and does not support revisions on bound engines (§8 row G1) | enforcement | CI | the factory never creates revisions; promotion is a Binary Authorization attestation, not a revision (HLD §3.2) | not applicable — a bound engine has no revisions |
+| The engine is created after 2026-04-29 and without revisions | Google refuses binding to older engines and does not support revisions on bound engines (§8 row G1) | enforcement | platform owner (the factory and CI apply it) | the factory never creates revisions; promotion is a Binary Authorization attestation, not a revision (HLD §3.2) | not applicable — a bound engine has no revisions |
 | `GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES=False` is never set | CI check fleet-wide (HLD §4.1; `wall-e/13` §7.2) | detection (CI) | platform owner | CI on every deploy config | the deploy is refused |
 
 The tenant app's own egress gateway (`gemini-egress`, Agent-to-Anywhere, in `GEMINI_PROJECT`)
@@ -125,7 +129,7 @@ register row and the manifest's `egress:` list (HLD §12.2), applied as a Unifie
 
 | Destination class | Entries | Why |
 |---|---|---|
-| The action service (Tier W+) | the internal load-balancer hostname of the action service after spike P3-1; the `run.app` hostname until then, registered explicitly as an endpoint in the project's Agent Registry so that the "unregistered host" contradiction (`wall-e/13` §7.4, R38) never applies | the one write path |
+| The action service (Tier W+) | the internal load-balancer hostname of the action service after spike P3-1; the `run.app` hostname until then, registered explicitly as an endpoint in the shared Agent Registry in `CORE_PROJECT` (P71; agent projects hold no registry — whether the gateway resolves a cross-project registration is part of P71's nonprod spike, [05](05-registry-and-autonomy-contract.md) §2.2, added 2026-09-13) so that the "unregistered host" contradiction (`wall-e/13` §7.4, R38) never applies | the one write path |
 | Essential platform endpoints | `aiplatform`, `agentregistry`, `logging`, `telemetry`, `cloudtrace`, `monitoring`, `cloudresourcemanager`, `iamcredentials`, the Sessions URI — each with the regional and mTLS variants the SDK resolves to (`wall-e/13` §7.6, verified against Google's 498 rule in §8 row G1) | without them every invocation fails with `498` |
 | Manifest `egress:` hostnames | MCP servers and read APIs the register row names, each with a supplier row (HLD §14.3); exact hostnames, no wildcards | the agent's declared tool surface |
 | **Never** | Secret Manager, Firestore, BigQuery, `admin.googleapis.com`, any Workspace API host, any other agent's action service | "the agent can read no secret" gains its second enforcement point here (`wall-e/13` §7.2); the absence is the control |
@@ -218,7 +222,7 @@ integrates with must be in the same region (§8 row M3); `europe-west1` is a Mod
 | SLO | `Assumption:` 99.5 % monthly successful screened invocations per region, measured by the probe below; the number is P83 | platform owner | monthly SLO report from the probe's metrics | a breach is a sev 3 review with Google support, never a `failOpen` flip |
 | Synthetic probe | one nonprod engine per region, invoked every 5 minutes through its ingress gateway with a benign prompt and a known-hostile prompt from the regression corpus; expects `200` and a `MATCH_FOUND` respectively | platform owner | Cloud Monitoring uptime-style alert on two consecutive failures | page the platform owner (sev 3); the agents fail closed by design |
 | Quota | ExternalProcessor QPM is consumed in the **gateway's** project — one more reason for project-per-agent; alert at 70 % of either quota (`wall-e/11` §6, promoted) | agent owner | Cloud Monitoring on `modelarmor.googleapis.com/template/request_count` and quota metrics | raise the quota by ticket before enforcement bites |
-| Runbook | "Model Armor or gateway outage": confirm with the probe, open a Google case, tell agent owners the agents are stopped by design, never edit `failOpen`, record the window in the evidence bucket | platform owner | tabletop quarterly (HLD §7.6) | — |
+| Runbook | "Model Armor or gateway outage": confirm with the probe, open a Google case, tell agent owners the agents are stopped by design, never edit `failOpen`, record the window in the evidence bucket | platform owner | tabletop quarterly (HLD §7.6) | a tabletop missed or a real outage without the window recorded: severity 3 finding against the platform owner; the tabletop is re-run within the month and the missing window is reconstructed from the probe's metrics and recorded as such in the evidence register |
 | The kill switches never depend on the gateway | K0–K7 are plain authenticated REST or folder policies (HLD §11.4; `wall-e/13` §7.6) | platform owner | monthly K7 drill | not applicable |
 
 An outage fails every fail-closed agent closed; HLD §6.1 already says so and this page only adds
@@ -246,11 +250,11 @@ Decision P88 records the pattern; `wall-e/11` §3 keeps its Wall-E reasoning as 
 | Control | Resource | Owner | Verified | On failure | Grade |
 |---|---|---|---|---|---|
 | Gateway binding at creation | `aiplatform.googleapis.com/ReasoningEngine` under `fld-agents-*` | platform owner | custom constraints (dry-run first, then enforced) + daily reconciliation | severity 2, unpublish | enforcement |
-| Default-deny egress with a generated allow-list | Unified Access Policy on the egress gateway | CI identity (writes), platform owner (standard) | dry-run logs in nonprod; asset feed in prod; monthly synthetic invocation | drift finding; a stale essential-endpoint set fails the agent with `498` | enforcement |
+| Default-deny egress with a generated allow-list | Unified Access Policy on the egress gateway | platform owner (standard and the generator; the factory identity writes it) | dry-run logs in nonprod; asset feed in prod; monthly synthetic invocation | drift finding; a stale essential-endpoint set fails the agent with `498` | enforcement |
 | Fail-closed ingress screening | authorization extension on the ingress gateway | platform owner | drift job on `failOpen` and timeout; the probe | outage, sev 3 | enforcement |
 | `streamQuery` only | caller repositories; Agent Runtime request log | agent owner | CI; monthly log query | severity 3 finding | detection |
 | Threat-detection rotation in nonprod | nonprod tier folders | platform owner | reconciliation count of unbound engines | page at two | detection |
-| Availability domain | one probe engine per region | platform owner | SLO report | sev 3 review | — |
+| Availability domain | one probe engine per region | platform owner | SLO report | sev 3 review | detection |
 
 ---
 
@@ -274,39 +278,68 @@ stated for any agent. Every row re-verified on 2026-09-13 unless marked.
 
 ### 3.2 The floor hierarchy
 
-Verified on 2026-09-13 (§8 row M1): floors exist at organisation, folder and project level; the
-console sets them at project level only, gcloud and REST at all three; the role is
-`roles/modelarmor.floorSettingsAdmin`; local settings always apply and a lower level may only
-tighten; floors do not check Sensitive Data Protection conformance; inline enforcement offers
-inspect-only and inspect-and-block, with "Agent Platform" GA and the Google MCP server Preview
-as enforcement points; `enableCloudLogging` and `enableMultiLanguageDetection` are floor flags;
-floor settings are `global` resources. The endpoint override
-`gcloud config set api_endpoint_overrides/modelarmor "https://modelarmor.googleapis.com/"`
+**Corrected 2026-09-13 on the review-findings pass.** An earlier version of this section said "a
+lower level may only tighten" and set inline enforcement at the organisation and folder levels.
+Google's floor-settings page (§8 row M1, re-read in full on 2026-09-13, updated 2026-09-10) says
+otherwise, in three sentences that change the design:
+
+- "**Template conformance** … is defined at the organization and folder levels. **Inline
+  enforcement** … is configured at the project level." Data inspection is "enforced only at the
+  project level using the inspect and block mode."
+- "If floor settings conflict, the settings lower in the resource hierarchy take precedence.
+  Similarly, project-level floor settings override conflicting folder-level floor settings."
+- A project may **Inherit** its parent's floor, define a **Custom** floor that "override[s] any
+  inherited floor settings", or **Disable** — "no detection rules apply to the Model Armor
+  templates and Agent Platform for your Gemini workloads."
+
+So the organisation and folder floors are **template-conformance controls only** (a new template
+below them is refused); the protection on the `generateContent` hop is a **project-level floor**;
+and whoever holds `roles/modelarmor.floorSettingsAdmin` on a project can loosen or disable that
+project's floor whatever the folders say. "Never looser" is therefore not a property of the
+hierarchy; it is a property of *who can write a project floor* and *how fast a write is seen*.
+
+Also verified on the page: the console sets floors at project level only, gcloud and REST at all
+three; floors do not check Sensitive Data Protection conformance; "Agent Platform" (GA) and the
+Google MCP server (Preview) are the inline enforcement points; `enableCloudLogging` and
+`enableMultiLanguageDetection` are floor flags; floor settings are `global` resources. The
+endpoint override `gcloud config set api_endpoint_overrides/modelarmor "https://modelarmor.googleapis.com/"`
 that `wall-e/11` §5 records is on the page.
 
-| Level | Set on | Content | Enforcement type | Owner | Change control |
+| Level | Set on | Content | What it does | Owner | Change control |
 |---|---|---|---|---|---|
-| Organisation | the organisation, by gcloud or REST | prompt-injection and jailbreak filter **enabled at `HIGH` or stricter**; malicious URL filter enabled; `enableCloudLogging` on; `enableMultiLanguageDetection` on | inline `INSPECT_ONLY` (evidence, not a block — the path is fail-open anyway) | **IT security** (the platform owner holds the role until IT security takes it; recorded as such, review date *tbd*) | `roles/modelarmor.floorSettingsAdmin` only through a PAM entitlement (HLD §4.4); every write alerted (§3.4) |
-| `fld-agentic-platform` | the folder | organisation floor + Responsible AI (hate, harassment, dangerous, sexually explicit) at `MEDIUM_AND_ABOVE` | inline `INSPECT_ONLY` | platform owner | same |
-| Tier floors `fld-agents-w`, `fld-agents-p`, `fld-controllers` | the tier folder | platform floor + prompt-injection at the **measured** confidence level once the tier's benign corpus has been run (§3.3) + Sensitive Data Protection basic *requested* in the template standard (floors cannot require it) | inline `INSPECT_AND_BLOCK` after the tier's first agent has passed the false-block threshold in nonprod; `INSPECT_ONLY` before | platform owner | same |
-| `fld-agents-p-sa` | the folder | tier P floor + nothing looser, ever; the hard-denied vocabulary detectors live in the **template** (§3.3), because floors cannot carry SDP | inline `INSPECT_AND_BLOCK` | platform owner; the security reviewer signs any change | same, plus the second approver of HLD §4.4 |
-| `fld-agents-r`, `fld-agents-x`, `fld-improvers`, `fld-platform-core`, `fld-gemini-enterprise` | inherit the platform floor | — | inherit | platform owner | — |
-| Project floors | **not used** after the factory runs; `./walle armor` keeps only Wall-E's templates (HLD §6.2) | — | — | — | a project floor written by hand is a drift finding |
+| Organisation | the organisation, by gcloud or REST | prompt-injection and jailbreak filter **enabled at `HIGH` or stricter**; malicious URL filter enabled; `enableCloudLogging` on; `enableMultiLanguageDetection` on | **template conformance** across the organisation; no inline enforcement (a project-level setting) | **IT security** (the platform owner holds the role until IT security takes it; recorded as such, review date *tbd*) | `roles/modelarmor.floorSettingsAdmin` only through a PAM entitlement (HLD §4.4); every write alerted (§3.4) |
+| `fld-agentic-platform` | the folder | organisation floor + Responsible AI (hate, harassment, dangerous, sexually explicit) at `MEDIUM_AND_ABOVE` | template conformance | platform owner | same |
+| Tier floors `fld-agents-w`, `fld-agents-p`, `fld-agents-p-sa`, `fld-controllers` | the tier folder | platform floor + prompt-injection at the **measured** confidence level once the tier's benign corpus has been run (§3.3) + Sensitive Data Protection basic *requested* in the template standard (floors cannot require it) | template conformance at the tier's level | platform owner; for P-SA the security reviewer signs | same, plus the second approver of HLD §4.4 at P-SA |
+| `fld-agents-r`, `fld-agents-x`, `fld-improvers`, `fld-platform-core`, `fld-gemini-enterprise` | inherit the platform floor | — | template conformance by inheritance | platform owner | — |
+| **Project floors — every agent project** | the project, written by the factory's **privileged phase** ([02](02-landing-zone-and-tiers.md) §3.3; the P-SA and controller projects under `ent-factory-singleton`) | a **Custom** floor generated from the tier floor's content (never `Inherit`, so the content is explicit in Terraform and diffable; never `Disable`) with inline enforcement for Agent Platform: `INSPECT_ONLY` at Tier R and before a tier's benign-corpus measurement; `INSPECT_AND_BLOCK` at W, P and controllers after it; `INSPECT_AND_BLOCK` always at P-SA | **inline enforcement** on the engine's Gemini calls (detection-grade whatever the mode, because the floor path is fail-open) and template conformance inside the project | platform owner | written only by the privileged phase; `roles/modelarmor.floorSettingsAdmin` at project level held by nobody standing and granted only through PAM; `modelarmor.googleapis.com/floorSettings.update` denied to every agent-project principal by rule R5 of `deny-agents-platform` ([04](04-identity-and-privileged-access.md) §3) |
+
+**Verified by:** the drift job reads every agent project's floor setting daily and compares it
+to the generated one (mode, filters, levels, `Custom`), and the floor-write alert of §3.4 reacts
+in minutes. **On failure:** a project floor whose content differs from the generated one, set to
+`Inherit` or `Disable`, or written by any principal other than a privileged-phase grant, is
+**severity 1 drift** to `platform-security@`; the privileged phase re-applies the generated floor
+after the security reviewer signs the incident note; at P-SA the agent's ladder is held at L0 for
+writes until it is re-applied. **Grade:** the organisation, platform and tier floors are
+enforcement of template conformance only; the project floors' content is detection-grade
+(fail-open path) and its *integrity* is enforcement for agent principals (deny rule R5) and
+detection for humans (PAM plus the alert).
 
 Why the organisation floor says "at `HIGH` or stricter" and not a level: `wall-e/11` §4's
 reading of conformance — `LOW_AND_ABOVE` is the most restrictive setting and `HIGH` the least —
 means a floor at `MEDIUM_AND_ABOVE` would forbid a later, measured choice of `HIGH`. The
-organisation floor therefore guarantees only that nobody can disable the two filters; the tier
-floor tightens to the measured level. The ordering is confirmed at build by creating a `HIGH`
-template under a `MEDIUM_AND_ABOVE` floor in a nonprod project and recording the refusal.
+organisation floor therefore guarantees only that nobody can create a template without the two
+filters; the tier floor tightens to the measured level. The ordering is confirmed at build by
+creating a `HIGH` template under a `MEDIUM_AND_ABOVE` floor in a nonprod project and recording
+the refusal.
 
-Why inline enforcement is inspect-only at the organisation and platform levels: the floor path is
-fail-open, so blocking there buys no safety case and costs benign-prompt refusals across the
-whole organisation; its purpose is the sanitize log, which is the only platform evidence of what
-a model was shown on the `generateContent` hop. Blocking at the tier folder is a measured change,
-per tier, taken by the same rule as a template flip (§3.3). The residency question — the
-`global` floor-setting write under `gcp.resourceLocations` — is HLD §3.3's row and is settled at
-the first factory run. Decision P84.
+Why inline enforcement starts inspect-only: the floor path is fail-open, so blocking buys no
+safety case and costs benign-prompt refusals; its first purpose is the sanitize log, which is the
+only platform evidence of what a model was shown on the `generateContent` hop. Blocking in a
+tier's projects is a measured change, per tier, taken by the same rule as a template flip
+(§3.3), and applied by regenerating the project floors. The residency question — the `global`
+floor-setting write under `gcp.resourceLocations` — is HLD §3.3's row; Google's supported-services
+page constrains Model Armor at template creation only ([08](08-data-logging-retention-sovereignty.md)
+§13), so the write is expected to pass and is confirmed at the first factory run. Decision P84.
 
 ### 3.3 The template standard per tier
 
@@ -365,8 +398,8 @@ logs record verdicts without the query text.
 | Rule | Mechanism | Owner | Verified by | On failure |
 |---|---|---|---|---|
 | Every Gemini Enterprise app in the tenant has Model Armor on, `FAIL_CLOSED`, with the two platform templates | Applied by the Gemini Enterprise admin through PAM; the templates are a **second template pair in the `eu` multi-region** (the app is in `eu`, HLD §2.1; Model Armor lists `eu`, §8 row M5), generated from the same Tier C standard (prompt injection, malicious URL, RAI, SDP basic; no custom detectors) | Gemini Enterprise admin; platform owner for the templates | a daily drift check enumerates the tenant's apps and reads `customerPolicy.modelArmorConfig` on each; any app without it, or with `FAIL_OPEN`, is a finding | severity 2; the app is unpublished for external sharing until fixed |
-| The setting is recorded as covering Tier C only | HLD §2.1 row "Console Model Armor"; `wall-e/11` §2 | this page | — | — |
-| No second app is created without the setting | the app inventory in the register (HLD §5); a new app is a register row | Gemini Enterprise admin | the same drift check | — |
+| The setting is recorded as covering Tier C only | HLD §2.1 row "Console Model Armor"; `wall-e/11` §2 | platform owner | the admission gate refuses a Tier R+ register row whose safety case cites the console setting as its screen; the annual safety-case review re-reads Google's scope sentence (§8 row M7) | a safety case that relies on it: the row is refused or, if already admitted, capped at L3 until it names its gateway screen; a change in Google's scope sentence is a P84/P87 review opened by the platform owner |
+| No second app is created without the setting | the app inventory in the register (HLD §5); a new app is a register row | Gemini Enterprise admin | the same drift check | a second app without the setting: severity 2, unpublished for sharing until set, and a register row is back-filled or the app deleted |
 
 Decision P87. With one app per tenant the per-app setting is tenant-wide in practice, exactly as
 HLD §2.1 says of the feature toggles; the drift check is what keeps that true when a second app
@@ -386,13 +419,14 @@ instead (HLD §5.2).
 
 | Control | Resource | Owner | Verified | On failure | Grade |
 |---|---|---|---|---|---|
-| Organisation floor | the organisation's floor setting | IT security | drift job; write alert | severity 1/2 | enforcement (conformance), detection (inline) |
+| Organisation floor | the organisation's floor setting | IT security | drift job; write alert | severity 1/2 | enforcement (template conformance only) |
 | Folder floors | `fld-agentic-platform` and the tier folders | platform owner | same | same | same |
+| Project floors (inline enforcement) | every agent project's floor setting, `Custom`, generated | platform owner | daily drift compare; write alert | severity 1; privileged phase re-applies after security-reviewer sign-off; P-SA writes held at L0 until re-applied | detection (fail-open content); enforcement of integrity against agent principals (R5) |
 | Template standard | every project's two templates | platform owner (standard), agent owner (tightening) | CI diff | CI refuses | enforcement (floor) plus CI |
 | SDP advanced with de-identify at W+ | templates + SDP templates in `CORE_PROJECT` | platform owner | CI; a sanitize-log sample audited monthly for raw names | finding against the module | detection |
 | P-SA vocabulary detectors | the P-SA response template | platform owner; security reviewer signs | regression suite case per string | finding | detection |
 | Console setting | every Gemini Enterprise app | Gemini Enterprise admin | daily drift check | severity 2 | enforcement for Tier C traffic (fail-closed), detection for its presence |
-| Sanitize logs routed first | content bucket + sink per project | factory | module dependency order | the template is not created | — |
+| Sanitize logs routed first | content bucket + sink per project | platform owner (the factory applies it) | module dependency order; the drift job asserts the sink exists before the template | the template is not created and the factory run fails | enforcement (ordering) |
 
 ---
 
@@ -542,9 +576,9 @@ The HLD §8.1 table, with this page's additions in the last column:
 | Control | Resource | Owner | Verified | On failure | Grade |
 |---|---|---|---|---|---|
 | Never internet-reachable | `run.allowedIngress` on five folders | platform owner | drift job; SHA module; monthly direct-call probe | Google refuses (after spike 1); severity 2 (before) | enforcement / detection |
-| Gateways born perimeter-ready | connectivity template `ALL_TRAFFIC` on every W+ gateway | factory | asset feed; module output | a gateway without a template is a drift finding and is recreated by the factory | — |
+| Gateways born perimeter-ready (P89) | connectivity template `ALL_TRAFFIC` on every W+ prod gateway | platform owner (the factory applies it) | asset feed; module output | a gateway without a template is a drift finding and is recreated by the factory | enforcement (the module cannot emit a W+ prod gateway without it) |
 | Tier perimeters (after spike 2) | VPC-SC perimeters per tier folder, prod and nonprod | platform owner; security reviewer signs | dry-run violation logs for 30 days before enforcement; the flow table as the rule source | a violation is a SIEM case; an enforcement mistake fails closed and is a sev 3 page | enforcement |
-| The two spikes | one throwaway project | platform owner | the artefacts of §4.3 | the super-admin grant waits (HLD §0.4, P line) | — |
+| The two spikes | one throwaway project | platform owner | the artefacts of §4.3 | the super-admin grant waits (HLD §0.4, P line) | gate (a precondition, not a runtime control) |
 
 ---
 
@@ -602,7 +636,7 @@ HLD's register after P34.
 | P81 | **Gateway binding standard**: egress gateway for every engine above C; ingress gateway whenever the register row's invoker list is non-empty; the essential-endpoint set as one platform local; nonprod dry-run, prod enforcing from the first deploy (the tenant app's 30-day dry-run the one exception); the front door's `streamQuery` method measured in nonprod and recorded | as §2.1–§2.3 (recommended) vs prod dry-run per agent for 14 days | platform owner | Tier R (the first factory-made prod project) |
 | P82 | **Gateway over Agent Platform Threat Detection** at every prod tier; nonprod rotation of at most one unbound engine per tier folder for at most 30 days; revisit on compatibility or GA | as §2.4 (recommended) | platform owner; security reviewer at P | none — adopted now |
 | P83 | **Availability domain numbers**: SLO `Assumption:` 99.5 % monthly per region; one probe engine per region every 5 minutes; quota alerts at 70 %; `failOpen` never flipped | the SLO value is *tbd* by measurement over the first quarter | platform owner | Tier W (the first fail-closed write agent) |
-| P84 | **Floor hierarchy and contents**: organisation floor "PI enabled at `HIGH` or stricter + malicious URL + logging + multi-language", inline `INSPECT_ONLY`; platform folder + RAI `MEDIUM_AND_ABOVE`; tier floors tighten to the measured level and go `INSPECT_AND_BLOCK` after the tier's first benign-corpus run; P-SA floor never looser; no project floors after the factory | as §3.2 (recommended) vs `INSPECT_AND_BLOCK` at the organisation | IT security (organisation floor), platform owner (folders) | Tier R (the first project) |
+| P84 | **Floor hierarchy and contents** (redesigned 2026-09-13: Google defines template conformance at organisation and folder level and inline enforcement at project level, and a project floor overrides its parents): organisation floor "PI enabled at `HIGH` or stricter + malicious URL + logging + multi-language" and platform folder + RAI `MEDIUM_AND_ABOVE` as template conformance; tier floors tighten to the measured level; a `Custom` project floor generated by the privileged phase in every agent project carries inline enforcement (`INSPECT_ONLY` at R and before measurement, `INSPECT_AND_BLOCK` at W/P/controllers after, always at P-SA); any other project floor write is severity-1 drift; project `floorSettingsAdmin` only through PAM | as §3.2 (recommended) vs `INSPECT_AND_BLOCK` at the organisation | IT security (organisation floor), platform owner (folders) | Tier R (the first project) |
 | P85 | **Template standard per tier** including SDP: basic at R; advanced with a fleet-wide de-identify template at W+; custom dictionary and regex infoTypes for the hard-denied vocabulary on the P-SA response template; `STABLE` filter version; flip rule with a measured false-block threshold (`Assumption:` 1 %) | as §3.3 (recommended) | platform owner; security reviewer for P-SA | Tier R; the P-SA threshold blocks the super-admin grant |
 | P86 | **Alerting on floor and template writes**: log-based alerts in `LOGGING_PROJECT` on `modelarmor.googleapis.com` administration entries, SIEM rule at P, PAM on `floorSettingsAdmin`; the SCC path for floor writes *tbd* pending the resource-type check | as §3.4 | platform owner; security reviewer owns the rule content | Tier R |
 | P87 | **Console Model Armor**: on for every Gemini Enterprise app, `FAIL_CLOSED`, an `eu` template pair from the Tier C standard, applied through PAM, drift-checked daily by enumerating apps | as §3.5 (recommended) vs `FAIL_OPEN` for availability | Gemini Enterprise admin | Tier C |
@@ -624,7 +658,7 @@ HLD's register after P34.
 | G4 | `roles/iap.egressor`; CEL attributes `iap.googleapis.com/mcp.toolName`, `mcp.tool.isReadOnly`, `request.auth.type`; policies bind to registered agents, MCP servers and endpoints — "You cannot bind a policy to an unregistered resource"; dry-run recommended; no VPC-SC statement | https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/policies/configure-iam-policies | 2026-09-08 |
 | G5 | `AgentConnectivityTemplate`: PSC network attachment, `/28` subnet with Private Google Access, DNS peering, `PRIVATE_RANGES_ONLY` (default) or `ALL_TRAFFIC`; VPC-SC needs `ALL_TRAFFIC` and `restricted.googleapis.com` (`199.36.153.4/30`) via a private zone; templates and template-less gateways must be recreated to change | https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/set-up-vpc-connectivity | 2026-09-11 |
 | G6 | the egress permission spelled `iap.webServiceVersions.egressViaIAP` (blog) versus `iap.resources.egressViaIAP` (overview) | https://cloud.google.com/blog/products/identity-security/whats-new-in-iam-security-governance-and-runtime-defense | undated in the search result |
-| M1 | floors at organisation, folder, project; console project-only; `roles/modelarmor.floorSettingsAdmin`; SDP not floor-checked; inspect-only / inspect-and-block; enforcement points "Model Armor template creation and update" GA, "Google MCP Server" Preview, "Agent Platform" GA; `enableCloudLogging`, `enableMultiLanguageDetection`; floors are `global`; the endpoint override | https://docs.cloud.google.com/model-armor/configure-floor-settings | 2026-09-10 |
+| M1 | floors at organisation, folder, project; **template conformance at organisation and folder, inline enforcement configured at project level; lower levels take precedence and a project floor overrides its folder; a project may Inherit, set Custom or Disable** (re-read in full 2026-09-13); console project-only; `roles/modelarmor.floorSettingsAdmin`; SDP not floor-checked; inspect-only / inspect-and-block; enforcement points "Model Armor template creation and update" GA, "Google MCP Server" Preview, "Agent Platform" GA; `enableCloudLogging`, `enableMultiLanguageDetection`; floors are `global`; the endpoint override | https://docs.cloud.google.com/model-armor/configure-floor-settings | 2026-09-10 |
 | M2 | fail-open: "skips the Model Armor sanitization step and continues processing the request"; `generateContent`; `europe-west1` listed; `modelArmorConfig` per request; function-response inspection not stated | https://docs.cloud.google.com/model-armor/model-armor-vertex-integration | 2026-09-10 |
 | M3 | egress scope (MCP `tools/call`, `prompts/get`, tool errors; A2A `SendMessage`, cards; OpenAI-format) and "payloads that aren't listed here are allowed without sanitization"; ingress `streamQuery` for ADK only; "Model Armor and the services it integrates with must be deployed within the same Google Cloud region"; the service-agent roles for ingress and egress | https://docs.cloud.google.com/model-armor/model-armor-agent-gateway-integration and https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/configure-model-armor | 2026-09-10; 2026-09-04 |
 | M4 | 1,200 QPM sanitize per project; 600 QPM `ExternalProcessor` per project; token limits 65,536 / 130,000; 4 MB | https://docs.cloud.google.com/model-armor/quotas | 2026-09-10 |
@@ -641,7 +675,7 @@ HLD's register after P34.
 | S4 | Model Armor in SCC: templates and floors as the configuration surfaces; finding categories on a linked page not read | https://docs.cloud.google.com/security-command-center/docs/model-armor | 2026-09-09 |
 | S5 | SHA custom modules: Premium; `run.googleapis.com/Service` supported; Model Armor, Agent Gateway and (per this read) `aiplatform.googleapis.com/ReasoningEngine` not returned by the reader | https://docs.cloud.google.com/security-command-center/docs/custom-modules-sha-overview | 2026-09-09 |
 | V1 | VPC-SC release notes: agent identities in ingress/egress rules GA 2026-06-29; Agent Identity API and Credentials API GA 2026-08-14; Model Armor GA 2026-01-09 | https://docs.cloud.google.com/vpc-service-controls/docs/release-notes | entries as dated |
-| V2 | supported identities page: agent identities "(in Preview)", `principal://TRUST_DOMAIN/…`, `principalSet://TRUST_DOMAIN/attribute.…`, `principalSet://TRUST_DOMAIN/*` | https://docs.cloud.google.com/vpc-service-controls/docs/supported-identities | search snippet; page not fetched |
+| V2 | supported identities page: "You can only specify workforce identity pools, workload identity pools, agentic identities, and service agents in service perimeter ingress and egress rules"; agent identity `principal://TRUST_DOMAIN/…`, `principalSet://TRUST_DOMAIN/attribute.…`, `principalSet://TRUST_DOMAIN/*`, **no Preview label** (only deleted principals carry one); GA per the release notes of 2026-06-29 — corrected 2026-09-13, the earlier "(in Preview)" came from a stale snippet | https://docs.cloud.google.com/vpc-service-controls/docs/supported-identities | 2026-09-09, read by raw fetch 2026-09-13 |
 | V3 | supported products: Vertex AI GA with Agent Platform limitations; Agent Registry GA with the project-inclusion note; Cloud Run GA; BigQuery GA; Model Armor, Secret Manager, Firestore, IAP not returned by the reader on this page | https://docs.cloud.google.com/vpc-service-controls/docs/supported-products | undated in the read |
 | R1 | Cloud Run ingress values and what `internal` admits; `run.allowedIngress` values `all`, `internal`, `internal-and-cloud-load-balancing` | https://docs.cloud.google.com/run/docs/securing/ingress | 2026-09-04 |
 | R2 | serverless NEGs: Cloud Run behind global external, regional external, regional internal and cross-region internal Application Load Balancers | https://docs.cloud.google.com/load-balancing/docs/negs/serverless-neg-concepts | 2026-09-09 |
@@ -674,8 +708,9 @@ HLD's register after P34.
 9. The Gemini Enterprise Agent Platform release-notes page and the Agent Platform VPC-SC page
    rendered as navigation only; the 2026-09-08 connectivity-template entry is taken from the
    set-up and VPC-connectivity pages instead.
-10. Agent identities in VPC-SC rules: GA per the release notes, Preview per the supported-identities
-    page snippet — recorded as GA with the conflict.
+10. *(Closed 2026-09-13: agent identities in VPC-SC ingress and egress rules are GA — the
+    supported-identities page carries no Preview label and the release notes record GA on
+    2026-06-29; row V2.)*
 11. The GA `gcloud` track creating `INSPECT_AND_BLOCK` templates only (`wall-e/11` §4) — not
     re-checked; the factory uses the REST field through Terraform in any case.
 12. The SLO value (P83), the false-block threshold (P85) and the IT-security handover date for the
