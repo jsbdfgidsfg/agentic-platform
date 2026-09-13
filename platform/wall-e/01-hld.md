@@ -15,7 +15,11 @@
   [../project-topology.md](../project-topology.md) is the authority for where each resource lives
   and how every grant crosses. Since the platform HLD, `FOLDER_ID` is `fld-agentic-platform` and
   the four projects sit in tier folders under it (§"Where Wall-E sits on the platform"); the
-  grant rows themselves are unchanged.
+  grant rows themselves are unchanged **except the additions listed in platform HLD §18 item 25**
+  (`eve-controller@` halt invoker on `walle-actions-super`, the `eve_quality` readers,
+  `eve-advisor@`'s view reads, `eve-export@`'s two witness-side grants, the SIEM's invoker on the
+  K7 job, and the platform drift job's folder-level `roles/iam.securityReviewer` as a named
+  exception to the one rule and to decision 48).
 - Challenged on 2026-09-11 by eleven independent reviewer lenses. Verdict: the architecture
   is the correct path; three blocking gaps and a set of document corrections stand, and the
   edits they call for are **not yet applied to this page**. See
@@ -35,7 +39,7 @@ above it and this page is the design of one tenant of that platform.
 | The other three projects | `GEMINI_PROJECT` under `fld-gemini-enterprise` (the tenant app, a platform project — topology decision 52 re-read); `EVE_PROJECT` under `fld-controllers`; `MO_PROJECT` under `fld-improvers`. Two projects this page never had: `EVE_ADVISOR_PROJECT` (Eve's reporting path) and `EVE_WITNESS_PROJECT` in a second organisation. None of them holds anything of Wall-E's | platform HLD §3.1, §13.2; [../project-topology.md](../project-topology.md) |
 | What the platform enforces for Wall-E, so this page does not | Agent Identity, gateway binding, the folder deny policy and Principal Access Boundary, the organisation-policy baseline, the monitoring baseline, the audit and ladder schemas, the admission gate, the fleet kill switch K7, Privileged Access Manager on every deploy grant, the SIEM-hosted super-admin detection set | platform HLD §3–§7, §11.4 |
 | What stays Wall-E's own code | The catalogue, the policy chain and its hard invariants, the ladder config, the playbooks, the prompt, the two lanes of the action service, verification by re-read | this page and [03-lld.md](03-lld.md) |
-| When Super Admin is granted | Not at a runbook phase: **at the platform's tier gate**, on the day every row of the P line is green — Eve's observe-and-report layer live and drilled, the witness organisation, a SIEM with 24x7 acknowledgement, two human super admins with the robot never the recovery one, the penetration test, the signed deviation, the two lists signed, the perimeter decision taken | platform HLD §0.4 |
+| When Super Admin is granted | Not at a runbook phase: **at the platform's tier gate**, on the day every row of the P line is green — Eve's observe-and-report layer live and drilled, the witness organisation, a SIEM with 24x7 acknowledgement, two human super admins with the robot never the recovery one, the penetration test done, the DPIA started, the works-council information given, the signed deviation, the two lists signed, the perimeter decision taken (P3's engine-reach spike passed and the ingress policy applied) | platform HLD §0.4 |
 | Trust boundaries | This page's five boundaries are the platform's B1–B5; B6 (peer agents) and B7 (agent ↔ platform) are inherited from the platform and not restated here | platform HLD §15 |
 | Decision numbering | Wall-E's decisions 1–52 keep their numbers; platform decisions continue as P1… in platform HLD §17. The ones this page changes are listed at the end | [09-open-decisions.md](09-open-decisions.md) |
 
@@ -130,7 +134,7 @@ flowchart TB
 
     subgraph WALLE["WALLE_PROJECT — Tier P-SA under fld-agents-p-sa (europe-west1, BigQuery EU)"]
         DIS["Cloud Run: walle-dispatcher<br/>owns run_id · checks halt<br/>enforces job budgets"]
-        AR["Agent Runtime: agent 'wall-e'<br/>ADK 2.8 · Agent Identity · <b>holds no credentials</b><br/>the only engine in this project"]
+        AR["Agent Runtime: agent 'wall-e'<br/>ADK 2.9 (pin google-adk~=2.9) · Agent Identity · <b>holds no credentials</b><br/>the only engine in this project"]
         CR["Cloud Run: walle-actions — band A<br/><b>narrow OAuth client, one reader</b><br/>catalogue · ladder · policy chain · hard-denied list · audit<br/>verifies Eve against a pinned PEM"]
         CRS["Cloud Run: walle-actions-super — bands B and C<br/><b>broad OAuth client, one reader, own service account</b><br/>/v1/execute-generic (Discovery-validated, always L3)<br/>/v1/handoff (console steps + watch) · hard-denied list · audit"]
         FS["Firestore<br/>ladder config · halt flags<br/>counters · approvals"]
@@ -144,7 +148,7 @@ flowchart TB
     end
 
     subgraph EAP["EVE_ADVISOR_PROJECT — reporting path, may reason"]
-        EA["eve-advisor<br/>no signer · no invoker · no secret<br/>can only raise a refusal or a severity-2 page"]
+        EA["eve-advisor<br/>no signer · no invoker · no secret<br/>report-only: narratives, advice, severity-2 pages; nothing it writes reaches a verdict"]
     end
 
     subgraph WIT["org-witness — a second organisation, IT security"]
@@ -154,6 +158,8 @@ flowchart TB
     subgraph MOP["MO_PROJECT — fld-improvers — continuous improvement"]
         MO["Mo — one per platform<br/>mo-metrics@ · mo-analyst@ · mo-narrator@<br/>reads walle_audit and eve_quality · writes pull requests only"]
     end
+
+    GIT["git: walle/config (ladder.yaml, playbooks)<br/>branch protection · two human reviewers<br/>CI applies a merged change to Firestore"]
 
     subgraph WS["Google Workspace tenant"]
         RB["walle@domain — <b>Super Admin</b> (reversed 2026-09-13)<br/>licensed user · two hardware keys · no recovery channels<br/>no interactive login · never the only or the recovery super admin"]
@@ -195,10 +201,12 @@ flowchart TB
     BQ -->|"dataset-level roles/bigquery.dataViewer on walle_audit<br/>to eve-controller@EVE_PROJECT, jobs run in EVE_PROJECT"| EVE
     BQ -->|"dataset-level roles/bigquery.dataViewer on walle_audit<br/>and walle_workspace_logs to mo-metrics@MO_PROJECT<br/>jobs run in MO_PROJECT"| MO
     EVE -->|"authorised views, no free text"| EA
-    EVE -->|"daily export + heartbeat<br/>two resource-level grants only"| VA
+    EVE -->|"eve-export@ pushes the daily export + heartbeat<br/>two grants, both on witness-owned stores; no witness principal in the tenant"| VA
     EA -->|"severity-2 pages, within budget"| SEC
     VA -->|"severity-1 pages, out of band of the tenant"| SEC
-    MO -.->|"pull request<br/>a human merges"| FS
+    MO -.->|"pull request, agent-authored label"| GIT
+    SEC -.->|"one of the two human reviewers merges"| GIT
+    GIT -.->|"CI deploy of the merged config"| FS
     DIS -->|"halt check<br/>before any LLM call"| FS
 ```
 
@@ -214,7 +222,7 @@ re-cut from "whether" to "which lane".
 |---|---|---|---|---|
 | **A** — catalogued autonomous work | The typed catalogue on the ladder (families F1–F10 and what grows into it); the **declared intended purpose** of the system | `walle-actions` `/v1/execute`, narrow OAuth client. Policy chain, pre-state predicate, inverse, taint, protected principals, verify-by-re-read, Eve at L4 — all unchanged | The only band that can ever climb. `WRITE_HIGH` never L5 | Requester in `walle-operators@` (re-checked live); approvals per the ladder level; second operator at L3 |
 | **B** — uncatalogued super-admin work | A generic Admin SDK request `(api, version, resource, method, path_params, body)`, schema-validated with `extra=forbid` against the **pinned Google Discovery document** for that API; the method mapped to `READ` / `WRITE` / `SUPER` by a committed table (anything touching admin roles, security, domains, billing, OAuth or API controls is `SUPER`); pre-state captured by the matching `get`/`list`, or the request refused `no_pre_state` unless the approver accepts that explicitly; no inverse, so treated as irreversible; the taint bit and every hard-denied row apply; never in any playbook's `uses` (CI asserts); the full canonical request, the Discovery revision and both humans on the audit row | `walle-actions-super` `/v1/execute-generic`, broad OAuth client, its own service account and secret, its own audit rows. C35's rejection is re-argued: this lane loses the inverse, the pre-state predicate and the taint declaration, and needs none of them because it is never above L3 | **Permanently L3.** Trigger class `chat` only (`principal.type == human`); every other trigger L0, in code. `SUPER` carries the two-person rule | `WRITE`: requester in `walle-operators@`, one approver. `SUPER`: requester must be a **human super admin** (live `users.get isAdmin` through the narrow token, fail-closed), approver a **different human super admin**, a change-ticket reference and a `hold_minutes` window before execution for the veto surface — the answer to decision 28 for this lane |
-| **C** — console-only work | Everything the Admin console can do and no API can write. Defined by fact, not by list: the Cloud Identity Policy API mutates only DLP rules, DLP detectors and provisioning settings (verified); DWD authorisation is console-only. So: DWD, 2SV enforcement and methods, sign-in challenges, password policy, session control, API controls and app trust, Marketplace, data regions, Gmail routing, Drive/Meet/Calendar tenant settings, billing, super-admin self-recovery, other admins' backup codes, the Transfer tool, account deletion | `walle-actions-super` `/v1/handoff`: returns the exact console steps to the requesting human super admin, opens a watch on `reports.activities.list` for the matching admin event, and reports `verified` or `not seen within N hours` | None. Nothing executes | The human does it. **No browser-driving or computer-use automation of the Admin console under the robot's session, ever** — "an interactive login is an incident" is the one control that survives Super Admin, and it stays an incident |
+| **C** — console-only work | Everything the Admin console can do and no API can write, **minus the hard-denied list, which applies to this lane too**. Defined by fact, not by list: the Cloud Identity Policy API mutates only DLP rules and DLP detectors (v1) and, in v1beta1 only, the conflicting-accounts provisioning setting (verified); DWD authorisation is console-only. So: 2SV enforcement and methods, sign-in challenges, password policy, session control, API controls and app trust, Marketplace, data regions, Gmail routing, Drive/Meet/Calendar tenant settings, billing, the Transfer tool. Corrected 2026-09-13: DWD, super-admin self-recovery, other admins' backup codes and security settings, and deletion of any admin or of the tenant account were listed here *and* on the hard-denied list; they are hard-denied, so `/v1/handoff` **refuses** them (`posture_change_denied` / `escalation_denied`, severity-1 page) instead of returning steps — a human super admin who wants them does them without the robot, and Eve's tenant-integrity rules see it either way | `walle-actions-super` `/v1/handoff`: runs the same hard-denied check as every lane, then returns the exact console steps to the requesting human super admin, opens a watch on `reports.activities.list` for the matching admin event, and reports `verified` or `not seen within N hours` | None. Nothing executes | The human does it. **No browser-driving or computer-use automation of the Admin console under the robot's session, ever** — "an interactive login is an incident" is the one control that survives Super Admin, and it stays an incident |
 
 ### The controls that replace role scoping
 
@@ -224,14 +232,16 @@ refused; detection: it happens and something independent sees it within a stated
 
 | Control | What it is now | Grade |
 |---|---|---|
-| **The never-list, re-ratified as hard denies in code** (decision 4 re-opened as P29, owner-signed) | Two lists. *Hard-denied in every lane*, denial reasons `self_modification_denied` / `escalation_denied` / `posture_change_denied` / `irreversible_denied` / `money_denied`, breaker trip, severity 1: anything targeting `walle@`, its OU, `eve@`, Eve's role, the control groups (`walle-operators@`, `walle-protected@`, `eve-owners@`, `ge-admins@`, `platform-approvers@`, the `mo-*` groups), the two OAuth clients, the activity rules that alert on the robot, "Share data with Google Cloud services", the SecOps export setting, the organisation sinks; `users.makeAdmin` and any `roleAssignments.insert` of Super Admin or of a role carrying admin-role management; `users.delete` of any admin; other admins' security settings and backup codes; DWD. The robot is on the committed floor list and is a protected principal under its own N7 rule. *Reachable only through band B at tier `SUPER`*: everything else on the old never-list of [06](06-security-guardrails.md) — OU create/rename/move, user delete of non-admins, group delete, admin-role create or assign below Super Admin, domain add, data transfer, licence purchases where an API exists. N1 and N2 stop reading "not in the custom role" and become hard invariants tested by the denial suite | enforcement (code) |
+| **The never-list, re-ratified as hard denies in code** (decision 4 re-opened as P29, owner-signed) | Two lists. *Hard-denied in every lane — bands A, B and the band-C handoff alike; a handoff request for one of these is refused, never turned into console steps* — denial reasons `self_modification_denied` / `escalation_denied` / `posture_change_denied` / `irreversible_denied` / `money_denied`, breaker trip, severity 1: anything targeting `walle@`, its OU, `eve@`, Eve's role, the control groups (`walle-operators@`, `walle-protected@`, `eve-owners@`, `ge-admins@`, `platform-approvers@`, the `mo-*` groups), the two OAuth clients, the activity rules that alert on the robot, "Share data with Google Cloud services", the SecOps export setting, the organisation sinks; `users.makeAdmin` and any `roleAssignments.insert` of Super Admin or of a role carrying admin-role management; `users.delete` of any admin and deletion of the tenant account; other admins' security settings and backup codes; the super-admin self-recovery setting; DWD. The robot is on the committed floor list and is a protected principal under its own N7 rule. *Reachable only through band B at tier `SUPER`*: everything else on the old never-list of [06](06-security-guardrails.md) — OU create/rename/move, user delete of non-admins, group delete, admin-role create or assign below Super Admin, domain add, data transfer, licence purchases where an API exists. N1 and N2 stop reading "not in the custom role" and become hard invariants tested by the denial suite | enforcement (code) |
 | **Requester and approver entitlement, as the whole story** | With a super admin behind the account, membership of `walle-operators@` would otherwise grant every operator the robot's whole reach — privilege escalation by proxy, not a feature. Band A keeps the committed operator list (decision 28's first form, reconciled daily against `roleAssignments.list`). Band B tier `SUPER` makes the deferred live check 5b mandatory and fail-closed: requester a human super admin, approver a different human super admin, both recorded on the audit row, the approval bound to the canonical request hash on the IAP surface | enforcement (code) |
 | **The two-person rule for the privileged tier** | No single human can make the robot do super-admin-class work: requester ≠ approver, both human super admins, a ticket reference, a hold window. Every raise of any ladder level already needs a second human; band B has no ladder to raise. The platform's RACI ([platform HLD §0.3](../agentic-platform/01-hld.md)) makes the second super admin a role that must exist before the grant, and "the four owner groups are one person" expires on the grant date | enforcement (code) plus organisational |
 | **Eve's minute-latency reconciliation against Google's own log** — the detective control | Every event attributed to `walle@` in every stream Eve ingests (all six Cloud Logging Workspace streams, plus the Reports API polled by actor) must match a `walle_audit` row or a band-B audit row within five minutes; a miss is a `reconciliation_gap`, a halt, and a severity-1 page from the witness. Plus a daily super-admin roster check from Eve's own credential (`roleAssignments.list`, `users.list isAdmin`) diffed against the committed roster, an evidence heartbeat that pages when `admin.googleapis.com` events stop or Eve's token returns `invalid_grant`, and the SIEM-hosted severity-1 set of [platform HLD §7.3](../agentic-platform/01-hld.md) owned by IT security and hosted outside `WALLE_PROJECT`. Google writes the log; Wall-E cannot edit it; a super admin can switch off the sharing, which is exactly what the absence alarm is for | detection, minute latency, with absence alarms — and stated as the **primary** control for this tier |
 
-Around them, the account hygiene Google decides for you (hardware-key-only 2SV, self-recovery
-off tenant-wide, no recovery channels, short session on the OU, at least two human super admins,
-K6), the perimeter (`walle-actions` and `walle-actions-super` never internet-reachable), and
+Around them, the account hygiene (hardware-key-only 2SV enforced by the tenant's policy on the
+robot OU, super-admin self-recovery Off at the top organisational unit with a drift check on
+every child OU and configuration group, no recovery channels, short session on the OU, at least
+two human super admins, K6), the perimeter (`walle-actions` and `walle-actions-super` never
+internet-reachable once P3's engine-reach spike has passed; IAM-only invoke until then), and
 Privileged Access Manager on the deploy grant are preconditions of the grant, not "before S1"
 items. They are listed once, in [platform HLD §13.1](../agentic-platform/01-hld.md), and not
 repeated here.
@@ -246,7 +256,7 @@ are B1–B5; B6 and B7 are inherited ([platform HLD §15](../agentic-platform/01
 | # | Boundary | Enforced by | What it stops |
 |---|---|---|---|
 | 1 | Human → Gemini Enterprise | Workspace SSO; the agent is shared only with `walle-operators@` on its User permissions tab. The app lives in `GEMINI_PROJECT`, holds nothing of Wall-E's, and the share is made on the app in that project. Since 2026-09-13 the app's egress to the engine goes through `gemini-egress`, whose access policy is generated from the platform register | Non-allowlisted staff reaching Wall-E at all |
-| 2 | Agent → action service | Cloud Run IAM (`run.invoker`), ID-token verification **with audience**, caller service-account allowlist. `run.invoker` on `walle-actions` is a service-level binding in `WALLE_PROJECT`, and two of its holders are identities homed in other projects — `eve-controller@EVE_PROJECT` and `mo-analyst@MO_PROJECT` — so the per-endpoint allowlist lists cross-project service-account emails, compared byte for byte. Since 2026-09-13 `walle-actions-super` has its own `run.invoker` set: the agent's identity and `eve-controller@` (halt only); never Mo | Anything but Wall-E's own identity calling the action service |
+| 2 | Agent → action service | Cloud Run IAM (`run.invoker`), ID-token verification **with audience**, caller service-account allowlist. `run.invoker` on `walle-actions` is a service-level binding in `WALLE_PROJECT`, and four of its holders are identities homed in other projects — `eve-controller@`, `eve-verifier@` and `eve-console@` from `EVE_PROJECT` (topology §3 row 3) and `mo-analyst@MO_PROJECT` (row 8) — so the per-endpoint allowlist lists cross-project service-account emails, compared byte for byte. Since 2026-09-13 `walle-actions-super` has its own `run.invoker` set: the agent's identity and `eve-controller@` (halt only); never Mo | Anything but Wall-E's own identity calling the action service |
 | 3 | LLM → credential | Architecture: the refresh tokens exist only inside the two action services, never in the model's process or context. Since 2026-09-13 the **scope split** is part of this boundary: the narrow client's consented scopes are the only Google-enforced ceiling on anything unattended, and `cloud-platform` is in neither client | Prompt injection exfiltrating an admin credential — now a super-admin credential |
 | 4 | Requested action → executed action | **Reversed 2026-09-13.** Was: policy engine *plus* Workspace refusing anything outside the role and the pilot OU. Now: the policy engine alone — catalogue allowlist, typed parameters, protected principals including the robot itself, the OU allow-list in code, budgets, and the hard-denied list as invariants; **two lanes** (band A through `walle-actions`, band B through `walle-actions-super` with Discovery validation and the two-person rule) and one handoff (band C, nothing executes). Google no longer refuses at its end; the scope set is the last Google-side ceiling and it is boundary 3's | The model inventing a destructive call and it simply running — and, new, any single human making the robot do super-admin-class work alone |
 | 5 | **Permitted action → autonomously executed action** | **Autonomy ladder: per-(family, trigger) level, approval tokens the service mints and a human or Eve releases, hold windows, breakers.** Since 2026-09-13 the `SUPER` and `WRITE-generic` rows are fixed in code at chat L3 / others L0, so this boundary is permanent, not climbable, for band B | **An operation that is legitimate on request being taken unattended before it has earned the right** — and, for super-admin-class work, ever |
@@ -279,10 +289,12 @@ path with an autonomous branch; bands B and C have no dispatcher entry and no pl
 **Band B, on request only (added 2026-09-13).** A human super admin asks for something the
 catalogue does not have → the ADK agent composes a generic request `(api, version, resource,
 method, path_params, body)` and calls `walle-actions-super` with an ID token → the service
-checks the caller identity, checks the requester is a human super admin (live, fail-closed),
-validates the body against the pinned Discovery document, maps the method to its tier, runs the
-hard-denied list and the taint check, captures pre-state by the matching `get` or refuses
-`no_pre_state` → for `WRITE` mints an approval for one operator; for `SUPER` mints a two-person
+checks the caller identity, validates the body against the pinned Discovery document, maps the
+method to its tier, runs the hard-denied list and the taint check, then applies the requester
+rule for that tier — `WRITE`: requester a member of `walle-operators@`, re-checked live against
+the committed operator list; `SUPER`: requester a human super admin, checked live and fail-closed
+(`users.get isAdmin` through the narrow token) — and captures pre-state by the matching `get` or
+refuses `no_pre_state` → for `WRITE` mints an approval for one operator; for `SUPER` mints a two-person
 approval that a **different** human super admin releases on the IAP surface, bound to the
 canonical request hash, with a ticket reference, then holds for `hold_minutes` so Eve or any
 operator can veto → executes once with the broad token → verifies by re-reading the same
@@ -364,7 +376,7 @@ reconsidering.
 | `walle-actions` (band A) | The narrow credential, the catalogue, the ladder, authorisation, execution, verification, audit, the hard-denied list | Natural language; the broad credential |
 | `walle-actions-super` (bands B and C; added 2026-09-13) | The broad credential, Discovery validation, the tier table, the two-person approval, pre-state by `get`, the handoff and its watch, audit; the same hard-denied list from the same library | Natural language; the ladder (it has none); any trigger but a human in chat; the narrow credential |
 | Eve control path (in `EVE_PROJECT`) | Approving, verifying independently, reconciling every stream at minute latency, the roster check, halting, demoting | Executing anything, raising a level, any model |
-| Eve reporting path (in `EVE_ADVISOR_PROJECT`; added 2026-09-13) | Narrating incidents, severity-2 pages within budget, raising a refusal | Approvals, signatures, halts, vetoes, any secret, any invoker |
+| Eve reporting path (in `EVE_ADVISOR_PROJECT`; added 2026-09-13) | Narrating incidents, `eve.advice`, severity-2 pages within budget — report-only; nothing it writes is read by the gate or by either action service (platform HLD §13.2, P34) | Approvals, signatures, halts, vetoes, refusals, any secret, any invoker |
 | Mo (in `MO_PROJECT`) | Measuring Wall-E and Eve, proposing | Any write path to config or Workspace; grading Eve |
 | Workspace | The actual effect — and, since 2026-09-13, **no refusal**: Google enforces the consented scopes and nothing else | — |
 
@@ -381,7 +393,7 @@ listed in [09-open-decisions.md](09-open-decisions.md).
 | End-user identity | "unverified, treat `actor` as untrusted" | Gemini Enterprise passes the **user's email as `user_id`**. It is asserted by the Discovery Engine service agent, not cryptographically bound to the user, so the action service still re-checks group membership. Lock `aiplatform.reasoningEngines.query` down to the smallest set of principals: first `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine.iam.gserviceaccount.com` — the **app** project's number, never Wall-E's — bound on the engine from `GEMINI_PROJECT`, then `walle-dispatcher@WALLE_PROJECT`. An earlier draft counted `eve-controller@` as a third; [C10](14-hld-challenge.md) removed it and [../project-topology.md](../project-topology.md) §3 row 13 records the absence. |
 | Chat API | "may need an app identity" | The robot's **user token is sufficient** to post messages and manage spaces it belongs to. A branded Chat app is optional UX, not a requirement. |
 | Alert Center as an event source | not considered | **Requires domain-wide delegation.** Out of scope. Use Workspace audit-log sharing into Cloud Logging instead, which needs no credential at all and gives Eve an independent view. |
-| Cloud Run ingress | "internal only" | Agent Runtime egresses from a Google-managed tenant project, which Cloud Run treats as **external** — internal-only ingress blocks it. The fixes are a shared VPC Service Controls perimeter, an internal load balancer in front of Cloud Run, or a Private Service Connect endpoint. A PSC **interface** alone does not help, because `run.app` traffic still bypasses the VPC without private DNS peering, and it also disables the agent's internet egress. **IAM is the enforced boundary** — [decision 9](09-open-decisions.md). Since 2026-09-13 the platform's folder policy `run.allowedIngress = internal-and-cloud-load-balancing` behind an internal load balancer via PSC applies to both action services (platform HLD §8.1, decision P3); IAM stays the boundary that is proven today. |
+| Cloud Run ingress | "internal only" | Agent Runtime egresses from a Google-managed tenant project, which Cloud Run treats as **external** — internal-only ingress blocks it. The fixes are a shared VPC Service Controls perimeter, an internal load balancer in front of Cloud Run, or a Private Service Connect endpoint. A PSC **interface** alone does not help, because `run.app` traffic still bypasses the VPC without private DNS peering, and it also disables the agent's internet egress. **IAM is the enforced boundary** — [decision 9](09-open-decisions.md), superseded by P3. Since 2026-09-13 the platform holds the folder policy `run.allowedIngress = internal-and-cloud-load-balancing` in Terraform and applies it to both action services **only after P3's engine-reach spike** has shown, on a throwaway engine, that the engine reaches an internal-ingress Cloud Run service through an internal load balancer and a PSC endpoint and that a direct `run.app` call is refused (platform HLD §8.1, §3.3); that spike is a precondition of the super-admin grant. Until it passes, IAM stays the boundary proven on 2026-09-13 and the ingress value is drift-checked. |
 
 ### Corrections carried in from the review of 2026-09-13
 
@@ -393,9 +405,9 @@ lenses on 2026-09-13; URLs at the end of this page.
 | Service accounts and Super Admin | Decision 26: the admin half could move to a keyless service account | A service account may hold any prebuilt or custom role **except Super Admin**. Decision 26 is closed for Wall-E by fact; it stays open for Eve as E-16 |
 | Scoping Super Admin | The role could be OU-scoped (`scopeType=ORG_UNIT`) so Workspace enforced scope independently of our code | True for custom roles, **false for Super Admin**, which cannot be limited to an OU or subset by privilege. Billing, Domain settings, Groups, Reports and Support privileges cannot be OU-limited even in custom roles |
 | Minting super admins | Not in the role, so unreachable | `users.makeAdmin` "makes a user a super administrator" under scope `admin.directory.user`, which the catalogue's narrow client already consents to. Only the hard-denied list stops it |
-| Admin 2SV | A hardening choice | Google enforces 2SV on admin accounts; an unenrolled admin loses web access after 30 days. Hardware-key-only is the choice; the enforcement is Google's |
-| Super-admin self-recovery | Not considered | A **tenant-wide** setting; must be Off and drift-checked, since a super-admin robot with self-recovery on is a takeover path |
-| Writing tenant settings by API | "Any admin action" could be an API call | The Cloud Identity Policy API mutates only DLP rules, DLP detectors and provisioning settings; everything else it reads only. DWD client authorisation is Admin console only. This is what defines band C |
+| Admin 2SV | A hardening choice | Google is rolling out mandatory 2SV for admin accounts **gradually, by edition**; on 2026-09-13 it applies to Education, Nonprofits, Cloud Identity, Android Enterprise and Enterprise editions using third-party SSO, with roughly 90 days' notice to super admins and 60 days to other admins. Where the tenant is not yet in scope, admin 2SV is the tenant's own policy: hardware-key-only 2SV enforced on the robot OU and drift-checked. Lockout when subject: 15 days for mobile apps, 30 days for web; admins under the Google policy cannot bypass it (corrected 2026-09-13; the earlier row read "Google enforces 2SV on admin accounts") |
+| Super-admin self-recovery | Not considered | Set **per organisational unit or configuration group** (top OU = all super admins), not tenant-wide; default On for most editions including Enterprise Standard/Plus (Off by default only for Frontline Standard, Business Plus, Education Standard/Plus, Enterprise Essentials Plus, G Suite Basic, Cloud Identity Premium). Set Off at the top OU and drift-check that no child OU or configuration group re-enables it, since a super-admin robot with self-recovery on is a takeover path (corrected 2026-09-13) |
+| Writing tenant settings by API | "Any admin action" could be an API call | The Cloud Identity Policy API mutates only DLP rules and DLP detectors (v1) and, in v1beta1 only, the conflicting-accounts provisioning setting; everything else it reads but cannot write. DWD client authorisation is Admin console only. This is what defines band C |
 | Reach into the GCP organisation | The four-project topology reasoned about GCP principals only | A Workspace super admin can grant the Organization Administrator role and is the organisation's recovery point of contact. `Assumption:` on irrevocability — Google's pages say "can grant", not "irrevocable" |
 | Context-Aware Access on the robot | Could bind the token to the action service's egress | Google's pages are silent on super admins and on user-account API tokens; there is no Admin SDK API entry in the app table. Adopted as detection-plus-friction, `Assumption:` until P7 |
 
@@ -432,9 +444,10 @@ autonomous, and what Wall-E does not do at all.
 
 - Anything on the hard-denied list: targeting the robot, `eve@`, Eve's role, the control
   groups, the two OAuth clients, the activity rules, audit-log sharing, the organisation sinks;
-  minting or assigning Super Admin; deleting an admin; other admins' security settings and
-  backup codes; DWD. Denied in code with a severity-1 page, whichever human asks and however
-  many approve.
+  minting or assigning Super Admin; deleting an admin or the tenant account; other admins'
+  security settings and backup codes; the super-admin self-recovery setting; DWD. Denied in
+  code with a severity-1 page, whichever human asks and however many approve — and in the
+  handoff lane too: `/v1/handoff` refuses these rather than returning console steps.
 - Acting as any user other than the robot account. Impossible without DWD, and intended.
 - Automating the Admin console under the robot's session, by browser, computer use or any
   other means. An interactive login on `walle@` is an incident, not a lane.
@@ -448,7 +461,9 @@ autonomous, and what Wall-E does not do at all.
   *GCP principals*: the IAM and settings of the four projects and their folders, the ladder
   config, the catalogue and the two OAuth clients' secrets are outside every Wall-E service
   account's reach; no Wall-E principal exists in `EVE_PROJECT` beyond the three carve-outs of
-  decision 48, none at all in `MO_PROJECT`, `GEMINI_PROJECT`, `EVE_ADVISOR_PROJECT` or the
+  decision 48 (the platform's own folder-level drift job, deny policy, PAB and K7 entitlement
+  are the dated exceptions to that cap — platform HLD §4.7 and §18 item 25 — and none of them is
+  Wall-E's), none at all in `MO_PROJECT`, `GEMINI_PROJECT`, `EVE_ADVISOR_PROJECT` or the
   witness; the folder deny policy and PAB add the platform's copy. The one path from the
   Workspace account into GCP — an interactive login or a `cloud-platform` token — is closed by
   the no-interactive-login rule (severity 1), witnessed key custody, `cloud-platform` forbidden
@@ -470,8 +485,14 @@ register in [platform HLD §17](../agentic-platform/01-hld.md) are where they ar
 | 27 (catalogue breadth: bands B and C) | "Wall-E is a narrow operator, not a stand-in for a super admin" | re-cut as "which lane": band A the catalogue, band B the generic lane, band C the handoff |
 | 28 (requester entitlement) | committed operator list; live check 5b deferred | band A unchanged; band B tier `SUPER` runs the live check, fail-closed, requester and approver both human super admins and different people |
 | 14 (approval surface) | Chat app or IAP page | the IAP surface, bound to the canonical request hash, is the band-B two-person surface; Eve's reporting contract is recorded against the same decision in platform HLD §13.2 |
+| 9 (Cloud Run ingress) | IAM as the boundary; PSC interface only if network policy demands | superseded by P3: IAM until P3's engine-reach spike passes, then the folder ingress policy behind an internal load balancer and PSC endpoint (§"Corrections carried in from research", Cloud Run ingress row) |
+| 21 (gateway or perimeter) | one decision before Stage 1 | closed by P3 (platform HLD §8.1): gateway now, VPC-SC per tier folder as backstop after the second spike |
+| 29 (where a gate change first executes) | offline harness; a second robot scoped to the sandbox OU in `WALLE_PROJECT`; a separate tenant only if F3/F3b autonomy is wanted | **a sandbox Workspace tenant, before Stage 1** (platform HLD §3.1 nonprod row, §9). Reason: Super Admin cannot be limited to an organisational unit, so a second robot "scoped to the sandbox OU" of the production tenant contains nothing once the robot is a super admin; only a separate tenant does |
+| 30 (control-plane durability), 41 (single region) | recommendations, unrecorded | accepted as written in platform HLD §10 (R-B row; single region for every tier) |
+| 31 (evidence durability) | off-project copy at Stage 1, Eve's mirror the candidate | closed by the daily JSONL export to the locked evidence bucket (platform HLD §7.5) plus the witness copy (§13.2); Eve's mirror stays as the reconciliation source |
+| 46 (who asserts Eve-side properties) | reassign to Eve's own drift job | closed by the platform drift job with folder-level `roles/iam.securityReviewer` (platform HLD §4.7), recorded as a dated exception to the one rule and to decision 48; Eve's own drift job keeps its anti-grant assertions |
 | C35 in [14](14-hld-challenge.md) | generic Admin SDK proxy rejected | re-argued as band B, never above L3, so the lost inverse, pre-state predicate and taint declaration are not needed |
-| New, platform | — | P7 (Context-Aware Access on the robot), P16 (a machine-invocable account stop — none now), P28 (Wall-E's intended purpose: the catalogue plus bands B/C as execution and instructions, signed with legal), P29 (the two lists), P3 (the perimeter, a precondition of the grant), and the dated decision "Wall-E holds Super Admin" itself, superseding 26 for Wall-E, entering the residual in the accepted-risks table of [10](10-adversarial-review.md), signed as a TISAX deviation and as row one of the risk register |
+| New, platform | — | P7 (Context-Aware Access on the robot), P16 (a machine-invocable account stop — none now), P28 (Wall-E's intended purpose: the catalogue plus bands B/C as execution and instructions, signed with legal), P29 (the two lists), P3 (the perimeter, a precondition of the grant), **P33** — the dated decision "Wall-E holds Super Admin" itself (`decisions/2026-09-13-wall-e-holds-super-admin.md`), superseding 26 for Wall-E, entering the residual in the accepted-risks table of [10](10-adversarial-review.md), signed as a TISAX deviation and as row one of the risk register — and **P34**, Eve's report-only reasoning path (`decisions/2026-09-13-eve-reporting-path-may-reason.md`), which overturns the "An LLM Eve — Rejected" row of [14](14-hld-challenge.md) for reporting only |
 
 ## Sources for the 2026-09-13 corrections
 
@@ -481,8 +502,10 @@ Read on 2026-09-13 by the review lenses; the full list is
 - https://knowledge.workspace.google.com/admin/users/assign-specific-admin-roles — any role except Super Admin may be assigned to a service account
 - https://knowledge.workspace.google.com/admin/users/administrator-privilege-definitions — privileges that cannot be OU-limited; super-admin-only tasks
 - https://developers.google.com/workspace/admin/directory/reference/rest/v1/users/makeAdmin — `users.makeAdmin`, scope `admin.directory.user`
-- https://knowledge.workspace.google.com/admin/security/about-2sv-enforcement-for-admins — Google-set 2SV enforcement on admins; 30-day web lockout
-- https://knowledge.workspace.google.com/admin/users/allow-super-administrators-to-recover-their-password — tenant-level self-recovery setting
+- https://knowledge.workspace.google.com/admin/security/about-2sv-enforcement-for-admins — gradual, edition-scoped admin 2SV enforcement; 90-/60-day notice; 15-day mobile and 30-day web lockout
+- https://knowledge.workspace.google.com/admin/users/allow-super-administrators-to-recover-their-password — self-recovery set per organisational unit or configuration group; On by default for most editions
+- https://docs.cloud.google.com/identity/docs/concepts/supported-policy-api-settings — `provisioning.conflicting_accounts_management` mutable in v1beta1 only
+- https://pypi.org/project/google-adk/ — 2.9.0 released 2026-09-10
 - https://knowledge.workspace.google.com/admin/apps/control-api-access-with-domain-wide-delegation — DWD authorisation is Admin console only
 - https://docs.cloud.google.com/identity/docs/concepts/supported-policy-api-settings — Policy API mutate support (DLP rules, detectors, provisioning only)
 - https://docs.cloud.google.com/resource-manager/docs/super-admin-best-practices and https://docs.cloud.google.com/resource-manager/docs/creating-managing-organization — a super admin can grant Organization Administrator; recovery point of contact

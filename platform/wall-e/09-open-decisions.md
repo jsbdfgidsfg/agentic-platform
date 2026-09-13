@@ -6,8 +6,15 @@
 - Decisions 42 to 52, opened on 2026-09-13 by the four-project topology, live in
   [../project-topology.md](../project-topology.md) §8. Decision 42 is repeated below
   because it gates Phase 7. Where a row below said "the project", it now names which of
-  `GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT` and `MO_PROJECT` it means; no decision
-  changed.
+  `GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT` and `MO_PROJECT` it means; that
+  renaming changed no decision.
+- **Objective restated 2026-09-13; see the platform HLD.** Decisions 3, 4, 5, 8, 9, 10, 11, 14,
+  18, 19, 21, 26, 27, 28, 29, 30, 31, 34, 37, 39, 41, 46 and 52 are changed, closed or accepted
+  by [../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §17 (which names the section
+  deciding each) and by the table at the end of [01-hld.md](01-hld.md); the dated lines on the
+  rows below are *tbd* until the propagation stage applies them. Platform decisions continue as
+  P1… in that register; P33 records "Wall-E holds Super Admin" and P34 Eve's report-only
+  reasoning path.
 
 Answer these, then record each as a dated file in [`../../decisions/`](../../decisions/).
 Nothing in that directory yet — none of these decisions has been written down, so

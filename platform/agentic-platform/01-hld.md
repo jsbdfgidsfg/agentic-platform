@@ -20,7 +20,9 @@
 - Standing constraints, unchanged: no domain-wide delegation; the language model holds no
   credential and cannot approve; the action service is the only holder of a Workspace
   credential; humans raise autonomy and machines lower it; no model produces an Eve approval or
-  signature (Eve may hold a separate, model-permitted reporting path, never an approval path);
+  signature (Eve may hold a separate, model-permitted reporting path, never an approval path —
+  and, decided on 2026-09-13 in §13.2, that path writes reports and pages only: nothing it
+  writes is read by the gate or by any action service);
   Mo holds no credential and reaches production only through a pull request a human merges;
   safety interlocks are plain authenticated REST; no secrets in the wiki.
 - Super Admin for Wall-E is the owner's decision and is not re-argued here. "What this reverses
@@ -77,22 +79,28 @@ the mechanisms and the enforcement grade of each:
    robot-attributed event in every ingested stream, a daily super-admin roster check from Eve's
    own credential, an evidence heartbeat, and a severity-1 detection set hosted in the SIEM
    outside Wall-E's project.
-5. Account hygiene Google decides for you: hardware-key-only 2SV, self-recovery off tenant-wide,
-   no recovery channels, short session on the OU, never the only or the recovery super admin,
-   at least two human super admins, K6 (a human removes Super Admin from the robot).
+5. Account hygiene: hardware-key-only 2SV enforced by the tenant on the robot OU (Google's own
+   admin-2SV mandate is a gradual, edition-scoped rollout, not a universal rule — §4.6),
+   super-admin self-recovery **Off at the top organisational unit** with a drift check that no
+   child OU or configuration group re-enables it (the setting is per OU or configuration group,
+   not tenant-wide, and defaults to On for Enterprise Standard/Plus — §13.1 item 6), no recovery
+   channels, short session on the OU, never the only or the recovery super admin, at least two
+   human super admins, K6 (a human removes Super Admin from the robot).
 6. The deferred controls, no longer deferred: a perimeter model for the agents folder, the
    second deploy reviewer, Privileged Access Manager on the deploy grant, Eve's observe-and-report
    layer live and drilled before the grant, a witness organisation the tenant's super admins do
    not administer, and a **second human outside the Wall-E administration line** as Eve's owner.
 7. A permanent ceiling: no super-admin-class operation is ever autonomous, stated in the same
    sentence as "`WRITE_HIGH` never reaches L5".
-8. A signed record: a dated decision "Wall-E holds Super Admin" superseding decision 26 for
-   Wall-E, re-ratifying decision 4 with the two lists, entering the residual in the accepted-risks
+8. A signed record: a dated decision "Wall-E holds Super Admin" — register row **P33**, file
+   `decisions/2026-09-13-wall-e-holds-super-admin.md` — superseding decision 26 for Wall-E,
+   re-ratifying decision 4 with the two lists, entering the residual in the accepted-risks
    table, as a TISAX deviation signed by the security reviewer, and as row one of the risk
    register.
 
 The other reversals the review found follow from the same objective and are decided on this
-page: Eve gains a reporting path that may reason (§13.2); Eve detects misbehaviour across every
+page: Eve gains a reporting path that may reason (§13.2; register row **P34**, file
+`decisions/2026-09-13-eve-reporting-path-may-reason.md`); Eve detects misbehaviour across every
 stream rather than verifying catalogued plans (§13.2); Mo's remit includes Eve (§13.3); "four
 projects" becomes a pattern produced by a factory (§3); compliance is two named regimes, not data
 protection alone (§14); Eve's observe-and-report layer arrives before the grant, not at Stage 3
@@ -105,7 +113,7 @@ protection alone (§14); Eve's observe-and-report layer arrives before the grant
 ### 0.1 Thesis
 
 The objective asks for enterprise-class security and monitoring for hundreds of agents, from an
-organisation that today runs one administrator. The two ways to fail are to design a SOC-shaped
+organisation that on 2026-09-13 runs one administrator. The two ways to fail are to design a SOC-shaped
 platform nobody can operate, or to declare the pilot's hand-built controls "the platform" and let
 the second agent re-implement them. This page does neither. It puts every control that can be
 **set once and enforced by Google** (organisation policy, deny policies, Principal Access
@@ -131,13 +139,13 @@ and made a platform rule; every table below that grades a control uses these two
 | P2 | Autonomy as data; humans raise, machines lower | One `agent-manifest.yaml`, one `ladder.schema`, one `audit.schema`; promotion is a pull request with evidence a validator recomputes | Validator custodian, branch protection, the action service's ceiling module | enforcement (in the action service) | §12 |
 | P3 | A capability ceiling outside the agent's process | The model holds no credential; the action service is the only credential holder; ceilings are code in the action service and permissions the deny policy refuses | Action service, folder deny policy, PAB, the OAuth scope set | enforcement | §4, §11, §13 |
 | P4 | A fleet kill switch outside any agent project | One organisation-policy flip and one deny rule stop every agent principal; drilled monthly | `gcp.restrictServiceUsage` at the tier folder, IAM deny policy at the folder, Scheduler pause per tier, PAB once its blocked-permission list is verified | enforcement | §11.4 |
-| P5 | A model-free monitor with halt authority | The path that approves, halts, demotes or vetoes contains no model; the reporting path may reason but can only raise a refusal | Eve's control path; CI check forbidding a model client in the image; no `aiplatform.*` in `EVE_PROJECT` by folder `restrictServiceUsage` | enforcement (by absence) | §13.2 |
+| P5 | A model-free monitor with halt authority | The path that approves, halts, demotes or vetoes contains no model; the reporting path may reason but writes reports and pages only — nothing it writes is an input to a verdict (§13.2) | Eve's control path; CI check forbidding a model client in the image; no `aiplatform.*` in `EVE_PROJECT` by a **project-level** `restrictServiceUsage` denylist on `EVE_PROJECT` itself (not on `fld-controllers`, whose other child, the reporting path, needs the API) | enforcement (by absence) | §13.2 |
 | P6 | Evidence the judged thing cannot forge or silence | Google-written audit streams copied to a store outside the reach of the agent, its owner and — for the super-admin case — the tenant's super admins | Organisation-level sinks into a locked bucket, the SecOps export, the witness organisation, an absence alarm | detection, with an absence alarm | §7, §8, §13.2 |
 
-### 0.3 Who exists today, and the roles the platform needs
+### 0.3 Who exists on 2026-09-13, and the roles the platform needs
 
 The platform RACI with the minimum staffing per tier and the separation rule per role. Names
-are supplied by the ISMS; today every role on the left is one person, which is the finding most
+are supplied by the ISMS; on 2026-09-13 every role on the left is one person, which is the finding most
 likely to stop a TISAX assessment (1.2.2) and the reason the tier gate in §0.4 exists. Tiers are
 lettered (§11) so they never collide with the ladder's trigger classes T0–T3. [TIS-03, EVE-06,
 TIS-09]
@@ -158,7 +166,7 @@ TIS-09]
 | Validator custodian | Runs the recompute Mo cannot reach | platform owner | security reviewer's project | — | — | not Mo's CI operator |
 
 Every role has a training outline and completion record refreshed at each stage transition
-(Art. 4; TISAX 2.1.3, 9.7.2).
+(Art. 4; TISAX 2.1.3 — and 9.7.2 only if the Data Protection module ever enters scope, §14.2).
 
 ### 0.4 The tier gate: what must exist before a tier opens
 
@@ -182,12 +190,45 @@ amounts are *tbd* for the detailed design. [SCA-10]
 | Cost | Driver | Paid by | From tier |
 |---|---|---|---|
 | SCC Premium | organisation-wide, all projects | organisation IT security (`Assumption:` platform budget line until then) | C |
-| Central log ingestion and locked retention | Workspace audit volume (the largest line in the set today) plus Data Access logs | platform | R |
+| Central log ingestion and locked retention | Workspace audit volume (the largest line in the set on 2026-09-13) plus Data Access logs | platform | R |
 | Google SecOps + MDR | events per day, retention months, retainer | IT security | P |
 | Workspace licence + admin role per Tier P agent | one licensed user each — Tier P stays rare by policy | agent owner's cost centre | P |
 | Model Armor | requests sanitised per project (1,200 QPM sanitize per project — one argument for project-per-agent) | agent budget | R |
 | Witness organisation | one Cloud Identity tenant, one project, one bucket, one dataset, a few channels, two hardware keys | IT security | P |
 | Human hours | §0.3 rows | — | per tier |
+
+### 0.6 Traceability: the objective's sixteen requirements and the register ids not cited elsewhere
+
+The review's §3 numbered the objective R1–R16. Where each is met or explicitly declined:
+
+| R | Requirement (short) | Met by | Declined or qualified |
+|---|---|---|---|
+| R1 | Secure Gemini Enterprise environment; agent identity, registry, Model Armor | §2, §4.1, §5, §6 | — |
+| R2 | Other security elements, with the correct path | §3.3, §4.5, §7, §8, §9, §11.4 | — |
+| R3 | Wall-E executes on a human prompt | §13.1 band A, T0 | — |
+| R4 | Any super-admin-level action | §13.1 bands A/B/C | the literal reading is declined: band C is instructions to a human and the hard-denied list is refused in every lane (§13.1 item 2, P28) |
+| R5 | Dedicated licensed user account with Super Admin | §13.1, P33 | — |
+| R6 | Eve controls and reports any misbehaviour | §13.2 detection catalogue, reconciliation over every stream, P34 | "any" ends where enumeration ends; the reporting path is report-only |
+| R7 | Eve holds no super admin | §4.6, §13.2 | — |
+| R8 | Eve independent and autonomous | §13.2 (detective inside the organisation, structural through the witness) | structural independence inside the tenant's organisation is declined as unachievable; P15 is the end state |
+| R9 | Eve reports to the human | §13.2 reporting contract, the second human | — |
+| R10 | Mo improves both | §13.3 | — |
+| R11 | Hundreds of agents | §3, §5, §11, P25 | the cap is grading capacity, not projects |
+| R12 | Future AGI agents | §11.4, §11.5, Tier X | declined for 2026: Tier X is a closed folder until §11.5's conditions hold |
+| R13 | Enterprise-class security and monitoring | §7, §0.4 tier gate | below Tier P the detection desk is "next business morning", stated |
+| R14 | EU AI Act bulletproof | §14.1 | "bulletproof" declined: what cannot be promised is listed |
+| R15 | TISAX compatible | §14.2 | maturity 3 on 4.2.1 may be refused on the super-admin deviation |
+| R16 | Review all, focus on the HLD, then the detailed design | [00-objective-review.md](00-objective-review.md); this page; §18 | — |
+
+Register ids of the review's §4 whose substance is answered on this page without being cited
+at the answering line: MON-01 and PS-08 (§7.1 central logging and SCC); MON-05 (§7.1 Data
+Access config); MON-06 (§7.1 SCC Premium); MON-11 (§7.5, §14.3 evidence register); CON-08
+(§14, both regimes named); AIA-03 (§14.1 Art. 14 row); AIA-05 (Art. 11 row); AIA-06 (Art. 50
+row); AIA-07 (Art. 26(7) row); AIA-09 (Art. 9 and Art. 10 rows); AIA-12 (Art. 4 and Art. 5
+rows); AIA-13 (Art. 27 row); WSA-04, WSA-05, WSA-06, WSA-08, WSA-11 and EVE-07 (§13.1 items 2,
+3, 6, 5, 7); MO-07 (§13.3, rule 3 and the `mo-analyst@` read endpoints); CON-06 (§18 preamble,
+the dated line per page). Nothing in the register is deferred to the detailed design without a
+section here naming the mechanism.
 
 ---
 
@@ -222,7 +263,7 @@ review said "verbatim", from `wall-e/ARCHITECTURE.md` §12, [../project-topology
 | D4 | Never both decide and act; never grade its own work; never loosen its own autonomy | charter rule; contract validator; humans-only raise path |
 | D5 | Write its audit rows to the platform schema with the correlation keys, insert-only, write-ahead, into a dataset the platform can read | `audit.schema` (§12); Mo's reader grant recorded in the topology |
 | D6 | Treat every peer agent as principal type `agent`, L0 for every write, tainted on receipt | contract; action-service policy chain |
-| D7 | Cross a project boundary only through a grant on the resource, never a project-level role; anti-grants asserted by the drift job | the one rule; Policy Analyzer drift job at the folder |
+| D7 | Cross a project boundary only through a grant on the resource, never a project-level role; anti-grants asserted by the drift job. The platform's own folder-level principals — the drift job's `roles/iam.securityReviewer`, the K7 job's PAM entitlement, the folder deny policy and the PAB — are the **named exceptions**, listed with their level and maker in §18 item 25 and recorded as a dated exception to topology decision 48 (they are inherited into `EVE_PROJECT`) | the one rule; Policy Analyzer drift job at the folder |
 | D8 | Grade every feature it relies on as enforcement or detection, and put nothing detection-grade alone in its safety case | design review at admission |
 | D9 | Be re-qualified on every model pin change: a fingerprint tuple change resets any cell above L3 | contract validator (C15 generalised) |
 | D10 | Be removable: deleting the project removes the agent and nothing else; its evidence has already left | evidence lake + retention lock (§7, §10) |
@@ -233,9 +274,9 @@ review said "verbatim", from `wall-e/ARCHITECTURE.md` §12, [../project-topology
 
 ## 2. The secure Gemini Enterprise environment
 
-The objective's first sentence. Today [../gemini-enterprise.md](../gemini-enterprise.md) is a
+The objective's first sentence. On 2026-09-13 [../gemini-enterprise.md](../gemini-enterprise.md) is a
 skeleton. This section is that page's HLD content; the detailed page is owned jointly by the
-platform owner and the Gemini Enterprise administrators (today the same person). [PS-04, PS-06,
+platform owner and the Gemini Enterprise administrators (the same person on 2026-09-13). [PS-04, PS-06,
 CON-05, AIA-10]
 
 ### 2.1 The tenant app and its project
@@ -243,11 +284,11 @@ CON-05, AIA-10]
 | Item | Decision | Reason |
 |---|---|---|
 | The app | One Gemini Enterprise app per tenant is the front door for every human-facing agent. Agents no human talks to (Eve's control path, Mo's jobs) are not published in it | One front door, one audit log naming the human |
-| Project | `GEMINI_PROJECT`, made by the factory as the first `tenant-app` instance, under `fld-gemini-enterprise` (§3.1) so it inherits the folder baseline, floor, deny policy and aggregated sink. Topology decision 52 becomes "the app project is a platform project" | The Discovery Engine service agent is project-wide; the app project hosts nothing of any agent's |
+| Project | `GEMINI_PROJECT` under `fld-gemini-enterprise` (§3.1) so it inherits the folder baseline, floor, deny policy and aggregated sink. The topology records (`Assumption:`) that the app **already exists** in a project of its own, and a live tenant app cannot be re-created by a factory, so the factory's first `tenant-app` run is an **import**, not a create: the existing project is imported into the module's state, moved under `fld-gemini-enterprise` with the Gemini Enterprise administrators' agreement, and reconciled to the module (a move changes inherited policy, so the move is a dated change window with the drift job's zero-diff as the exit). If the administrators do not agree, the project stays where it is as decision 52 allowed — recorded as the one project outside the folder, with the floor, the deny policy, the `discoveryengine` Data Access config and the sink re-applied at project level by the same module — and the exception carries a review date. Topology decision 52 therefore becomes "the app project is a platform project, imported in place"; the reason for departing from 52's "only if they agree, otherwise outside" recommendation is that `gemini-egress` (below) makes the app project a **publication enforcement point**, and a project outside the folder misses the floor, the deny policy and the aggregated sink that make that enforcement auditable | The Discovery Engine service agent is project-wide; the app project hosts nothing of any agent's |
 | App location | `eu` | Residency; `global` only if a feature the tenant needs is `eu`-unavailable, recorded as a dated exception |
 | Identity provider | Google identities of the Workspace tenant (`Assumption:`; SSO via the tenant's SAML IdP if one exists — *tbd* in [../google-workspace.md](../google-workspace.md)) | One identity for people; the human `sub` in the `StreamAssist` Data Access log is the correlation key |
 | Administrators | `ge-admins@` holding `roles/discoveryengine.agentspaceAdmin` on `GEMINI_PROJECT` (the role name the set verified, `wall-e/PREREQUISITES.md` §10 item 25) **through Privileged Access Manager for changes**, standing for reads; membership change is a detection | Admission is an IAM decision recorded by PAM, not a console habit |
-| Who may build in the console | Agent Designer and Workflow Builder feature toggles are managed organisation-wide by administrators in the console (verified, §19): off for the general population, on for `ge-builders@`; Marketplace agents enter through Agent Gallery's two-step governance (request, then admin approval) | A no-code agent is still a Tier C agent and needs a register row |
+| Who may build in the console | Feature toggles are set **per Gemini Enterprise app** on its Configurations > Feature Management tab by `roles/discoveryengine.agentspaceAdmin` (with one app per tenant, per-app is tenant-wide in practice; corrected 2026-09-13, §19): "Enable chat agents", "Enable workflows" (Workflow Builder, formerly Agent Designer), "Enable Agent Gallery", "Enable skills", "Enable agent sharing" with optional admin approval — off for the general population, on for `ge-builders@`; Marketplace agents enter through Agent Gallery's request-then-admin-approval flow | A no-code agent is still a Tier C agent and needs a register row |
 | Console Model Armor | On, tenant-wide, from day one. Recorded as not covering custom Agent Runtime agents (`wall-e/11` §2); those are screened at their own gateway | Covers the no-code and data-store agents that never see a project floor |
 | Connectors and actions | Allow-list committed in git, applied by the Gemini Enterprise admin; every connector is a supplier row (§14.3); no connector carries a Workspace write credential — Wall-E is the one write path and it runs through an action service | A connector is a credential the tenant holds on users' behalf |
 | Data-store residency | EU only; a data store outside the EU is a dated exception | Same rule as the folder |
@@ -297,12 +338,12 @@ flowchart TB
     PSA --> W["WALLE_PROJECT<br/>engine · walle-actions (narrow client) · walle-actions-super (broad client) · Firestore · walle_audit"]
     FAP --> TX["fld-agents-x<br/>Tier X: empty; restrictServiceUsage allow-list empty until §11.4 is live"]
     FAP --> CTRL["fld-controllers"]
-    CTRL --> E["EVE_PROJECT<br/>deterministic control path · eve-approval HSM key · eve.* · locked evidence bucket · no aiplatform"]
-    CTRL --> EA["EVE_ADVISOR_PROJECT<br/>reporting path · no signer · no invoker · no secret"]
+    CTRL --> E["EVE_PROJECT<br/>deterministic control path · eve-approval HSM key · eve.* · locked evidence bucket · aiplatform denied at project level · eve-export@"]
+    CTRL --> EA["EVE_ADVISOR_PROJECT<br/>reporting path · no signer · no invoker · no secret · writes reports and pages only"]
     FAP --> IMP["fld-improvers"]
     IMP --> M["MO_PROJECT<br/>one Mo per platform, keyed on agent_id"]
     WIT --> V1["EVE_WITNESS_PROJECT<br/>evidence mirror · eve.incidents copy · sev 1/2 paging channels · K5 rota records · absence alarm on Eve and on Google's feed"]
-    E -. "daily export + heartbeat (two resource-level grants only)" .-> V1
+    E -. "eve-export@ pushes the daily export + heartbeat into witness-owned stores (two grants, both on the witness side; no witness principal in the tenant)" .-> V1
     C2 -. "SIEM feed" .-> SIEM["Google SecOps (EU) or the organisation's SIEM<br/>+ SCC Premium at organisation level"]
 ```
 
@@ -315,9 +356,9 @@ flowchart TB
 | `fld-agents-p` | Tier P privileged agents | as W plus the perimeter of §8, Access Approval, HSM keys, PAM on every deploy role | 500 EUR/month |
 | `fld-agents-p-sa` | the singleton | as P plus `restrictServiceUsage` to exactly the services the Wall-E set names; own Model Armor floor with the hard-denied vocabulary detectors; own kill-plane binding | 500 EUR/month |
 | `fld-agents-x` | nothing | `restrictServiceUsage` allow-list **empty** until every buildable row of §11.4 is live and drilled | — |
-| `fld-controllers` | Eve, eve-advisor | `aiplatform.googleapis.com` denied in `restrictServiceUsage` for `EVE_PROJECT` (Eve is deterministic by absence) | 200 EUR/month |
+| `fld-controllers` | Eve, eve-advisor | no `secretmanager` for any principal outside Eve's allow-list (deny policy); **the `aiplatform.googleapis.com` denylist is set on `EVE_PROJECT` at project level, not on this folder** — a folder denylist would apply to `EVE_ADVISOR_PROJECT` too, and the reporting path needs the API; P5's "deterministic by absence" grade is therefore tied to the project-level constraint on `EVE_PROJECT`, drift-checked, and to the CI check on the image | 200 EUR/month |
 | `fld-improvers` | Mo | no `secretmanager`; no `run` invoker of any credential holder (denial test MD-9 generalised) | 200 EUR/month |
-| `*/nonprod` | one nonprod project per agent; sandbox Workspace tenant for Tier P (decision 29 → yes, before Stage 1) | `iam.allowedPolicyMemberDomains` includes the sandbox tenant; the tenant gateway's access policy never lists a nonprod engine | 50 % of prod |
+| `*/nonprod` | one nonprod project per agent; sandbox Workspace tenant for Tier P (decision 29 → yes, before Stage 1: Super Admin cannot be limited to an organisational unit, so decision 29's "second robot scoped to the sandbox OU" of the production tenant contains nothing once the robot is a super admin — only a separate tenant does) | `iam.allowedPolicyMemberDomains` includes the sandbox tenant; the tenant gateway's access policy never lists a nonprod engine | 50 % of prod |
 
 Project-per-agent is forced by Google, not chosen: `roles/discoveryengine.serviceAgent` is
 project-wide over every engine, and all Agent Runtime agents in one project-region must bind the
@@ -335,7 +376,7 @@ implementation; whether it is adopted or a bespoke module set is P2. [PS-01, SCA
 
 | Module | Makes | Inputs from the register row and manifest |
 |---|---|---|
-| `agent-project` | project under the tier/env folder; APIs per tier; Agent Identity engine skeleton; egress gateway with default-deny access policy; ingress gateway with fail-closed Model Armor for machine-called engines; action service (Tier W+) with internal ingress; regional secrets (W+); Firestore with PITR + scheduled backups + delete protection (W+); insert-only audit dataset on the platform schema; content-log bucket with generated reader IAM; Pub/Sub event topic; log views and absence policy with the organisation channel; budget; labels; Essential Contacts; monitoring baseline (§7.2); registry card; PAB binding for the project's agent identities; the per-project `principalSet://cloudresourcemanager.googleapis.com/projects/N/type/ServiceAccount` entry on the folder deny policy | `agent`, `owner`, `tier`, `env`, `risk_class`, `data_class`, `ai_act_class`, `tisax_class`, `cost_centre`, `recovery_class`, invoker principals, dataset readers, egress hostnames, Model Armor template id |
+| `agent-project` | project under the tier/env folder; APIs per tier; Agent Identity engine skeleton; egress gateway with default-deny access policy; ingress gateway with fail-closed Model Armor for machine-called engines; action service (Tier W+) with IAM-only invoke and, once P3 has passed, internal ingress behind the internal load balancer and PSC endpoint the module emits; regional secrets (W+); Firestore with PITR + scheduled backups + delete protection (W+); insert-only audit dataset on the platform schema; content-log bucket with generated reader IAM; Pub/Sub event topic; log views and absence policy with the organisation channel; budget; labels; Essential Contacts; monitoring baseline (§7.2); registry card; PAB binding for the project's agent identities; the per-project `principalSet://cloudresourcemanager.googleapis.com/projects/N/type/ServiceAccount` entry on the folder deny policy | `agent`, `owner`, `tier`, `env`, `risk_class`, `data_class`, `ai_act_class`, `tisax_class`, `cost_centre`, `recovery_class`, invoker principals, dataset readers, egress hostnames, Model Armor template id |
 | `verifier-project` | Eve's shape: KMS key ring with an approval key at HSM level, verifier and gate identities, independent sink copy, evidence bucket with retention lock, `eve.*` datasets, no `aiplatform` | which agents it verifies; which manifests to compile ceilings from |
 | `improver-project` | Mo's shape: metrics datasets, drop box (`mo-proposals`), three-tier IAM seam (raw reader, reporter, narrator), no invoker anywhere | which audit datasets it reads; which repositories it may open pull requests against |
 | `tenant-app` | §2.1 | — |
@@ -358,20 +399,21 @@ managed forms exist). [PS-05, SCA-05]
 
 | Constraint | Value | Why |
 |---|---|---|
-| `gcp.resourceLocations` | `in:eu-locations` | Residency for every resource, no per-project checklist |
+| `gcp.resourceLocations` | `in:eu-locations` | Residency for every resource, no per-project checklist. Google's supported-services page (read 2026-09-13, §19) lists only Model Armor **template** creation as location-enforced and Agent Registry's regional resources; it does not list floor settings, so the `global` floor-setting write should not need an exception. The topology's §5 row and `wall-e/PREREQUISITES.md` §4.2 allow `global` for floor settings; that is verified at the first factory run — if the folder floor write is refused, `global` is added to the allowed set for the floor-setting resource only, as a dated exception in §8.2, and topology §5 is aligned either way (§18 item 25) |
 | `iam.managed.disableServiceAccountKeyCreation`, `iam.managed.disableServiceAccountKeyUpload` | enforced | Keyless everywhere (`wall-e/12` §6); exception via PAM, dated |
 | `iam.automaticIamGrantsForDefaultServiceAccounts` | enforced | Default SAs get nothing |
-| `iam.allowedPolicyMemberDomains` | tenant customer id; + sandbox tenant in nonprod; + `gmail-api-push@system.gserviceaccount.com` exception recorded; + the witness organisation's customer id **for exactly the two witness principals** of §13.2 | No foreign principals beyond an enumerated list |
+| `iam.allowedPolicyMemberDomains` | tenant customer id; + sandbox tenant in nonprod; + `gmail-api-push@system.gserviceaccount.com` exception recorded. **No witness exception**: the evidence mirror is a push by `eve-export@EVE_PROJECT` into witness-owned stores (§13.2), so no witness principal holds any grant in the tenant's organisation; the exception lives on the witness side, where its own `allowedPolicyMemberDomains` lists the tenant's customer id for that one principal | No foreign principals beyond an enumerated list |
 | `iam.disableCrossProjectServiceAccountUsage` | enforced | The one rule: bindings, not attachments |
 | `storage.uniformBucketLevelAccess` | enforced | No ACLs on evidence buckets |
-| `run.allowedIngress` | `internal-and-cloud-load-balancing` (W, P, controllers) | "Credential holders are never internet-reachable" (§8) from day one |
+| `run.allowedIngress` | `internal-and-cloud-load-balancing` (W, P, controllers) — **held in Terraform, applied to the folders only after the P3 engine-reach spike passes** (§8.1) | "Credential holders are never internet-reachable" (§8) is the target; it cannot be applied on day one because Agent Runtime traffic arrives from a Google-managed tenant project that Cloud Run treats as external (`wall-e/01` verified row), so the policy would cut the engine off from its own action service until the internal load balancer and PSC path is proven. Until then IAM-only invoke is the enforced boundary and a Security Health Analytics custom module flags any Cloud Run service in W/P/controllers whose ingress is `all` (detection) |
 | `run.allowedVPCEgress` | `private-ranges-only` (W+) | No direct egress from credential holders |
 | `run.allowedBinaryAuthorizationPolicies` | the platform policy (W+) | §9 |
 | `compute.vmExternalIpAccess` | deny all | No VMs with public IPs anywhere on the platform |
 | `essentialcontacts.managed.allowedContactDomains` | tenant domain | Google's security notices reach the platform owner, not a builder's inbox |
 | `gcp.restrictServiceUsage` | per folder (§3.1) | Eve cannot enable `aiplatform`; Tier R cannot enable Secret Manager; Tier X is empty; **also the first fleet-kill lever (§11.4)** |
-| Custom constraint `custom.reasoningEngineGatewayRequired` | `aiplatform.googleapis.com/ReasoningEngine` CREATE/UPDATE: `agentGatewayConfig` set and the gateway in the allow-list (CEL form verified by the scale-and-agi lens on Google's custom-constraints page) | Gateway binding at the API, not in CI |
-| Custom constraints, support *tbd* (spike P4) | `spec.identityType == AGENT_IDENTITY` on `ReasoningEngine`; `agentidentity.googleapis.com/AuthProvider` creation denied outside `fld-agents-p`; Cloud Run `binaryAuthorization` set | The identity and supply-chain rules become Google-enforced instead of CI-checked; until the spike, the CI checks of `wall-e/06` "Forbidden configurations" stay and are graded detection |
+| Custom constraint `custom.reasoningEngineGatewayRequired` | `aiplatform.googleapis.com/ReasoningEngine` CREATE/UPDATE, CEL: `has(resource.spec.deploymentSpec.agentGatewayConfig.agentToAnywhereConfig.agentGateway) && resource.spec.deploymentSpec.agentGatewayConfig.agentToAnywhereConfig.agentGateway in [allow-list]` — Google's own published constraint `custom.allowlistedEgressAgentGatewaysForAgentEngine` on the runtime deploy page (§19), plus its Client-to-Agent ingress twin (field path corrected 2026-09-13; the earlier shorthand "`agentGatewayConfig` set" was not the field) | Gateway binding at the API, not in CI |
+| Custom constraint on `agentidentity.googleapis.com/AuthProvider` — **supported, Preview** (fields `resource.name`, `resource.allowedScopes`, `resource.blockedScopes`, `resource.workloadIds`; §19) | `AuthProvider` creation denied outside `fld-agents-p`; blocked scopes fleet-wide | Adopted under Pre-GA terms with the same nonprod-first rule as §4.1; the CI check stays beside it until GA |
+| Custom constraints, support *tbd* (spike P4) | `spec.identityType == AGENT_IDENTITY` on `ReasoningEngine` (field unverified); Cloud Run `binaryAuthorization` (`run.googleapis.com/Service` is GA for custom constraints, but no `binaryAuthorization` field is documented) | The identity and supply-chain rules become Google-enforced instead of CI-checked; until the spike, the CI checks of `wall-e/06` "Forbidden configurations" stay and are graded detection |
 
 ### 3.4 Labels, budgets, contacts, quotas
 
@@ -415,8 +457,8 @@ The one line that removes the property —
 
 | Population | Identity | Where it lives | How it authenticates to the platform |
 |---|---|---|---|
-| Agents (reasoning layers) | `principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N/locations/europe-west1/reasoningEngines/ID`; fleet-wide `principalSet://agents.global.org-ORG_ID.system.id.goog/*` (the form `wall-e/12` §1.4 records; Google's overview shows only the single-principal form, so the set form is **`Assumption:` until a throwaway engine proves it accepted in a deny policy** — P8) | their project | 24-hour certificates, bound tokens |
-| Workforce (humans) | Google identities of the tenant; a **Workforce Identity Federation pool** `wif-agentic-operators` only if a non-Google operator population exists (P24; `wall-e/12` §5 case (b)) | tenant | IAP with a Context-Aware Access level: managed device + security key for any control surface of Tier W+ (Context-Aware Access needs Enterprise Standard or above; edition *tbd*) [PS-17] |
+| Agents (reasoning layers) | `principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N/locations/europe-west1/reasoningEngines/ID`; the **documented per-project set** `principalSet://agents.global.org-ORG_ID.system.id.goog/attribute.container/projects/N` ("all agent identities in the specified project's trust domain", Google's PAB page, §19), emitted by the factory per project; the fleet-wide `principalSet://agents.global.org-ORG_ID.system.id.goog/*` form that `wall-e/12` §1.4 records is **`Assumption:` until a throwaway engine proves it** (P8), as is deny-policy support of agent principals at all — Google's deny overview lists no agent principal type | their project | 24-hour certificates, bound tokens |
+| Workforce (humans) | Google identities of the tenant; a **Workforce Identity Federation pool** `wif-agentic-operators` only if a non-Google operator population exists (P24; `wall-e/12` §5 case (b)) | tenant | IAP with a Context-Aware Access level: managed device + security key for any control surface of Tier W+ (Context-Aware Access needs Frontline Standard/Plus, Enterprise Standard/Plus, Education Standard/Plus, Enterprise Essentials Plus or Cloud Identity Premium; edition *tbd*) [PS-17] |
 | Operators of agents (machines) | service accounts per component, keyless, one per duty (`walle-actions@`, `eve-controller@`, `mo-metrics@` …) | their project | ID tokens; IAM on the receiving resource |
 
 Operator groups are created by the factory per agent (`<agent>-owners@`, `-operators@`,
@@ -479,9 +521,16 @@ by the deterministic kill job on a severity-1 rule.
 
 Two user accounts exist on the platform: `walle@` (Super Admin, §13.1) and `eve@` (read-only
 custom role, never Super Admin). Both in `/Automation/Service Identities`; hardware-key-only 2SV
-(Google-enforced on admins; two keys in the safe with a witnessed custody record); no recovery
-channels; short session control on the OU (settings can be OU-scoped even though the role
-cannot); no interactive login ever (activity rule, severity 1).
+enforced by the tenant's own 2SV policy on that OU (two keys in the safe with a witnessed
+custody record) — corrected 2026-09-13: Google's mandatory admin 2SV is a **gradual rollout
+scoped by edition** (on 2026-09-13: Education, Nonprofits, Cloud Identity, Android Enterprise
+and Enterprise editions using third-party SSO, with 90-day notice to super admins and 60-day
+notice to other admins), not a universal Google-enforced rule, so where the tenant is not yet
+in scope the enforcement is the tenant's policy and a drift check; where it is in scope the
+lockout is 15 days for mobile apps and 30 days for web and an admin cannot bypass it; no
+recovery channels; super-admin self-recovery Off at the top organisational unit (§13.1 item 6);
+short session control on the OU (settings can be OU-scoped even though the role cannot); no
+interactive login ever (activity rule, severity 1).
 
 **Context-Aware Access, graded honestly.** An access level on the **Admin console** for the
 robot OU that no device satisfies is cheap, Google-native and needs no second person — and it
@@ -501,11 +550,19 @@ consent.
 One platform job in `CORE_PROJECT` replaces the per-agent 18-check jobs: Policy Analyzer with
 folder-level `roles/iam.securityReviewer` (closes decision 46), plus a Cloud Asset Inventory
 feed at the folder (RESOURCE, IAM_POLICY, ORG_POLICY content types, to Pub/Sub — verified) that
-turns IAM and org-policy changes into events within minutes rather than daily. IAM-shaped checks
+turns IAM and org-policy changes into events within minutes rather than daily. That folder-level
+role is inherited into `EVE_PROJECT`, which topology row 17 forbids for Wall-E's job and
+decision 48 caps at three foreign carve-outs: it is a **named exception** to the one rule (D7)
+and to decision 48, dated 2026-09-13, on the grounds that the principal is the platform's, not
+any agent's, holds a read-only role, lives in a folder no agent principal exists in, and is
+itself on Eve's anti-grant list (Eve's own drift job asserts that nothing but this one
+platform principal and the three carve-outs appears in `EVE_PROJECT`). IAM-shaped checks
 (engine principals, `run.invoker` members, keys, token-creator sprawl, dataset readers, baseline
-drift, impersonation chains) become **Security Health Analytics custom modules** (SCC Premium;
-YAML + CEL over 100+ resource types) so their findings are SCC findings; the rest go to the SIEM.
-Owner: platform owner; reviewer of exceptions: security reviewer.
+drift, impersonation chains, Cloud Run ingress values, post-deploy image digests) become
+**Security Health Analytics custom modules** (SCC Premium; YAML + CEL over about 90 resource
+types on 2026-09-13, 14 of them Gemini Enterprise Agent Platform types) so their findings are
+SCC findings; the rest go to the SIEM. Owner: platform owner; reviewer of exceptions: security
+reviewer.
 
 ---
 
@@ -542,11 +599,17 @@ Mandatory fields (CI schema check; a missing field fails the merge):
 ### 5.2 Shared registry, independent observation, daily reconciliation
 
 - **Shared Agent Registry** in `CORE_PROJECT`, `europe-west1` (manual registration needs a
-  regional registry): `agentregistry.admin` to the CI identity only; viewer role to
-  `platform-readers@`, `eve-owners@` and the detection desk; every write alerted. Cards are
-  generated, never hand-written. Per-agent registries are not created (they would fragment the
-  inventory), so automatic same-project registration is not used and CI registers each engine
-  explicitly after the factory run. "Registration never authorises" stays (`wall-e/13` §2.5):
+  `global` or single-region registry — the `eu` and `us` multi-region registries refuse it,
+  `wall-e/13` §2.1; `europe-west1` is chosen over `global` for residency): roles are
+  `roles/agentregistry.admin`, `.editor`, `.viewer`, `.user`; `agentregistry.admin` to the CI
+  identity only; viewer role to `platform-readers@`, `eve-owners@` and the detection desk; every
+  write alerted. Cards are generated, never hand-written. Per-agent registries are not created
+  (they would fragment the inventory), so automatic same-project registration is not used and
+  CI registers each engine explicitly after the factory run. `Assumption:` manual registration of
+  an engine that lives in another project of the same organisation is accepted by the registry —
+  `wall-e/13` §2 verified only same-project automatic registration; if the registry refuses a
+  cross-project engine, the fallback is one registry per tier folder's core project with the
+  reconciliation job reading all of them, recorded as a dated change to §5.2. "Registration never authorises" stays (`wall-e/13` §2.5):
   reaching an agent still needs the resource-level grant and the gateway entry.
 - **Independent observation**: the Cloud Asset Inventory folder export (daily, to BigQuery in
   `CORE_PROJECT`) of `aiplatform.googleapis.com/ReasoningEngine`, `run.googleapis.com/Service`
@@ -604,8 +667,8 @@ platform owner, not an incident for the agents.
 
 | Layer | Set where | Content | Owner | Change control |
 |---|---|---|---|---|
-| Organisation floor | organisation, API only | prompt injection / jailbreak HIGH, malicious URL | IT security (platform owner until IT security takes it) | write = SCC finding + SIEM alert; PAM entitlement |
-| Folder floor `fld-agentic-platform` | folder, API | organisation floor + responsible-AI filters at MEDIUM | platform owner | same |
+| Organisation floor | organisation, by gcloud, REST or SDK with `roles/modelarmor.floorSettingsAdmin` (the console sets floors only at project level) | prompt injection / jailbreak HIGH, malicious URL | IT security (platform owner until IT security takes it) | write = SCC finding + SIEM alert; PAM entitlement |
+| Folder floor `fld-agentic-platform` | folder, gcloud or API | organisation floor + responsible-AI filters at MEDIUM | platform owner | same |
 | Tier floors (`fld-agents-w`, `fld-agents-p`, `fld-agents-p-sa`, `fld-controllers`) | folder | + Sensitive Data Protection **basic** on (floors do not check SDP conformance — verified — so the template standard carries it) | platform owner | same |
 | Template standard per tier | `CORE_PROJECT`, Terraform module copied into each project by the factory | R: floor + SDP basic; W/P: + SDP de-identify template for the sanitize-log copy, decided once for the fleet; **P-SA: + custom detectors for the hard-denied vocabulary** (`makeAdmin`, `roleAssignments`, `eve@`, the control group names) — a second, Google-side screen on the reasoning layer's output for the exact strings the two lists forbid, detection-grade | platform owner; agent owner may only tighten | CI diff against the standard |
 | Console setting | Gemini Enterprise tenant-wide | on | Gemini Enterprise admin | drift check daily |
@@ -633,9 +696,9 @@ Below Tier P, detection stays what it was — a check on enforcement. [MON-02, W
 | Security Command Center **Premium** at organisation level (the Enterprise tier is deprecated since 2026-05-21 and shuts down 2027-05-21 — not chosen) | Event Threat Detection incl. the Workspace detectors (SSO toggled, 2SV disabled, strong auth disabled, account hijack — these need Workspace log sharing on); Security Health Analytics + custom modules (§4.7); AI Protection (GA; Model Armor findings integrated; AI asset inventory); Sensitive Actions; Agent Platform Threat Detection on nonprod only. **SCC does not page on its own**: findings reach a person through a Pub/Sub notification config to the Terraform-managed channel | organisation IT security; funding P11 | C+ |
 | Central logging | `LOGGING_PROJECT`: **one** organisation-level aggregated sink with `includeChildren` over `fld-agentic-platform` plus the Workspace audit logs (all six Cloud Logging streams, not only `admin`), into a **locked** regional `europe-west1` log bucket (retention per §7.5) and a BigQuery dataset; per-agent access by log views; login/token/SAML Data Access entries routed here (they live 30 days in `_Default` otherwise; Admin, Groups and OAuth-token Admin Activity entries are in `_Required` at 400 days regardless — verified). The three per-agent organisation sinks become views — except Eve's independent copy, which stays. Behavioural baselines per agent (denial mix, tool-call distribution, target novelty, egress attempts in dry-run logs) are BigQuery scheduled queries over the evidence lake | platform owner | R+ |
 | Data Access audit config | one folder-level `auditConfigs` in Terraform: `DATA_READ`/`DATA_WRITE` for `secretmanager`, `iap`, `cloudkms`, `firestore`, `aiplatform`, `discoveryengine`, `sts`, `logging`, `storage` on evidence buckets; no exemptions for agent principals | platform owner; cost line in the retention schedule | R+ |
-| SIEM | **Decision: the organisation's existing SIEM if IT security runs one (P10); otherwise an own Google SecOps instance in the EU multi-region or `europe-west3`, retention raised from the 12-month default to the evidence horizon.** Four organisation-owned feeds, none needing domain-wide delegation: (1) the Admin-console **Google Security Operations export** of Workspace events (edition prerequisite Enterprise Standard/Plus — tenant edition *tbd*; also carries Gmail/Drive/Chat/Meet/Devices/Chrome events Cloud Logging never gets), (2) the aggregated Cloud Audit Logs sink, (3) SCC findings (default ingestion), (4) agent-layer events (`halt.set`, `content.flagged`, `override.applied`, `run.verified`, denial rows) as **metadata only** via Pub/Sub. "Registered ⇒ feeding the SIEM" is a platform invariant from Tier P, checked by the admission gate and reconciliation | IT security; detection content owned by the security reviewer with the MDR partner | **Tier P precondition**; optional earlier |
+| SIEM | **Decision: the organisation's existing SIEM if IT security runs one (P10); otherwise an own Google SecOps instance in the SecOps "Europe" multi-region (EU member-state data centres) or a single EU region (`europe-west3` Frankfurt, `europe-west9` Paris, `europe-west12` Turin) — SecOps has no `eu` location and no `europe-west1`; retention raised from the 12-month default (extendable to 60 months on the order) to the evidence horizon. Google's SecOps data-residency terms page rendered only partially on 2026-09-13; re-verify the region list at build.** Four organisation-owned feeds, none needing domain-wide delegation: (1) the Admin-console **Google Security Operations export** of Workspace events (edition prerequisite Enterprise Standard/Plus — tenant edition *tbd*; also carries Gmail/Drive/Chat/Meet/Devices/Chrome events Cloud Logging never gets), (2) the aggregated Cloud Audit Logs sink, (3) SCC findings (default ingestion), (4) agent-layer events (`halt.set`, `content.flagged`, `override.applied`, `run.verified`, denial rows) as **metadata only** via Pub/Sub. "Registered ⇒ feeding the SIEM" is a platform invariant from Tier P, checked by the admission gate and reconciliation | IT security; detection content owned by the security reviewer with the MDR partner | **Tier P precondition**; optional earlier |
 | Detection desk | C–W: SCC findings and absence alerts page the platform owner (Cloud Monitoring → PagerDuty or the organisation's tool; email secondary), acknowledgement best-effort, **"next business morning" written down as the honest number**. P: **bought** 24x7 acknowledgement (MDR on SecOps or the organisation's SOC) for the sev 1 set of §7.3 | as stated | per tier |
-| Audit Manager | ISO 27001:2022, NIST AI 600-1 and "Google Recommended AI Essentials for Gemini Enterprise Agent Platform" assessments, **monthly**, into the evidence bucket; the evidence register is generated from them where possible | platform owner | W+ |
+| Audit Manager | ISO 27001:2022, NIST AI 600-1 and "Google Recommended AI Essentials - Gemini Enterprise Agent Platform" assessments, **monthly**, into the evidence bucket; the evidence register is generated from them where possible. Audit Manager is GA but its scheduled runs are **Preview**: until GA the monthly run is triggered by Cloud Scheduler or by hand and its report copied to the evidence bucket; the three frameworks need SCC Premium or Assured Workloads (SCC Premium is the §7.1 choice) | platform owner | W+ |
 
 ### 7.2 The monitoring baseline module
 
@@ -740,33 +803,56 @@ MON-10, TIS-09, AIA-08]
 
 The deferral of a perimeter rested on "no writes" and a narrow role; both are gone. Decision 21
 and E-19 are re-opened as one platform decision (P3), a precondition of the super-admin grant.
-Two models are on the table; the platform **runs (b) from day one and adopts (a) as the fleet
-backstop after the spike**, because (b) is a folder policy Google enforces now and (a) rests on
-two Google pages that contradict each other. [PS-09, SCA-11, TIS-15]
+Two models are on the table; the platform **adopts (b) as soon as its one spike passes, and (a)
+as the fleet backstop after the second spike**, because (b) is a folder policy Google enforces
+and (a) rests on two Google pages that contradict each other. Corrected 2026-09-13: an earlier
+draft said "(b) from day one"; that contradicted the Wall-E set's own verified fact that Agent
+Runtime egresses from a Google-managed tenant project which Cloud Run treats as **external**, so
+internal-only ingress would cut the engine off from its own action service, a PSC *interface*
+alone does not help, and IAM is the boundary proven on 2026-09-13 (`wall-e/01` "Cloud Run
+ingress" row, decision 9). [PS-09, SCA-11, TIS-15]
 
 - (a) **VPC Service Controls** perimeters per tier folder (Secret Manager, BigQuery, Firestore,
   KMS, Cloud Run, Agent Runtime), ingress rules for the `GEMINI_PROJECT` service agent, egress
   rules to Workspace APIs, gateways created after 2026-09-08 with the agent connectivity
-  template — losing Unified Access Policies, so hostname control moves to VPC firewall and DNS on
-  the template. Google's runtime deploy page (2026-09-08) and gateway overview (2026-09-10)
-  disagree on support; one spike on a throwaway engine and one decision record naming which page
-  was right. Who maintains the perimeter rules at scale: the factory, from the manifest.
+  template. `Assumption:` that binding a gateway to the connectivity template forfeits Unified
+  Access Policies, so hostname control would move to VPC firewall and DNS on the template —
+  neither Google page states it (the gateway overview says an IAM access policy granting
+  `iap.resources.egressViaIAP` is always required for destination resources), so the P3 spike
+  settles it. Google's runtime deploy page (2026-09-08: "VPC Service Controls are not supported
+  with Agent Gateway") and gateway overview (2026-09-10: perimeter rules applied through the
+  agent connectivity template) disagree on support; one spike on a throwaway engine and one
+  decision record naming which page was right. Who maintains the perimeter rules at scale: the
+  factory, from the manifest.
 - (b) Gateway access policies as the agent-side exfiltration bound, plus
   `run.allowedIngress = internal-and-cloud-load-balancing` for every credential holder behind an
-  internal load balancer reached through Private Service Connect, with IAM-only invoke and Model
-  Armor on the gateway; **"credential holders are never internet-reachable" is the folder policy
-  of §3.3 whichever way the spike goes.** The load-balancer and PSC pattern is a factory module
-  output, not a per-service hand build.
+  internal load balancer reached through a Private Service Connect **endpoint**, with IAM-only
+  invoke and Model Armor on the gateway. **The engine-to-action-service path under (b), stated
+  explicitly:** the engine's egress gateway allow-list names the action service's internal
+  load-balancer hostname (private DNS on the agent connectivity template, or the gateway's own
+  connectivity — which of the two the engine can use is the spike's first question), the
+  load balancer fronts the Cloud Run service through a serverless NEG, and the PSC endpoint is
+  what the Google-managed tenant project reaches; the `gemini-egress` gateway of the tenant app
+  reaches engines, never the action services, so it is unaffected. **The spike is part of P3
+  and precedes the folder policy**: on a throwaway engine bound to a gateway, prove that a call
+  to an `internal-and-cloud-load-balancing` Cloud Run service through the load balancer and
+  PSC endpoint succeeds and that a direct `run.app` call is refused; record the working
+  template as the factory module output. Until it passes, `run.allowedIngress` stays in
+  Terraform unapplied (§3.3), IAM-only invoke is the enforced boundary, and the ingress value is
+  drift-checked (detection). "Credential holders are never internet-reachable" is the folder
+  policy of §3.3 **once the spike has passed**, whichever way the VPC-SC spike goes.
 
 | Tier | Perimeter |
 |---|---|
-| C, R | the gateway default-deny and the folder `run.allowedIngress` |
-| W, P, controllers, core | (b) now; (a) per tier folder after P3 |
+| C, R | the gateway default-deny; the folder `run.allowedIngress` once P3's first spike passes |
+| W, P, controllers, core | IAM-only invoke on 2026-09-13; (b) after P3's engine-reach spike; (a) per tier folder after P3's VPC-SC spike |
 | Robot Workspace accounts | short session control on the OU; the Admin console CAA level of §4.6 as detection-plus-friction; CAA on API tokens `Assumption:` pending P7 |
 
 Under (b), `walle-actions`, `walle-actions-super`, Eve's gate and reconciler and the approval
-surface are reachable only from inside the perimeter and through IAP; the Gemini Enterprise app
-reaches engines through `gemini-egress`, never the action services directly.
+surface are reachable only through the load balancer, the PSC endpoint and IAP; the Gemini
+Enterprise app reaches engines through `gemini-egress`, never the action services directly.
+The P line of §0.4 says "the perimeter decision taken": that means P3's engine-reach spike has
+passed and (b) is applied, not that (a) is live.
 
 ### 8.2 Sovereignty
 
@@ -790,7 +876,7 @@ package or if the TISAX label becomes Strictly confidential (P12); raise the gap
 | Key or secret class | Mechanism | Tier |
 |---|---|---|
 | Approval-authority keys (`eve-approval`, any future verifier's) | Cloud KMS, **HSM** protection level, `EVE_PROJECT`, Data Access logs on, no signer outside `eve-controller@`; Key Access Justifications only if Assured Workloads is ever adopted | W+ |
-| Data at rest | **Cloud KMS Autokey** at the folder (folder-level configuration, inherited; keys are HSM) for the services on its compatible list — BigQuery, Cloud Storage, Cloud Run, Secret Manager, Pub/Sub, Artifact Registry. **Firestore is not on Autokey's compatible list** and is recorded as the first exception (Google-managed encryption); the Agent Runtime path (CMEK unavailable) is the second, recorded once for the fleet | W+ |
+| Data at rest | **Cloud KMS Autokey** at the folder (folder-level configuration, inherited; keys are HSM) for the services on its compatible list — BigQuery, Cloud Storage, Cloud Run, Secret Manager, Pub/Sub, Artifact Registry. **Firestore is not on Autokey's compatible list** and is recorded as the one exception (Google-managed encryption). Agent Runtime is **not** an exception (corrected 2026-09-13; `wall-e/ARCHITECTURE.md` already had it right): an engine in `europe-west1` takes CMEK through `encryption_spec` with a **single-region** Cloud KMS key — CMEK is unavailable only on multi-regional endpoints, which the platform does not use — and Autokey does not cover it, so the factory creates that key in the folder key ring (§19) | W+ |
 | Secrets | regional (`europe-west1`) only; naming `<agent>-<purpose>`; rotation label; folder-level Data Access logs on `secretmanager` and `cloudkms`; folder-level alert on `versions.access` by any identity not attached as the secret's declared reader | R+ |
 | Robot passwords, hardware keys | corporate vault; two keys per robot account with named custodians and a witnessed custody record | P |
 | One cryptography table (key, algorithm, location, rotation, owner, log) | compliance mapping page; organisation crypto standard by reference (*tbd*); the CMEK position decided with the TISAX label | — |
@@ -807,10 +893,10 @@ package or if the TISAX label becomes Strictly confidential (P12); raise the gap
 |---|---|---|
 | Build | Cloud Build in `CICD_PROJECT` with SLSA Level 3 provenance generated and verified; builds triggered from protected branches only | platform owner |
 | Images | shared Artifact Registry in `CICD_PROJECT` with remote repositories for upstream bases so no build pulls from the public internet; Artifact Analysis scanning; **gate: no CRITICAL, HIGH triaged within 7 days** (`Assumption:` thresholds, ISMS confirms); monthly CVE triage; patch cadence per tier | platform owner |
-| Admission | Binary Authorization policy requiring the Cloud Build attestor; `run.allowedBinaryAuthorizationPolicies` at the W and P folders; continuous validation on | folder constraint |
+| Admission | Binary Authorization policy requiring the Cloud Build attestor; `run.allowedBinaryAuthorizationPolicies` at the W and P folders. Binary Authorization **continuous validation exists only for GKE** (corrected 2026-09-13, §19), so post-deploy image drift on Cloud Run is a drift-job / Security Health Analytics custom-module check comparing the running digest with the attested one — detection-grade, stated as such | folder constraint; drift job |
 | Agent Runtime bundles | no attestation product exists: the factory records bundle SHA-256 and the hash-pinned lockfile in the register row and `config_versions`; the drift job compares `spec` post-deploy — a detection-grade substitute, stated as such; *tbd* until Google offers engine attestation | CI |
-| Dependencies | hash-pinned lockfile, monthly review, no floating minors (`google-adk~=2.8` and `google-auth>=2.45.0` become pins); software approval list in the compliance mapping (1.3.4) | agent owner |
-| Repositories and deploy identity | git host *tbd* (P22); branch protection, required reviewers outside the agent's reach, admin bypass disabled and audited; the CI deployer through WIF is the only writer to registries, images and engines; **no agent principal holds any write on any repository, Artifact Registry or deploy identity**, folder-wide (deny policy + PAB + branch protection); **agent-authored pull requests (Mo's today, any Tier X tomorrow) are labelled `agent-authored`, cannot be merged by the agent, and need two human reviewers, one outside the agent's owner line** | platform owner |
+| Dependencies | hash-pinned lockfile, monthly review, no floating minors (`google-adk~=2.9` — 2.9.0 released 2026-09-10 — and `google-auth>=2.45.0`, current 2.58.0, become exact pins); software approval list in the compliance mapping (1.3.4) | agent owner |
+| Repositories and deploy identity | git host *tbd* (P22); branch protection, required reviewers outside the agent's reach, admin bypass disabled and audited; the CI deployer through WIF is the only writer to registries, images and engines; **no agent principal holds any write on any repository, Artifact Registry or deploy identity**, folder-wide (deny policy + PAB + branch protection); **agent-authored pull requests (Mo's on 2026-09-13, any Tier X agent's later) are labelled `agent-authored`, cannot be merged by the agent, and need two human reviewers, one outside the agent's owner line** | platform owner |
 | Environments and release | `nonprod` folder per tier, sandbox Workspace tenant for Tier P (decision 29 → yes, before Stage 1); promotion by attestation, rollback by digest; emergency-change procedure with a post-hoc second reviewer within one business day | platform owner |
 | Penetration test | action services, approval page, Gemini Enterprise share — before Stage 1 of any Tier P agent; annual thereafter | bought; IT security |
 
@@ -825,7 +911,7 @@ package or if the TISAX label becomes Strictly confidential (P12); raise the gap
 | R-A evidence | audit tables, `eve.*`, Workspace logs, incident, drill and decision records | 24 h | 72 h | Eve's mirror; daily JSONL to the locked evidence bucket; BigQuery snapshots; witness copy (P) | restore one day's export quarterly |
 | R-B control plane | Firestore ladder config, plans, approvals, halts, counters, `config_versions` | 1 h (PITR, 7 days) | 4 h to `halt_all` posture, 1 business day to service | PITR + daily scheduled backups + delete protection, mandated by the factory; restore boots at `halt_all` and a human clears it | one recorded restore before Stage 1; then in every promotion gate above L3 |
 | R-C agent compute | engines, action services, gateways | 0 (git) | 1 business day | rebuild from git through the factory from the attested image and bundle hash | annual, with the tabletop |
-| R-D shared services | registry, logging config, CI, Terraform state (versioned bucket) | 24 h | 1 business day | Terraform re-apply; Backup and DR for state buckets | annual |
+| R-D shared services | registry, logging config, CI, Terraform state (versioned bucket) | 24 h | 1 business day | Terraform re-apply; Terraform state in a bucket with object versioning, soft delete, a retention policy and a Storage Transfer Service copy to a second EU region — Backup and DR Service does not protect Cloud Storage buckets (buckets are a backup target, not a protectable workload; corrected 2026-09-13, §19) | annual |
 | R-K keys and secrets | approval keys, robot tokens | — | key: never destroyed inside the evidence horizon; token: re-bootstrap per the agent runbook | **disable, never destroy**; witnessed bootstrap | with R-B |
 | R-W Workspace state | what the agents changed | per family: the rollback primitive of the manifest | — | **the platform never backs up Workspace**; F10-style rollback per family and Google's own recovery are the continuity plan | — |
 
@@ -883,7 +969,7 @@ platform-enforced and an agent's owner cannot change them.
 
 ### 11.3 P-SA: the super-admin singleton
 
-Exactly one agent on the platform may hold `privilege: super_admin` (today: Wall-E). A second
+Exactly one agent on the platform may hold `privilege: super_admin` (on 2026-09-13: Wall-E). A second
 P-SA register row fails CI until the first is `retired`. Its controls are §13.1; its folder
 policies are stricter than the platform's, never looser; it has no deferred control. The reason
 for singleton-by-policy is that each Tier P agent is a licensed Workspace user on the
@@ -902,12 +988,12 @@ lever because none lives in a project. Four levers, in order of confidence:
 | Lever | Mechanism | Verified? |
 |---|---|---|
 | **KF-1** service denial | `gcp.restrictServiceUsage` denylist on the tier folder adding `aiplatform.googleapis.com` and `run.googleapis.com` — every engine query and every Cloud Run invocation in the folder is refused at the API | Constraint verified (organisation/folder/project, denylist, dry-run; "controls the runtime access to all in-scope resources", immediate with eventual consistency). `Assumption:` already-running Cloud Run instances refuse new requests rather than terminate — measured in the monthly drill |
-| **KF-2** deny | `deny-agents-halt` (§4.5) extended to `aiplatform.googleapis.com/reasoningEngines.query`, `.streamQuery` and `run.googleapis.com/routes.invoke` for `principalSet://agents…/*` | Permission names and the principal-set form *tbd* (P8) |
+| **KF-2** deny | `deny-agents-halt` (§4.5) extended to `aiplatform.googleapis.com/reasoningEngines.query`, `.streamQuery` and `run.googleapis.com/routes.invoke` for the per-project `principalSet://agents…/attribute.container/projects/N` entries the factory emits (the fleet-wide `/*` form only if P8 proves it) | Permission names, deny-policy support of agent principals and the `/*` form *tbd* (P8) |
 | **KF-3** Scheduler pause | Cloud Scheduler jobs paused per tier folder by the same job | Buildable |
 | **KF-4** principal ineligibility | The PAB `pab-agents` swapped to an empty rule set by a holder of `iam.principalAccessBoundaryAdmin` at the organisation (PAB policies are organisation-level resources) | **Unproven until P9** — blocks only permissions in the enforcement version; not counted in the safety case until the blocked-permissions list is read and invoke/query are shown blockable |
 
 Drilled **monthly like K0** in nonprod, target under 5 minutes end to end and under 60 seconds
-for KF-1, times recorded in the evidence bucket. Per-agent K0–K5 stay as today; K6 is §13.1.
+for KF-1, times recorded in the evidence bucket. Per-agent K0–K5 stay as on 2026-09-13; K6 is §13.1.
 
 | Primitive | Mechanism on Google Cloud, 2026-09-13 | Status | Tier |
 |---|---|---|---|
@@ -915,7 +1001,7 @@ for KF-1, times recorded in the evidence bucket. Per-agent K0–K5 stay as today
 | Default-deny egress | gateway hostname allow-list; VPC-SC backstop (§8) | buildable; residual: hostname granularity, `*.googleapis.com` essentials are wide | R+ |
 | No credential reach | deny policy + PAB at folder/organisation (§4.5) | buildable; permission names *tbd* verification; PAB caveat | R+ |
 | No self-modification | folder rule: no agent principal writes to any repository, Artifact Registry or deploy identity; Binary Authorization; agent-authored PRs labelled and two-human-merged; CI-only deploys with PAM on the human path; validator custodian outside the agent's reach | buildable | W+ (Mo already opens PRs) |
-| **Fleet kill switch outside any agent project (K7)** | above | buildable; **absent from the sets today** | all |
+| **Fleet kill switch outside any agent project (K7)** | above | buildable; **absent from the sets on 2026-09-13** | all |
 | Sandboxed execution | GKE Agent Sandbox (gVisor; default egress blocks RFC 1918, cluster DNS, the metadata server) in `europe-west1`, **launch stage *tbd*** (P27); Agent Runtime Code Execution stays off fleet-wide (no EU residency; by organisation constraint if one exists — verify) | buildable with a stage caveat; no EU-resident managed sandbox on Agent Runtime | X only |
 | Model-free monitor with halt authority | Eve's shape: deterministic by absence (no `aiplatform`, no model in the image), halt path contains no model; per tier by the contract | exists; the platform's AI-control primitive | P; X |
 | Re-qualification on model change | fingerprint tuple (prompt hash, model id, framework version, filter version) change resets every cell above L3; a pin change demotes to the cell's entry level until the evidence gates pass again (C15 generalised) | buildable | W+ |
@@ -941,7 +1027,7 @@ exists with agents in it. [SCA-09]
 
 ## 12. The autonomy contract
 
-The ladder is the right primitive and is Wall-E's private property today. It becomes four
+The ladder is the right primitive and is Wall-E's private property on 2026-09-13. It becomes four
 platform artefacts any Tier W+ agent adopts by conforming to them. [SCA-06, MO-05, WSA-10]
 
 ### 12.1 The ladder — unchanged rules, platform defaults
@@ -963,7 +1049,7 @@ consumed by the factory, Eve and Mo:
 |---|---|
 | `identity` | `agent_id`, tier, owner group, principal form, environment |
 | `families[]` | id, description, risk tier (`READ`, `WRITE_LOW`, `WRITE_HIGH`, `SUPER`, `WRITE-generic`), reversibility, inverse operation, pre-state predicate type, taint fields |
-| `trigger_classes[]` | the ladder's T0–T3 (chat, scheduled, event, agent) with per-class ceilings — the trigger vocabulary keeps its numbers; tiers carry letters |
+| `trigger_classes[]` | the ladder's T0–T3 exactly as `wall-e/05` §3 defines them — **chat, scheduled, event, inbox** (T3 `inbox` is attacker-controlled text, proposals only, permanently) — with per-class ceilings, plus the separate **`agent` ceiling column** of `wall-e/13` §5.4 for callers of principal type `agent` (L5 for READ, L0 for every write); corrected 2026-09-13, an earlier draft wrote "agent" as T3. The trigger vocabulary keeps its numbers; tiers carry letters |
 | `ceilings` | the permanent maximum level per (family, trigger); `SUPER` and `WRITE-generic` rows fixed by the schema, marked `code: true` |
 | `protected_principals` | ids the agent may never target; the platform appends its own (`eve@`, the control groups, the robot itself) |
 | `hard_denied` | operations denied in every lane (§13.1 list 1 for Wall-E) |
@@ -987,8 +1073,9 @@ manifest ceiling and the platform defaults.
 ### 12.4 The validator and the platform verifier
 
 - **Validator custodian** in `VALIDATOR_PROJECT`, owned by the security reviewer, run by CI:
-  holds dataset-level `READER` on every agent's audit dataset and on Eve's quality dataset
-  (§13.3), with no binding of any kind in any agent project or in `MO_PROJECT`; re-derives every
+  holds dataset-level `READER` on every agent's audit dataset and — if P30 is decided as
+  recommended; until then Eve proposals beyond `incident_note` stay advisory — on Eve's quality
+  dataset (§13.3), with no binding of any kind in any agent project or in `MO_PROJECT`; re-derives every
   number a promotion or a Mo proposal cites and refuses what it cannot recompute; golden
   fixtures per metric pack. One for the platform.
 - **Platform verifier** for Tier W agents: Eve's deterministic shape, generalised — predicates
@@ -1032,7 +1119,7 @@ flowchart LR
         ER["eve-reconciler<br/>all six streams + Reports API poll by actor<br/>detection catalogue · roster check · heartbeat"]
     end
     subgraph EAP["EVE_ADVISOR_PROJECT — reporting path (may reason)"]
-        EA["eve-advisor<br/>reads eve.* through authorised views<br/>writes eve.incidents narratives, eve.advice<br/>no signer · no invoker · no secret · can only raise a refusal"]
+        EA["eve-advisor<br/>reads eve.* through authorised views<br/>writes eve.incidents narratives, eve.advice<br/>no signer · no invoker · no secret · reports and pages only, nothing on the verdict path"]
     end
     subgraph WIT["org-witness — second organisation"]
         VA["EVE_WITNESS_PROJECT<br/>evidence mirror · eve.incidents copy · K5 rota records<br/>sev 1/2 channels · absence alarm on Eve and on Google's feed"]
@@ -1041,6 +1128,7 @@ flowchart LR
         MO["Mo — one per platform<br/>mo-metrics@ (no model) · mo-narrator@ (model, aggregates only)<br/>reads walle_audit + eve_quality via views<br/>writes pull requests only"]
     end
     KILL["K7 fleet kill — CORE_PROJECT job via PAM<br/>human or sev-1 SIEM rule, never a model"]
+    GIT["git repositories<br/>walle/config · eve/config<br/>branch protection, two human reviewers"]
     REQ --> APPX --> TG --> IG --> AG
     AG -->|"named operation + params"| WA
     AG -->|"generic request (band B)"| WS
@@ -1060,7 +1148,8 @@ flowchart LR
     VA -->|"sev 1 pages out-of-band"| SEC
     MO -->|"reads"| FS
     MO -->|"reads (views)"| ER
-    MO -->|"PR to walle/config, eve/config"| SEC
+    MO -->|"pull request, agent-authored label"| GIT
+    SEC -->|"reviews and merges (one of two humans)"| GIT
     KILL -.->|"stops every agent principal"| AG
 ```
 
@@ -1076,17 +1165,17 @@ detection is the primary control. [WSA-01, WSA-02, WSA-07, TIS-02, CON-01, MON-0
 | # | Compensation | Mechanism | Grade |
 |---|---|---|---|
 | 1 | **Three bands, not breadth** | the table below | enforcement (code) |
-| 2 | **Two lists**, decision 4 re-ratified and owner-signed (P29) | *Hard-denied in every lane*, denial reasons `self_modification_denied` / `escalation_denied`, breaker trip, severity 1: anything targeting `walle@`, its OU, `eve@`, Eve's role, the control groups (`walle-operators@`, `walle-protected@`, `eve-owners@`, `ge-admins@`, `platform-approvers@`, the `mo-*` groups), the two OAuth clients, the activity rules that alert on the robot, "Share data with Google Cloud services", the SecOps export setting, the organisation sinks; `users.makeAdmin` and any `roleAssignments.insert` of Super Admin or of a role carrying admin-role management; `users.delete` of any admin; **other admins' security settings and backup codes**; DWD. The robot is on the committed floor list and a protected principal under its own N7 rule. *Reachable only through band B at tier `SUPER`*: everything else on the old never-list — OU create/rename/move, user delete of non-admins, group delete, admin-role create/assign below Super Admin, domain add, data transfer, licence purchases where an API exists — two-person rule, change-ticket reference mandatory, `hold_minutes` before execution for the veto surface | enforcement (code) |
-| 3 | **Two credentials, two services** (decision 18 forced to now) | Client 1, narrow (the catalogue's scopes), readable only by `walle-actions`; client 2, broad, readable only by `walle-actions-super`, a separate Cloud Run service with its own secret and service account. Both Internal, In production, Trusted, consented in one sitting on the same hardware key; `cloud-platform` in neither, checked in CI against the consent screen; the 100-tokens-per-client rule kept. Scopes are the only Google-enforced ceiling left, so the narrow client keeps one for everything unattended; adding a scope is a re-consent of client 2 only | enforcement (Google, by scope) |
-| 4 | **Requester rule for band B** | live, fail-closed check: requester a human super admin (`users.get isAdmin` via the narrow token), approver a **different** human super admin, both on the audit row, approval bound to the canonical request hash on the IAP surface; closes decision 28 for this lane; band A unchanged | enforcement (code) |
-| 5 | **Detection as the primary control** | Eve's minute-latency reconciliation of every robot-attributed event in every ingested stream against `walle_audit` and the band-B audit rows; a daily super-admin roster check from Eve's own credential (`roleAssignments.list`, `users.list isAdmin`) diffed against the committed roster; the evidence heartbeat paging a human when `admin.googleapis.com` events stop or Eve's token returns `invalid_grant`; the SIEM-hosted severity-1 set of §7.3 owned by IT security; the drift row "`walle@` holds no organisation-level IAM role" | detection, minute latency, with absence alarms |
-| 6 | **Account hygiene Google decides for you** | hardware-key-only 2SV (Google-enforced on admins; two keys, named custodians, witnessed custody; the 30-day web lockout noted so M2A-before-M2B ordering stays); super-admin self-recovery **Off tenant-wide** with a drift check; no recovery channels; short session control on the OU; the robot never the only or the recovery super admin; at least two human super admins; the Admin console CAA level of §4.6; a second activity rule on any admin event whose actor is the robot and whose target is another admin; `role_assignment_missing` a paging class in both directions | enforcement (Google) plus detection; the CAA level detection-plus-friction (`Assumption:`, P7) |
-| 7 | **Kill switches** | K0–K5 as in `wall-e/ARCHITECTURE.md` §4.6; **K6**: a human super admin removes Super Admin from the robot (`users.makeAdmin false`) — the switch that survives a token already minted; **K7** the fleet kill (§11.4). K5/K6 are human-only on a two-person rota (the on-duty human super admin and the second human of §13.2), paged from the witness, rota records held in the witness. A machine holder of a Workspace privilege over `walle@` is **not built** now — it is one more credential for one administrator to guard — but the door stays open as P16: a spike on whether disabling the two OAuth clients in `WALLE_PROJECT` invalidates issued refresh tokens, and whether a delegated admin role can suspend a super-admin user (`Assumption:` it cannot; Google's privilege page lists super-admin-only tasks) | enforcement (human) |
-| 8 | **The perimeter** | §8.1 (b) now: `walle-actions` and `walle-actions-super` never internet-reachable; Access Approval on `WALLE_PROJECT`; PAM on the deploy grant with a second reviewer (weakness 12 closed before the role exists) | enforcement |
+| 2 | **Two lists**, decision 4 re-ratified and owner-signed (P29) [WSA-04] | *Hard-denied in every lane — including the band-C handoff lane, which refuses these rather than returning console steps*: the closed denial vocabulary of `audit.schema` (§12.3) is `self_modification_denied`, `escalation_denied`, `posture_change_denied`, `irreversible_denied`, `money_denied`; breaker trip, severity 1: anything targeting `walle@`, its OU, `eve@`, Eve's role, the control groups (`walle-operators@`, `walle-protected@`, `eve-owners@`, `ge-admins@`, `platform-approvers@`, the `mo-*` groups), the two OAuth clients, the activity rules that alert on the robot, "Share data with Google Cloud services", the SecOps export setting, the organisation sinks; `users.makeAdmin` and any `roleAssignments.insert` of Super Admin or of a role carrying admin-role management; `users.delete` of any admin and deletion of the tenant account; **other admins' security settings and backup codes**; the super-admin self-recovery setting; DWD. The robot is on the committed floor list and a protected principal under its own N7 rule. *Reachable only through band B at tier `SUPER`*: everything else on the old never-list — OU create/rename/move, user delete of non-admins, group delete, admin-role create/assign below Super Admin, domain add, data transfer, licence purchases where an API exists — two-person rule, change-ticket reference mandatory, `hold_minutes` before execution for the veto surface | enforcement (code) |
+| 3 | **Two credentials, two services** (decision 18 forced to now) [WSA-05] | Client 1, narrow (the catalogue's scopes), readable only by `walle-actions`; client 2, broad, readable only by `walle-actions-super`, a separate Cloud Run service with its own secret and service account. Both Internal, In production, Trusted, consented in one sitting on the same hardware key; `cloud-platform` in neither, checked in CI against the consent screen; the 100-tokens-per-client rule kept. Scopes are the only Google-enforced ceiling left, so the narrow client keeps one for everything unattended; adding a scope is a re-consent of client 2 only | enforcement (Google, by scope) |
+| 4 | **Requester rule for band B**, stated once for both pages | tier `WRITE`: requester a member of `walle-operators@` (re-checked live against the committed operator list), one approver; tier `SUPER`: live, fail-closed check that the requester is a human super admin (`users.get isAdmin` via the narrow token), approver a **different** human super admin, both on the audit row, approval bound to the canonical request hash on the IAP surface; the live super-admin check runs for `SUPER` only, never for `WRITE`; closes decision 28 for this lane; band A unchanged | enforcement (code) |
+| 5 | **Detection as the primary control** [WSA-08] | Eve's minute-latency reconciliation of every robot-attributed event in every ingested stream against `walle_audit` and the band-B audit rows; a daily super-admin roster check from Eve's own credential (`roleAssignments.list`, `users.list isAdmin`) diffed against the committed roster; the evidence heartbeat paging a human when `admin.googleapis.com` events stop or Eve's token returns `invalid_grant`; the SIEM-hosted severity-1 set of §7.3 owned by IT security; the drift row "`walle@` holds no organisation-level IAM role" | detection, minute latency, with absence alarms |
+| 6 | **Account hygiene** [WSA-06] | hardware-key-only 2SV enforced by the tenant's 2SV policy on the robot OU (two keys, named custodians, witnessed custody). Google is rolling out mandatory 2SV for admin accounts gradually; on 2026-09-13 it applies to Education, Nonprofits, Cloud Identity, Android Enterprise and Enterprise editions using third-party SSO, with 90-/60-day notice, so where the tenant is not yet in scope admin 2SV is the tenant's own policy, enforced on the robot OU and drift-checked; lockout when subject is 15 days for mobile and 30 days for web, and admins under the Google policy cannot bypass it (the 30-day web lockout is noted so M2A-before-M2B ordering stays). Super-admin self-recovery is set **per organisational unit or configuration group** (top OU = all super admins); it defaults to On for most editions including Enterprise Standard/Plus (Off by default only for Frontline Standard, Business Plus, Education Standard/Plus, Enterprise Essentials Plus, G Suite Basic and Cloud Identity Premium): set **Off at the top OU** and drift-check that no child OU or configuration group re-enables it (both corrected 2026-09-13, §19); no recovery channels; short session control on the OU; the robot never the only or the recovery super admin; at least two human super admins; the Admin console CAA level of §4.6; a second activity rule on any admin event whose actor is the robot and whose target is another admin; `role_assignment_missing` a paging class in both directions | enforcement (Google) plus detection; the CAA level detection-plus-friction (`Assumption:`, P7) |
+| 7 | **Kill switches** [EVE-07, WSA-11] | K0–K5 as in `wall-e/ARCHITECTURE.md` §4.6; **K6**: a human super admin removes Super Admin from the robot (`users.makeAdmin false`) — the switch that survives a token already minted; **K7** the fleet kill (§11.4). K5/K6 are human-only on a two-person rota (the on-duty human super admin and the second human of §13.2), paged from the witness, rota records held in the witness. A machine holder of a Workspace privilege over `walle@` is **not built** now — it is one more credential for one administrator to guard — but the door stays open as P16: a spike on whether disabling the two OAuth clients in `WALLE_PROJECT` invalidates issued refresh tokens, and whether a delegated admin role can suspend a super-admin user (`Assumption:` it cannot; Google's privilege page lists super-admin-only tasks) | enforcement (human) |
+| 8 | **The perimeter** | §8.1 (b) once P3's engine-reach spike has passed — a precondition of the grant, so by the grant date `walle-actions` and `walle-actions-super` are never internet-reachable; until then IAM-only invoke, with the ingress value drift-checked; Access Approval on `WALLE_PROJECT`; PAM on the deploy grant with a second reviewer (weakness 12 closed before the role exists) | enforcement (IAM now; ingress policy after P3) |
 | 9 | **A permanent ceiling** | no super-admin-class operation is ever autonomous, in the same sentence as `WRITE_HIGH`: `SUPER` rows chat L3 two-person, every other trigger L0, permanent, code not config; `WRITE-generic` rows chat L3, others L0; CI asserts neither appears in any `playbook.uses` | enforcement (code) |
-| 10 | **The controls that replace the lost role scoping** | the OU allow-list, N1/N2, the `SAFE_USER_FIELDS` split, the credential-leak bound move into the policy chain as hard invariants (`posture_change_denied`, `irreversible_denied`, `self_modification_denied`, `money_denied`), tested by the denial suite, whose exit checklist inverts to "`$ROBOT` is a super admin, on the floor list, and every super-admin-class request is denied in the catalogue lane"; the script's `isAdmin` checks invert; denial tests gain "write targeting the robot itself" and "any `makeAdmin`" | enforcement (code) |
+| 10 | **The controls that replace the lost role scoping** | the OU allow-list, N1/N2, the `SAFE_USER_FIELDS` split, the credential-leak bound move into the policy chain as hard invariants carrying the same five-reason vocabulary as item 2 (`self_modification_denied`, `escalation_denied`, `posture_change_denied`, `irreversible_denied`, `money_denied`), tested by the denial suite, whose exit checklist inverts to "`$ROBOT` is a super admin, on the floor list, and every super-admin-class request is denied in the catalogue lane"; the script's `isAdmin` checks invert; denial tests gain "write targeting the robot itself" and "any `makeAdmin`" | enforcement (code) |
 | 11 | **Second human outside the Wall-E line** | named before the grant (§13.2); owner of `eve-owners@`; "the four owner groups are one person" expires on the grant date | organisational |
-| 12 | **A signed record** | a dated decision "Wall-E holds Super Admin" superseding decision 26 for Wall-E (E-16 stays open for Eve), re-ratifying decision 4 with the two lists, entering the residual (leaked token or interactive login = tenant compromise and a path to the organisation; perimeter = custody plus scope split plus detection latency) in the accepted-risks table with the owner's signature, as a TISAX deviation signed by the security reviewer, and as row one of the risk register; the threat row becomes "Robot credential leak — tenant compromise; bounded by custody, scope split and detection latency; severity 1; response includes Google support escalation" | organisational |
+| 12 | **A signed record** | a dated decision "Wall-E holds Super Admin" — register row **P33**, file `decisions/2026-09-13-wall-e-holds-super-admin.md` — superseding decision 26 for Wall-E (E-16 stays open for Eve), re-ratifying decision 4 with the two lists, entering the residual (leaked token or interactive login = tenant compromise and a path to the organisation; perimeter = custody plus scope split plus detection latency) in the accepted-risks table with the owner's signature, as a TISAX deviation signed by the security reviewer, and as row one of the risk register; the threat row becomes "Robot credential leak — tenant compromise; bounded by custody, scope split and detection latency; severity 1; response includes Google support escalation" | organisational |
 | 13 | **EU AI Act position** | the catalogue is the declared intended purpose; Super Admin is a credential fact; "never in the catalogue" is the Art. 6(3) boundary enforced in code with CI ownership outside the agent repository; band B is "execution of a fully specified administration request decided and approved by two human super administrators", documented as such; band C is instructions to a human (§14.1, P28) | documentation |
 
 **The three bands.** [WSA-03, CON-02, decision 27 re-cut as "which lane"]
@@ -1095,7 +1184,7 @@ detection is the primary control. [WSA-01, WSA-02, WSA-07, TIS-02, CON-01, MON-0
 |---|---|---|---|---|
 | **A** catalogued autonomous work | the typed catalogue on the ladder (F1–F10 and what grows); the declared intended purpose | `walle-actions` `/v1/execute`, narrow client; policy chain, pre-state predicate, inverse, taint, protected principals, verify-by-re-read, Eve at L4 — unchanged | the only band that can climb; `WRITE_HIGH` never L5 | per ladder |
 | **B** uncatalogued super-admin work | a generic Admin SDK lane `/v1/execute-generic` taking `(api, version, resource, method, path_params, body)`, schema-validated (`extra=forbid`) against the **pinned Google Discovery document**, method mapped to `READ`/`WRITE`/`SUPER` by a committed table; pre-state by the matching `get`/`list` or refused `no_pre_state` unless the approver accepts explicitly; no inverse ⇒ treated as irreversible; taint and every hard-denied row apply; never in `playbook.uses` (CI asserts); full canonical request, Discovery revision and both humans on the audit row. Challenge C35's rejection is re-argued: the lane loses inverse, pre-state predicate and taint declaration and needs none because it is never above L3 | `walle-actions-super`, broad client, separate service account, separate secret, own audit rows | **permanently L3**; `SUPER` two-person; `chat` trigger (`principal.type == human`) only | `WRITE`: one operator; `SUPER`: requester a human super admin, approver a **different** human super admin, change-ticket reference and `hold_minutes` mandatory [WSA-09] |
-| **C** console-only work | DWD authorisation, 2SV enforcement and methods, sign-in challenges, password policy, session control, API controls and app trust, Marketplace, data regions, Gmail routing, Drive/Meet/Calendar tenant settings, billing, super-admin self-recovery, backup codes for other admins, Transfer tool, account deletion — **defined by fact, not by list: the Cloud Identity Policy API mutates only DLP rules, detectors and provisioning settings** (verified); everything else the API reads but cannot write is band C | `walle-actions-super` `/v1/handoff`: returns the exact console steps to the requesting human super admin, opens a watch on `reports.activities.list` for the matching admin event (the Reports application per route is committed beside the "records nothing" list of §13.2), reports `verified` or `not seen within N hours` | none | the human does it. **No browser-driving or computer-use automation of the Admin console under the robot's session, ever** — "an interactive login is an incident" is the one control that survives Super Admin and it must stay an incident |
+| **C** console-only work | 2SV enforcement and methods, sign-in challenges, password policy, session control, API controls and app trust, Marketplace, data regions, Gmail routing, Drive/Meet/Calendar tenant settings, billing, the Transfer tool — **defined by fact, not by list: the Cloud Identity Policy API mutates only DLP rules and DLP detectors (v1) and, in v1beta1 only, the conflicting-accounts provisioning setting** (verified); everything else the API reads but cannot write is band C. **The hard-denied list applies to this lane too** (corrected 2026-09-13; an earlier draft listed DWD, super-admin self-recovery, other admins' backup codes and account deletion here as well as on the hard-denied list): a handoff request for DWD, for another admin's security settings or backup codes, for the super-admin self-recovery setting, or for deletion of any admin or of the tenant account is refused by `/v1/handoff` with `posture_change_denied` / `escalation_denied` and a severity-1 page, not turned into console steps — a human super admin who wants those does them without asking the robot, and Eve's tenant-integrity rules see it either way | `walle-actions-super` `/v1/handoff`: runs the same hard-denied check as every lane, then returns the exact console steps to the requesting human super admin, opens a watch on `reports.activities.list` for the matching admin event (the Reports application per route is committed beside the "records nothing" list of §13.2), reports `verified` or `not seen within N hours` | none | the human does it. **No browser-driving or computer-use automation of the Admin console under the robot's session, ever** — "an interactive login is an incident" is the one control that survives Super Admin and it must stay an incident |
 
 **Placement.** `WALLE_PROJECT` under `fld-agents-p-sa` with the stricter policies of §3.1; the
 two OAuth clients' secrets regional with pinned versions and one reader each; K6 joins the drill
@@ -1106,8 +1195,10 @@ deleted; the Workspace privilege facts stay as footnotes.
 
 **Control path (unchanged, deterministic by absence).** `eve-gate`, `eve-reconciler`,
 `eve-console` in `EVE_PROJECT`; approve/veto/halt/demote over plain authenticated REST; the
-signing key `eve-approval` (HSM); no `aiplatform` (folder `restrictServiceUsage` makes it
-Google-enforced; no model client in the image, CI-checked); decision 34 stands for approve,
+signing key `eve-approval` (HSM); no `aiplatform` (a **project-level** `restrictServiceUsage`
+denylist on `EVE_PROJECT` makes it Google-enforced — project level, not folder, because the
+reporting path in the sibling project needs the API, §3.1; no model client in the image,
+CI-checked); decision 34 stands for approve,
 halt, demote and veto. Recorded as a compliance invariant: a model-free Eve is outside the
 AI Act's Art. 3(1) AI-system definition and serves as an Art. 14 oversight measure. [AIA-11,
 CON-03]
@@ -1116,14 +1207,23 @@ CON-03]
 `fld-controllers`, identity `eve-advisor@`: reads `eve.*`, `eve_workspace_logs` and the report
 tables through authorised views with no free-text columns; writes only `eve.incidents.narrative`
 and `eve.advice`; holds no signer, no `run.invoker`, no secret access, no write to `eve/config`;
-one-directional — it can raise a refusal (turn an accept into a refuse) through the existing
-wire, or a page, never clear or lower one; may page at severity 2 only, inside the page budget,
-citing the deterministic findings that triggered it; produces no finding about a named human
-without the deterministic rule that triggered it until P19 is answered. The reopening of the
-settled "no model anywhere in Eve" row is a dated decision on the objective's new evidence.
-"Anything wrong" cannot be enumerated in a closed vocabulary, and this is where the
-enumeration ends. `wall-e/08` item 5 ("halting, on its own judgement") narrows to the reporting
-path. [EVE-04]
+**report-only, by construction**: nothing it writes is read by `eve-gate`, `eve-reconciler`,
+`walle-actions` or `walle-actions-super` — the gate reads `eve.*` control tables and
+`eve/config`, never `eve.advice` — so no model output enters a verdict. Corrected 2026-09-13:
+an earlier draft said the path "can raise a refusal through the existing wire"; no wire, grant
+or reader existed for that, and any one that did would put a model output on the authority
+path, which the standing constraint forbids. What the path can do is page at severity 2 only,
+inside the page budget, citing the deterministic findings that triggered it; a human who
+agrees with a "wrong accept" finding halts or demotes through the existing human path, and
+tightens Eve's rules through a human-merged `thresholds.yaml` change (Mo's
+`eve_threshold_tighten` type, §13.3). It produces no finding about a named human without the
+deterministic rule that triggered it until P19 is answered. The reopening of the settled "no
+model anywhere in Eve" row (`eve/09`; `wall-e/14` "An LLM Eve — Rejected") is a dated decision
+on the objective's new evidence: register row **P34**, file
+`decisions/2026-09-13-eve-reporting-path-may-reason.md`, owner the Eve owner with the
+security reviewer, gate: the `eve-advisor` build. "Anything wrong" cannot be enumerated in a
+closed vocabulary, and this is where the enumeration ends. `wall-e/08` item 5 ("halting, on its
+own judgement") narrows to the reporting path's *reporting*, not to a halt. [EVE-04]
 
 **Evidence perimeter for a super-admin Wall-E** (declared limits carried in every attestation).
 [EVE-02, EVE-08, MO-08]
@@ -1165,12 +1265,22 @@ and outside the Wall-E administration line, holding `EVE_WITNESS_PROJECT` with: 
 append-only export of `eve.findings`, `eve.verdicts`, `eve.incidents`, `eve.pages` and the
 evidence bucket copy; a copy of `eve.incidents`; the K5 rota records; the sev 1/2 Cloud
 Monitoring notification channels (SMS, mobile app, PagerDuty/webhook) to individuals; the
-**absence alarm on Eve's heartbeat and on Google's feed** (no Workspace rows for N hours in
-business hours → page). Nothing in it can approve, halt or execute. Cross-organisation reach is
-**exactly two resource-level grants**: the witness mirror-writer identity holds dataset-level
-`READER` on the evidence lake and object-creator on the locked bucket; `iam.allowedPolicyMemberDomains`
-on `fld-agentic-platform` lists the witness customer id for those two principals only. Access
-Approval and Access Transparency on the witness project. Cost: one more tenant, two more
+**absence alarm on Eve's heartbeat and on Google's feed** (no `eve_workspace_logs` rows for
+60 minutes in business hours, the same number as §7.3 → page). Nothing in it can approve, halt
+or execute. **Direction and grants, fixed 2026-09-13** (an earlier draft described a pull by a
+witness identity, contradicting the diagram): the mirror is a **push**. One Eve identity,
+`eve-export@EVE_PROJECT`, a Cloud Run job in `EVE_PROJECT` with dataset-level `READER` on
+`eve.*` and `storage.objectViewer` on Eve's locked bucket at home, holds **exactly two
+resource-level grants in the witness organisation**: `roles/bigquery.dataEditor` on the
+witness dataset `eve_mirror` in `EVE_WITNESS_PROJECT` and `roles/storage.objectCreator` on the
+witness bucket (create-only; the bucket has a retention lock, so a compromised `eve-export@`
+can add rows and objects but cannot delete or rewrite what is already there). Both grants are
+made by the witness administrators on witness resources; **no witness principal holds any
+grant in the tenant's organisation**, so the tenant's `iam.allowedPolicyMemberDomains` needs no
+witness exception (§3.3) and the witness's own constraint lists the tenant's customer id for
+`eve-export@` only. The heartbeat is a row the same job writes; the absence alarm is a Cloud
+Monitoring policy in the witness on that table. Access Approval and Access Transparency on the
+witness project. Cost: one more tenant, two more
 hardware keys, a second ENX and supplier line, and an honest statement that **Eve's control
 path stays in the tenant's organisation and its independence there is detective, not
 structural**: a super admin who reaches Organization Administrator can redeploy `eve-gate`;
@@ -1315,7 +1425,7 @@ with mechanism, evidence, owner and status. [TIS-01, TIS-04, TIS-10]
 | 1.3.1 / 1.3.2 assets, classification | the register (§5) with owner and class per agent; the topology per project; every store classified in §7.5 | register export | platform | to build |
 | 1.4.1 risk | risk register page, super-admin deviation row one, one row per weakness and accepted residual with owner and acceptance | register | security reviewer | to write |
 | 1.6.x incidents, crisis | §7.6; crisis scenario = abused super-admin credential; tabletop dated; staffed recipient with an acknowledgement SLA | incident records | IT security | to build |
-| 2.1.x, 9.7.2 training | training outline per role with completion record, refreshed at each stage transition | records | ISMS | to write |
+| 2.1.3 training (9.7.2 only if the Data Protection module enters scope) | training outline per role with completion record, refreshed at each stage transition | records | ISMS | to write |
 | 4.1 / 4.2 identity, least privilege, reviews | §4; PAM as the access-review evidence; quarterly privilege review against a signed list; super admin as a signed deviation; privileged-account procedure (creation, key custody, no interactive login, login rule, rebuild checklist per decision 39) | PAM logs, drift job | platform | strong; deviation to sign |
 | 5.1 cryptography | §8.3 table; organisation standard by reference | mapping page | platform | to consolidate |
 | 5.2.1 / 5.2.2 / 5.3.1 change, environments, development | §9; nonprod folder and sandbox tenant; attestation-based promotion; release and emergency-change procedure; git bypass off; first decision files | git, decisions | platform | pre-production is a control that does not exist yet |
@@ -1355,8 +1465,8 @@ platform mechanism enforces it, which agent code adds to it, and the grade. [CON
 |---|---|---|---|---|---|
 | B1 | Human ↔ reasoning layer: the model sees the request, never the credential; the human's identity travels as a surrogate | Gemini Enterprise identity + `StreamAssist` log; `gemini-egress`; Model Armor on the tenant; IAP with Context-Aware Access for control surfaces | prompt security chapter (`wall-e/11`) | enforcement | C |
 | B2 | Reasoning layer ↔ action service: the model names an operation and parameters; deterministic code decides | Agent Identity; gateway allow-list to the action service only; deny on secrets; PAB | catalogue, policy chain, ladder | enforcement | W |
-| B3 | Action service ↔ system of record: the only credential holder; scopes as the Google-enforced ceiling; every write pre-stated, verified, audited | keyless SA; regional secret; `run.allowedIngress` internal; perimeter (§8) | operation implementations, inverses | enforcement (scope) plus detection at minute latency for a super admin | W |
-| B4 | Agent ↔ verifier: approvals signed by a key the agent cannot reach; halt over plain REST; no model on the authority path | separate project, HSM key, deny policy, folder `restrictServiceUsage` | predicates from the manifest | enforcement (by absence) | W (platform verifier), P (Eve) |
+| B3 | Action service ↔ system of record: the only credential holder; scopes as the Google-enforced ceiling; every write pre-stated, verified, audited | keyless SA; regional secret; IAM-only invoke, then `run.allowedIngress` internal once P3 passes; perimeter (§8) | operation implementations, inverses | enforcement (scope) plus detection at minute latency for a super admin | W |
+| B4 | Agent ↔ verifier: approvals signed by a key the agent cannot reach; halt over plain REST; no model on the authority path | separate project, HSM key, deny policy, project-level `restrictServiceUsage` on `EVE_PROJECT` | predicates from the manifest | enforcement (by absence) | W (platform verifier), P (Eve) |
 | B5 | Agent ↔ improver: every number re-derivable by a custodian the proposer cannot reach; changes reach production only by a human-merged PR | validator project; branch protection; agent-authored PR label | metric pack | enforcement | W |
 | B6 (fleet) | Agent ↔ peer agents: peers are `agent` principals, L0 for writes, tainted on receipt; egressor bindings limited to the manifest | ingress gateway with Model Armor; registry-based egressor list | taint handling | enforcement | R |
 | B7 (fleet) | Agent ↔ platform: the agent cannot reach outside its folder, cannot deploy itself, cannot silence its logs; the fleet kill sits outside its project | PAB (detection-grade until P9), deny policy, aggregated sink, K7 | nothing — by design | enforcement (deny, sink, K7) | R |
@@ -1382,8 +1492,9 @@ witnessed key custody, `cloud-platform` forbidden and CI-checked, the organisati
   says so.
 - It does not automate the Admin console under any robot session, by browser or computer use.
   Band C is documentation and verification.
-- It does not let any model produce an approval, a signature, a halt or a veto; a model may
-  narrate and may raise a refusal.
+- It does not let any model produce an approval, a signature, a halt, a veto or a refusal; a
+  model may narrate and may page a human at severity 2, and nothing it writes is read by the
+  gate (§13.2, P34).
 - It does not evaluate model capabilities, detect deception, or claim AGI containment. Tier X is
   closed until §11.5's conditions hold.
 - It does not count the PAB, the Admin console CAA level or the deny policy's unverified names
@@ -1410,16 +1521,21 @@ witnessed key custody, `cloud-platform` forbidden and CI-checked, the organisati
 
 Platform decisions continue Wall-E's register (which ends at 52) as **P1..**. Each names the
 options, the owner and the gate it blocks; a recommendation is given where a lens or a judge
-made one. Decisions in the agent sets that this page affects (3, 4, 5, 8, 10, 11, 18, 19, 26,
-27, 28, 29, 34, 37, 39, 52; E-2, E-6, E-7, E-13, E-16, E-19; M-4, M-8, M-11) get a dated line
-pointing at the section above (§18). [CON-07]
+made one. Decisions in the agent sets that this page affects get a dated line pointing at the
+section above (§18): 3 (§13.1 item 3), 4 (item 2, P29), 5, 8 (§7.5), 9 (superseded by P3, §8.1),
+10, 11, 14 (the IAP surface is the band-B and reporting surface, §13.1 item 4 and §13.2), 18
+(item 3), 19, 21 (closed by P3), 26 (closed by fact, P33), 27 (§13.1 bands), 28 (item 4), 29
+(a sandbox tenant before Stage 1, §3.1 nonprod row, with its reason), 30 (accepted in §10 R-B),
+31 (closed by the daily JSONL export of §7.5 and the witness copy), 34 (§13.2), 37 (§0.3), 39,
+41 (accepted in §10), 46 (closed by the drift job of §4.7), 52 (§2.1); E-2, E-6, E-7, E-13,
+E-16, E-19; M-4, M-8, M-11. [CON-07]
 
 | Id | Decision | Options / recommendation | Owner | Gate it blocks |
 |---|---|---|---|---|
 | P1 | Adopt this tier model, the tier gate and the lettered tiers as the platform's | as §0.4 and §11 | the platform owner | everything |
 | P2 | Factory tooling | Cloud Foundation Fabric FAST project factory (recommended) vs bespoke modules vs Config Controller | platform owner | Tier R |
-| P3 | Perimeter model: (b) now, VPC-SC per tier folder as backstop after a spike on a throwaway engine resolving Google's two contradictory pages; closes decisions 21 and E-19 | as §8.1 | platform owner, security reviewer | Tier W perimeter; the super-admin grant |
-| P4 | Which custom constraints the resource types support (`identityType`, `AuthProvider`, Cloud Run `binaryAuthorization`) | spike | platform owner | D2 enforcement grade |
+| P3 | Perimeter model, two spikes on a throwaway engine: (1) the engine-reach spike — an engine bound to its gateway calls an `internal-and-cloud-load-balancing` action service through an internal load balancer and PSC endpoint, direct `run.app` refused — after which (b)'s folder policy is applied; (2) the VPC-SC spike resolving Google's two contradictory pages and the `Assumption:` on Unified Access Policies, after which (a) is the backstop; closes decisions 9, 21 and E-19 | as §8.1 | platform owner, security reviewer | Tier W perimeter; the super-admin grant (spike 1) |
+| P4 | Which custom constraints the resource types support (`spec.identityType` on `ReasoningEngine`; a `binaryAuthorization` field on `run.googleapis.com/Service`) — `AuthProvider` is answered (supported, Preview, §3.3) | spike | platform owner | D2 enforcement grade |
 | P5 | Cloud Run Agent Identity in prod when GA (Preview on 2026-09-10); nonprod now; dated SA exceptions until then | verify GA | platform owner | Tier R prod exceptions |
 | P6 | Tenant app bound to `gemini-egress` in `eu` | spike; yes if supported (recommended) | Gemini Enterprise admin | the register as publication enforcement (§2.1) |
 | P7 | Context-Aware Access on the robot account: does the Admin console level apply to super admins; can API tokens be bound | verify with Google; adopt as detection-plus-friction meanwhile | platform owner | grade of §4.6 and §13.1 item 6 |
@@ -1448,6 +1564,8 @@ pointing at the section above (§18). [CON-07]
 | P30 | Validator custodian's `READER` on `eve_quality` | now (recommended), or Eve proposals stay advisory | Eve owner | Eve proposals beyond `incident_note` |
 | P31 | Quota register and per-tier budget numbers | `Assumption:` numbers of §3.1 and §3.4 | platform owner | Tier R |
 | P32 | Art. 25 written position with the model provider, and Google's per-service TISAX coverage | request from Google | platform owner, ISMS | Stage 1; assessment order |
+| P33 | **"Wall-E holds Super Admin"** — the dated decision superseding decision 26 for Wall-E and re-ratifying decision 4 with the two lists (P29 depends on it); file `decisions/2026-09-13-wall-e-holds-super-admin.md`, entering the residual in the accepted-risks table, signed as a TISAX deviation and as row one of the risk register | decided by the owner on 2026-09-13; the file records it | the platform owner; the security reviewer signs the deviation | the super-admin grant |
+| P34 | **Eve's reporting path may reason** — the dated reopening of `eve/09`'s settled "no model anywhere in Eve v1 or v2" row and `wall-e/14`'s "An LLM Eve — Rejected", limited to `eve-advisor` as a report-only path (§13.2; P19 depends on it for the AI Act class); file `decisions/2026-09-13-eve-reporting-path-may-reason.md` | as §13.2 (recommended); or no reporting path and "anything wrong" stays the deterministic catalogue only | Eve owner, security reviewer | the `eve-advisor` build |
 
 ---
 
@@ -1481,9 +1599,12 @@ dated line "Objective restated 2026-09-13; see the platform HLD".
    policy and Phase 11's organisation sink become folder-level and a log view.
 6. `08-team-eve-mo.md`: Mo rows for Eve in the responsibility table and "What Mo must do"; rule 3
    "Eve can lower; Mo can only propose"; item 5 narrowed to Eve's reporting path.
-7. `09-open-decisions.md`: dated lines on 3, 4, 5, 8, 10, 11, 18, 19, 26, 27, 28, 29, 37, 39, 52
-   pointing at this page; 26 and 27 rewritten; the register notes that platform decisions
-   continue as P1...
+7. `09-open-decisions.md`: dated lines on 3, 4, 5, 8, 9, 10, 11, 14, 18, 19, 21, 26, 27, 28, 29,
+   30, 31, 34, 37, 39, 41, 46, 52 pointing at the section of this page named in §17's preamble;
+   26 and 27 rewritten; 29's recommendation replaced ("a separate tenant only if F3/F3b autonomy
+   is wanted" → a sandbox tenant before Stage 1, because Super Admin cannot be OU-scoped); the
+   Status line "no decision changed" replaced by a dated pointer; the register notes that
+   platform decisions continue as P1...
 8. `11-prompt-security.md`, `12-agent-identity.md`, `13-agent-interconnection.md`: one framing
    note each that the chapter is a platform page seeded here; the P-SA Model Armor template with
    the hard-denied vocabulary detectors added to `11`.
@@ -1540,9 +1661,35 @@ dated line "Objective restated 2026-09-13; see the platform HLD".
 **Shared pages**
 
 25. [../project-topology.md](../project-topology.md) §1 wording ("pattern, not count"), §8
-    decision 52 (the app project is a platform project; Eve's independence detective inside the
-    organisation), new §3 rows for the `eve_quality` grants and the two witness principals, and
-    the Tier P-SA compromise row in §1.2.
+    decision 52 (the app project is a platform project, imported in place; Eve's independence
+    detective inside the organisation), §5 `gcp.resourceLocations` aligned with §3.3 (the
+    `global` floor-setting allowance verified or dropped at the first factory run), the Tier P-SA
+    compromise row in §1.2, and **new §3 rows for every cross-project reach this page adds**,
+    each with its level and maker:
+    - `eve-controller@EVE_PROJECT` → `roles/run.invoker` on Cloud Run service
+      `walle-actions-super` in `WALLE_PROJECT`, service-level, halt path only (the in-app control
+      list carries no other endpoint for it); made by Wall-E's runbook.
+    - `mo-metrics@MO_PROJECT` and the validator custodian → dataset-level `READER` on
+      `eve_quality` in `EVE_PROJECT`; made by Eve's runbook (P30 for the custodian).
+    - `eve-advisor@EVE_ADVISOR_PROJECT` → dataset-level `READER` on the authorised-view dataset
+      in `EVE_PROJECT` that fronts `eve.*`, `eve_workspace_logs` and the report tables (never on
+      the source datasets); write access to `eve.incidents.narrative` and `eve.advice` through a
+      dedicated dataset `eve_advice` in `EVE_PROJECT` with `dataEditor` on that dataset only;
+      made by Eve's runbook.
+    - `eve-export@EVE_PROJECT` → `roles/bigquery.dataEditor` on `eve_mirror` and
+      `roles/storage.objectCreator` on the witness bucket, both in `EVE_WITNESS_PROJECT`, made by
+      the witness administrators; the only cross-organisation grants (§13.2).
+    - the SIEM's outbound principal (SecOps webhook / the organisation SIEM's service account,
+      *tbd* with P10) → `roles/run.invoker` on the K7 Cloud Run job in `CORE_PROJECT`,
+      resource-level; made by the platform owner through PAM.
+    - the platform drift job `platform-drift@CORE_PROJECT` → `roles/iam.securityReviewer` on
+      `fld-agentic-platform`, **folder-level, inherited into `EVE_PROJECT`** — the named
+      exception to the one rule (D7) and to decision 48's three-carve-out cap, together with the
+      folder deny policy, the PAB and the K7 job's PAM entitlement; recorded as a dated line on
+      decision 48 and on topology row 17, and added to Eve's drift job's expected set so that a
+      fifth foreign principal still fails.
+    The Wall-E HLD's Status sentence "the grant rows themselves are unchanged" is corrected to
+    "unchanged except the additions listed in platform HLD §18 item 25".
 26. [../agents.md](../agents.md): generated from the register with the `privilege` column;
     [../overview.md](../overview.md) Architecture and Constraints; [../gemini-enterprise.md](../gemini-enterprise.md)
     filled from §2; [../google-workspace.md](../google-workspace.md) gains the edition and IdP
@@ -1568,7 +1715,22 @@ uncited product name:
 - https://docs.cloud.google.com/resource-manager/docs/super-admin-best-practices and https://docs.cloud.google.com/resource-manager/docs/creating-managing-organization — a super admin can grant the Organization Administrator role; the creating super admin holds it; recovery point of contact; no "irrevocable"
 - https://knowledge.workspace.google.com/admin/security/assign-context-aware-access-levels-to-the-admin-console and https://knowledge.workspace.google.com/admin/security/assign-context-aware-access-levels-to-apps and https://knowledge.workspace.google.com/admin/security/protect-your-business-with-context-aware-access — Admin console in the app table (block mode); no Admin SDK API entry; end-user accounts only; silent on super admins and on user-account API tokens
 - https://docs.cloud.google.com/identity/docs/concepts/supported-policy-api-settings — the Cloud Identity Policy API's mutable settings (band C by fact)
-- https://docs.cloud.google.com/gemini/enterprise/docs/agent-gallery — Agent Designer / Workflow Builder toggles managed organisation-wide; Agent Gallery two-step governance
+- https://docs.cloud.google.com/gemini/enterprise/docs/manage-web-app-features — per-app Feature Management toggles (chat agents, workflows, Agent Gallery, skills, agent sharing with optional admin approval), role `roles/discoveryengine.agentspaceAdmin`; https://docs.cloud.google.com/gemini/enterprise/docs/agent-designer — "Workflow Builder (formerly known as Agent Designer)"; https://docs.cloud.google.com/gemini/enterprise/docs/agent-gallery — the request-then-admin-approval flow (this page does not describe the toggles; corrected 2026-09-13)
+- https://knowledge.workspace.google.com/admin/users/allow-super-administrators-to-recover-their-password — self-recovery is set per organisational unit or configuration group (top OU = all super admins); Off by default only for Frontline Standard, Business Plus, Education Standard/Plus, Enterprise Essentials Plus, G Suite Basic, Cloud Identity Premium; On for all other editions
+- https://knowledge.workspace.google.com/admin/security/about-2sv-enforcement-for-admins — gradual, edition-scoped admin 2SV enforcement; 90-day notice to super admins, 60-day to other admins; 15-day mobile and 30-day web lockout
+- https://docs.cloud.google.com/binary-authorization/docs/overview-cv — continuous validation: "GKE is the only supported platform"
+- https://docs.cloud.google.com/gemini-enterprise-agent-platform/machine-learning/general/cmek — Agent Runtime CMEK through `encryption_spec` with a single-region key; unavailable on multi-regional endpoints
+- https://docs.cloud.google.com/backup-disaster-recovery/docs/concepts/backupdr-for-workloads — protected workloads (Compute Engine, Cloud SQL, AlloyDB, disks, VMware, file systems, databases); Cloud Storage only as backup storage
+- https://docs.cloud.google.com/audit-manager/docs/overview — scheduled audits are Preview; framework list gated on SCC Premium/Enterprise or Assured Workloads
+- https://docs.cloud.google.com/security-command-center/docs/custom-modules-sha-overview — supported resource types (91 on 2026-09-13, 14 of them Gemini Enterprise Agent Platform); Premium tier
+- https://docs.cloud.google.com/security-command-center/docs/model_armor_floor_settings — organisation and folder floors by gcloud, REST or SDK; console at project level only; `roles/modelarmor.floorSettingsAdmin`
+- https://docs.cloud.google.com/agent-registry/quickstart-register-agent and https://docs.cloud.google.com/agent-registry/setup — manual registration into a `global` registry; project-level registry; roles `agentregistry.viewer/editor/admin/user`
+- https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/runtime/agent-gateway-runtime-deploy — `custom.allowlistedEgressAgentGatewaysForAgentEngine` on `aiplatform.googleapis.com/ReasoningEngine`, field `resource.spec.deploymentSpec.agentGatewayConfig.agentToAnywhereConfig.agentGateway`; "VPC Service Controls are not supported with Agent Gateway"
+- https://docs.cloud.google.com/iam/docs/agent-identity-custom-constraints and https://docs.cloud.google.com/organization-policy/reference/custom-constraint-supported-services — `agentidentity.googleapis.com/AuthProvider` custom constraints (Preview; fields `resource.name`, `allowedScopes`, `blockedScopes`, `workloadIds`); `run.googleapis.com/Service` GA
+- https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/agent-gateway-overview — an IAM access policy granting `iap.resources.egressViaIAP` is always required for destination resources
+- https://cloud.google.com/terms/secops/data-residency (rendered partially on 2026-09-13) and https://docs.cloud.google.com/chronicle/docs/about/data-retention — SecOps "Europe" multi-region and single EU regions; 12-month default retention, extendable
+- https://docs.cloud.google.com/resource-manager/docs/organization-policy/defining-locations-supported-services — `gcp.resourceLocations` is enforced on Model Armor `template` creation and Agent Registry regional resources; floor settings are not listed
+- https://pypi.org/project/google-adk/ (2.9.0, 2026-09-10) and https://pypi.org/project/google-auth/ (2.58.0, 2026-09-09)
 - https://docs.cloud.google.com/iam/docs/agent-identity-overview — Agent Runtime, Gemini Enterprise and Cloud Run; trust domain; IAM allow/deny, PAB and VPC-SC integration
 - https://docs.cloud.google.com/asset-inventory/docs/monitoring-asset-changes — feeds at organisation, folder or project scope
 - https://docs.cloud.google.com/resource-manager/docs/managing-notification-contacts — Essential Contacts
