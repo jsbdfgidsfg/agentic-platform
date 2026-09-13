@@ -40,6 +40,16 @@
       "local_hash": "eeebf03dd7adbc0209d01848de28a4712c6b0a14cbcc2ffeeb4e8c773ef950ba",
       "remote_modified": "2026-09-11T12:35:27.765Z"
     },
+    "platform/agentic-platform/00-objective-review.md": {
+      "file_id": "1rHI86KKyRtQCYZMVw1Ks7KkrPGsZvmqucWKJy2VOrBE",
+      "local_hash": "3c5b56127cd247b966c9b3cc12378063f35179cc3f5d70a100b48f2a469a6ab9",
+      "remote_modified": "2026-09-13T13:43:20.153Z"
+    },
+    "platform/agentic-platform/01-hld.md": {
+      "file_id": "1SyY49d9u-joa73VBSFAHXpiRg_itQMdo3P1VWVeCGnA",
+      "local_hash": "9319dd6321267865b226795c59634213072a41c63bebfcc0ed0264b970f8b35d",
+      "remote_modified": "2026-09-13T13:43:25.368Z"
+    },
     "platform/agents.md": {
       "file_id": "1nR2mBKLjQHIksJWWjbAWv4f5S95ddhTsjLp7yQLdBE8",
       "local_hash": "c4f83d0e19a54e056d46de2fdb9673cae660e13d6d1ddac91640a0df667c0394",
@@ -207,8 +217,8 @@
     },
     "platform/wall-e/01-hld.md": {
       "file_id": "15Q1W5oHDTpAexZIRpiGYbIaFE7cOqRW6hljkIX1okrc",
-      "local_hash": "4f257165a89b7402d286b914b324b05562fb4236f1972e6501e721a4e8f6e233",
-      "remote_modified": "2026-09-13T08:57:13.935Z"
+      "local_hash": "26776607b28d669388298d694e2e1c30fcb23d7b1128c0db149718b43d7953bd",
+      "remote_modified": "2026-09-13T13:43:31.250Z"
     },
     "platform/wall-e/02-identity-and-auth.md": {
       "file_id": "1Jg1guKxA6FzWj-asGuTp6-TcarfJ5KKeR9YxUnODEoM",
@@ -287,8 +297,8 @@
     },
     "platform/wall-e/README.md": {
       "file_id": "1t3jmMHGzFYUlAlPKh_9M2QpmPDxMrG7IMpj39vibr_4",
-      "local_hash": "079623d060e0edcea0c37ea48a569d12152da0047d18a0a2dc8b5b8749a52170",
-      "remote_modified": "2026-09-13T08:58:13.094Z"
+      "local_hash": "e7303d8546e3d74bac30d91d9a08ff3c66cc24c838f70f58dc40c66aebbd75a2",
+      "remote_modified": "2026-09-13T13:43:34.411Z"
     },
     "platform/wall-e/SETUP.md": {
       "file_id": "1lRSiD57up5qabwsps7-z86Xmu2ZcWOkAT7uzghpnBx8",
@@ -332,6 +342,7 @@
     "meetings": "17uVUCSZjBi_E27dFWteFEOt1RC3TfTVZ",
     "people": "1j7eE-g1TDSSXUTRnTzeDeRLhlTvv3God",
     "platform": "10Tug5CiVs9mi5A2IZ444xmRy2N8bFOl4",
+    "platform/agentic-platform": "1tuJJr0jSxIaq3zZGr9FgsluinmAMPVU7",
     "platform/edge-ai-v2": "1Rxc6xAd39RI3NTfnzwC6wI1uaxqQlHkb",
     "platform/eve": "1SSQ3sTBYOSzznTjx4pyR7mXbFA5gdDQc",
     "platform/mo": "1aUKqrilzhb6A_GGFBX4mZc6hNGbSdRDz",
