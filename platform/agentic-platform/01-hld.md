@@ -1567,6 +1567,11 @@ E-16, E-19; M-4, M-8, M-11. [CON-07]
 | P33 | **"Wall-E holds Super Admin"** — the dated decision superseding decision 26 for Wall-E and re-ratifying decision 4 with the two lists (P29 depends on it); file `decisions/2026-09-13-wall-e-holds-super-admin.md`, entering the residual in the accepted-risks table, signed as a TISAX deviation and as row one of the risk register | decided by the owner on 2026-09-13; the file records it | the platform owner; the security reviewer signs the deviation | the super-admin grant |
 | P34 | **Eve's reporting path may reason** — the dated reopening of `eve/09`'s settled "no model anywhere in Eve v1 or v2" row and `wall-e/14`'s "An LLM Eve — Rejected", limited to `eve-advisor` as a report-only path (§13.2; P19 depends on it for the AI Act class); file `decisions/2026-09-13-eve-reporting-path-may-reason.md` | as §13.2 (recommended); or no reporting path and "anything wrong" stays the deterministic catalogue only | Eve owner, security reviewer | the `eve-advisor` build |
 
+P35–P141 — the decisions the detailed pages [02](02-landing-zone-and-tiers.md)–[11](11-tisax.md)
+record — are consolidated, grouped by gate and cross-referenced to the agent sets in
+[12-open-decisions.md](12-open-decisions.md), which is the register of record for the whole set;
+this table stays the HLD's own P1–P34, and page 12 repeats them so a reader has one list.
+
 ---
 
 ## 18. What this HLD requires of the Wall-E, Eve and Mo sets

@@ -6,8 +6,8 @@
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md) §0.4 (tier gate),
   §3 (landing zone), §11 (tier model) and §15 (trust boundaries). Nothing is built. This page
   details one part of the platform HLD; where the HLD left a choice open this page proposes
-  and records a decision as **P35..** ("provisional; renumbered in
-  [12-open-decisions.md](12-open-decisions.md)"). It contradicts the HLD nowhere; where it
+  and records a decision as **P35–P47** (final ids; the register of record is
+  [12-open-decisions.md](12-open-decisions.md)). It contradicts the HLD nowhere; where it
   found the HLD relying on a fact that turned out wrong (labels on folders, one constraint
   spelling), it says so in §9 for the reconcile pass rather than silently diverging.
 - Scope, from the review's HLD brief ([00-objective-review.md](00-objective-review.md) §5.A):
@@ -709,8 +709,9 @@ split and the two candidates the HLD did not decide.
 
 ## 7. Decisions this page records
 
-Provisional numbering continuing the HLD's P1..P34; renumbered in
-[12-open-decisions.md](12-open-decisions.md).
+Numbering continues the HLD's P1..P34. The ids are final; the register of record, grouped by
+gate and cross-referenced to the agent sets, is [12-open-decisions.md](12-open-decisions.md)
+(P35–P47 are this page's rows).
 
 | Id | Decision | Options considered | Owner | Gate it blocks |
 |---|---|---|---|---|
@@ -816,7 +817,7 @@ All read on 2026-09-13. Where a page rendered partially, the row says so.
 
 - [01-hld.md](01-hld.md) — the parent: §0.4 tier gate, §3 landing zone, §4.4 PAM, §4.5 deny and PAB, §5 register, §11 tier model, §15 trust boundaries, §17 decisions P1–P34
 - [00-objective-review.md](00-objective-review.md) — gaps PS-01, PS-02, SCA-01..03, SCA-06, SCA-07; brief items A1, A2, A3, A5, A9
-- [12-open-decisions.md](12-open-decisions.md) — where P35–P47 are renumbered
+- [12-open-decisions.md](12-open-decisions.md) — the register: P35–P47 are this page's rows
 - [../project-topology.md](../project-topology.md) — the grant rows this page turns into factory inputs; §5 constraints and §6 names superseded here
 - [../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md), [../wall-e/12-agent-identity.md](../wall-e/12-agent-identity.md), [../wall-e/13-agent-interconnection.md](../wall-e/13-agent-interconnection.md) — the seeds promoted in §8
 - [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) §4 — the API lists behind §4.2

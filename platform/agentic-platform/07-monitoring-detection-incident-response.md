@@ -14,7 +14,7 @@
   correlation contract on every audit row; the "registered ⇒ feeding the SIEM" module; the
   incident-response organisation, its tool, its runbooks, its regulatory clocks, its exercises
   and its metrics; and the platform reporting path every verifier uses. Decisions are recorded
-  in §16 as **P35–P46, provisional; renumbered in [12-open-decisions.md](12-open-decisions.md)**.
+  in §16 as **P92–P103**, final ids in [12-open-decisions.md](12-open-decisions.md).
 - What this page does not do: it does not re-decide the retention schedule (HLD §7.5, P13), the
   perimeter (HLD §8, P3), the kill-plane mechanics of K7 (HLD §11.4) or Eve's control path
   (HLD §13.2). Where it touches them it cites the section and says what it adds.
@@ -69,7 +69,7 @@ account inside the tenant.
 
 | # | Feed | Mechanism (verified 2026-09-13, §18) | Carries | Owner | Lag budget | Absence detection |
 |---|---|---|---|---|---|---|
-| F1 | Workspace events → SIEM | Admin console, Menu → Reporting → Data integrations → **Google Security Operations export**; configured with the SecOps customer id, token and instance id; needs the **Reports** administrator privilege; editions Enterprise Standard/Plus, Frontline Plus, Education Standard/Plus (tenant edition *tbd*, [../google-workspace.md](../google-workspace.md)); exports **all** supported event types (Admins, Users, Groups, OAuth, SAML, Login, Rules, Gmail, Drive, Chat, Calendar, Meet, Devices, Chrome, Takeout, Data Studio, Vault… — no selective export); only events after connection; up to 24 h before the first data | the desk's copy of everything, including the Gmail/Drive/Calendar/Chat/Meet/Chrome streams Cloud Logging never receives | Gemini Enterprise administrators configure; IT security owns | `Assumption:` 15 min steady-state (verify at build) | SIEM heartbeat rule H-2 (§7) |
+| F1 | Workspace events → SIEM | Admin console, Menu → Reporting → Data integrations → **Google Security Operations export**; configured with the SecOps customer id, token and instance id; needs the **Reports** administrator privilege; editions Enterprise Standard/Plus, Frontline Plus, Education Standard/Plus (tenant edition *tbd*, [../google-workspace.md](../google-workspace.md)); exports **all** supported event types (Admins, Users, Groups, OAuth, SAML, Login, Rules, Gmail, Drive, Chat, Calendar, Meet, Devices, Chrome, Takeout, Data Studio, Vault… — no selective export); only events after connection; up to 24 h before the first data | the desk's copy of everything, including the Gmail/Drive/Calendar/Chat/Meet/Chrome streams Cloud Logging never receives | a **human** Workspace administrator holding the Reports privilege configures it (never `walle@` — the export setting is on the hard-denied list, HLD §13.1 item 2); IT security owns | `Assumption:` 15 min steady-state (verify at build) | SIEM heartbeat rule H-2 (§7) |
 | F2 | Cloud Audit Logs and Workspace-in-Cloud-Logging → `LOGGING_PROJECT` → SIEM | the HLD's one organisation-level aggregated sink with `includeChildren` over `fld-agentic-platform` plus the organisation's Workspace audit streams (admin, groups, login, OAuth token, SAML, Access Transparency) into the locked `europe-west1` log bucket and BigQuery dataset (HLD §7.1); SecOps ingests Cloud Logging directly (the ingest page rendered as an index only on 2026-09-13; the mechanism — direct ingestion configured from SecOps, or a Pub/Sub sink — is **unverified this pass** and fixed at build) | every Admin Activity and Data Access entry the folder produces; the Workspace entries Google shares with Cloud Logging | platform owner | sink: seconds; SIEM: `Assumption:` 5 min | H-1 (Eve's independent copy) and H-2 |
 | F3 | SCC findings → SIEM and → pager | SecOps ingests SCC findings by default (lens, §18); independently, one **notification config** at the organisation (`gcloud scc notifications create … --pubsub-topic … --filter …`, filters as in `findings.list`) to a Pub/Sub topic in `CORE_PROJECT` whose subscriber posts to the Terraform-managed channel — **SCC does not page on its own** | ETD (incl. the eight Workspace findings), SHA + custom modules, AI Protection, Sensitive Actions, Agent Platform Threat Detection (nonprod) | organisation IT security (P11) | near-real time (Google) | H-3: a synthetic SHA custom-module finding raised weekly by the drift job and expected at the desk |
 | F4 | Agent-layer events → SIEM, **metadata only** | each action service publishes `halt.set`, `content.flagged`, `override.applied`, `run.verified`, `reconciliation_gap`, denial rows and the heartbeat row to the project's Pub/Sub topic (factory-made, HLD §3.2); ids, reason codes and hashes only — never prompt or payload; the platform's SIEM feed subscribes to every topic labelled `tier ∈ {W,P,P-SA}` | the correlation keys of §5 and the closed denial vocabulary | agent owner emits; platform owner owns the subscription | seconds | the per-agent heartbeat (§4, §7) |
@@ -163,7 +163,7 @@ provisions itself if P10 is unanswered on the day the last other row of the tier
 | S8 entities | Can key on the four entity types of HLD §7.4: agent principal, robot user, OAuth client id, operator | correlation across a tenant and an organisation | an entity search for `walle@` returns rows from F1, F2 and F4 |
 | S9 access | Reader access for the second human and IT security through a group the platform does not administer; no reader for any agent principal or `mo-*` group | independence | group memberships listed |
 
-**Decision P35 (provisional; renumbered in 12-open-decisions.md).** The nine clauses above are
+**Decision P92.** The nine clauses above are
 the SIEM contract; P10 is decided by IT security against it; the platform's factory provisions
 the default of §2.2 if P10 has no answer when the rest of the Tier P checklist is green.
 Owner: IT security (decision), platform owner (the contract and the default). Gate: Tier P.
@@ -191,7 +191,7 @@ paragraph and a second search hit and is re-verified on the order form.
 | Access | `siem-readers@` (IT security, the second human), `siem-content@` (security reviewer + MDR partner) — groups administered by IT security, not by the platform | S9 |
 | Cost | events per day (F1 is the largest line: Workspace edition-wide activity, not only the agents' — `Assumption:`), retention months, MDR retainer; paid by IT security from Tier P (HLD §0.5) | — |
 
-**Decision P36 (provisional).** The default instance's location is the Europe multi-region and
+**Decision P93.** The default instance's location is the Europe multi-region and
 its retention is ordered at or above the schedule's 400 days, with `europe-west3` as the
 single-site fallback. Owner: IT security. Gate: Tier P.
 
@@ -221,13 +221,13 @@ Premium at organisation level is sold as a subscription or pay-as-you-go.
 | Item | Decision | Owner | Verified by | On failure |
 |---|---|---|---|---|
 | Tier and level | **Premium, organisation-level activation** (Tier C precondition, HLD §0.4); subscription vs pay-as-you-go is P11's funding question | organisation IT security (P11) | the activation shown in the console; a Workspace ETD finding observed in a drill (a 2SV toggle on a nonprod test account) | no Workspace findings, no SHA custom modules: Tier C stays closed |
-| Data residency of SCC itself | **Open — part of P37.** SCC offers `eu`, `us` and `sa` residency locations; the SCC data-residency page states that in the **`eu` location** the AI Discovery service, the Gemini inventory, **Model Armor** and SHA compliance resource counts have restricted availability (the exact restriction text is *tbd*; the page rendered as a summary). Recommendation: **`eu`**, because findings carry resource names and Workspace user identities, and the Model Armor loss is compensated by the sanitize logs already in `LOGGING_PROJECT` and the log-filter alerts of [../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md) §6 until the restriction is understood | IT security with the platform owner | the activation location; a Model Armor `MATCH_FOUND` in nonprod either appears in SCC or the log-filter alert fires | if `eu` loses Model Armor findings entirely, the log-filter path stays primary and the gap is a dated row in the compliance mapping |
+| Data residency of SCC itself | **Open — part of P94.** SCC offers `eu`, `us` and `sa` residency locations; the SCC data-residency page states that in the **`eu` location** the AI Discovery service, the Gemini inventory, **Model Armor** and SHA compliance resource counts have restricted availability (the exact restriction text is *tbd*; the page rendered as a summary). Recommendation: **`eu`**, because findings carry resource names and Workspace user identities, and the Model Armor loss is compensated by the sanitize logs already in `LOGGING_PROJECT` and the log-filter alerts of [../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md) §6 until the restriction is understood | IT security with the platform owner | the activation location; a Model Armor `MATCH_FOUND` in nonprod either appears in SCC or the log-filter alert fires | if `eu` loses Model Armor findings entirely, the log-filter path stays primary and the gap is a dated row in the compliance mapping |
 | Services on for `fld-agentic-platform` | ETD (all curated Cloud Threats and the eight Workspace findings: SSO Enablement Toggle, SSO Settings Changed, Strong Authentication Disabled, Two Step Verification Disabled, Account Disabled Hijacked, Disabled Password Leak, Government Based Attack, Suspicious Login Blocked); SHA plus the custom modules of HLD §4.7 (baseline drift, Cloud Run ingress, impersonation chains, keys, token-creator sprawl, dataset readers, image digests, `walle@` org-level role); AI Protection (asset inventory incl. MCP servers; Model Armor findings; Google Recommended AI Essentials posture); Sensitive Actions Service (Add Sensitive Role at the organisation, Organization Policy Changed, Remove Billing Admin — all relevant to a super admin reaching Organization Administrator); Agent Platform Threat Detection **on nonprod only** (Preview; prod engines are gateway-bound) | platform owner configures; IT security owns | a weekly synthetic SHA finding (H-3); the custom-module list diffed against git by the drift job | a missing module is a drift finding; the synthetic finding not arriving is H-3 |
 | Sensitive Actions constraint | The `_Required` and `_Default` organisation buckets stay where Google keeps them; the platform **copies** with the aggregated sink and never redirects `_Required`. Reason, verified: Sensitive Actions cannot detect if logs use CMEK or if log-bucket storage is configured outside the `global` location | platform owner | the sink configuration in Terraform | redirecting `_Required` silently blinds Sensitive Actions — refused in code review |
 | Paging | SCC does not page. One organisation-level notification config, filter `state="ACTIVE" AND severity="CRITICAL" OR severity="HIGH"` (exact filter committed), to `projects/CORE_PROJECT/topics/scc-findings`; a Cloud Run job subscribes and posts to the Terraform-managed channel (§9.2). Everything else reaches the desk through the SIEM | platform owner | the notifier's own heartbeat (a weekly synthetic finding must produce a page at the desk) | no page for a CRITICAL finding is itself a severity-2 incident |
 | Audit Manager | as HLD §7.1: ISO 27001:2022, NIST AI 600-1, Google Recommended AI Essentials monthly; scheduled runs Preview, so Cloud Scheduler or by hand until GA | platform owner | the report object in the evidence bucket, dated | a missing monthly report is a drift finding |
 
-**Decision P37 (provisional).** SCC Premium at organisation level with the service set above
+**Decision P94.** SCC Premium at organisation level with the service set above
 (Enterprise is not chosen because it is deprecated), and SCC's data-residency location —
 recommendation `eu` with the Model Armor compensations named; verify the restriction before
 activation because the location is chosen at activation. Owner: organisation IT security with
@@ -275,14 +275,16 @@ an agent that stops feeding.
 | A6 | Only then: registry card `prod`, `gemini-egress` entry, share | HLD §5.3 |
 
 **Reconciliation, nightly, in `CORE_PROJECT`** (HLD §5.2): every registry card in `prod` must
-have had a heartbeat in the SIEM in the last 24 h (R), 2 h (W) or 15 min (P). A card without one
+have had a heartbeat in the SIEM in the last 24 h (R), 4 h (W) or 15 min (P) — the same silence
+budgets as [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) P74, so
+the two pages fire on one number. A card without one
 is a `shadow_or_silent_agent` finding: severity 3 at R, 2 at W, **1 at P** — and at P the
 finding is also the H-4 heartbeat rule of §7. The response is not "fix the monitoring": the
 agent's share is removed by the reconciliation job (it holds the `revoke`-lite grant for the
 `gemini-egress` policy entry, through PAM, drift-checked) until the heartbeat returns. An agent
 that cannot be seen is not published — that is what "registered ⇒ feeding" enforces.
 
-**Decision P38 (provisional).** The baseline variants, heartbeat cadences, absence windows and
+**Decision P95.** The baseline variants, heartbeat cadences, absence windows and
 the unpublish-on-silence response above. Owner: platform owner; the P-SA windows are reviewed
 with the Eve owner because they equal Eve's own (§7). Gate: Tier R for the module, Tier P for the
 SIEM invariant.
@@ -412,7 +414,7 @@ Until the SIEM's outbound identity (§2.2) holds `roles/run.invoker` on the K7 j
 exercises the real call from nonprod. "Machines lower": the job can apply KF-1; only a human
 with the PAM entitlement can remove it.
 
-**Decision P39 (provisional).** Catalogue ownership with IT security as code owner, YARA-L
+**Decision P96.** Catalogue ownership with IT security as code owner, YARA-L
 detection-as-code through `google_chronicle_rule` deployed by CI, a fixture per rule as a merge
 condition, the rule ids SA/SG/PL/AG above, and the auto-K7 subset. Owner: security reviewer;
 platform owner for the pipeline. Gate: Tier W for PL-*, the super-admin grant for SA-*/SG-*.
@@ -446,7 +448,7 @@ Two design points the reader should test:
   `eve-export@` under grants the witness administrators made; deleting `EVE_PROJECT` stops the
   push and fires the alarm within the window, in a tenant nobody in the Wall-E line administers.
 
-**Decision P40 (provisional).** The four heartbeats, their windows and the `log_pipeline_silent`
+**Decision P97.** The four heartbeats, their windows and the `log_pipeline_silent`
 halt semantics (no autonomous writes; `halt_all` on the super-admin lane; human clear). Owner:
 Eve owner (H-1, H-4), platform owner (H-2, H-3). Gate: the super-admin grant (H-1 in the witness
 is a gate row of HLD §0.4).
@@ -474,7 +476,7 @@ The reporting contract table of the HLD (§13.2) stands as the P-SA instance of 
 Tier W agents the desk row reads "next business morning" and the verifier owner is the platform
 owner until a second person exists (HLD §0.3) — recorded as such.
 
-**Decision P41 (provisional).** RP-1…RP-6 as the platform reporting path; Eve's contract is its
+**Decision P98.** RP-1…RP-6 as the platform reporting path; Eve's contract is its
 first instance. Owner: Eve owner and security reviewer. Gate: Tier W (RP-1, RP-2, RP-6), the
 super-admin grant (RP-3, RP-5 in the witness).
 
@@ -520,7 +522,7 @@ containment; a page about the administrator's own action is acknowledged by the 
 | Who is on the rota | `oncall.yaml` in Eve's repository (primary, secondary outside the Wall-E line, per-severity timeouts, HLD §13.2) is **the platform rota file**; the K5/K6 rota of human super admins is a second section of it, with records held in the witness | — |
 | No-operator window | Eve's `no_operator_window` mechanism ([../eve/06-failure-modes.md](../eve/06-failure-modes.md)) generalises: an uncovered rota period halts autonomous writes for every Tier W+ agent whose verifier the uncovered person owns | contract |
 
-**Decision P42 (provisional).** The tool rule, the escalation ladder and the targets above.
+**Decision P99.** The tool rule, the escalation ladder and the targets above.
 Owner: incident commander role (IT security) with the platform owner. Gate: Tier P for the 24x7
 line; Tier W for the channel resource.
 
@@ -555,14 +557,14 @@ sequenceDiagram
 
 | Item | Decision |
 |---|---|
-| System | **The SIEM's case management** (SecOps cases if SecOps; the organisation's ITSM if the organisation's SIEM is chosen and its cases cannot carry the mandatory fields — P43). One system, not one per agent |
+| System | **The SIEM's case management** (SecOps cases if SecOps; the organisation's ITSM if the organisation's SIEM is chosen and its cases cannot carry the mandatory fields — P100). One system, not one per agent |
 | Mandatory fields | `case_id`; severity; rule id(s); `agent_id`; the correlation keys of §5 present on the triggering event (`invocation_id`, `run_id`, `trace_id`, human `sub` surrogate, Workspace `insertId`); actor entity; targets as ids (never names in free text — the record is exported); levers pulled with timestamps; acknowledgement ts/by; whether Eve saw it and which detection fired first; regulatory flags (`gdpr_breach_assessed`, `art73_assessed`, `works_council_informed`); resolution; root-cause link; the decision record to resume |
 | Who writes | the desk opens and updates; the incident commander owns; Eve's `eve.incidents` row links to the case and the case links back — two records, one truth, reconciled nightly |
 | Export | monthly export of closed and open cases as JSONL to the evidence bucket (locked, 400 days, HLD §7.5), and a copy of every severity-1 case to the witness within 24 h of opening |
 | Evidence preservation | on severity 1: the desk snapshots the SIEM search results, the audit rows, `eve.findings`/`eve.verdicts` for the run ids, the Cloud Trace spans and the content-log entries (30-day store) into `evidence/incidents/<case_id>/` in the locked bucket **before** any remediation that alters the system; Art. 73(6) is quoted in the runbook header |
 | Access | `siem-readers@`, the incident commander, the DPO (for cases flagged GDPR), legal (for Art. 73 cases); never an agent principal; never Mo (Mo reads `eve_quality.incidents` minus narrative, HLD §13.3) |
 
-**Decision P43 (provisional).** One incident record in the SIEM's case system with the mandatory
+**Decision P100.** One incident record in the SIEM's case system with the mandatory
 fields, the witness copy and the monthly locked export. Owner: incident commander role. Gate:
 Tier W (record exists), Tier P (witness copy).
 
@@ -807,7 +809,7 @@ the case system and the locked export. Employee representatives are informed bef
 monitoring aspects of the tabletop and receive the post-incident review of any incident that
 affected employees; the communications/HR row of the RACI owns that path.
 
-**Decision P44 (provisional).** The Art. 73 taxonomy, assessor, report owner and deadlines; the
+**Decision P101.** The Art. 73 taxonomy, assessor, report owner and deadlines; the
 GDPR path with the DPO as accountable; the negative determination on critical infrastructure.
 Owner: legal and the DPO; the incident commander operates it. Gate: Stage 1 of any Tier W agent
 (the DPO path), the super-admin grant (the Art. 73 taxonomy live in the case system).
@@ -826,7 +828,7 @@ Owner: legal and the DPO; the incident commander operates it. Gate: Stage 1 of a
 | Evidence | a dated record in the locked evidence bucket (`evidence/tabletops/<date>/`): scenario, participants, timings against the targets of §9.2, findings, actions with owners and dates; actions promoted to `backlog.md`; a decision record if a target or a runbook changes |
 | Pass criteria | every acknowledgement and containment target met or a dated action to meet it; no participant discovered a lever they could not pull; the queries completed under the tabletop's time budget (`Assumption:` 30 min for all four) |
 
-**Decision P45 (provisional).** Cadence, participants, scenarios and evidence as above. Owner:
+**Decision P102.** Cadence, participants, scenarios and evidence as above. Owner:
 IT security. Gate: Stage 1 (first tabletop), the super-admin grant (the crisis scenario).
 
 ---
@@ -856,7 +858,7 @@ months of data exist; the `Assumption:` column is the starting proposal.
 The monthly pack is a page in the evidence bucket and a line in the management review of the
 ladder-state page (HLD §14.2, 5.2.6).
 
-**Decision P46 (provisional).** The metric set and the producer split (desk platform-wide, Mo for
+**Decision P103.** The metric set and the producer split (desk platform-wide, Mo for
 Wall-E and Eve packs). Owner: security reviewer. Gate: Tier W (first pack), Tier P (desk-produced).
 
 ---
@@ -865,7 +867,7 @@ Wall-E and Eve packs). Owner: security reviewer. Gate: Tier W (first pack), Tier
 
 | Control | Owner (role) | Resource | Verified by | When it fails |
 |---|---|---|---|---|
-| F1 SecOps export | Gemini Enterprise administrator configures; IT security owns | Admin console Data integrations | a Workspace event visible in the SIEM daily (H-2 canary) | H-2 fires; RB-05 or RB-04 |
+| F1 SecOps export | a human Workspace administrator with the Reports privilege configures; IT security owns | Admin console Data integrations | a Workspace event visible in the SIEM daily (H-2 canary) | H-2 fires; RB-05 or RB-04 |
 | F2 aggregated sink + direct SIEM ingestion | platform owner | organisation sink, `LOGGING_PROJECT` bucket, SIEM feed | H-2 canary; drift job zero-diff | H-2; SG-02 if changed |
 | F3 SCC notification config | platform owner | organisation notification config, `CORE_PROJECT` topic and notifier job | H-3 weekly synthetic finding | severity 2, notifier rebuilt from Terraform |
 | F4 agent metadata topics | agent owner (emit), platform owner (subscription) | per-project Pub/Sub topic | admission A2; H-4 | `shadow_or_silent_agent`; share removed |
@@ -892,23 +894,23 @@ Wall-E and Eve packs). Owner: security reviewer. Gate: Tier W (first pack), Tier
 
 ## 16. Decisions recorded on this page
 
-All provisional; renumbered in [12-open-decisions.md](12-open-decisions.md). Numbering continues
+Final ids P92–P103, recorded in [12-open-decisions.md](12-open-decisions.md). Numbering continues
 [01-hld.md](01-hld.md) §17, which ends at P34.
 
 | Id | Decision | Recommendation / value | Owner | Gate it blocks |
 |---|---|---|---|---|
-| P35 | The SIEM contract S1–S9 and the platform-provisioned default if P10 is unanswered at the gate | own SecOps instance per §2.2 | IT security (P10); platform owner (contract, default) | Tier P |
-| P36 | SecOps location and retention | Europe multi-region; retention ordered ≥ 400 days (term granularity *tbd*); `europe-west3` fallback if the ISMS needs a single site | IT security | Tier P |
-| P37 | SCC Premium at organisation level with the service set of §3; Enterprise not chosen; SCC data-residency location | Premium; `eu` location recommended, Model Armor restriction verified before activation | organisation IT security | Tier C |
-| P38 | Monitoring baseline variants, heartbeat cadences, absence windows, unpublish-on-silence | §4 | platform owner (with the Eve owner for P windows) | Tier R (module), Tier P (SIEM invariant) |
-| P39 | Detection catalogue ownership, detection-as-code toolchain, fixture-per-rule merge rule, rule ids, the auto-K7 subset | §6 | security reviewer; platform owner | Tier W (PL-*), the grant (SA-*/SG-*) |
-| P40 | The four heartbeats, windows and `log_pipeline_silent` semantics | §7 | Eve owner; platform owner | the super-admin grant |
-| P41 | The platform reporting path RP-1…RP-6 (every verifier reports to a human outside the owner's line; Eve's contract is the first instance) | §8 | Eve owner; security reviewer | Tier W; the grant |
-| P42 | On-call tool rule, escalation ladder, acknowledgement and containment targets | §9.2 | incident commander role; platform owner | Tier P (24x7), Tier W (channel) |
-| P43 | One incident record in the SIEM's case system, mandatory fields, witness copy, monthly locked export | §10 | incident commander role | Tier W; Tier P |
-| P44 | Art. 73 taxonomy, assessor and report owner, deadlines; GDPR 72-hour path with the DPO accountable; negative determination on critical infrastructure | §12 | legal, DPO; incident commander operates | Stage 1 (DPO path); the grant (Art. 73 live) |
-| P45 | Tabletop cadence, participants, scenarios, evidence, pass criteria | §13 | IT security | Stage 1; the grant |
-| P46 | SOC metric set and producer split (desk platform-wide; Mo for the Wall-E and Eve packs) | §14 | security reviewer | Tier W; Tier P |
+| P92 | The SIEM contract S1–S9 and the platform-provisioned default if P10 is unanswered at the gate | own SecOps instance per §2.2 | IT security (P10); platform owner (contract, default) | Tier P |
+| P93 | SecOps location and retention | Europe multi-region; retention ordered ≥ 400 days (term granularity *tbd*); `europe-west3` fallback if the ISMS needs a single site | IT security | Tier P |
+| P94 | SCC Premium at organisation level with the service set of §3; Enterprise not chosen; SCC data-residency location | Premium; `eu` location recommended, Model Armor restriction verified before activation | organisation IT security | Tier C |
+| P95 | Monitoring baseline variants, heartbeat cadences, absence windows, unpublish-on-silence | §4 | platform owner (with the Eve owner for P windows) | Tier R (module), Tier P (SIEM invariant) |
+| P96 | Detection catalogue ownership, detection-as-code toolchain, fixture-per-rule merge rule, rule ids, the auto-K7 subset | §6 | security reviewer; platform owner | Tier W (PL-*), the grant (SA-*/SG-*) |
+| P97 | The four heartbeats, windows and `log_pipeline_silent` semantics | §7 | Eve owner; platform owner | the super-admin grant |
+| P98 | The platform reporting path RP-1…RP-6 (every verifier reports to a human outside the owner's line; Eve's contract is the first instance) | §8 | Eve owner; security reviewer | Tier W; the grant |
+| P99 | On-call tool rule, escalation ladder, acknowledgement and containment targets | §9.2 | incident commander role; platform owner | Tier P (24x7), Tier W (channel) |
+| P100 | One incident record in the SIEM's case system, mandatory fields, witness copy, monthly locked export | §10 | incident commander role | Tier W; Tier P |
+| P101 | Art. 73 taxonomy, assessor and report owner, deadlines; GDPR 72-hour path with the DPO accountable; negative determination on critical infrastructure | §12 | legal, DPO; incident commander operates | Stage 1 (DPO path); the grant (Art. 73 live) |
+| P102 | Tabletop cadence, participants, scenarios, evidence, pass criteria | §13 | IT security | Stage 1; the grant |
+| P103 | SOC metric set and producer split (desk platform-wide; Mo for the Wall-E and Eve packs) | §14 | security reviewer | Tier W; Tier P |
 
 Decisions in the agent sets this page touches (dated pointer lines to be added in the
 propagation stage): Wall-E 11 (on-call → §9.2), 37 (security reviewer → §6.1), 39 (rebuild
@@ -944,7 +946,7 @@ stays *tbd* at S2), E-14 (retention → HLD §7.5, unchanged here); Mo M-5, M-8 
 - `_Required` and `_Default` organisation buckets are copied by the aggregated sink and never
   redirected (Sensitive Actions constraint).
 - SecOps has no `eu` location and no `europe-west1`; the chosen location is the **Europe
-  multi-region**; SCC's own residency location is `eu` (P37, pending the Model Armor check).
+  multi-region**; SCC's own residency location is `eu` (P94, pending the Model Armor check).
 - SCC **Premium** at organisation level; Enterprise deprecated 2026-05-21, shutdown 2027-05-21;
   AI Protection GA in Premium since 2026-03-05; Agent Platform Threat Detection Preview, nonprod
   only.
@@ -975,8 +977,8 @@ Verified this pass:
 - https://docs.cloud.google.com/security-command-center/docs/agent-engine-threat-detection-overview — Preview; Premium/Enterprise; runtime and control-plane detectors on Agent Runtime
 - https://docs.cloud.google.com/security-command-center/docs/data-residency-support — SCC `eu`/`us`/`sa` locations; restricted availability in `eu` for AI Discovery, Gemini inventory, Model Armor, SHA compliance counts; "for Google SecOps data residency is always enabled"
 - https://docs.cloud.google.com/security-command-center/docs/activate-scc-overview — Premium at organisation level: subscription or pay-as-you-go
-- https://cloud.google.com/terms/secops/data-residency (rendered partially, as on the HLD) with the SecOps regions reported on the SCC data-residency page's SecOps section and a second search hit: Europe multi-region (EU member states: Belgium, Netherlands, Finland); `europe-west2`, `europe-west3`, `europe-west6`, `europe-west9`, `europe-west12` — **re-verify on the order form**
-- https://docs.cloud.google.com/chronicle/docs/about/data-retention (rendered as an index; figures from the lens and a search hit on the same page): 12-month default; maximum raised to 60 months; extension on the purchase order through SecOps support
+- https://cloud.google.com/terms/secops/data-residency (rendered truncated on both passes of 2026-09-13) with the SecOps regions confirmed by https://security.googlecloudcommunity.com/news-announcements-9/expanding-google-secops-data-residency-5276 (Google's own announcement: Europe multi-region in EU member states — Belgium, Netherlands, Finland; `europe-west2`, `europe-west3`, `europe-west6`, `europe-west9`, `europe-west12`) and by the SecOps paragraph of https://docs.cloud.google.com/security-command-center/docs/data-residency-support — **re-verify on the order form**
+- https://docs.cloud.google.com/chronicle/docs/about/data-retention (rendered as an index on both passes; the linked "Configure SIEM data retention" page returned 404 on the second pass): 12-month default; maximum raised to 60 months; extension on the purchase order through SecOps support — figures from the lens's verified table, **unverified from the primary page this pass**
 - https://knowledge.workspace.google.com/admin/reports/export-log-events-to-google-security-operations-to-monitor-insider-risk — the SecOps export: editions, console path, all event types, customer id/token/instance id, up to 24 h initial delay, Reports privilege
 - https://knowledge.workspace.google.com/admin/getting-started/share-data-with-google-cloud-services — Sharing options: Menu → Account → Account settings → Legal and compliance; super administrator; Groups Enterprise, Admin, User, OAuth, SAML, Access Transparency logs; "no new data is shared" when off
 - https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging — the shared log types; `admin.googleapis.com`, `cloudidentity.googleapis.com`, `login.googleapis.com`, `oauth2.googleapis.com`; `insertId` and `uniqueQualifier` present; Admin Activity in `_Required` (400 days), Data Access in `_Default`
@@ -996,7 +998,9 @@ Verified this pass:
 - The lens report `.agent-work/review/monitoring.md` (facts table, read 2026-09-13): SecOps ingests SCC findings by default and Cloud Logging directly; log scopes; Audit Manager frameworks
 
 Not verified this pass and marked in the text: the mechanism of F2's SecOps ingestion (direct vs
-Pub/Sub — the ingest page rendered as an index); the SecOps retention term granularity; the
+Pub/Sub — the ingest page rendered as an index); the SecOps 12-month default and 60-month
+maximum retention (primary page not reachable; lens figures carried); the SecOps retention term
+granularity; the
 exact SCC `eu`-location restriction on Model Armor findings; a Terraform rule-deployment
 resource beside `google_chronicle_rule`; the UDM field paths for the correlation keys; the
 Workspace admin `eventName` values for the Sharing options and SecOps export changes and the
@@ -1016,7 +1020,7 @@ tenant's Workspace edition (F1's prerequisite); SecOps rule-performance metric n
   witness, §13.3 Mo's metric packs, §14.1 Art. 73, §14.2 TISAX 1.6, §17 P10–P21, P33, P34
 - [00-objective-review.md](00-objective-review.md) — gap rows MON-01…MON-12, PS-07, TIS-09,
   AIA-08; HLD brief F44–F51
-- [12-open-decisions.md](12-open-decisions.md) — where P35–P46 are renumbered
+- [12-open-decisions.md](12-open-decisions.md) — the register: P92–P103 are this page's rows
 - [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §9 — the severity table
   reused platform-wide
 - [../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) §4.6 — K0–K5, the 60-minute token

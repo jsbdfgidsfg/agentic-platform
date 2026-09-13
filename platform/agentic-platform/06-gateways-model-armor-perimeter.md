@@ -6,8 +6,8 @@
 - Parent: [01-hld.md](01-hld.md) §6 (gateways and Model Armor), §8.1 (network model), §3.3
   (the gateway custom constraint and `run.allowedIngress`), §15 boundaries B1, B2, B3 and B6.
   This page details those sections and does not contradict them; where the HLD left a value
-  open, this page proposes one and records it as a platform decision (§7), numbered P35 onward,
-  **provisional; renumbered in [12-open-decisions.md](12-open-decisions.md)**.
+  open, this page proposes one and records it as a platform decision (§7), numbered P81–P91,
+  final ids in [12-open-decisions.md](12-open-decisions.md).
 - Scope: HLD brief items E41, E42, E43 of [00-objective-review.md](00-objective-review.md) §5
   and register rows PS-05, PS-06, PS-08, SCA-05, SCA-11 (with PS-07, PS-09, TIS-15 and MON-13,
   which the same mechanisms answer).
@@ -145,7 +145,7 @@ Rules that follow, each with its mechanism:
   destination that appears in the nonprod dry-run log and not in the manifest is a finding
   against the manifest, never a reason to widen prod. The one standing exception is the tenant
   app's `gemini-egress` (30 days dry-run, HLD §2.1), because it fronts agents that already exist.
-  Decision P35.
+  Decision P81.
 - **5,000 registered resources per gateway** (§8 row G2) is far above any single agent; the quota
   register (HLD §3.4) tracks it anyway.
 - **Every policy change is a pull request** to the agent's manifest under the two-reviewer rule;
@@ -174,7 +174,7 @@ ingress. Three platform rules follow, all promoted from `wall-e/11` §2:
 |---|---|---|---|---|---|
 | Every machine caller uses `streamQuery`, never `query` or `asyncQuery` | CI greps every caller repository for the forbidden calls (already a rule for Wall-E's dispatcher and Eve's caller); the platform's dispatcher library exposes only `stream_query` | detection (CI) | agent owner; platform owner for the library | CI; the Agent Runtime request log is queried monthly for `query` calls per engine | a `query` call is a severity 3 finding — it removed the only enforcement-grade prompt screen silently |
 | `failOpen` stays `false`; timeout 1 s | The authorization extension's default is `false` (§8 row S1); the factory sets it explicitly and CI diffs the extension YAML against the standard | enforcement (fail-closed by Google) | platform owner | drift job on the extension resource | a Model Armor error or timeout stops the request — an outage, not a screening gap (§2.5) |
-| The human front door's method is measured, not assumed | Whether Gemini Enterprise calls a registered engine with `streamQuery` is **unverified** (`wall-e/13` A-OQ1; nothing on the pages read on 2026-09-13 says). The first machine-called engine in nonprod reads it from the Agent Runtime request log | detection | platform owner | one log query, recorded in the decision file of P35 | if the front door uses `query`, the tenant app's traffic is unscreened at the engine and the console Model Armor setting (§3.5) plus `gemini-egress` are the front-door screens — recorded as a dated residual, and raised with Google |
+| The human front door's method is measured, not assumed | Whether Gemini Enterprise calls a registered engine with `streamQuery` is **unverified** (`wall-e/13` A-OQ1; nothing on the pages read on 2026-09-13 says). The first machine-called engine in nonprod reads it from the Agent Runtime request log | detection | platform owner | one log query, recorded in the decision file of P81 | if the front door uses `query`, the tenant app's traffic is unscreened at the engine and the console Model Armor setting (§3.5) plus `gemini-egress` are the front-door screens — recorded as a dated residual, and raised with Google |
 
 Caller authentication does not come from the ingress gateway (IAP is unsupported there): it is
 the custom role holding only `aiplatform.reasoningEngines.query` and `.streamQuery` bound **on
@@ -201,7 +201,7 @@ HLD §6.1 table is adopted unchanged and given its reasons per row:
 The rotation rule for nonprod: at most one unbound engine per tier folder at any time, for at
 most 30 days, opened and closed by a factory input with a review date; the reconciliation job
 counts unbound engines and pages the platform owner at two. Revisit when Google makes the two
-compatible or the detector reaches GA. Decision P36.
+compatible or the detector reaches GA. Decision P82.
 
 ### 2.5 The gateway plus Model Armor as an availability domain
 
@@ -213,7 +213,7 @@ integrates with must be in the same region (§8 row M3); `europe-west1` is a Mod
 
 | Item | Value | Owner | Verified by | On failure |
 |---|---|---|---|---|
-| SLO | `Assumption:` 99.5 % monthly successful screened invocations per region, measured by the probe below; the number is P37 | platform owner | monthly SLO report from the probe's metrics | a breach is a sev 3 review with Google support, never a `failOpen` flip |
+| SLO | `Assumption:` 99.5 % monthly successful screened invocations per region, measured by the probe below; the number is P83 | platform owner | monthly SLO report from the probe's metrics | a breach is a sev 3 review with Google support, never a `failOpen` flip |
 | Synthetic probe | one nonprod engine per region, invoked every 5 minutes through its ingress gateway with a benign prompt and a known-hostile prompt from the regression corpus; expects `200` and a `MATCH_FOUND` respectively | platform owner | Cloud Monitoring uptime-style alert on two consecutive failures | page the platform owner (sev 3); the agents fail closed by design |
 | Quota | ExternalProcessor QPM is consumed in the **gateway's** project — one more reason for project-per-agent; alert at 70 % of either quota (`wall-e/11` §6, promoted) | agent owner | Cloud Monitoring on `modelarmor.googleapis.com/template/request_count` and quota metrics | raise the quota by ticket before enforcement bites |
 | Runbook | "Model Armor or gateway outage": confirm with the probe, open a Google case, tell agent owners the agents are stopped by design, never edit `failOpen`, record the window in the evidence bucket | platform owner | tabletop quarterly (HLD §7.6) | — |
@@ -237,7 +237,7 @@ display name, a group description, a mail body — crosses no gateway screen.
 | W, P, P-SA | REST to the agent's own action service (`wall-e/03`'s shape) | **inside the action service** — option B of `wall-e/11` §3: `sanitizeUserPrompt` on every attacker-writable field before it returns, inspect-only for reads, `MA-Client-Correlation-Id` = the audit id, `MATCH_FOUND` sets the taint bit and publishes `content.flagged`; fencing with ADK's markers; URL removal | **detection by placement, with the taint bit as the enforcement** — the platform ceiling module caps a tainted run at proposals or human approval (HLD §12) |
 | W+ option A, per agent | the action service exposed as an MCP server so the gateway screens `tools/call` | the egress gateway | enforcement on tool results if the two open questions of `wall-e/11` §3 close (bearer token through the gateway; the 5-minute `sse_read_timeout` hang); decided per agent at Stage 3, never a platform default |
 
-Decision P42 records the pattern; `wall-e/11` §3 keeps its Wall-E reasoning as the worked example.
+Decision P88 records the pattern; `wall-e/11` §3 keeps its Wall-E reasoning as the worked example.
 
 ### 2.7 Controls of this section
 
@@ -304,7 +304,7 @@ whole organisation; its purpose is the sanitize log, which is the only platform 
 a model was shown on the `generateContent` hop. Blocking at the tier folder is a measured change,
 per tier, taken by the same rule as a template flip (§3.3). The residency question — the
 `global` floor-setting write under `gcp.resourceLocations` — is HLD §3.3's row and is settled at
-the first factory run. Decision P38.
+the first factory run. Decision P84.
 
 ### 3.3 The template standard per tier
 
@@ -335,7 +335,7 @@ tier's injection regression suite (`wall-e/11` §6, promoted as the platform's s
 manifest's `fingerprint` tuple recorded per run) has produced a false-block rate on the tier's
 benign corpus below the threshold the tier's first decision record fixes (`Assumption:` below
 1 % — measured, not assumed). The flip is a pull request under the two-reviewer rule; a block
-that fires on a legitimate operator prompt is a finding against the template. Decision P39.
+that fires on a legitimate operator prompt is a finding against the template. Decision P85.
 
 ### 3.4 Alerting on floor and template writes
 
@@ -349,7 +349,7 @@ The floor is a platform control; a write to it is either a change window or an i
 | Security Command Center | Model Armor findings are surfaced in SCC once Model Armor is enabled and integrated (§8 rows S3, S4); whether **floor writes** produce an SCC finding is **unverified** — Model Armor resources did not appear in the Security Health Analytics custom-module resource list read on 2026-09-13 (§8 row S5), so the SCC path for floor writes is *tbd* and the log-based alert is the control | platform owner | — | detection |
 | `MATCH_FOUND`, `EXECUTION_SKIPPED`, `invocationResult != SUCCESS`, filter-version drift, quota approach | the `wall-e/11` §6 alert set, promoted into the monitoring baseline module (HLD §7.2) for every project with a template | agent owner | as `wall-e/11` §6; never an automatic demotion — a probabilistic verdict does not move the ladder | detection |
 
-Decision P40.
+Decision P86.
 
 ### 3.5 The console setting, tenant-wide by rule, per app by mechanism
 
@@ -366,7 +366,7 @@ logs record verdicts without the query text.
 | The setting is recorded as covering Tier C only | HLD §2.1 row "Console Model Armor"; `wall-e/11` §2 | this page | — | — |
 | No second app is created without the setting | the app inventory in the register (HLD §5); a new app is a register row | Gemini Enterprise admin | the same drift check | — |
 
-Decision P41. With one app per tenant the per-app setting is tenant-wide in practice, exactly as
+Decision P87. With one app per tenant the per-app setting is tenant-wide in practice, exactly as
 HLD §2.1 says of the feature toggles; the drift check is what keeps that true when a second app
 appears.
 
@@ -428,7 +428,7 @@ second spike. This page does not reopen that; it specifies the spikes, decides w
 does *today* so that (a) stays reachable without rebuilding the fleet, and turns "credential
 holders are never internet-reachable" into a folder rule with an owner.
 
-**What the factory does from the first prod gateway, decided here (P43).** Every gateway the
+**What the factory does from the first prod gateway, decided here (P89).** Every gateway the
 factory creates for Tier W and above is created **with an agent connectivity template in
 `ALL_TRAFFIC` mode** from the first prod deploy, in the agent project's own VPC (a `/28` subnet
 with Private Google Access, a PSC network attachment, DNS peering for the internal load-balancer
@@ -522,7 +522,7 @@ finite and are listed once, so the rules are generated, not hand-written:
 
 Anything not in this table is refused by the perimeter, which is the fleet backstop the HLD
 wants: an agent principal that somehow obtained a grant on a resource in another tier still
-cannot reach it. Decision P45 records the table as the source the factory generates from.
+cannot reach it. Decision P91 records the table as the source the factory generates from.
 
 ### 4.5 Per tier, on 2026-09-13
 
@@ -592,22 +592,22 @@ The two chapters stay where they are and keep Wall-E's reasoning; each gets a fr
 
 ## 7. Decisions recorded on this page
 
-All provisional; renumbered in [12-open-decisions.md](12-open-decisions.md). Each continues the
+Final ids P81–P91, recorded in [12-open-decisions.md](12-open-decisions.md). Each continues the
 HLD's register after P34.
 
 | Id | Decision | Options / recommendation | Owner | Gate it blocks |
 |---|---|---|---|---|
-| P35 | **Gateway binding standard**: egress gateway for every engine above C; ingress gateway whenever the register row's invoker list is non-empty; the essential-endpoint set as one platform local; nonprod dry-run, prod enforcing from the first deploy (the tenant app's 30-day dry-run the one exception); the front door's `streamQuery` method measured in nonprod and recorded | as §2.1–§2.3 (recommended) vs prod dry-run per agent for 14 days | platform owner | Tier R (the first factory-made prod project) |
-| P36 | **Gateway over Agent Platform Threat Detection** at every prod tier; nonprod rotation of at most one unbound engine per tier folder for at most 30 days; revisit on compatibility or GA | as §2.4 (recommended) | platform owner; security reviewer at P | none — adopted now |
-| P37 | **Availability domain numbers**: SLO `Assumption:` 99.5 % monthly per region; one probe engine per region every 5 minutes; quota alerts at 70 %; `failOpen` never flipped | the SLO value is *tbd* by measurement over the first quarter | platform owner | Tier W (the first fail-closed write agent) |
-| P38 | **Floor hierarchy and contents**: organisation floor "PI enabled at `HIGH` or stricter + malicious URL + logging + multi-language", inline `INSPECT_ONLY`; platform folder + RAI `MEDIUM_AND_ABOVE`; tier floors tighten to the measured level and go `INSPECT_AND_BLOCK` after the tier's first benign-corpus run; P-SA floor never looser; no project floors after the factory | as §3.2 (recommended) vs `INSPECT_AND_BLOCK` at the organisation | IT security (organisation floor), platform owner (folders) | Tier R (the first project) |
-| P39 | **Template standard per tier** including SDP: basic at R; advanced with a fleet-wide de-identify template at W+; custom dictionary and regex infoTypes for the hard-denied vocabulary on the P-SA response template; `STABLE` filter version; flip rule with a measured false-block threshold (`Assumption:` 1 %) | as §3.3 (recommended) | platform owner; security reviewer for P-SA | Tier R; the P-SA threshold blocks the super-admin grant |
-| P40 | **Alerting on floor and template writes**: log-based alerts in `LOGGING_PROJECT` on `modelarmor.googleapis.com` administration entries, SIEM rule at P, PAM on `floorSettingsAdmin`; the SCC path for floor writes *tbd* pending the resource-type check | as §3.4 | platform owner; security reviewer owns the rule content | Tier R |
-| P41 | **Console Model Armor**: on for every Gemini Enterprise app, `FAIL_CLOSED`, an `eu` template pair from the Tier C standard, applied through PAM, drift-checked daily by enumerating apps | as §3.5 (recommended) vs `FAIL_OPEN` for availability | Gemini Enterprise admin | Tier C |
-| P42 | **Tool-result screening pattern per tier**: MCP through the gateway at R (enforcement); the action service screens itself at W+ (option B) with the taint bit as enforcement; option A per agent at Stage 3 | as §2.6 (recommended) | platform owner; agent owner for option A | Tier R |
-| P43 | **Gateways born perimeter-ready**: every W+ prod gateway created with an `ALL_TRAFFIC` connectivity template in the project's VPC (subnet, PSC network attachment, DNS peering, Cloud NAT) from the first deploy, if spike 1 passes on it; R stays `PRIVATE_RANGES_ONLY` | as §4.2 (recommended) vs no template until spike 2, with fleet recreation later | platform owner | Tier W |
-| P44 | **"Credential holders are never internet-reachable" as a folder rule**: `run.allowedIngress = internal-and-cloud-load-balancing` on five folders the day spike 1 passes; IAM-only invoke plus the SHA custom module until then; Cloud Run jobs outside the rule by nature; the direct-call probe monthly | as §4.3 | platform owner; security reviewer signs at P | the super-admin grant (with P3) |
-| P45 | **The cross-perimeter flow table** of §4.4 as the generated source of every ingress and egress rule under (a); per-tier perimeters prod and nonprod; anything not in the table refused | as §4.4 (recommended) vs one perimeter over the whole folder | platform owner; security reviewer | the (a) backstop, after spike 2 |
+| P81 | **Gateway binding standard**: egress gateway for every engine above C; ingress gateway whenever the register row's invoker list is non-empty; the essential-endpoint set as one platform local; nonprod dry-run, prod enforcing from the first deploy (the tenant app's 30-day dry-run the one exception); the front door's `streamQuery` method measured in nonprod and recorded | as §2.1–§2.3 (recommended) vs prod dry-run per agent for 14 days | platform owner | Tier R (the first factory-made prod project) |
+| P82 | **Gateway over Agent Platform Threat Detection** at every prod tier; nonprod rotation of at most one unbound engine per tier folder for at most 30 days; revisit on compatibility or GA | as §2.4 (recommended) | platform owner; security reviewer at P | none — adopted now |
+| P83 | **Availability domain numbers**: SLO `Assumption:` 99.5 % monthly per region; one probe engine per region every 5 minutes; quota alerts at 70 %; `failOpen` never flipped | the SLO value is *tbd* by measurement over the first quarter | platform owner | Tier W (the first fail-closed write agent) |
+| P84 | **Floor hierarchy and contents**: organisation floor "PI enabled at `HIGH` or stricter + malicious URL + logging + multi-language", inline `INSPECT_ONLY`; platform folder + RAI `MEDIUM_AND_ABOVE`; tier floors tighten to the measured level and go `INSPECT_AND_BLOCK` after the tier's first benign-corpus run; P-SA floor never looser; no project floors after the factory | as §3.2 (recommended) vs `INSPECT_AND_BLOCK` at the organisation | IT security (organisation floor), platform owner (folders) | Tier R (the first project) |
+| P85 | **Template standard per tier** including SDP: basic at R; advanced with a fleet-wide de-identify template at W+; custom dictionary and regex infoTypes for the hard-denied vocabulary on the P-SA response template; `STABLE` filter version; flip rule with a measured false-block threshold (`Assumption:` 1 %) | as §3.3 (recommended) | platform owner; security reviewer for P-SA | Tier R; the P-SA threshold blocks the super-admin grant |
+| P86 | **Alerting on floor and template writes**: log-based alerts in `LOGGING_PROJECT` on `modelarmor.googleapis.com` administration entries, SIEM rule at P, PAM on `floorSettingsAdmin`; the SCC path for floor writes *tbd* pending the resource-type check | as §3.4 | platform owner; security reviewer owns the rule content | Tier R |
+| P87 | **Console Model Armor**: on for every Gemini Enterprise app, `FAIL_CLOSED`, an `eu` template pair from the Tier C standard, applied through PAM, drift-checked daily by enumerating apps | as §3.5 (recommended) vs `FAIL_OPEN` for availability | Gemini Enterprise admin | Tier C |
+| P88 | **Tool-result screening pattern per tier**: MCP through the gateway at R (enforcement); the action service screens itself at W+ (option B) with the taint bit as enforcement; option A per agent at Stage 3 | as §2.6 (recommended) | platform owner; agent owner for option A | Tier R |
+| P89 | **Gateways born perimeter-ready**: every W+ prod gateway created with an `ALL_TRAFFIC` connectivity template in the project's VPC (subnet, PSC network attachment, DNS peering, Cloud NAT) from the first deploy, if spike 1 passes on it; R stays `PRIVATE_RANGES_ONLY` | as §4.2 (recommended) vs no template until spike 2, with fleet recreation later | platform owner | Tier W |
+| P90 | **"Credential holders are never internet-reachable" as a folder rule**: `run.allowedIngress = internal-and-cloud-load-balancing` on five folders the day spike 1 passes; IAM-only invoke plus the SHA custom module until then; Cloud Run jobs outside the rule by nature; the direct-call probe monthly | as §4.3 | platform owner; security reviewer signs at P | the super-admin grant (with P3) |
+| P91 | **The cross-perimeter flow table** of §4.4 as the generated source of every ingress and egress rule under (a); per-tier perimeters prod and nonprod; anything not in the table refused | as §4.4 (recommended) vs one perimeter over the whole folder | platform owner; security reviewer | the (a) backstop, after spike 2 |
 | P3 (refined, not renumbered) | The two spike protocols of §4.3 with their pass criteria and artefacts; the reading of §4.1 that the two Google pages describe different objects, to be confirmed or refuted by spike 2 | as §4.3 | platform owner, security reviewer | unchanged: Tier W perimeter; the super-admin grant (spike 1) |
 
 ---
@@ -676,8 +676,8 @@ HLD's register after P34.
     page snippet — recorded as GA with the conflict.
 11. The GA `gcloud` track creating `INSPECT_AND_BLOCK` templates only (`wall-e/11` §4) — not
     re-checked; the factory uses the REST field through Terraform in any case.
-12. The SLO value (P37), the false-block threshold (P39) and the IT-security handover date for the
-    organisation floor (P38) — numbers nobody has decided.
+12. The SLO value (P83), the false-block threshold (P85) and the IT-security handover date for the
+    organisation floor (P84) — numbers nobody has decided.
 13. The `wall-e/01` fact that Agent Runtime's tenant-project egress is external to Cloud Run —
     relied on as the Wall-E set verified it; spike 1 re-tests it in passing.
 
@@ -691,7 +691,7 @@ HLD's register after P34.
   (tiers), §13 (the three agents), §15 (boundaries), §17 (P1–P34)
 - [00-objective-review.md](00-objective-review.md) — E41–E43; PS-05, PS-06, PS-07, PS-08,
   PS-09, SCA-05, SCA-11, TIS-15, MON-13
-- [12-open-decisions.md](12-open-decisions.md) — where P35–P45 are renumbered
+- [12-open-decisions.md](12-open-decisions.md) — the register: P81–P91 are this page's rows
 - [../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md) — the seed for §3 and §2.6
 - [../wall-e/13-agent-interconnection.md](../wall-e/13-agent-interconnection.md) — the seed for
   §2 and §4.1
