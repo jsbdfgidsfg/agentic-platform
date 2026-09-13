@@ -396,37 +396,47 @@ UNKNOWN = "<unknown>"       # distinct from None: "we could not find out", not "
 # left its recorded timestamp stale and made the next push call it "Drive changed".
 # Back off instead of polling at a fixed rate, and give up only after ~2 minutes.
 SETTLE_BACKOFF_S = (2, 3, 5, 8, 13, 21, 34, 55)
+SETTLE_STABLE_ROUNDS = 2   # consecutive unchanged reads before a page counts as settled
+SETTLE_MIN_S = 30          # and never sooner than this after the write
 
 
 def settle(svc, manifest, rels) -> int:
     """Re-reads modifiedTime for pages written this run until it stops moving.
 
     Docs converts an uploaded markdown body asynchronously: files.update returns,
-    and modifiedTime moves again a few seconds later when the conversion lands.
-    Recording the first value made the next push see "Drive changed" on 18 of
-    43 pages (2026-09-11) and refuse them as conflicts. Returns how many entries
-    were corrected."""
+    and modifiedTime moves again seconds later when the conversion lands. The
+    first version of this loop dropped a page from the pending set after ONE read
+    that matched the recorded value, so a page whose conversion had simply not
+    landed yet at the first read was declared settled: on 2026-09-13 fourteen
+    platform pages moved 1-3 s after being declared settled, and the next push
+    refused all fourteen as conflicts. A page is now settled only after
+    SETTLE_STABLE_ROUNDS consecutive unchanged reads AND at least SETTLE_MIN_S
+    seconds since the write. Returns how many entries were corrected."""
     import time
-    pending = list(rels)
+    stable = {rel: 0 for rel in rels}
+    elapsed = 0
     corrected = 0
     for wait in SETTLE_BACKOFF_S:
-        if not pending:
+        if not stable:
             break
         time.sleep(wait)
-        still = []
-        for rel in pending:
+        elapsed += wait
+        for rel in list(stable):
             entry = manifest["files"][rel]
             ts = remote_modified(svc, entry["file_id"])
             if ts in (None, UNKNOWN):
-                continue                      # leave the guard to report it next run
+                stable.pop(rel)                   # leave it to the guard next run
+                continue
             if ts != entry.get("remote_modified"):
                 entry["remote_modified"] = ts
                 corrected += 1
-                still.append(rel)             # moved: confirm it is stable next round
-        pending = still
+                stable[rel] = 0                   # moved: start counting again
+            else:
+                stable[rel] += 1
+                if stable[rel] >= SETTLE_STABLE_ROUNDS and elapsed >= SETTLE_MIN_S:
+                    stable.pop(rel)
         save_manifest(manifest)
     return corrected
-
 
 def remote_modified(svc, file_id: str):
     """Returns the timestamp, None if the Doc is gone, or UNKNOWN on a transient
