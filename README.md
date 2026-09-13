@@ -1,6 +1,6 @@
-# Digital Workplace — Wiki
+#  Digital Workplace — Wiki
 
-Personal working wiki for the platform owner — Digital Workplace manager, the organisation.
+Personal working wiki for the platform owner — Digital Workplace Manager
 Scope: agentic platform on **GCP** + **Google Workspace**, Gemini Enterprise admin, Workspace super admin.
 
 > Maintained with Claude. To add or update anything, just say what happened —
