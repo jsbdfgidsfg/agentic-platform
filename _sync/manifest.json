@@ -50,6 +50,66 @@
       "local_hash": "9319dd6321267865b226795c59634213072a41c63bebfcc0ed0264b970f8b35d",
       "remote_modified": "2026-09-13T13:43:25.368Z"
     },
+    "platform/agentic-platform/02-landing-zone-and-tiers.md": {
+      "file_id": "1qM9ek_TjRhDnGTG7FeK6qU3F2tmwEJ3t3qDWIZ4GKmY",
+      "local_hash": "4c0acd45f128133f32a67e7bf3f6a3fe0da26e6d60c175d2fc573f199e36df41",
+      "remote_modified": "2026-09-13T18:15:55.556Z"
+    },
+    "platform/agentic-platform/03-gemini-enterprise-environment.md": {
+      "file_id": "1A4Ghwzjo8Dm7Moj_Hl4yd29yPpaU5y3_AW_nOtWt72I",
+      "local_hash": "9d226de222b8707318c595ede09ba3d3e3949fa2aa656ec10fa6b3ba69ec10fe",
+      "remote_modified": "2026-09-13T18:16:00.101Z"
+    },
+    "platform/agentic-platform/04-identity-and-privileged-access.md": {
+      "file_id": "1pFkcdJu5mK6Ncmrgnpld9JWr3yAlVUvPGT33kiy0EuI",
+      "local_hash": "4677041fa79b26aad08cff8ec968518116d02d9d4e73acc6e68e4bb8ad7ac0b3",
+      "remote_modified": "2026-09-13T18:16:03.699Z"
+    },
+    "platform/agentic-platform/05-registry-and-autonomy-contract.md": {
+      "file_id": "1CzadZIqTcPPGYs3qzbBJqKaHIrRbBQKm9Wz4R8OdYRQ",
+      "local_hash": "d12014e3ceedb501aea5cd6d1eb70d7a96e3886613095e53efb06e94577b34d6",
+      "remote_modified": "2026-09-13T18:16:07.317Z"
+    },
+    "platform/agentic-platform/06-gateways-model-armor-perimeter.md": {
+      "file_id": "1w6ktRXbjlAARRBrqpBbf0xj9gDHxJGPh3yEzhQ4A-3s",
+      "local_hash": "54d92080cb200279e401c21c7308f2f5d700cd41d11743380dc23bcb195592fb",
+      "remote_modified": "2026-09-13T18:16:10.913Z"
+    },
+    "platform/agentic-platform/07-monitoring-detection-incident-response.md": {
+      "file_id": "1OnAGIp5dR9L3jPmlYYdBbBnjK5TKKeHtaT4i9t3JOc0",
+      "local_hash": "25d74ea2d3333f3b25988e96653c0a9205387cdf675ac05f6ef85db29f7671da",
+      "remote_modified": "2026-09-13T18:16:14.486Z"
+    },
+    "platform/agentic-platform/08-data-logging-retention-sovereignty.md": {
+      "file_id": "1qxKbd5LZL0MgrEPc7-_HVayQwnPgJjHEnHwX8gLNNgA",
+      "local_hash": "bd4be6e965ff0e10062e99bd9683a85abd0c9c9e7239082c3920532069a90be6",
+      "remote_modified": "2026-09-13T18:16:18.968Z"
+    },
+    "platform/agentic-platform/09-supply-chain-secrets-recovery.md": {
+      "file_id": "1Mx8CXcA66HtUnqs93L7RxiOXEAde5dsAUSocTheG-ms",
+      "local_hash": "908687124f266be74394e7a0676bb92a752e81472af02692e1921842d1ede286",
+      "remote_modified": "2026-09-13T18:16:22.951Z"
+    },
+    "platform/agentic-platform/10-eu-ai-act.md": {
+      "file_id": "17QF1WwFuIYxVzsSX-VusmZv9EWbCjtvkVAtXF05aGKY",
+      "local_hash": "63385dc8120926054e2a0795fed0a71f8d60dddf54d680c9b55ce63fc2e8d39d",
+      "remote_modified": "2026-09-13T18:16:26.865Z"
+    },
+    "platform/agentic-platform/11-tisax.md": {
+      "file_id": "1YxOwQWQ0BuDxueLXvXAWya56PXhiCsConNNqTPCQ01c",
+      "local_hash": "b29517ab2e915c99084742427fe8c5d8edd91a30de51b5b0ea550e896fac18ce",
+      "remote_modified": "2026-09-13T18:16:31.234Z"
+    },
+    "platform/agentic-platform/12-open-decisions.md": {
+      "file_id": "1_IdP5M4lTk9JcMfrVE6BUXAQUo1ij1IYcICC90ploYQ",
+      "local_hash": "a5f78969855a507dd32560ce53c7e7f7c44823b39c9b0202e4956eec171f4685",
+      "remote_modified": "2026-09-13T18:16:34.561Z"
+    },
+    "platform/agentic-platform/README.md": {
+      "file_id": "1vrxnoz3WpLNjz5b3i0ulNk-ivIZ9GeESJxvz9VPwVm4",
+      "local_hash": "9097395b72b3930f5c92febbe416da11695de286e2533b84c025bb326971f864",
+      "remote_modified": "2026-09-13T18:16:38.664Z"
+    },
     "platform/agents.md": {
       "file_id": "1nR2mBKLjQHIksJWWjbAWv4f5S95ddhTsjLp7yQLdBE8",
       "local_hash": "c4f83d0e19a54e056d46de2fdb9673cae660e13d6d1ddac91640a0df667c0394",
@@ -152,8 +212,8 @@
     },
     "platform/gemini-enterprise.md": {
       "file_id": "1F95ZKQjRxXdhswo_PuPUFSj5bkcS2hw0FgNBcf70JuU",
-      "local_hash": "b6e92620044c09b2acf9247445f843c0aa551f7ab5841dddc04ec6e4b5952e20",
-      "remote_modified": "2026-09-11T12:35:58.484Z"
+      "local_hash": "e98955f98265f3771a356cf13dde619f14ef02524720bd3ab1b3d6e82d3ffe52",
+      "remote_modified": "2026-09-13T18:16:43.437Z"
     },
     "platform/google-workspace.md": {
       "file_id": "1p3GvJHq8Nl_4KAOUMDFxJJ74BNIP5fFZOsBlYTIMoYQ",
