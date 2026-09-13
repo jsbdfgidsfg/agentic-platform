@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 
 This page states what happens when each part of Eve is wrong, missing or hostile, and what
 this design does **not** close. It is the page a security reviewer should read first, and
@@ -67,7 +67,7 @@ audit log cannot reach the key. See [02-identity-and-auth.md](02-identity-and-au
 
 | Scenario | Behaviour |
 |---|---|
-| **Eve is down** — the job fails, billing lapses, the credential expires, the scheduler stops | Nothing degrades open. Plans sit at `pending_eve` and never fall through. `walle-actions`' own `eve_silence` sweeper sets `no_autonomous` after four business hours, origin `breaker`, with an incident note. Any executed L5 item with no row in `eve.verdict_receipts` after 60 minutes freezes promotions; after four hours that cell drops to L4. The `eve_last_seen` absence alert pages at 15 minutes. **Eve returning clears nothing** — only an operator clears `no_autonomous`. |
+| **Eve is down** — the job fails, billing lapses, the credential expires, the scheduler stops | Nothing degrades open. Plans sit at `pending_eve` and never fall through. `walle-actions`' own `eve_silence` sweeper sets `no_autonomous` after four business hours, origin `breaker`, with an incident note. Any executed L5 item with no row in the `verdict_receipts` view (receipts dataset, separate from `eve`) after 60 minutes freezes promotions; after four hours that cell drops to L4. The `eve_last_seen` absence alert pages at 15 minutes. **Eve returning clears nothing** — only an operator clears `no_autonomous`. |
 | **Eve is degraded but alive** — stale config, BigQuery unreachable, token near expiry | The gate stops signing; it does not halt. Individual plans are refused with `eve_read_failed` or `eve_config_stale`, which costs an operator an approval rather than costing the programme a level. The same four-hour timer still runs, because it keys on missing work rather than on reported health. |
 | **Eve is uncertain about one plan** | Ordered rule. Cannot read what is needed → refuse `eve_read_failed`. A read contradicts the plan → refuse `pre_state_mismatch` and raise a ticket. Otherwise sign. Eve never halts on uncertainty about a single plan. |
 | **Eve is wrong in the refusing direction** | Items wait and expire; nothing executes wrongly. Approval latency and the disagreement counter rise. Per cell, 30-day rolling, floor of at least 35 paired observations: if the Wilson 95 % lower bound of the false-refusal rate exceeds 0.05, that cell's `eve_authority` drops to advisory automatically, origin `breaker`, reason `false_refusal_rate`. That is a lowering, so a machine may do it. Raising it back is a human decision with a root cause. |
@@ -127,7 +127,10 @@ the operator veto, not on Eve.
 **Containment, in order:**
 
 1. **Revoke `roles/run.invoker`** on `walle-actions` from `eve-controller@` and
-   `eve-verifier@`. Every L4 step then stalls closed — plans stay at `pending_eve`, the
+   `eve-verifier@`. The binding sits on a service in `WALLE_PROJECT`, so the revocation is
+   made there: by a human holding `run.admin` on `walle-actions` (Wall-E's operator), or by
+   `walle_setup.py`'s containment path — Eve's identities cannot revoke their own binding,
+   and nothing in `EVE_PROJECT` can. Every L4 step then stalls closed — plans stay at `pending_eve`, the
    `eve_silence` sweeper sets `no_autonomous` after four business hours, and nothing
    executes.
 2. **Disable the current `eve-approval` key version.** Disable, never destroy: destruction
@@ -138,7 +141,8 @@ the operator veto, not on Eve.
    root cause, a fresh decision record.
 
 **The named residual.** A compromised Eve can **write false verdict receipts** into
-`eve.verdict_receipts` and thereby suppress the `eve_evidence_stale` sweeper, which is the
+`eve.verdicts`, which the `verdict_receipts` view in the receipts dataset (separate from
+`eve`, topology decision 48) exposes, and thereby suppress the `eve_evidence_stale` sweeper, which is the
 mechanism that would otherwise drop an unverified L5 cell to L4. Two things follow, and both
 are design choices rather than accidents:
 

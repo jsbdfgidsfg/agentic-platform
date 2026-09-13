@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 - Maturity: all three agents designed; nothing built
 
 One row per agent. Detail pages under `platform/agents/` when a row outgrows the table.
@@ -33,3 +33,9 @@ gate that acts on it.
 Designing Eve surfaced about twenty contradictions inside Wall-E's own set, listed in
 [eve/08-contract-changes.md](eve/08-contract-changes.md). They are recorded there rather than
 applied.
+
+**Each agent has its own GCP project**, and the Gemini Enterprise app a fourth, decided on
+2026-09-13 for least privilege: no project-level role in one agent's project reaches another
+agent's secret, key or evidence, and every interaction between them is an explicit,
+resource-level grant. [project-topology.md](project-topology.md) is the single authority for
+what lives where and how the grants cross.

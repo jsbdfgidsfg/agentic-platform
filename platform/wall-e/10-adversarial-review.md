@@ -2,7 +2,9 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
+- 2026-09-13: A2 carries a dated placement note. Eve's key now lives in `EVE_PROJECT`
+  ([../project-topology.md](../project-topology.md)); no attack verdict changed.
 - Two independent reviews of the design as written, 2026-09-08: an **adversarial pass**
   (17 attacks) and a **consistency and fact pass** (contradictions between documents,
   guardrails with no mechanism, and every Google Cloud and Workspace claim checked against
@@ -41,7 +43,7 @@ Severity is the damage if the design had been built as first written.
 | # | Attack | Severity | Change made |
 |---|---|---|---|
 | A1 | Injected text in an audit row persuades the agent to post its own approval; the service checks the named human is an operator, not that they consented | **Critical** | Approval endpoint refuses the agent's service account outright. Human approval arrives out of band, carrying an identity the service verifies itself. [03](03-lld.md), [04](04-flows.md) Flow A |
-| A2 | Eve's symmetric key must be shared with the action service for verification to work, so "Eve approved" becomes forgeable by the service | **Critical** | Cloud KMS asymmetric signing key. Eve signs, the service verifies with the public half and can never mint. Eve signs a hash it computed itself. [02](02-identity-and-auth.md), [07](07-build-runbook.md) |
+| A2 | Eve's symmetric key must be shared with the action service for verification to work, so "Eve approved" becomes forgeable by the service | **Critical** | Cloud KMS asymmetric signing key. Eve signs, the service verifies with the public half and can never mint. Eve signs a hash it computed itself. As of 2026-09-13 the key `eve-approval` lives in `EVE_PROJECT` and the service verifies against Eve's public key pinned as PEM in Wall-E's repository, with no KMS grant of its own ([../project-topology.md](../project-topology.md) §3 row 14); the property is unchanged. [02](02-identity-and-auth.md), [07](07-build-runbook.md) |
 | A3 | Attacker-authored group names, profile fields and audit parameters reach the model on a **scheduled** run, where ceilings are high | **Critical** | Per-run taint bit. Any attacker-writable field reaching the model forces the inbox ceiling for that run. [03](03-lld.md), [05](05-autonomy-ladder.md) §4 |
 | A4 | Firestore outage; halt read throws, override read defaults to "no override", so every demoted family silently returns to its configured level | **Critical** | Any control-plane read failure denies and trips the breaker. Overrides fail to L0, never to L5. Halt epochs on every audit row. [03](03-lld.md) |
 | A5 | Wall-E's own writes match the log sink filter, so each write triggers a run that writes again | **High** | Sink excludes the robot's principal, plus a per-principal 24-hour cooldown and a causation depth limit, which also closes the system-attributed second hop. [07](07-build-runbook.md) |

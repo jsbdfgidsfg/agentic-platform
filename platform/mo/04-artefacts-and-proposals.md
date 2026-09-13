@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 
 Mo was built backwards from five things a human reads. Everything else in the design —
 the metric queries, the authorised views, the three identities, the drop box — exists
@@ -169,7 +169,8 @@ the view — so a grader cannot see it whatever they do with the artefact.
 
 The grading surface itself is a dependency of Mo, not part of it
 ([decision 14](../wall-e/09-open-decisions.md) owns what it turns out to be). It writes
-write-ahead to `walle_audit.grades`. Mo reads no Firestore.
+write-ahead to `${WALLE_PROJECT}.walle_audit.grades`, which Mo reads cross-project. Mo reads
+no Firestore.
 
 ### 2.2 The draw, and the seed protocol
 
@@ -196,8 +197,9 @@ each of them is the point:
 2. Nobody chooses the sample — including Mo, which has no input to the seed and no way to
    write one.
 3. The validator re-draws the sample from the published seed and refuses any merge whose
-   sample membership differs. An auditor with `walle_audit` read can do the same, months
-   later, from the seed in the evidence block.
+   sample membership differs. An auditor with dataset-level read on
+   `${WALLE_PROJECT}.walle_audit` and job rights in their own project can do the same,
+   months later, from the seed in the evidence block.
 4. The seed a bundle cites is **anchored to that file** at ingestion ([§3.3](#33-ingestion-and-the-bot-author)),
    the way `scorecard_sha256` is anchored to a published scorecard. Without the anchor, the
    validator's re-draw compares a membership against a claim that descends from the same seed:
@@ -295,17 +297,18 @@ without it, so it appears on Mo's line in the S1-exit review rather than in a fo
 ```mermaid
 sequenceDiagram
     autonumber
-    participant T1 as mo-reporter, as mo-analyst
-    participant BOX as Drop box walle-mo-proposals
-    participant CI as CI ingestion
-    participant BOT as Bot author, not Mo
-    participant VAL as Validator, owned outside the repo
-    participant AUD as walle_audit
-    participant HUM as Two authenticated reviewers
+    participant T1 as "mo-reporter, as mo-analyst, in MO_PROJECT"
+    participant BOX as "Drop box walle-mo-proposals, in MO_PROJECT"
+    participant CI as "CI ingestion"
+    participant BOT as "Bot author, not Mo"
+    participant VAL as "Validator, owned outside the repo, in its custodian's project"
+    participant AUD as "walle_audit, in WALLE_PROJECT"
+    participant HUM as "Two authenticated reviewers"
 
     T1->>BOX: write one bundle object - diff, evidence_block, decision_record_draft, narrative
     Note over BOX: objectCreator only - no read back, no overwrite, no delete
     BOX->>CI: ingest one object
+    Note over BOX,CI: CI reads the bucket cross-project - objectViewer, bucket-level, identity tbd
     alt diff touches a path outside the allowlist
         CI-->>BOX: reject at ingestion, no pull request is opened
     else scorecard_sha256 was never published, or the snapshot does not exist
@@ -320,6 +323,7 @@ sequenceDiagram
         BOT->>VAL: open the pull request
     end
     VAL->>AUD: re-execute the evidence SQL at its pinned commit
+    Note over VAL,AUD: cross-project, dataset-level read - no binding in MO_PROJECT
     VAL->>AUD: re-draw the blind sample from the published week seed
     alt any value differs, or the sample differs
         VAL-->>BOT: required check fails, merge refused
@@ -336,8 +340,8 @@ sequenceDiagram
 
 ### 3.1 The bundle contract
 
-One object per bundle in `walle-mo-proposals`, written by `mo-analyst@` with
-`roles/storage.objectCreator` and nothing else. Verified 2026-09-12: that role "Allows users
+One object per bundle in `walle-mo-proposals`, a bucket in `MO_PROJECT`, written by
+`mo-analyst@${MO_PROJECT}` with `roles/storage.objectCreator` and nothing else. Verified 2026-09-12: that role "Allows users
 to create objects. Does not give permission to view, delete, or **overwrite** objects"
 ([IAM roles for Cloud Storage](https://docs.cloud.google.com/storage/docs/access-control/iam-roles)).
 So Mo cannot read back, replace or delete a bundle it has written, and a duplicate write
@@ -366,10 +370,14 @@ empty field is a rejection at ingestion, not a warning.
 | `seed` | The `week_seed` CI published after the week closed | The validator re-draws the blind sample from it — **after** ingestion has checked it against the per-week seed file ([§3.3](#33-ingestion-and-the-bot-author)) |
 | `double_grade_coverage` | The coverage the evidence was earned at | A precision figure earned at one coverage is not comparable with one earned at another; a bundle whose coverage moved mid-window is refused ([§3.4](#34-what-the-validator-enforces)) |
 | `scorecard_sha256` | The SHA-256 of the scorecard row `mo-metrics@` published | A bundle citing a hash that was never published is rejected before the recompute even runs |
-| `snapshot_name` | The `walle_metrics_archive.scorecard_YYYYMMDD` snapshot the claim points at | The dated, citable object an auditor replays against, rather than a mutable table |
+| `snapshot_name` | The `${MO_PROJECT}.walle_metrics_archive.scorecard_YYYYMMDD` snapshot the claim points at, project-qualified | The dated, citable object an auditor replays against, rather than a mutable table |
 
-The whole block is re-executable by anyone holding read on `walle_audit`, with no access to
-Mo, no access to `walle_metrics`, and no cooperation from either.
+The whole block is re-executable by anyone holding dataset-level read on
+`${WALLE_PROJECT}.walle_audit` and job rights in a project of their own, holding no binding
+of any kind in `MO_PROJECT`, and with no cooperation from Mo. The SQL names every table
+fully qualified, and declares the two interval functions as `CREATE TEMP FUNCTION` from the
+committed text ([03-metrics-contract.md](03-metrics-contract.md) §3), so it resolves from
+any project.
 
 ### 3.2 The path allowlist
 
@@ -401,6 +409,18 @@ append-only per-week seed file ([§2.2](#22-the-draw-and-the-seed-protocol)); st
 `narrative` from everything the validator will see; and only then opens the pull request under
 a **bot identity that is not Mo**.
 
+**Two of those checks read something in `MO_PROJECT` from outside it**, and the route has to
+be named because "the validator never reads `walle_metrics`" and "ingestion checks the
+snapshot exists" cannot both be literal across a project boundary unless different
+identities do them. The route: the **CI ingestion identity** — the bot, not the validator —
+holds a metadata-only read in `MO_PROJECT`: `Assumption:` `roles/bigquery.metadataViewer` at
+dataset level on `${MO_PROJECT}:walle_metrics_archive` (enough to see that
+`scorecard_YYYYMMDD` exists, not to read it) and on the published-hash register, plus
+bucket-level `roles/storage.objectViewer` on the drop box. The validator holds nothing in
+`MO_PROJECT`. The identity, its home and the exact roles are *tbd* with the git host
+([M-7 · 48](08-open-decisions.md)) and are recorded as [M-11 · 52](08-open-decisions.md) (c),
+topology decision 50 ([`../project-topology.md`](../project-topology.md) §3 rows 19 and 20).
+
 The seed check is new, and it is there for the same reason as the `scorecard_sha256` check. Both
 `scorecard_sha256` and `snapshot_name` are anchored to something published; the seed is the
 one input that decides **which items are evidence at all**, and without an anchor the
@@ -416,16 +436,19 @@ produces, at worst, an object in a bucket that fails a path check.
 ### 3.4 What the validator enforces
 
 The recompute check is a **required** check in the configuration repository, owned outside
-that repository, deployed **by image digest** rather than a mutable tag. It never reads
-`walle_metrics`, never trusts a number Mo asserts, and never accepts prose as evidence.
+that repository, deployed **by image digest** rather than a mutable tag. It holds no binding
+of any kind in `MO_PROJECT` — so it never reads `walle_metrics` — never trusts a number Mo
+asserts, and never accepts prose as evidence. Its identity holds dataset-level `READER` on
+`${WALLE_PROJECT}:walle_audit` and `roles/bigquery.jobUser` in the custodian's own project
+([`../project-topology.md`](../project-topology.md) §3 row 21).
 
 | Gate | Source | Refusal |
 |---|---|---|
-| Re-execute the evidence SQL at `sql_commit_sha` against `walle_audit` | This design | Any value differs → merge refused |
+| Re-execute the evidence SQL at `sql_commit_sha` against `${WALLE_PROJECT}.walle_audit`, cross-project from the custodian's project | This design | Any value differs → merge refused |
 | `seed` is the seed the per-week file records for `week(window_end)` | This design, C16 | Any other seed → rejected at ingestion, before the recompute |
 | Re-draw the blind sample from `seed` | This design, C16 | Sample membership differs → merge refused |
 | `double_grade_coverage` moved during the promotion window | This design, C17 | Refused: the evidence mixes two measurement processes in an unrecorded proportion |
-| `walle_metrics` watermark ≤ 24 hours old | This design | Stale Mo refuses **every** promotion — absence is restrictive |
+| `walle_metrics` watermark ≤ 24 hours old — reached **without a data read in `MO_PROJECT`**: the validator takes the watermark from the cited snapshot's own date in `snapshot_name` (a `scorecard_YYYYMMDD` older than 24 hours is stale by name) and, `Assumption:`, cross-checks it against the `custom.googleapis.com/mo/metrics_watermark_age_hours` metric that the ingestion identity, not the validator, reads in `MO_PROJECT`; decided 2026-09-13 as the provisional route, recorded in [M-11 · 52](08-open-decisions.md) (c) | This design | Stale Mo refuses **every** promotion — absence is restrictive |
 | A level went up without a link to an `accepted` decision file | [05](../wall-e/05-autonomy-ladder.md) §10 | Refused |
 | The level exceeds a ceiling | §10 | Refused |
 | A `WRITE_HIGH` promotion lacks a second named approver | §10 | Refused |

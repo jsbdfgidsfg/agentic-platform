@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 - Last executed: **never**
 
 ## When to use this
@@ -36,7 +36,7 @@ can state in numbers how much approval burden it avoids.
 
 | Decision | Needed before | If unanswered |
 |---|---|---|
-| [E-1](09-open-decisions.md) — does Eve get its own GCP project? | Phase 1 | The whole of this runbook assumes yes. The single-project variant still works and pinned-PEM verification still prevents key substitution, but every command below changes and "`walle-actions@` must never mint an Eve approval" reverts to IAM hygiene. |
+| [E-1](09-open-decisions.md) — does Eve get its own GCP project? | Phase 1 | **Answered yes 2026-09-13**: four projects — `GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT` — under `FOLDER_ID` ([../project-topology.md](../project-topology.md); decision file *tbd*). The single-project variant is history. Every cross-project grant below is either made by Wall-E's runbook on a Wall-E resource and verified here, or made here on an Eve resource; the topology page is the authority for which is which. |
 | [E-14](09-open-decisions.md) — retention floor **and** ceiling | Phase 3 | Eve's mirror and bucket are set to 400 days pending it. A locked bucket retention period can be lengthened later but **never** shortened, so a wrong answer here is expensive in one direction only. |
 | [E-16](09-open-decisions.md), which depends on [decision 26](../wall-e/09-open-decisions.md) | Phase 8 | If a keyless service account can hold a custom admin role with no domain-wide delegation, then Eve's robot account, its consent, its hardware key, its refresh token and the six-month clock all disappear and Phase 8 is mostly deleted. Re-examine before executing it, not after. |
 | [E-18](09-open-decisions.md) — the threshold numbers | Phase 10 | `thresholds.yaml` is stubbed from Phase 4 so v0 and the controller read the same values, but the numbers are calibrated on measured data at S2. Wiring a control call to an uncalibrated threshold is how a buggy Eve halts the programme during the stage the programme is trying to prove itself. |
@@ -47,7 +47,8 @@ can state in numbers how much approval burden it avoids.
 
 | What | Where | Phase | Lead time |
 |---|---|---|---|
-| GCP project creator and a billing account | Organisation | 1 | Same day |
+| `roles/resourcemanager.projectCreator` on `FOLDER_ID` — the folder that holds `GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT` and `MO_PROJECT` — plus billing-account user | Folder, billing account | 1 | Same day |
+| Read access in `WALLE_PROJECT` (`roles/viewer`, `run.viewer`, `bigquery.metadataViewer`, `secretmanager.secrets.getIamPolicy`) and `discoveryengine.viewer` in `GEMINI_PROJECT`, as the human owner | Wall-E's and the Gemini app's projects | 2, 9 | Same day while one person owns all four; a request to each owner group once [E-2](09-open-decisions.md) lands. The verify blocks that read another project say so. |
 | **Organisation-level `roles/logging.configWriter`** | Organisation | 7 | **Allow calendar time.** Workspace audit logs land at organisation level, so a project-level sink cannot see them. This is the one step in Eve's build that needs someone else's approval, and it is the step that must happen *early* — see Phase 7. |
 | Workspace super admin | Tenant | 8 | Same day |
 | One spare Workspace licence for `eve@<domain>` | Tenant | 8 | `Assumption:` seats are available without a purchase order. This is the largest recurring cost line in Eve. |
@@ -58,7 +59,8 @@ can state in numbers how much approval burden it avoids.
 
 ```bash
 # ---- Eve's own names -------------------------------------------------------
-export EVE_PROJECT="<eve-project-id>"            # tbd, decision E-1
+export EVE_PROJECT="<eve-project-id>"
+export FOLDER_ID="<folder-id>"                   # the one folder all four projects sit under
 export REGION="europe-west1"
 export BQ_LOCATION="EU"
 export ORG_ID="<org-id>"
@@ -70,8 +72,24 @@ export OPERATORS="walle-operators@${DOMAIN}"
 export PROTECTED="walle-protected@${DOMAIN}"
 
 # ---- Wall-E's, from SETUP.md section 1.7 -----------------------------------
-export PROJECT="<walle-project-id>"
-export SA_ACTIONS="walle-actions@${PROJECT}.iam.gserviceaccount.com"
+# Wall-E's project. SETUP.md and walle_setup.py call it PROJECT; it is WALLE_PROJECT
+# everywhere else (../project-topology.md section 6).
+export WALLE_PROJECT="<walle-project-id>"
+export SA_ACTIONS="walle-actions@${WALLE_PROJECT}.iam.gserviceaccount.com"
+# Wall-E's CI identity: the value of Wall-E's CI_DEPLOYER config key, a full service
+# account email in WALLE_PROJECT (../wall-e/PREREQUISITES.md section 2, owner tbd there).
+# Not invented here: copy it from Wall-E's config. Used in Phase 9.
+export SA_WALLE_CI="<ci-deployer-service-account>"
+
+# ---- The Gemini Enterprise app's project, for Phase 9 check 4 only -----------
+export GEMINI_PROJECT="<gemini-project-id>"
+
+# ---- Mo's project, for Phase 11's one Mo carve-out only (topology row 18) -----
+# mo-metrics@ lives in MO_PROJECT, created by Mo's runbook (Mo-2); it appears here
+# only as the grantee of a dataset-level READER on the mirror's dataset, from S4.
+export MO_PROJECT="<mo-project-id>"
+export SA_MO_METRICS="mo-metrics@${MO_PROJECT}.iam.gserviceaccount.com"
+export EVE_MIRROR_DS="eve_mirror"          # Assumption: name tbd, topology decision 51. Phase 11.
 
 # ---- derived ---------------------------------------------------------------
 export SA_EVE_V0="eve-v0@${EVE_PROJECT}.iam.gserviceaccount.com"
@@ -82,8 +100,9 @@ export SA_EVE_CONSOLE="eve-console@${EVE_PROJECT}.iam.gserviceaccount.com"
 export EVE_EVIDENCE="gs://${EVE_PROJECT}-eve-evidence"
 export EVE_KEYS="${EVE_EVIDENCE}/keys"     # a prefix, not a second bucket. See Phase 11.
 export EVE_AR="${REGION}-docker.pkg.dev/${EVE_PROJECT}/eve"
+export EVE_RECEIPTS_DS="eve_receipts"      # Assumption: name tbd, topology decision 48. Phase 11.
 
-echo "EVE_PROJECT=$EVE_PROJECT PROJECT=$PROJECT REGION=$REGION DOMAIN=$DOMAIN"
+echo "EVE_PROJECT=$EVE_PROJECT WALLE_PROJECT=$WALLE_PROJECT FOLDER_ID=$FOLDER_ID REGION=$REGION DOMAIN=$DOMAIN"
 ```
 
 Filled in as later phases produce them:
@@ -102,13 +121,14 @@ same guard Wall-E's runbook uses, because the build spans months rather than a w
 [ -n "$EVE_PROJECT" ] || { echo 'env not sourced'; return 1; }
 ```
 
-**`SA_EVE` is not what [SETUP.md](../wall-e/SETUP.md) section 1.7 says it is.** There it is
-`eve-controller@${PROJECT}`, in Wall-E's project. Here it is `eve-controller@${EVE_PROJECT}`.
-That single change propagates into `CONTROL_CALLER_ALLOWLIST`, `EVE_KMS_KEY`, `EVE_SECRETS`
-and `EVE_PROJECT_ROLES`, and it is one of the edits listed in
-[08-contract-changes.md](08-contract-changes.md). Do not execute Phase 9 without having read
-that page, or you will end up with two `eve-controller@` accounts and a service pointed at
-the wrong one.
+**`SA_EVE` and Wall-E's runbook.** Before 2026-09-13 [SETUP.md](../wall-e/SETUP.md)
+section 1.7 fixed `SA_EVE = eve-controller@${PROJECT}`, in Wall-E's project; since
+2026-09-13 both runbooks agree on `eve-controller@${EVE_PROJECT}`. That single change
+propagates into `CONTROL_CALLER_ALLOWLIST`, `READ_CALLER_ALLOWLIST` and `EVE_KMS_KEY`
+(`EVE_PROJECT_ROLES` is empty since 2026-09-13 and carries nothing), and it is CC-25 in
+[08-contract-changes.md](08-contract-changes.md).
+**If Wall-E's script has not yet landed CC-25, do not execute Phase 9**, or you will end up
+with two `eve-controller@` accounts and a service pointed at the wrong one.
 
 ---
 
@@ -123,7 +143,11 @@ controller role rests on. A project boundary makes it structural. It is also wha
 Eve's evidence copy outside Wall-E's teardown blast radius.
 
 ```bash
-gcloud projects create "$EVE_PROJECT"
+# --folder, not --organization: the project must be a child of the folder the other three
+# share, or it inherits nothing from the folder floor and its IAM (verified 2026-09-13,
+# https://docs.cloud.google.com/sdk/gcloud/reference/projects/create — "--folder: ID for
+# the folder to use as a parent"). Nothing below moves it afterwards.
+gcloud projects create "$EVE_PROJECT" --folder="$FOLDER_ID"
 gcloud billing projects link "$EVE_PROJECT" --billing-account="<billing-account>"
 gcloud config set project "$EVE_PROJECT"
 
@@ -156,13 +180,25 @@ gcloud services list --enabled --project="$EVE_PROJECT" \
 ```
 
 Then assert the property that the whole project boundary exists for — that Wall-E's
-deployers hold nothing here:
+deployers hold nothing here. A project-level read does **not** show bindings inherited from
+the folder, so read the folder policy too (`gcloud resource-manager folders get-iam-policy`,
+verified 2026-09-13,
+https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/folders/get-iam-policy):
 
 ```bash
-gcloud projects get-iam-policy "$EVE_PROJECT" \
-  --flatten='bindings[].members' \
-  --filter="bindings.members:${SA_ACTIONS}" --format='value(bindings.role)'
-# expect: nothing
+gcloud projects describe "$EVE_PROJECT" --format='value(parent.type,parent.id)'
+# expect: folder  <FOLDER_ID>
+
+for M in "$SA_ACTIONS" "$SA_WALLE_CI" "<walle-deployer-group>"; do
+  gcloud projects get-iam-policy "$EVE_PROJECT" \
+    --flatten='bindings[].members' \
+    --filter="bindings.members:${M}" --format='value(bindings.role)'
+  gcloud resource-manager folders get-iam-policy "$FOLDER_ID" \
+    --flatten='bindings[].members' \
+    --filter="bindings.members:${M}" --format='value(bindings.role)'
+done
+# expect: nothing, for every principal, at both levels. The deployer group's name comes
+# from Wall-E's set (walle-owners@ per ../project-topology.md decision 52); it is tbd there.
 ```
 
 **Rollback.** `gcloud projects delete "$EVE_PROJECT"`. Nothing outside the project has
@@ -221,12 +257,19 @@ Phase 11, for the same reason.
 
 The read grant on Wall-E's audit dataset is **dataset-level, never project-level** — a
 project-level `roles/bigquery.dataViewer` in Wall-E's project would be a lateral path into
-it. `bq add-iam-policy-binding` operates on tables, views and connections, not datasets, so
-dataset access is edited through the dataset's own `access` array. Run this against
-**Wall-E's** project:
+it. It sits on a dataset in `WALLE_PROJECT`, so **it is Wall-E's runbook's grant to make**,
+not this one's: **provided by Wall-E's runbook at Stage 0 — dataset-level `READER` on
+`walle_audit` for `${SA_EVE_V0}`** (CC-22, `walle_setup.py` `add_dataset_access` with member
+`eve-v0@${EVE_PROJECT}`; [../project-topology.md](../project-topology.md) §3 row 4). Give
+Wall-E's operator the `${SA_EVE_V0}` email, then verify the grant below. For reference,
+the edit Wall-E's runbook makes — it needs `bigquery.datasets.update` in `WALLE_PROJECT`,
+which no Eve principal holds; `bq add-iam-policy-binding` operates on tables, views and
+connections, not datasets, so dataset access is edited through the dataset's own `access`
+array:
 
 ```bash
-bq show --format=prettyjson "${PROJECT}:walle_audit" > /tmp/walle_audit.json
+# Wall-E's runbook, in WALLE_PROJECT — reference only
+bq show --format=prettyjson "${WALLE_PROJECT}:walle_audit" > /tmp/walle_audit.json
 
 SA="$SA_EVE_V0" python3 - <<'EOF'
 import json, os
@@ -235,30 +278,35 @@ d.setdefault('access', []).append({"role": "READER", "userByEmail": os.environ['
 json.dump(d, open('/tmp/walle_audit.json', 'w'))
 EOF
 
-bq update --source=/tmp/walle_audit.json "${PROJECT}:walle_audit"
+bq update --source=/tmp/walle_audit.json "${WALLE_PROJECT}:walle_audit"
 ```
 
 The second grant, `roles/bigquery.dataEditor` on the `eve` dataset, is applied in Phase 3
 when the dataset exists.
 
-> **This grant does not exist anywhere in Wall-E's runbook today.** The entire shared data
-> plane of [08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) is unbuilt. It is
-> [E-9](09-open-decisions.md), and this phase is where it lands.
+> **This grant did not exist anywhere in Wall-E's runbook as of 2026-09-12.** The entire
+> shared data plane of [08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) was unbuilt. It is
+> [E-9](09-open-decisions.md); since 2026-09-13 Wall-E's runbook (CC-22) makes it, keyed on
+> `EVE_PROJECT`, and this phase is where it is verified.
 
 **Verify.**
 
 ```bash
-bq show --format=prettyjson "${PROJECT}:walle_audit" \
+# Both reads are in WALLE_PROJECT and need viewer permission there (bigquery.datasets.get,
+# resourcemanager.projects.getIamPolicy); they are run by the human owner, never by an
+# Eve identity.
+bq show --format=prettyjson "${WALLE_PROJECT}:walle_audit" \
   | python3 -c "import json,sys;[print(a) for a in json.load(sys.stdin)['access']]"
 # expect: eve-v0@ present as READER, and with NOTHING else. No WRITER, no OWNER.
 
 # and prove the negative: eve-v0@ cannot write to Wall-E's audit dataset
-gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' \
+gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten='bindings[].members' \
   --filter="bindings.members:${SA_EVE_V0}" --format='value(bindings.role)'
 # expect: nothing at all at project level
 ```
 
-**Rollback.** Remove the `access` entry from `walle_audit` the same way it was added, and
+**Rollback.** Ask Wall-E's operator to remove the `access` entry from `walle_audit` the
+same way it was added (a `WALLE_PROJECT` edit), and
 `gcloud iam service-accounts delete "$SA_EVE_V0"`.
 
 ---
@@ -316,7 +364,7 @@ bq mk --transfer_config \
   --service_account_name="$SA_EVE_V0" \
   --schedule="every day 01:13" \
   --params='{
-    "query": "INSERT INTO `'"$EVE_PROJECT"'.eve.walle_audit_mirror` SELECT * FROM `'"$PROJECT"'.walle_audit.actions` WHERE DATE(ts) = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)"
+    "query": "INSERT INTO `'"$EVE_PROJECT"'.eve.walle_audit_mirror` SELECT * FROM `'"$WALLE_PROJECT"'.walle_audit.actions` WHERE DATE(ts) = DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)"
   }'
 ```
 
@@ -508,7 +556,7 @@ with Eve. Every item is argued in [08-contract-changes.md](08-contract-changes.m
 | 2 | **Offline pinned-PEM verification as the primary path**, with a CI-only test key; KMS `getPublicKey` as fallback only | S4 |
 | 3 | The reason-code validator: a verdict carrying a code outside `reasons.yaml` is rejected before it can be acted on | S4 |
 | 4 | `eve_silence` — any plan at `pending_eve` for more than four business hours sets `no_autonomous`, origin `breaker`, with an incident note | S3 entry |
-| 5 | `eve_evidence_stale` — an executed L5 item with no row in `eve.verdict_receipts` after 60 minutes freezes promotions; after four hours that cell drops to L4 | S4 |
+| 5 | `eve_evidence_stale` — an executed L5 item with no row in the `verdict_receipts` view (receipts dataset `${EVE_RECEIPTS_DS}`, separate from `eve`) after 60 minutes freezes promotions; after four hours that cell drops to L4 | S4 |
 | 6 | `eve_last_seen` — stamped **passively** from any successfully authenticated `eve-controller@` or `eve-verifier@` call, published as a metric with a Cloud Monitoring **absence** policy at 15 minutes | S3 entry |
 | 7 | `items_hash` in the signed field list, and per-item vector verification | Before the approve endpoint is built |
 | 8 | `eve_authority` on the ladder cell and on the override document, plus the denial reason `eve_authority_advisory` | S4 |
@@ -607,11 +655,17 @@ EOF
 bq update --source=/tmp/ewl.json "${EVE_PROJECT}:eve_workspace_logs"
 ```
 
-Then repoint metric 9 and query 11 from Phase 4 at `eve_workspace_logs`, and add the
-standing drift check in the other direction: **Eve asserts on every pass that Wall-E's
-`walle_workspace_logs` still carries no actor exclusion.** That is a drift check on Wall-E,
-and it is why audit completeness is computed from Eve's copy — so that deleting Wall-E's
-copy does not silently make the metric perfect.
+Then repoint metric 9 and query 11 from Phase 4 at `eve_workspace_logs`. The standing
+drift check in the other direction — **that Wall-E's `walle_workspace_logs` still carries
+no actor exclusion** — is a drift check on Wall-E, and it is why audit completeness is
+computed from Eve's copy, so that deleting Wall-E's copy does not silently make the metric
+perfect. It needs a grant no set makes today: the sink filter is an organisation resource
+(reading it would need organisation-level `logging.viewer`, refused), and the dataset is in
+`WALLE_PROJECT`. Topology decision 47 gives it a form — dataset-level `READER` on
+`walle_workspace_logs` for `eve-verifier@`, made by Wall-E's runbook at S3 entry, and a
+data-level comparison of robot-actor admin events per day in `eve_workspace_logs` against
+`walle_workspace_logs`, a persistent deficit being the finding. **Until that grant lands,
+Eve does not run the check**; do not add it to Eve v0 here.
 
 Also at S2, add to Eve v0 the **Google-side contract drift check**: a query comparing a
 committed snapshot of privilege names and admin event names against what the tenant now
@@ -741,8 +795,10 @@ Every step here is a **manual console step**. There is no gcloud for any of it.
    | `admin.reports.usage.readonly` | Metric series |
    | `openid`, `userinfo.email` | So the bootstrap can verify **which** account consented — the check that stops you storing your own credentials by accident |
 
-   **`apps.licensing` is dropped.** [SETUP.md](../wall-e/SETUP.md) Phase 15 grants it with
-   the justification "Eve needs to read assignments". That justification does not survive:
+   **`apps.licensing` is dropped.** [SETUP.md](../wall-e/SETUP.md) Phase 15, before
+   2026-09-13 (when it still built Eve's credential in Wall-E's project), granted it with
+   the justification "Eve needs to read assignments"; the scope list above is this phase's
+   own. That justification does not survive:
    the privilege is indivisible, it carries assign and revoke, and Eve holds no write
    privilege at any stage ever. The cost is real and is accepted rather than argued away —
    F7 licence changes can only be verified from Google-written licence events, recorded
@@ -836,42 +892,71 @@ previous still-valid token and the kill switch does nothing. Do not assume the n
 `walle-actions@` must not appear in that loop, and it cannot: it has no principal in this
 project at all. That is the project boundary doing the work that IAM hygiene used to do.
 
-**Cross-project grants**, run against **Wall-E's** project:
+**Cross-project grants in `WALLE_PROJECT` — provided by Wall-E's runbook at S3 entry, not
+made here.** Exactly two kinds of grant to Eve identities exist in `WALLE_PROJECT`, both on
+a resource, both made by Wall-E's runbook ([../project-topology.md](../project-topology.md)
+§3 rows 3 and 4): `run.invoker` on the service `walle-actions` through SETUP Phase 10's
+loop (CC-20), and dataset-level `READER` on `walle_audit` through SETUP Phase 7 (CC-22,
+next paragraph), all against the `@${EVE_PROJECT}` emails in the shell block. **No
+project-level role for any Eve identity exists in `WALLE_PROJECT`**: `EVE_PROJECT_ROLES` in
+`walle_setup.py` is `()` since 2026-09-13 and SETUP Phase 6 refuses the line;
+`agentregistry.viewer` is dropped (topology decision 43 — no resource-level form exists and
+no Eve duty needs it); `datastore.viewer` is **not granted**. Eve's Firestore discovery read
+of `plans/{id}` at `pending_eve` therefore has no grant behind it until topology decision
+44 lands — either `datastore.viewer` under an IAM Condition scoped to Wall-E's `(default)`
+database (Firestore documents database-scoped conditions,
+https://docs.cloud.google.com/firestore/docs/security/iam; the expression is **unverified**
+and is Wall-E's spike), or the list endpoint `GET /v1/plans?state=pending_eve` on
+`walle-actions` (CC-33). Until one of them lands, `eve-gate` cannot discover work and
+**this phase is blocked at that step**, deliberately: never leave Eve depending on a grant
+Wall-E refuses to make. Hand Wall-E's operator the three emails, then **verify with checks
+3 and 6 below**. For reference, what Wall-E's runbook runs — it needs
+`run.services.setIamPolicy` in `WALLE_PROJECT`, which no Eve principal holds:
 
 ```bash
-for M in "$SA_EVE" "$SA_EVE_VERIFIER"; do
-  gcloud projects add-iam-policy-binding "$PROJECT" \
-    --member="serviceAccount:${M}" --role=roles/datastore.viewer
-  gcloud projects add-iam-policy-binding "$PROJECT" \
-    --member="serviceAccount:${M}" --role=roles/agentregistry.viewer
-done
-
+# Wall-E's runbook, in WALLE_PROJECT — reference only, never run from Eve's side.
+# No `gcloud projects add-iam-policy-binding "$WALLE_PROJECT"` line for any Eve
+# identity exists any more; one appearing here would be the old placement.
 for M in "$SA_EVE" "$SA_EVE_VERIFIER" "$SA_EVE_CONSOLE"; do
   gcloud run services add-iam-policy-binding walle-actions \
-    --project="$PROJECT" --region="$REGION" \
+    --project="$WALLE_PROJECT" --region="$REGION" \
     --member="serviceAccount:${M}" --role=roles/run.invoker
 done
 ```
 
-Those two project-level roles are the **only** ones Eve holds in Wall-E's project, and both
-are read-only. [E-12](09-open-decisions.md) exists because an earlier wording said
-`datastore.viewer` was the only one while the runbook granted `agentregistry.viewer` as
-well; the reworded rule is "no project-level role beyond the two named read-only roles, and
-no write role".
+[E-12](09-open-decisions.md) exists because an earlier wording said `datastore.viewer`
+was Eve's only project-level role while the runbook granted `agentregistry.viewer` as
+well; it is settled by removal — the rule is now "no project-level role in `WALLE_PROJECT`
+at all", the mirror image of Wall-E's `check_project_roles`, and check 3 below asserts it.
 
-Add the dataset-level `READER` entry on `walle_audit` for both identities, exactly as
-Phase 2 did for `eve-v0@`, and `roles/bigquery.jobUser` for both in **Eve's own** project so
-query cost and job quota never touch Wall-E's.
+The dataset-level `READER` entry on `walle_audit` for `eve-controller@` and `eve-verifier@`
+is likewise **Wall-E's runbook's step** (CC-22, exactly as for `eve-v0@` in Phase 2), made
+in `WALLE_PROJECT` against the `@${EVE_PROJECT}` emails. What Eve makes here is the job
+right in its own project, so query cost and job quota never touch Wall-E's:
+
+```bash
+# in EVE_PROJECT — Eve's own step
+for M in "$SA_EVE" "$SA_EVE_VERIFIER"; do
+  gcloud projects add-iam-policy-binding "$EVE_PROJECT" \
+    --member="serviceAccount:${M}" --role=roles/bigquery.jobUser
+done
+```
 
 `run.invoker` is granted per **service**, not per path. What keeps Eve out of
 `POST /v1/execute` is the per-endpoint allowlist inside `walle-actions`, keyed on the
-verified identity token. Update it now:
+verified identity token. That allowlist is **Wall-E's configuration in `WALLE_PROJECT`**,
+owned and asserted by `walle_setup.py` (CC-30), and it is **provided by Wall-E's runbook at
+S3 entry**:
 
-```bash
-# in Wall-E's project: CONTROL_CALLER_ALLOWLIST gains eve-verifier@ and keeps $OPERATORS
-gcloud run services update walle-actions --project="$PROJECT" --region="$REGION" \
-  --update-env-vars="CONTROL_CALLER_ALLOWLIST=${SA_EVE},${SA_EVE_VERIFIER},${OPERATORS}"
 ```
+CONTROL_CALLER_ALLOWLIST=${SA_EVE},${SA_EVE_VERIFIER},${OPERATORS}   # cross-project emails
+```
+
+Do not set it from Eve's side: `gcloud run services update --update-env-vars` replaces the
+whole value, and an Eve-side command would clobber whatever else Wall-E stores alongside —
+in particular the **read-endpoint allowlist**, a separate list carrying
+`eve-console@${EVE_PROJECT}…` (`GET /v1/plans`, `GET /v1/ladder`) and
+`mo-analyst@<MO_PROJECT>` (`GET /v1/plans`, `GET /v1/runs` only). Verify with check 6.
 
 **`${OPERATORS}` must stay in that list.** If the service treats the variable as exhaustive
 — the fail-closed reading, and the only safe one — then Eve alone means no human can halt
@@ -891,9 +976,13 @@ gcloud storage buckets update "$EVE_EVIDENCE" --lock-retention-period
 gcloud storage buckets add-iam-policy-binding "$EVE_EVIDENCE" \
   --member="serviceAccount:${SA_EVE_VERIFIER}" --role=roles/storage.objectCreator
 
-# Wall-E's CI publishes the ladder artefact, create-only, into its own prefix
+# Wall-E's CI (CI_DEPLOYER, a WALLE_PROJECT principal) publishes the ladder artefact,
+# create-only, into its own prefix. This is the one Eve-made resource-level grant to a
+# Wall-E principal at S3 entry — one of exactly three such grants in EVE_PROJECT
+# (topology decision 48, row 16); it is bucket-level with a prefix condition, never a
+# project-level role.
 gcloud storage buckets add-iam-policy-binding "$EVE_EVIDENCE" \
-  --member="serviceAccount:<walle-ci-identity>" --role=roles/storage.objectCreator \
+  --member="serviceAccount:${SA_WALLE_CI}" --role=roles/storage.objectCreator \
   --condition='expression=resource.name.startsWith("projects/_/buckets/'"${EVE_PROJECT}"'-eve-evidence/objects/ladder/"),title=ladder-prefix-only'
 ```
 
@@ -930,51 +1019,78 @@ for S in eve-oauth-client eve-refresh-token; do
     --flatten='bindings[].members' --filter="bindings.members:${SA_ACTIONS}" \
     --format='value(bindings.members)'
 done
+# the second loop reads secret policies in WALLE_PROJECT: it needs
+# secretmanager.secrets.getIamPolicy there and is run by the human owner. --location
+# presumes Wall-E's secrets are regional, per Wall-E's set.
 for S in walle-oauth-client walle-refresh-token walle-confirm-hmac; do
-  gcloud secrets get-iam-policy "$S" --location="$REGION" --project="$PROJECT" \
+  gcloud secrets get-iam-policy "$S" --location="$REGION" --project="$WALLE_PROJECT" \
     --flatten='bindings[].members' \
     --filter="bindings.members:${SA_EVE} OR bindings.members:${SA_EVE_VERIFIER}" \
     --format='value(bindings.members)'
 done
 
-# 2. Wall-E's deployers hold nothing in Eve's project
-gcloud projects get-iam-policy "$EVE_PROJECT" --flatten='bindings[].members' \
-  --filter="bindings.members:${SA_ACTIONS}" --format='value(bindings.role)'
-# expect: nothing
-
-# 3. Eve holds exactly two read-only project roles in Wall-E's project and no more
-for M in "$SA_EVE" "$SA_EVE_VERIFIER"; do
-  gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' \
+# 2. Wall-E's deployers hold no project-level role in Eve's project, and none on the
+#    folder. A project-level read misses inherited bindings, so read both levels.
+for M in "$SA_ACTIONS" "$SA_WALLE_CI" "<walle-deployer-group>"; do
+  gcloud projects get-iam-policy "$EVE_PROJECT" --flatten='bindings[].members' \
+    --filter="bindings.members:${M}" --format='value(bindings.role)'
+  gcloud resource-manager folders get-iam-policy "$FOLDER_ID" --flatten='bindings[].members' \
     --filter="bindings.members:${M}" --format='value(bindings.role)'
 done
-# expect exactly: roles/datastore.viewer and roles/agentregistry.viewer
+# expect: nothing, six times. The three resource-level carve-outs for Wall-E principals
+# (CI on the bucket prefix; walle-actions@ on the key and on the receipts dataset, both
+# S4) do not appear here because they are not project-level bindings — that is the
+# point. The one Mo carve-out (mo-metrics@${MO_PROJECT}, dataset-level READER on the
+# mirror's dataset, from S4 — Phase 11, topology row 18) is likewise dataset-level and
+# never appears in the project policy; Phase 12's drift job expects exactly it from S4
+# and fails on any other Mo principal, or on the same one before S4.
 
-# 4. no aiplatform permission anywhere on either Eve identity
+# 3. no Eve identity holds ANY project-level role in Wall-E's project — the mirror
+#    image of Wall-E's check_project_roles (reads WALLE_PROJECT's policy: human owner,
+#    or Wall-E's drift job from its side)
+for M in "$SA_EVE" "$SA_EVE_VERIFIER" "$SA_EVE_CONSOLE" "$SA_EVE_V0"; do
+  gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten='bindings[].members' \
+    --filter="bindings.members:${M}" --format='value(bindings.role)'
+done
+# expect: nothing, four times. A non-empty result is a defect — the old placement, or a
+# datastore.viewer someone restored — until topology decision 44 names a resource-scoped
+# form (a binding carrying an IAM Condition on the (default) database), which is then the
+# one line this check is updated to expect, with the condition, and nothing else.
+
+# 4. no aiplatform permission anywhere on either Eve identity — in Eve's project, in
+#    Wall-E's, and in the Gemini app's project, where a discoveryengine or aiplatform
+#    grant to an Eve identity would be most damaging. Reading GEMINI_PROJECT's policy
+#    needs viewer there (human owner).
 for M in "$SA_EVE" "$SA_EVE_VERIFIER"; do
-  for P in "$EVE_PROJECT" "$PROJECT"; do
+  for P in "$EVE_PROJECT" "$WALLE_PROJECT" "$GEMINI_PROJECT"; do
     gcloud projects get-iam-policy "$P" --flatten='bindings[].members' \
-      --filter="bindings.members:${M} AND bindings.role:aiplatform" \
+      --filter="bindings.members:${M} AND (bindings.role:aiplatform OR bindings.role:discoveryengine)" \
       --format='value(bindings.role)'
   done
 done
-# expect: nothing, four times. In particular no reasoningEngines.query.
+# expect: nothing, six times. In particular no reasoningEngines.query.
 
 # 5. the retention policy is locked
 gcloud storage buckets describe "$EVE_EVIDENCE" \
   --format='value(retentionPolicy.isLocked,retentionPolicy.retentionPeriod)'
 # expect: True  34560000
 
-# 6. the allowlist landed with BOTH Eve identities and the operators group
-gcloud run services describe walle-actions --project="$PROJECT" --region="$REGION" \
+# 6. the allowlist landed with BOTH Eve identities and the operators group, as
+#    cross-project emails (needs run.viewer in WALLE_PROJECT: human owner)
+gcloud run services describe walle-actions --project="$WALLE_PROJECT" --region="$REGION" \
   --format='value(spec.template.spec.containers[0].env)' | tr ';' '\n' \
   | grep CONTROL_CALLER_ALLOWLIST
 ```
 
 Checks 1 and 2 are the ones to re-run after every future IAM change, in both directions,
-forever. CI asserts check 4, and Wall-E's own drift job asserts check 2 from the other side.
+forever. CI asserts check 4. **Eve's own daily drift job asserts check 2** — it reads
+`EVE_PROJECT`'s and `FOLDER_ID`'s policies, which Wall-E's drift job cannot do without a
+grant CC-29 forbids; **Wall-E's drift job asserts check 3 from its side** (topology
+decision 46, recorded in [02-identity-and-auth.md](02-identity-and-auth.md)).
 
-**Rollback.** Delete the three service accounts, delete the two secrets, remove the
-cross-project bindings, revert `CONTROL_CALLER_ALLOWLIST` to `${SA_EVE},${OPERATORS}`.
+**Rollback.** Delete the three service accounts, delete the two secrets, and ask Wall-E's
+operator to remove the `WALLE_PROJECT` bindings and to revert `CONTROL_CALLER_ALLOWLIST` to
+`${SA_EVE},${OPERATORS}` through Wall-E's runbook (both are `WALLE_PROJECT` edits).
 **The bucket cannot be rolled back** — a locked retention policy cannot be removed, and the
 project cannot be deleted while the lien stands. If you are abandoning Eve after this
 command, the bucket and its objects persist until the retention period expires. That is the
@@ -1048,7 +1164,7 @@ gcloud run jobs deploy eve-reconciler \
   --image="${EVE_AR}/reconciler" \
   --service-account="$SA_EVE_VERIFIER" \
   --tasks=1 --max-retries=1 --task-timeout=1800s \
-  --set-env-vars="^;^EVE_PROJECT=${EVE_PROJECT};WALLE_PROJECT=${PROJECT};ACTIONS_URL=<actions-url>;REFRESH_TOKEN_SECRET=eve-refresh-token;EVE_TOKEN_VERSION=${EVE_TOKEN_VERSION};EVIDENCE_BUCKET=${EVE_EVIDENCE#gs://};LADDER_PREFIX=ladder/"
+  --set-env-vars="^;^EVE_PROJECT=${EVE_PROJECT};WALLE_PROJECT=${WALLE_PROJECT};ACTIONS_URL=<actions-url>;REFRESH_TOKEN_SECRET=eve-refresh-token;EVE_TOKEN_VERSION=${EVE_TOKEN_VERSION};EVIDENCE_BUCKET=${EVE_EVIDENCE#gs://};LADDER_PREFIX=ladder/"
 ```
 
 Each pass is one Cloud Scheduler job invoking the same Cloud Run job with a different
@@ -1267,11 +1383,18 @@ gcloud kms keys versions get-public-key 1 \
 # copy 1: the keys/ prefix of the LOCKED evidence bucket Phase 9 already created
 gcloud storage cp ./eve-approval-v1.pem "${EVE_KEYS}/eve-approval-v1.pem"
 
-# copy 2: committed to Wall-E's repository under ladder.yaml's CODEOWNERS
-cp ./eve-approval-v1.pem wall-e/contracts/eve-public-keys/1.pem
-git -C wall-e add contracts/eve-public-keys/1.pem
-git -C wall-e commit -m "eve-approval public key, version 1, exported at creation"
+# copy 2: handed over to Wall-E. The commit lands in Wall-E's repository under
+# ladder.yaml's CODEOWNERS and is Wall-E's runbook's step (CC-21): Eve's runbook exports
+# the PEM and hands it over; the merge needs two reviewers and must precede the first
+# signature. What Wall-E's side does with it, for reference:
+#   cp ./eve-approval-v1.pem wall-e/contracts/eve-public-keys/1.pem
+#   git -C wall-e add contracts/eve-public-keys/1.pem
+#   git -C wall-e commit -m "eve-approval public key, version 1, exported at creation"
+#   ... then a pull request with two distinct approving reviewers, neither the author.
 ```
+
+Do not sign until that pull request is merged: a signature that exists before the pinned
+copy does is one the primary path cannot verify.
 
 **One bucket, not two.** The archive is a prefix of the locked evidence bucket from Phase 9,
 not a bucket of its own. A fresh bucket would be an ordinary bucket: every project owner and
@@ -1303,10 +1426,15 @@ gcloud kms keys add-iam-policy-binding eve-approval \
   --member="serviceAccount:${SA_ACTIONS}" --role=roles/cloudkms.publicKeyViewer
 ```
 
-`walle-actions@` gets `publicKeyViewer` and **nothing else, ever**. Never
-`roles/cloudkms.signerVerifier` and never `roles/cloudkms.cryptoOperator`: both carry
-`useToSign`, and either would let the action service mint the approval it is supposed to
-verify. `eve-verifier@` appears in neither binding.
+`walle-actions@<WALLE_PROJECT>` gets `publicKeyViewer` and **nothing else, ever** — on this
+one key in `EVE_PROJECT`, a key-level, cross-project grant for the **fallback path only**,
+and one of the three resource-level grants to Wall-E principals in `EVE_PROJECT` (topology
+decision 48, row 14). Never ring- or project-level. The pinned PEM is the primary path and
+needs no cross-project KMS grant at all, so this binding may be omitted entirely if the
+fallback is not wanted. Never `roles/cloudkms.signerVerifier` and never
+`roles/cloudkms.cryptoOperator`: both carry `useToSign`, and either would let the action
+service mint the approval it is supposed to verify. `eve-verifier@` appears in neither
+binding.
 
 **Data Access audit logging on the signature.** `AsymmetricSign` requires
 `cloudkms.cryptoKeyVersions.useToSign`, which is typed `DATA_READ`, so it is a Data Access
@@ -1347,7 +1475,7 @@ gcloud run jobs deploy eve-gate \
   --service-account="$SA_EVE" \
   --args=gate \
   --tasks=1 --max-retries=0 --task-timeout=300s \
-  --set-env-vars="^;^EVE_PROJECT=${EVE_PROJECT};WALLE_PROJECT=${PROJECT};ACTIONS_URL=<actions-url>;EVE_KEY_VERSION=${EVE_KEY_VERSION};REFRESH_TOKEN_SECRET=eve-refresh-token;EVE_TOKEN_VERSION=${EVE_TOKEN_VERSION}"
+  --set-env-vars="^;^EVE_PROJECT=${EVE_PROJECT};WALLE_PROJECT=${WALLE_PROJECT};ACTIONS_URL=<actions-url>;EVE_KEY_VERSION=${EVE_KEY_VERSION};REFRESH_TOKEN_SECRET=eve-refresh-token;EVE_TOKEN_VERSION=${EVE_TOKEN_VERSION}"
 
 # eve-gate-poll runs AS eve-controller@; same resource-scoped actAs grant as Phase 10.
 gcloud iam service-accounts add-iam-policy-binding "$SA_EVE" \
@@ -1371,16 +1499,52 @@ then fetching the body from `GET /v1/plans/{id}`. No topic, no subscription, no 
 Eve is a client everywhere, which is what makes "Eve is down" an absence and what makes it
 structurally impossible for a safety interlock to run through a conversation.
 
-**The existence-only receipt view**, the one thing `walle-actions` may read from Eve:
+**The existence-only receipt view**, the one thing `walle-actions` may read from Eve. An
+authorized view **must live in a different dataset from its source**, in the same location
+(verified 2026-09-13, https://docs.cloud.google.com/bigquery/docs/authorized-views: "Create a
+dataset to contain your authorized view"; "the source data dataset and authorized view
+dataset must be in the same regional location"), so it cannot sit in `eve`. Three steps:
+create the view's own dataset in `EVE_PROJECT`; add the view to the `eve` dataset's access
+list as an authorized view (a `view` entry in the access array, via `bq update --source`, or
+the console's Sharing > Authorize views); grant `walle-actions@` `dataViewer` on the view's
+dataset — nothing on `eve`.
 
 ```bash
+# 1. the view's own dataset. Name tbd (topology decision 48); Assumption: eve_receipts.
+bq --location="$BQ_LOCATION" mk --dataset \
+  --description="Existence-only verdict receipts for walle-actions; authorized on eve" \
+  "${EVE_PROJECT}:${EVE_RECEIPTS_DS}"
+
 bq mk --use_legacy_sql=false --view \
   "SELECT run_id, item, verdict_ts FROM \`${EVE_PROJECT}.eve.verdicts\`" \
-  "${EVE_PROJECT}:eve.verdict_receipts"
+  "${EVE_PROJECT}:${EVE_RECEIPTS_DS}.verdict_receipts"
 
-# authorize the view over the eve dataset, then grant walle-actions@ READER on the view only
-bq add-iam-policy-binding --member="serviceAccount:${SA_ACTIONS}" \
-  --role=roles/bigquery.dataViewer "${EVE_PROJECT}:eve.verdict_receipts"
+# 2. authorize the view on the eve dataset: a 'view' entry in eve's access array
+bq show --format=prettyjson "${EVE_PROJECT}:eve" > /tmp/eve.json
+P="$EVE_PROJECT" D="$EVE_RECEIPTS_DS" python3 - <<'EOF'
+import json, os
+d = json.load(open('/tmp/eve.json'))
+d.setdefault('access', []).append({"view": {"projectId": os.environ['P'],
+                                            "datasetId": os.environ['D'],
+                                            "tableId": "verdict_receipts"}})
+json.dump(d, open('/tmp/eve.json', 'w'))
+EOF
+bq update --source=/tmp/eve.json "${EVE_PROJECT}:eve"
+
+# 3. walle-actions@<WALLE_PROJECT> reads the view's dataset and nothing on eve.
+#    Dataset-level READER on the view's dataset — one of the three resource-level grants
+#    to Wall-E principals in EVE_PROJECT (topology decision 48, row 15). The query jobs
+#    for that read run in WALLE_PROJECT under walle-actions@'s own job-creation right
+#    there (SETUP Phase 8: a custom role carrying bigquery.jobs.create if load jobs are
+#    used, never roles/bigquery.jobUser, which walle-actions@ does not hold).
+bq show --format=prettyjson "${EVE_PROJECT}:${EVE_RECEIPTS_DS}" > /tmp/receipts.json
+SA="$SA_ACTIONS" python3 - <<'EOF'
+import json, os
+d = json.load(open('/tmp/receipts.json'))
+d.setdefault('access', []).append({"role": "READER", "userByEmail": os.environ['SA']})
+json.dump(d, open('/tmp/receipts.json', 'w'))
+EOF
+bq update --source=/tmp/receipts.json "${EVE_PROJECT}:${EVE_RECEIPTS_DS}"
 ```
 
 Three columns and no verdict content. The service checks that evidence **arrived** and can
@@ -1388,6 +1552,55 @@ never branch on what it says. That narrowing is the whole of [E-17](09-open-deci
 and it is re-argued at this phase rather than assumed: a compromised Eve can still write
 false receipts and suppress the evidence-stale sweeper, which is exactly why that sweeper is
 absence-only and why the blind sample, not Eve, is the precision input.
+
+**The one Mo carve-out: `mo-metrics@${MO_PROJECT}` reads the mirror, from S4.** Topology
+row 18 and decision 51 make Eve's `walle_audit_mirror` the off-project evidence copy that
+Mo reads from S4 instead of the live dataset ([../mo/08-open-decisions.md](../mo/08-open-decisions.md)
+M-5), so Wall-E's deployers cannot rewrite the evidence Mo argues from. The grant is
+dataset-level `READER`, made by Eve's owner, on **the mirror's dataset only** — and a
+dataset-level `READER` covers every table in the dataset, so the mirror leaves `eve` first
+(which holds `verdicts`, `findings` and the blind tables) for a dataset of its own,
+`${EVE_MIRROR_DS}` (`Assumption:` `eve_mirror`, name *tbd*, decision 51). This is the one
+entry of a second carve-out list, next to the three Wall-E ones; the drift job of Phase 12
+expects exactly it from S4 and fails on any other Mo principal, or on this one before S4.
+
+```bash
+# 4. the mirror's own dataset, and the daily copy retargeted to it
+bq --location="$BQ_LOCATION" mk --dataset \
+  --description="Append-only daily copy of walle_audit; read by Eve and, from S4, by mo-metrics@" \
+  --default_partition_expiration=34560000 \
+  "${EVE_PROJECT}:${EVE_MIRROR_DS}"
+bq cp "${EVE_PROJECT}:eve.walle_audit_mirror" "${EVE_PROJECT}:${EVE_MIRROR_DS}.walle_audit_mirror"
+# Retarget the Phase 3 daily copy job's destination to ${EVE_MIRROR_DS}.walle_audit_mirror
+# (its transfer config's destination dataset), run it once by hand, compare row counts per
+# partition between the two tables, THEN drop eve.walle_audit_mirror. Nothing of Eve's own
+# (verdicts, findings, the blind views) lives in ${EVE_MIRROR_DS}.
+
+# 5. mo-metrics@<MO_PROJECT>: dataset-level READER on the mirror's dataset, nothing on eve.
+#    The query jobs run and are billed in MO_PROJECT (jobUser there, Mo-2), never here.
+bq show --format=prettyjson "${EVE_PROJECT}:${EVE_MIRROR_DS}" > /tmp/mirror.json
+SA="$SA_MO_METRICS" python3 - <<'EOF'
+import json, os
+d = json.load(open('/tmp/mirror.json'))
+entry = {"role": "READER", "userByEmail": os.environ['SA']}
+if entry not in d.setdefault('access', []):
+    d['access'].append(entry)
+json.dump(d, open('/tmp/mirror.json', 'w'))
+EOF
+bq update --source=/tmp/mirror.json "${EVE_PROJECT}:${EVE_MIRROR_DS}"
+# expect, on eve itself: no userByEmail entry for mo-metrics@ — ever.
+bq show --format=prettyjson "${EVE_PROJECT}:eve" \
+  | python3 -c "import json,sys;print([a for a in json.load(sys.stdin)['access'] if 'mo-' in json.dumps(a)])"
+# expect: []
+```
+
+`Assumption:` the mirror carries only the columns Mo reads (`params_redacted` included,
+which is the disclosure Mo's [06-failure-modes.md](../mo/06-failure-modes.md) already
+owns for the live dataset); if the S4 review narrows Mo's read further, the narrowing is a
+view in `${EVE_MIRROR_DS}` authorized on itself, not a change to this grant. Eve's own
+readers of the mirror (`eve-v0@`, `eve-verifier@`, `eve-console@`) keep their `eve`-level
+roles and gain the same role on `${EVE_MIRROR_DS}`; that is inside Eve's project and
+crosses nothing.
 
 **Wall-E's edits, landing with this phase.** Every one is in
 [08-contract-changes.md](08-contract-changes.md):
@@ -1397,7 +1610,7 @@ absence-only and why the blind sample, not Eve, is the precision input.
 | Signature verification against the pinned PEM, with the full key-version resource name taken from the envelope | `walle-actions` |
 | Per-item accept/reject vector verification against `items_hash` | `walle-actions` |
 | `eve_authority` enforced per cell; absent reads as **advisory**; an Eve signature for an advisory cell is refused `eve_authority_advisory` | `walle-actions`, `ladder.yaml` schema |
-| The `eve.verdict_receipts` read, wired to `eve_evidence_stale` | `walle-actions` |
+| The `${EVE_RECEIPTS_DS}.verdict_receipts` read (the receipts dataset, never `eve`), wired to `eve_evidence_stale` | `walle-actions` |
 | `eve_key_version` and `approver_type` columns on the `approvals` row | `walle_audit` schema, [03-lld.md](../wall-e/03-lld.md) |
 | An Eve-rejected item becomes `skipped_by_operator` with `approver_type: eve` — not a new state | [03-lld.md](../wall-e/03-lld.md) |
 
@@ -1451,10 +1664,15 @@ gcloud storage buckets describe "$EVE_EVIDENCE" \
 # expect: True  34560000
 # If isLocked is False the archive is deletable and the forgery argument does not hold.
 
-# 5. the receipt view exposes three columns and nothing else
-bq show --schema --format=prettyjson "${EVE_PROJECT}:eve.verdict_receipts" \
+# 5. the receipt view exposes three columns and nothing else, lives outside eve, is
+#    authorized on eve, and walle-actions@ holds nothing on eve itself
+bq show --schema --format=prettyjson "${EVE_PROJECT}:${EVE_RECEIPTS_DS}.verdict_receipts" \
   | python3 -c "import json,sys;print([f['name'] for f in json.load(sys.stdin)])"
 # expect: ['run_id', 'item', 'verdict_ts']
+bq show --format=prettyjson "${EVE_PROJECT}:eve" \
+  | python3 -c "import json,sys;[print(a) for a in json.load(sys.stdin)['access'] if 'view' in a or 'walle-actions' in json.dumps(a)]"
+# expect: exactly one entry, the view entry naming ${EVE_RECEIPTS_DS}.verdict_receipts;
+#         no userByEmail entry for walle-actions@
 
 # 6. Data Access logging is on for KMS
 gcloud projects get-iam-policy "$EVE_PROJECT" --format=json \
@@ -1513,6 +1731,19 @@ If it returns false, teardown must **refuse the flag and exit non-zero**, naming
 version and both expected paths. Not prompt, not warn — refuse. The operator running
 teardown is by definition not thinking about evidence retention.
 
+**Who may run it, decided 2026-09-13 with the topology (decision file *tbd*).** The key
+lives in `EVE_PROJECT`, so destroying a version is a cross-project act from Wall-E's
+script's point of view, and under least privilege it is **not Wall-E's teardown's to do as
+a Wall-E identity**: no Wall-E service identity holds, or may ever hold, `cloudkms.admin`
+on Eve's key ring. The flag stays in `walle_setup.py` because the guard code is there
+(CC-21), but it targets `EVE_PROJECT` (the `ctx.need("EVE_PROJECT")` above) and runs
+**only as a human holding `roles/cloudkms.admin` on ring `eve` in `EVE_PROJECT`** — the Eve
+owner — with Wall-E's repository checked out for the second copy. The alternative, moving
+key-version destruction into an Eve-side teardown with the same two-copy guard, was
+considered and set aside so the guard has one implementation; it is reopened if the two
+owner groups of [E-2](09-open-decisions.md) become different people. The guard logic itself
+is unchanged.
+
 Two other teardown facts worth writing down before they are discovered:
 
 - From Phase 7, an **organisation-level sink outlives the project**. Delete
@@ -1549,7 +1780,7 @@ the additional ones Eve's build owns. The numbering is this document's own.
 | **EVE-9** | A valid signature for a plan whose hold window elapsed during an outage | Refused. The plan is expired; Eve never resumes it. |
 | **EVE-10** | An approval replayed after the key version was disabled | Still **verifiable** against the archived PEM, and still refused as used |
 | **EVE-11** | A verdict carrying a reason code absent from `reasons.yaml` | Rejected before signing |
-| **EVE-12** | `walle-actions@` reads `eve.verdicts` directly | Denied. Only the `verdict_receipts` view is granted. |
+| **EVE-12** | `walle-actions@` reads `eve.verdicts` directly, or any table in `eve` | Denied. Only the `verdict_receipts` view's own dataset (`${EVE_RECEIPTS_DS}`) is granted; `walle-actions@` holds nothing on `eve`. |
 | **EVE-13** | An Eve image built with any denylisted model dependency in its lockfile | CI build fails |
 | **EVE-14** | Either Eve identity holding any `aiplatform.*` permission | CI IAM assertion fails |
 | **EVE-15** | A display name containing bidirectional overrides or zero-width characters reaching a veto notification | Canonicalised before comparison **and** before display: control characters stripped, whitespace collapsed, length capped, markdown escaped |
@@ -1619,8 +1850,8 @@ Three general rules for a half-failed step anywhere in this runbook:
 
 ## Verified facts used in this runbook
 
-All checked 2026-09-12. Anything not in this table and not in the skeleton this page was
-written from is `tbd` rather than assumed.
+All checked 2026-09-12 unless the row says 2026-09-13. Anything not in this table and not
+in the skeleton this page was written from is `tbd` rather than assumed.
 
 | Fact | Source |
 |---|---|
@@ -1640,6 +1871,10 @@ written from is `tbd` rather than assumed.
 | A locked retention policy cannot be removed or shortened; retention locking applies a lien preventing project deletion | [Bucket Lock](https://docs.cloud.google.com/storage/docs/using-bucket-lock), [Object Retention Lock](https://docs.cloud.google.com/storage/docs/object-lock) |
 | IAP can be enabled directly on a Cloud Run service with `--iap`, with the IAP service agent granted `roles/run.invoker` and access granted through `roles/iap.httpsResourceAccessor` | [IAP for Cloud Run](https://docs.cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run) |
 | BigQuery Data Transfer Service writes logs under the monitored resource type `bigquery_dts_config` | [Monitor BigQuery Data Transfer Service](https://docs.cloud.google.com/bigquery/docs/dts-monitor) |
+| `gcloud projects create` takes `--folder=FOLDER_ID`, "ID for the folder to use as a parent", as the alternative to `--organization` (verified 2026-09-13) | [gcloud projects create](https://docs.cloud.google.com/sdk/gcloud/reference/projects/create) |
+| An authorized view must live in a **different dataset** than the dataset its query reads, and the two datasets must be in the same regional location; a principal querying it needs `dataViewer` on the view's dataset and nothing on the source (verified 2026-09-13) | [Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views) |
+| `gcloud resource-manager folders get-iam-policy FOLDER_ID` reads a folder's IAM policy and takes `--flatten`, `--filter` and `--format` (verified 2026-09-13); a project-level `get-iam-policy` does not show bindings inherited from the folder | [gcloud resource-manager folders get-iam-policy](https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/folders/get-iam-policy) |
+| Firestore supports IAM Conditions scoped to one or more databases; the per-database condition **expression is unverified** (topology decision 44) | [Firestore IAM](https://docs.cloud.google.com/firestore/docs/security/iam) |
 
 **Deliberately unverified, and must stay so:** Agent Gateway availability in
 `europe-west1`; whether group-management privileges honour OU scoping; whether licence
@@ -1656,5 +1891,6 @@ egress control until the first is answered is VPC Service Controls plus a host a
 - [06-failure-modes.md](06-failure-modes.md) — what happens when a phase's output is wrong, missing or hostile
 - [08-contract-changes.md](08-contract-changes.md) — every edit this runbook forces back on Wall-E's set
 - [09-open-decisions.md](09-open-decisions.md) — the twenty decisions this design does not settle
+- [../project-topology.md](../project-topology.md) — the four projects, which runbook makes each cross-project grant, and decisions 42–52
 - [../wall-e/07-build-runbook.md](../wall-e/07-build-runbook.md) and [../wall-e/SETUP.md](../wall-e/SETUP.md) — Wall-E's equivalents
 - [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) — the contract this runbook builds against

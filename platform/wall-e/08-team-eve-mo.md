@@ -2,7 +2,12 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
+- Placement, 2026-09-13: the three agents and the Gemini Enterprise app live in four
+  separate GCP projects. [../project-topology.md](../project-topology.md) is the authority
+  for which project each identity, key, secret, dataset and topic sits in and for the exact
+  form of every grant that crosses; this page names the home project on each row and
+  points there rather than restating the grants. The contract itself is unchanged.
 - Eve and Mo are now designed: [../eve/README.md](../eve/README.md) and
   [../mo/README.md](../mo/README.md), written 2026-09-12 against this contract. Where they
   depart from it, or where this page contradicts another Wall-E page, the departures are
@@ -50,15 +55,19 @@ is wrong regardless of how convenient it is.
 done correctly and safely". They own different halves of it: Wall-E owns *doing the work*,
 Eve owns *nothing bad getting through and stopping it fast when it does*, Mo owns *the
 system getting better rather than merely older*. The place they meet is the audit dataset
-and the `walle-events` topic — one shared set of facts, three different readings.
+and the `walle-events` topic, both in `WALLE_PROJECT`, reached from `EVE_PROJECT` and
+`MO_PROJECT` through dataset-level `roles/bigquery.dataViewer` and, once a consumer names
+a duty for the topic, a subscription in the reader's own project — one shared set of
+facts, three different readings. No agent's identity is homed in another agent's project
+([../project-topology.md](../project-topology.md)).
 
 ## Identities
 
-| Agent | Runtime identity | Workspace credential | Secrets it may read | Can it call the action service? |
-|---|---|---|---|---|
-| Wall-E | `walle-agent@` on Agent Runtime | none | none | Yes, execute and plan endpoints |
-| Eve | `eve-controller@` | **Its own read-only robot account** — [decision 10](09-open-decisions.md) says yes, and [07](07-build-runbook.md) needs a phase for its consent | `roles/cloudkms.signer` on its own asymmetric key | Yes, control and read endpoints only |
-| Mo | `mo-analyst@` | none | none | **No.** BigQuery reads only |
+| Agent | Home project | Runtime identity | Workspace credential | Secrets it may read | Can it call the action service? |
+|---|---|---|---|---|---|
+| Wall-E | `WALLE_PROJECT` | `walle-agent@` on Agent Runtime, or the agent principal ([12](12-agent-identity.md)) | none | none | Yes, execute and plan endpoints |
+| Eve | `EVE_PROJECT` | `eve-controller@EVE_PROJECT` (Eve's design adds `eve-v0@`, `eve-verifier@`, `eve-console@`, all in `EVE_PROJECT`) | **Its own read-only robot account** — [decision 10](09-open-decisions.md) says yes; its OAuth client and refresh token live in `EVE_PROJECT`'s Secret Manager, provisioned by [../eve/07-build-runbook.md](../eve/07-build-runbook.md), never in Wall-E's project | `roles/cloudkms.signer` on its own asymmetric key `eve-approval`, in `EVE_PROJECT`; Wall-E verifies with the pinned public PEM | Yes, control and read endpoints only: `roles/run.invoker` on `walle-actions` in `WALLE_PROJECT`, a cross-project **resource-level** binding made by Wall-E's owner |
+| Mo | `MO_PROJECT` | `mo-metrics@`, `mo-analyst@`, `mo-narrator@` (designed 2026-09-12, [../mo/02-identity-and-access.md](../mo/02-identity-and-access.md)) | none | none | Only `mo-analyst@MO_PROJECT`, on the two read endpoints (`roles/run.invoker` on `walle-actions`, cross-project). `mo-metrics@MO_PROJECT` holds dataset-level `dataViewer` on `walle_audit` and `walle_workspace_logs`. Nothing of Mo's lives in `WALLE_PROJECT` |
 
 **Eve should get its own Workspace credential.** If Eve verifies through Wall-E's
 credential, a compromised Wall-E path can make the world look however it wants to the
@@ -71,17 +80,17 @@ token costs one more bootstrap and buys genuinely independent observation. Recom
 Everything Eve and Mo need already exists in Wall-E's design. Neither reads Wall-E's memory
 or asks Wall-E questions about itself.
 
-| Surface | Contents | Eve | Mo |
-|---|---|---|---|
-| BigQuery `walle_audit.actions` | every request with principal, level, config version, decision, pre/post hashes, verification | read | read |
-| `walle_audit.runs`, `plans` | frozen plans, per-item pre-state, rollback plan, terminal state, budgets, cost | read | read |
-| `walle_audit.approvals` | who approved what, how long they took, verdicts and reason codes | read | read |
-| `walle_audit.verifications` | verified / drift / unverifiable | read | read |
-| `walle_audit.config_versions` | every ladder change, its decision file, its origin | read | read |
-| Pub/Sub `walle-events` | `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged` (payload: `run_id`, `audit_id`, `source: gateway|actions`, the `filter:confidence` list, `trigger_id`; emitted for dispatcher-invoked runs only, see [11](11-prompt-security.md) section 6) | subscribe | subscribe |
-| Workspace audit logs in Cloud Logging | what the robot account actually did, **written by Google, not by Wall-E** | read | read |
-| Agent Runtime traces and OTel metrics | token spend, tool-call counts, latency per run | — | read |
-| `ladder.yaml` in git | what the level *should* be | read | read |
+| Surface | Contents | Eve | Mo | Lives in / crossed by |
+|---|---|---|---|---|
+| BigQuery `walle_audit.actions` | every request with principal, level, config version, decision, pre/post hashes, verification | read | read | `WALLE_PROJECT`. Read through dataset-level `roles/bigquery.dataViewer` granted to Eve's and Mo's identities in `EVE_PROJECT` and `MO_PROJECT`; jobs run and are billed in the reader's project, never `jobUser` in Wall-E's |
+| `walle_audit.runs`, `plans` | frozen plans, per-item pre-state, rollback plan, terminal state, budgets, cost | read | read | as above |
+| `walle_audit.approvals` | who approved what, how long they took, verdicts and reason codes | read | read | as above |
+| `walle_audit.verifications` | verified / drift / unverifiable | read | read | as above |
+| `walle_audit.config_versions` | every ladder change, its decision file, its origin | read | read | as above |
+| Pub/Sub `walle-events` | `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged` (payload: `run_id`, `audit_id`, `source: gateway\|actions`, the `filter:confidence` list, `trigger_id`; emitted for dispatcher-invoked runs only, see [11](11-prompt-security.md) section 6) | subscribe | subscribe | `WALLE_PROJECT`. Target state ([14](14-hld-challenge.md) C30): a subscription created in the reader's project with `roles/pubsub.subscriber` bound on the topic |
+| Workspace audit logs in Cloud Logging | what the robot account actually did, **written by Google, not by Wall-E** | read | read | Organisation level. Eve reads its own organisation-level sink into `EVE_PROJECT`; Mo reads Wall-E's copy `walle_workspace_logs` in `WALLE_PROJECT` through dataset-level `dataViewer` |
+| Agent Runtime traces and OTel metrics | token spend, tool-call counts, latency per run | — | read | `WALLE_PROJECT`. Mo's cross-project read is *tbd* — `Assumption:` a dataset-level `READER` on the linked `walle_spans` dataset, never a project-level viewer role (decision 49) |
+| `ladder.yaml` in git | what the level *should* be | read | read | The repository; crosses no project |
 
 Join key: `run_id` throughout, plus the ADK `invocation_id` linking traces to audit rows.
 
@@ -90,11 +99,15 @@ Join key: `run_id` throughout, plus the ADK `invocation_id` linking traces to au
 These are the endpoints to build in the action service from the start, even before Eve
 exists. Until then they are exercised by a stub caller in the test suite.
 
+Machine callers are named by their full cross-project service-account email. Each holds
+`roles/run.invoker` on `walle-actions` in `WALLE_PROJECT` — a resource-level binding made by
+Wall-E's owner — and appears in the in-app allowlist by that email, compared byte for byte.
+
 | Interface | Caller | Contract |
 |---|---|---|
-| `GET /v1/plans/{id}` | Eve, Mo | Frozen plan, `plan_hash`, per-item pre-state, `expects`, rollback plan, per-item policy verdict, effective level, config version |
-| `GET /v1/runs/{id}` | Eve, Mo | Run record with terminal state, budgets consumed, per-item outcomes |
-| `POST /v1/plans/{id}/approve` | Eve, or the out-of-band human surface. **Never the agent** | Signed with Eve's **Cloud KMS asymmetric key**, verified by the service with the public half. Carries `plan_hash` and `config_version`, rejected if either differs. Eve signs a hash **it computed itself** |
+| `GET /v1/plans/{id}` | Eve (`eve-controller@EVE_PROJECT`), Mo (`mo-analyst@MO_PROJECT`) | Frozen plan, `plan_hash`, per-item pre-state, `expects`, rollback plan, per-item policy verdict, effective level, config version |
+| `GET /v1/runs/{id}` | Eve (`eve-controller@EVE_PROJECT`), Mo (`mo-analyst@MO_PROJECT`) | Run record with terminal state, budgets consumed, per-item outcomes |
+| `POST /v1/plans/{id}/approve` | Eve (`eve-controller@EVE_PROJECT`), or the out-of-band human surface. **Never the agent** | Signed with Eve's **Cloud KMS asymmetric key** in `EVE_PROJECT`, verified by the service with the public half pinned as PEM in Wall-E's repository. Carries `plan_hash` and `config_version`, rejected if either differs. Eve signs a hash **it computed itself** |
 | `POST /v1/plans/{id}/veto` | operator, Eve | During a hold window |
 | `POST /v1/control/halt` | operator, Eve | `{mode: run \| no_autonomous \| no_writes \| halt_all, reason}` |
 | `POST /v1/control/demote` | operator, Eve | `{family, trigger, to_level, reason}`. **Refuses any value higher than the configured level.** There is no raise endpoint at all. |
@@ -110,7 +123,8 @@ Two hard requirements on these:
 - **`walle-agent@` is excluded from all of them — but not by `run.invoker`.** That grant
   is per *service*, not per path, so IAM alone cannot express this and an earlier draft
   was simply wrong to claim it did. The exclusion is a per-endpoint caller allowlist
-  inside the service, keyed on the verified identity token, and ideally a second Cloud Run
+  inside the service, keyed on the verified identity token — whose allowed values now
+  include service-account emails from `EVE_PROJECT` and `MO_PROJECT` — and ideally a second Cloud Run
   service for the control plane ([decision 18](09-open-decisions.md)). Test it: the agent
   calling `/v1/control/demote` must get a 403.
 
@@ -166,7 +180,7 @@ platform, do it in Mo.
 | Scenario | What must happen |
 |---|---|
 | Eve down | L4 waits. Over four business hours, `no_autonomous` is set automatically. Never fall through to execute. |
-| Eve compromised | It can approve within the current level's blast radius until the next sampled human review. Contained by hold windows, vetoes, caps, and the fact that it cannot raise a level. Revoking its `run.invoker` binding stalls every L4 step. |
+| Eve compromised | It can approve within the current level's blast radius until the next sampled human review. Contained by hold windows, vetoes, caps, and the fact that it cannot raise a level. Revoking the `run.invoker` binding for `eve-controller@EVE_PROJECT` on `walle-actions` — made in `WALLE_PROJECT`, by Wall-E's owner — stalls every L4 step. |
 | Eve and Wall-E disagree persistently | Neither wins automatically. Disagreement above threshold demotes the family and opens a root cause — the disagreement is the finding. |
 | Mo proposes something harmful | Requires a human merge, CI validation, and a decision record. Two humans above L3. |
 | All three unavailable | Nothing happens. The correct outcome. |

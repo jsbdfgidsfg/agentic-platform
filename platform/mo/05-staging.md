@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 
 ## What this page is for
 
@@ -32,10 +32,10 @@ the same decision: see [§ Trust does not grow with age](#trust-does-not-grow-wi
 | Stage | What exists | What it is trusted with |
 |---|---|---|
 | **Before Phase 1** | `config/metrics/toil_baseline.csv` and four weeks of measured baseline toil for the top three admin tasks. Nothing else of Mo | Nothing. It is a measurement humans take, and it exists before Wall-E does because [decision 38](../wall-e/09-open-decisions.md)'s denominator cannot be reconstructed afterwards |
-| **S0 — Eyes** | The four datasets `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` (the surrogate mapping alone, no reader) and `walle_metrics_views` (views only); `mo-metrics@` with the BigQuery grants that do not exist in the runbook today; ~12 scheduled queries committed as `config/metrics/*.sql` under `ladder.yaml`'s reviewers; `gates.yaml`; the golden fixtures and assertion queries; the daily snapshot. **This is "Eve v0", and it is Mo's T0 — there is no later handover because there is no later replacement.** No reporter job, no drop box, no model, no Pub/Sub, no Firestore, no action-service access. `MO_PRINCIPAL` resolves to `mo-analyst@` so Phase 13b has a value | Producing the numbers the S0 exit criteria are read from. A human reads them and signs the S1 decision record; nothing automatic consumes them. Every cell reports `insufficient_data` — the write budget is 0 and no sample approaches 35 — and **no S0 or S1 exit criterion cites Mo's verdict**. What S0 buys is that the definitions are fixed and version-controlled before the first item is graded, which is C18's own instruction |
-| **S1 — Hands held** | Adds `mo-analyst@`, the authorised-view layer, the `mo-reporter` job on a weekly schedule, the freshness absence alert, the cost report and the S1 stop-or-continue document | One decision, and it is a **value** decision rather than a safety one: the dated stop-or-continue review at S1 exit, measured toil saved against operating cost including human hours. Nothing about a level |
+| **S0 — Eyes** | The project `MO_PROJECT`, created under `FOLDER_ID` with billing linked and APIs enabled; in it, the four datasets `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` (the surrogate mapping alone, no reader) and `walle_metrics_views` (views only); `mo-metrics@${MO_PROJECT}` with grants that do not exist in any runbook today, split in two — the in-project ones (`jobUser`, `WRITER` on the four datasets) from Mo's runbook, and two cross-project dataset-level `READER`s on `walle_audit` and `walle_workspace_logs` in `WALLE_PROJECT` from Wall-E's runbook, keyed on `MO_PROJECT`; ~12 scheduled queries committed as `config/metrics/*.sql` under `ladder.yaml`'s reviewers; `gates.yaml`; the golden fixtures and assertion queries; the daily snapshot. **This is "Eve v0", and it is Mo's T0 — there is no later handover because there is no later replacement.** No reporter job, no drop box, no model, no Pub/Sub, no Firestore, no action-service access. `MO_PRINCIPAL` resolves to `mo-analyst@${MO_PROJECT}`; Phase 13b's project-level `roles/agentregistry.viewer` on `WALLE_PROJECT` is dropped or made resource-level ([02-identity-and-access.md](02-identity-and-access.md) §6) | Producing the numbers the S0 exit criteria are read from. A human reads them and signs the S1 decision record; nothing automatic consumes them. Every cell reports `insufficient_data` — the write budget is 0 and no sample approaches 35 — and **no S0 or S1 exit criterion cites Mo's verdict**. What S0 buys is that the definitions are fixed and version-controlled before the first item is graded, which is C18's own instruction |
+| **S1 — Hands held** | Adds, all in `MO_PROJECT`: `mo-analyst@`, the authorised-view layer, the `mo-reporter` job on a weekly schedule, the freshness absence alert with its channel, the cost report and the S1 stop-or-continue document — plus the one cross-project `roles/run.invoker` on `walle-actions` in `WALLE_PROJECT`, made from Wall-E's runbook | One decision, and it is a **value** decision rather than a safety one: the dated stop-or-continue review at S1 exit, measured toil saved against operating cost including human hours. Nothing about a level |
 | **S2 — Proposals** | Adds the scorecard view and page, `ladder-state.md` regeneration, the regression explanation, the grading worklist, the capability-gap ranking, and the weekly plan-hash recomputation. **At S2 exit:** the drop box, CI ingestion, the bot author, and the validator's recompute check. Graded samples first approach 35 on the highest-volume cells. The **back-test** runs here | Telling the ladder owner which cells are close and why, and telling graders what to grade. Verdicts are informational: no promotion cites Mo yet. Proposals are restricted by the template set to **non-ladder** changes — catalogue additions, playbook selection queries, prompt changes, cap changes. A second grader must exist by now, because a `WRITE_HIGH` cell cannot pass L2 without 20 % blind double-grading — **earlier than [decision 11b](../wall-e/09-open-decisions.md) assumes**, a scheduling conflict Mo surfaces rather than resolves |
-| **S3 — Batch approval** | The full pipeline, with Mo's **acceptance test** in progress. The blind sampler runs in preparation for L4, **with the CI-published weekly seed and its append-only per-week seed file in force from entry**. The Spans dataset link is created. Eve is in observe mode and Mo excludes Eve's verdicts from precision entirely | The S3 entry decision is the first that may carry a recomputed evidence block, and the first promotion pull request assembled from a bundle. Mo's verdict is still not the gate — the validator's recomputation is. Authoring promotion pull requests **up to L3**; `WRITE_HIGH` cells stay hard-blocked above L2 until a second grader is named |
+| **S3 — Batch approval** | The full pipeline, with Mo's **acceptance test** in progress. The blind sampler runs in preparation for L4, **with the CI-published weekly seed and its append-only per-week seed file in force from entry**. The Spans dataset link is created in `WALLE_PROJECT` by a human holding `roles/observability.editor` there, and `mo-metrics@${MO_PROJECT}` gets a cross-project dataset-level `READER` on it (a spike, topology decision 49). Eve is in observe mode and Mo excludes Eve's verdicts from precision entirely | The S3 entry decision is the first that may carry a recomputed evidence block, and the first promotion pull request assembled from a bundle. Mo's verdict is still not the gate — the validator's recomputation is. Authoring promotion pull requests **up to L3**; `WRITE_HIGH` cells stay hard-blocked above L2 until a second grader is named |
 | **S4 — Eve gates** | Blind-sample hardening: verdict suppression in the worklist, agreement reporting. The weekly seed is already in force from S3. `agg_eve_latency` becomes computable. Precision for any L4/L5 cell switches to the blind sample **only**. The E35 review path goes live. Optionally `mo-narrator` and the model-family comparison | Being the only route by which L4/L5 precision exists at all. L4 promotion evidence, with two distinct authenticated approving reviewers and a validator recomputation. `WRITE_HIGH` never reaches L5 on any trigger at any stage, and Mo has no template that emits a ceiling change |
 | **S5 — Steady state** | Quarterly rhythm: proposals reviewed, budgets, caps and OU scope re-decided, the demand ranking read for catalogue additions, and the privilege-pruning query — catalogue operations with zero invocations in 90 days — feeding the quarterly removal of privileges the custom role no longer needs | The same as S4. **Mo never accumulates authority with age**; there is no version of Mo whose output is not a proposal. That is deliberate: the one agent that may use a model freely is the one whose ceiling never rises |
 
@@ -49,7 +49,9 @@ the components themselves in [01-hld.md](01-hld.md); the commands in
 | Component | Exists from |
 |---|---|
 | The toil baseline, `config/metrics/toil_baseline.csv` | **Before Phase 1** — the only part of Mo that must exist before Wall-E does |
-| `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private`, `walle_metrics_views` | S0 |
+| The project `MO_PROJECT` under `FOLDER_ID`, billing linked, APIs enabled, its number recorded | S0, before Mo-1 ([07-build-runbook.md](07-build-runbook.md) Mo-1 step 0) |
+| The cross-project grants in `WALLE_PROJECT` — two dataset `READER`s on `walle_audit` and `walle_workspace_logs`, one `run.invoker` on `walle-actions` | S0 (the readers) and S1 (the invoker), from **Wall-E's runbook**, keyed on `MO_PROJECT` |
+| `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private`, `walle_metrics_views`, in `MO_PROJECT` | S0 |
 | T0 — the metric queries, `config/metrics/*.sql` | S0 |
 | `gates.yaml`, the golden fixtures, the assertion queries, the daily snapshot | S0 |
 | `mo-metrics@` and its BigQuery grants | S0 |
@@ -61,7 +63,7 @@ the components themselves in [01-hld.md](01-hld.md); the commands in
 | The CI-published weekly seed and the append-only per-week seed file | **S3**, with the sampler — never later than the first blind draw |
 | The proposal drop box | S2 exit |
 | The validator's recompute check | S2 exit. The §10 ladder gates themselves exist from S0, for Wall-E's own promotions |
-| The linked Spans dataset (`_AllSpans`) | S3, created once by a human holding `roles/observability.editor` — never by Mo |
+| The linked Spans dataset (`_AllSpans`), in `WALLE_PROJECT` | S3, created once by a human holding `roles/observability.editor` in `WALLE_PROJECT` — never by Mo — with a cross-project dataset `READER` for `mo-metrics@${MO_PROJECT}` (spike, decision 49) |
 | T2 — `mo-narrator` | S4, and it is legitimate never to build it ([decision 49](08-open-decisions.md)) |
 
 ## Stage by stage, and why each boundary is where it is
@@ -94,12 +96,14 @@ What changes with the stages is what reads them, never who computes them.
 
 **Unresolved, and it must be settled before either set is built.** Eve's set claims the same
 step: [`../eve/05-stages.md`](../eve/05-stages.md) and
-[`../eve/01-hld.md`](../eve/01-hld.md) build "Eve v0" at S0 as scheduled queries in **Eve's
-own project**, pinned to `eve-v0@`, writing `eve.findings`, computing the same ten §8 metrics.
-Two sets cannot both own one step. Either there is one query set — and the decision is whose
-project it lives in and which service account pins it — or there are two, and the cost, the
-duplicated arithmetic and the risk of two divergent answers to the same §8 threshold have to
-be argued for. Nothing in either design settles it, and neither page should be read as having
+[`../eve/01-hld.md`](../eve/01-hld.md) build "Eve v0" at S0 as scheduled queries in
+`EVE_PROJECT`, pinned to `eve-v0@`, writing `eve.findings`, computing the same ten §8 metrics.
+Both candidates now live in their own projects. Two sets cannot both own one step. Either
+there is one query set in `MO_PROJECT` pinned to `mo-metrics@`, or a second in `EVE_PROJECT`
+pinned to `eve-v0@` — and either way one more cross-project dataset-level `READER` on
+`walle_audit` per pinned account, made from Wall-E's runbook — and if there are two, the
+cost, the duplicated arithmetic and the risk of two divergent answers to the same §8
+threshold have to be argued for. Nothing in either design settles it, and neither page should be read as having
 settled it. It belongs in the next stage decision record, not in a reconciliation of prose.
 
 Nothing at S0 or S1 is gated on a Mo verdict, and that is stated as an exit-criterion
@@ -191,8 +195,9 @@ and every bundle's cited seed is checked against that file at ingestion
 ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §2.2 and §3.3). The sampler and
 the protocol arrive together deliberately — a stage of sampling on an unspecified seed produces
 grades nobody can re-draw, and those are the grades L4 is later argued from. The Spans dataset
-link is created once, by a human holding
-`roles/observability.editor`, never by Mo; and Eve is in observe mode, which means Mo
+link is created once, in `WALLE_PROJECT`, by a human holding
+`roles/observability.editor` there, never by Mo, and Mo's read of it is a cross-project
+dataset `READER`; and Eve is in observe mode, which means Mo
 **excludes Eve's verdicts from precision entirely** — grading Eve's verdicts into Mo's
 precision metric would make Eve's shadow stage self-confirming.
 
@@ -296,11 +301,11 @@ compressed.
 | Stage | Work | Days |
 |---|---|---|
 | Before Phase 1 | Toil baseline: four weeks elapsed, human time | ~2 |
-| S0 | The four Mo datasets, `mo-metrics@`, the BigQuery grants, ~12 scheduled queries, the Wilson and Newcombe UDFs, `gates.yaml`, golden fixtures, assertion queries, the snapshot | 6–9 |
+| S0 | Creating `MO_PROJECT` under `FOLDER_ID` (billing, APIs, project number); the four Mo datasets, `mo-metrics@`, the in-project BigQuery grants, ~12 scheduled queries, the Wilson and Newcombe UDFs, `gates.yaml`, golden fixtures, assertion queries, the snapshot. The two cross-project `READER` grants are executed from Wall-E's runbook by Wall-E's owner — a hand-off, not Mo's keystrokes | `Assumption:` 6–9 |
 | S1 | `mo-reporter` job, Cloud Scheduler, authorised views and surrogate keys, cost report, S1 stop-or-continue document | 4–6 |
 | S2 | Scorecard renderer, `ladder-state.md`, regression explanation, grading worklist, capability-gap ranking, the back-test | 6–9 |
 | S2 exit | Drop box, CI ingestion, bot author, the validator's recompute and sample re-draw — of which ~3 days belong to the **validator custodian**, not to Mo's budget | 5–8 |
-| S3 | Spans link (one-off, by a human with `roles/observability.editor`), acceptance harness including the seeded-fabrication exercise | 3–4 |
+| S3 | Spans link (one-off, in `WALLE_PROJECT`, by a human with `roles/observability.editor` there) and the cross-project `READER` on it, acceptance harness including the seeded-fabrication exercise | 3–4 |
 | S4 | Blind-sample hardening, optional narrator | 3–5 |
 
 Total in Mo's own budget: `Assumption:` **24–37 person-days**, none on the critical path to
@@ -323,6 +328,15 @@ dozen cells a day are single-digit euros. Call it **€25–60 a month at pilot 
 (`Assumption:`), dominated by BigQuery, growing with `actions` volume rather than with the
 number of metrics. Switch the hourly queries to incremental `MERGE` over the last two
 partitions if `actions` passes ~10⁶ rows a month.
+
+**Whose bill.** The on-demand bytes scanned in `walle_audit` are billed to `MO_PROJECT`, not
+to Wall-E's: "the querying project is billed for the query job while the project storing the
+data is billed for the amount of data stored in BigQuery"
+([Run a query](https://docs.cloud.google.com/bigquery/docs/running-queries), verified
+2026-09-13). So the €25–60 is `MO_PROJECT`'s billing line, readable per project in the
+billing export, and storage of the audit series stays on `WALLE_PROJECT`. The topology's
+`Assumption:` of a 50 EUR budget on `MO_PROJECT` at S0 (decision 52) sits inside that range
+and is adjusted after one measured cycle.
 
 ### Run, human — the real number, and the one that decides whether the programme survives
 
@@ -385,7 +399,7 @@ currently ends at decision 41, and the numbers below are assigned in
 | 45 — who is the second grader | S2, and every `WRITE_HIGH` cell from L2 upwards | Before S2 entry |
 | 47 — the pilot OU account count ([decision 5](../wall-e/09-open-decisions.md)) | S2. At a per-cell blind rate of 5 decided items a week the floor of 35 takes seven weeks, so the promotion sample **accumulates** rather than expiring after 30 days — which makes 46's `retention_floor_days` a hard prerequisite for L4 rather than only a clamp. At an unknown and possibly small volume some cells still sit at L2 or L3 permanently, reported as `floor_unreachable_at_current_volume` | Before S2 |
 | 43 — strict fingerprint scoping or a material subset | S4; it decides whether L4 is reachable at a realistic prompt- and model-change cadence. Mo publishes both counts from S2 so the choice is made on data | Before the first L4 promotion is argued |
-| 46 — the retention floor ([decision 17](../wall-e/09-open-decisions.md)) and the owner of the off-project evidence copy ([decision 31](../wall-e/09-open-decisions.md)) | 17 before Stage 1; 31 before S4, when Mo should read the off-project copy | 17 before Stage 1; 31 before S4 |
+| 46 — the retention floor ([decision 17](../wall-e/09-open-decisions.md)) and the owner of the off-project evidence copy ([decision 31](../wall-e/09-open-decisions.md)) | 17 before Stage 1; 31 before S4, when Mo should read the off-project copy. The copy's project is one of the four or a fifth, *tbd*, and must not be `MO_PROJECT`; Mo reading it is one more cross-project dataset-level `READER` for `mo-metrics@${MO_PROJECT}` (topology decision 51 recommends Eve's mirror in `EVE_PROJECT`) | 17 before Stage 1; 31 before S4 |
 | 49 — is T2 built at all, and against which pinned model id | S4 entry | S4 entry |
 | 44 — who may read `walle_metrics` and its artefacts ([decision 35](../wall-e/09-open-decisions.md)) | S1, when the first artefact is published to a reader | Before the first reader is onboarded |
 

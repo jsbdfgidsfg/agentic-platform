@@ -2,11 +2,14 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 - Scope: the arithmetic Mo computes, in enough detail that the CI validator and an auditor
   read the same thing and get the same numbers. Everything on this page is computed by
   committed SQL in `config/metrics/*.sql`, parameterised by `config/metrics/gates.yaml`, and
-  re-executable by anyone holding read on `walle_audit`.
+  re-executable by anyone holding dataset-level read on `${WALLE_PROJECT}.walle_audit` and
+  `bigquery.jobs.create` in a project of their own — never a project-level role in
+  `WALLE_PROJECT`. Mo's own SQL runs in `MO_PROJECT` and names Wall-E's tables fully
+  qualified ([`../project-topology.md`](../project-topology.md)).
 - Companion pages: [README.md](README.md), [01-hld.md](01-hld.md),
   [02-identity-and-access.md](02-identity-and-access.md),
   [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md),
@@ -100,6 +103,17 @@ Three things deliberately **not** in `gates.yaml`:
 
 Both are BigQuery UDFs committed beside the metric SQL, covered by the fixtures in
 [§5](#5-golden-fixtures--the-design-document-is-the-test-oracle), and used nowhere else.
+
+**Where they live, and how the validator gets them.** The persistent routines live in
+`${MO_PROJECT}.walle_metrics`. Evidence SQL that the validator re-executes from another
+project cannot resolve a bare `walle_metrics.wilson_lower`, and must not need a routine
+read in `MO_PROJECT` — the validator holds no binding of any kind there
+([02-identity-and-access.md](02-identity-and-access.md) §5). So the rule is: **every
+committed evidence SQL declares the two functions as `CREATE TEMP FUNCTION` from the same
+committed text** that Mo-3 installs as the persistent routines, and CI asserts the two texts
+are byte-identical. The persistent routines are a convenience for Mo's own scheduled queries;
+the temp declaration is what makes the evidence block self-contained across a project
+boundary. Decided 2026-09-13; the runbook's Mo-3 carries the same note.
 
 ### 3.1 Wilson score interval
 
@@ -307,7 +321,7 @@ the SQL share a misunderstanding.
 | A2 | `precision` is within `[0, 1]` | A denominator of zero, or accepts leaking in from another window |
 | A3 | No row with `verdict = ready` and `n_decided < 35` | The floor being bypassed in the verdict `CASE` |
 | A4 | No row with `verdict = ready` and dwell unsatisfied, or a drill older than 30 days | The two gates that live outside the precision arithmetic |
-| A5 | Every `grades` row joins to an `actions` row | Grades for items that never ran — a fabricated or mis-keyed sample |
+| A5 | Every `grades` row joins to an `actions` row — a cross-project join, both tables in `${WALLE_PROJECT}.walle_audit`, run from `MO_PROJECT` | Grades for items that never ran — a fabricated or mis-keyed sample |
 | A6 | A batch approval never contributes more accepts than its per-item vector has entries | C16's inflation, reintroduced by a join |
 | A7 | No published row carries an email-shaped string | The suppression rule, [§14](#14-the-suppression-rule) |
 | A8 | No published group-by cell has a count between 1 and 4 | Re-identification by small cell |
@@ -344,7 +358,7 @@ shape for all of them.
 | 6 | **Run reliability** | Runs reaching a terminal state within budget, from `runs` | ≥ 99 % | Below 97 %: `no_autonomous` for that playbook | `agg_reliability_playbook` |
 | 7 | **Eve post-hoc latency** | p99 time from an L5 write to Eve's independent verification | ≤ 60 min p99 | Breach: promotions frozen. Above 4 h: L5 cells drop to L4 | `agg_eve_latency` |
 | 8 | **Approval latency** | p50 human time-to-verdict, in **business hours** on the `Europe/Paris` calendar | p50 < 4 business hours | **Blocks stage exit.** Excluded from every promotion and demotion predicate | `agg_approval_latency` |
-| 9 | **Audit completeness** | Workspace admin-audit events by the robot, from `walle_workspace_logs`, with a matching `walle_audit` row | 100 % | Below 100 %: halt writes until reconciled | `agg_audit_completeness` |
+| 9 | **Audit completeness** | Workspace admin-audit events by the robot, from `${WALLE_PROJECT}.walle_workspace_logs`, with a matching `${WALLE_PROJECT}.walle_audit` row — a cross-project join under two dataset-level `READER`s | 100 % | Below 100 %: halt writes until reconciled | `agg_audit_completeness` |
 | 10 | **Drill freshness** | Days since the last kill-switch drill, from the write-ahead `drills` table | ≤ 30 days | Stale: CI refuses **every** promotion | `agg_drill_freshness` |
 
 Those ten `agg_*` views are ten of the **sixteen** supporting aggregates. The other six carry
@@ -380,7 +394,9 @@ would produce the wrong number:
   digest and in the cost report as **waiting time, not effort**, and is absent from the
   scorecard's reason array by construction.
 - **Metric 9 is queried from BigQuery**, through the saved view joining Google's org-level
-  admin events to `walle_audit` requester and approver — never from org-level Cloud Logging,
+  admin events to `walle_audit` requester and approver — Wall-E's view, in `WALLE_PROJECT`,
+  which `mo-metrics@${MO_PROJECT}` reads through its dataset-level `READER` on both
+  underlying datasets, from a job in `MO_PROJECT` — never from org-level Cloud Logging,
   whose `_Default` bucket is fixed at 30 days for organisations. It also carries the standing
   footnote that Google's log proves the robot acted and never who asked
   ([14](../wall-e/14-hld-challenge.md) C43): the human attribution comes from Wall-E's own
@@ -423,7 +439,8 @@ that visible on the scorecard and in the digest rather than quiet.
 
 ## 9. Dwell, the ratchet and the one-notch rule
 
-All three are computed from `walle_audit.ladder_events`, a table that does not exist yet.
+All three are computed from `${WALLE_PROJECT}.walle_audit.ladder_events`, read
+cross-project, a table that does not exist yet.
 Until it does, the dwell column reads `not_computable` and **no cell is reported ready** —
 see [06-failure-modes.md](06-failure-modes.md) and change 2 in
 [08-open-decisions.md](08-open-decisions.md). Automatic demotions deliberately write no
@@ -498,8 +515,8 @@ releases nothing early.
 ## 10. Grading rules
 
 Grades are the only human-produced input to the whole contract, and the only one Mo cannot
-reconstruct if it is missing. They arrive write-ahead in `walle_audit.grades` from the
-approval surface; Mo reads no Firestore.
+reconstruct if it is missing. They arrive write-ahead in `${WALLE_PROJECT}.walle_audit.grades`
+from the approval surface, and Mo reads them cross-project; Mo reads no Firestore.
 
 | Rule | Form | Why |
 |---|---|---|
@@ -646,10 +663,10 @@ they have genuinely different lags.
 
 | Source | Breach bound | Basis |
 |---|---|---|
-| `walle_audit.actions` | older than **2 h** | Default-stream writes are queryable immediately; 2 h means the pipeline stopped |
+| `${WALLE_PROJECT}.walle_audit.actions` | older than **2 h** | Default-stream writes are queryable immediately; 2 h means the pipeline stopped |
 | Workspace admin events | older than **6 h** | Google documents admin-log lag as a couple of minutes and group events as tens of minutes up to a couple of hours; 6 h is beyond the documented worst case |
 | `walle_audit.grades` | older than **7 days** | The grading cycle is weekly |
-| Billing export | older than **48 h** | Cost is a reporting input, not a gate |
+| Billing export | older than **48 h** | Cost is a reporting input, not a gate. The export spans the four projects; where its dataset lives is *tbd* |
 
 Any breach sets `stale_evidence` and the cell is `not_ready`. A stale source never produces a
 stale *pass*: the direction of failure is always restrictive.
@@ -660,7 +677,10 @@ stale *pass*: the direction of failure is always restrictive.
 the scorecard says which it is. This is also what makes a teardown-and-recreate of
 `walle_audit` loud instead of quiet: the window discontinuity is flagged and every cell falls
 below the floor at once. Mo does not solve evidence durability — decision 31's off-project
-copy does — but Mo refuses to paper over it.
+copy does — but Mo refuses to paper over it. That copy is a further location: when Mo reads
+it at S4 that is one more cross-project, dataset-level `READER` for `mo-metrics@${MO_PROJECT}`
+into whichever project decision 31 names — not `MO_PROJECT` ([`../project-topology.md`](../project-topology.md)
+recommends Eve's `walle_audit_mirror` in `EVE_PROJECT`, decision 51).
 
 ---
 
@@ -864,9 +884,11 @@ authenticated reviewers at L4 and L5.
 
 ## 16. The `scorecard` row
 
-One row per `(family, trigger, fingerprint_sha, as_of_hour)` in `walle_metrics.scorecard`,
-snapshotted daily into `walle_metrics_archive.scorecard_YYYYMMDD` — the dated, citable object
-a decision file points at and an auditor replays against.
+One row per `(family, trigger, fingerprint_sha, as_of_hour)` in
+`${MO_PROJECT}.walle_metrics.scorecard`, snapshotted daily into
+`${MO_PROJECT}.walle_metrics_archive.scorecard_YYYYMMDD` — the dated, citable object a
+decision file points at and an auditor replays against. The citable object is
+project-qualified in every evidence block.
 
 `Assumption:` the BigQuery types below, and the value enumerations given for `ratchet_state`
 and `error_budget_state`, are this page's rendering of columns the design names without
@@ -964,7 +986,7 @@ back, or pushed forward, by how long a human took to answer.
 |---|---|---|
 | The retention floor (decision 17) | Every window clamp in [§12](#12-freshness-bounds-and-window-clamping) | 46 |
 | Strict fingerprint scoping versus a material subset | [§11.2](#112-the-scoping-rule); may make L4 unreachable on the **promotion** side. The demotion denominator is unscoped either way | 43 |
-| The pilot OU account count (decision 5) | The floor of 35 against a per-cell blind rate of 5 decided items a week. At that rate the sample reaches the floor in **seven weeks**, so the promotion window must accumulate rather than expire — which makes decision 17's `retention_floor_days` and decision 31's off-project copy **hard prerequisites for L4**, not merely a clamp on it. Neither number is filled in here | 47, with 46 |
+| The pilot OU account count (decision 5) | The floor of 35 against a per-cell blind rate of 5 decided items a week. At that rate the sample reaches the floor in **seven weeks**, so the promotion window must accumulate rather than expire — which makes decision 17's `retention_floor_days` and decision 31's off-project copy **hard prerequisites for L4**, not merely a clamp on it. The copy's project is not `MO_PROJECT`, and Mo's S4 read of it is one more cross-project dataset-level `READER`. Neither number is filled in here | 47, with 46 |
 | Who the second grader is, and when | [§10](#10-grading-rules); blocks `WRITE_HIGH` at L2 from S2 | 45 |
 | The `unsure` cap of `0.10` and the `Europe/Paris` business-day calendar | [§2](#2-configmetricsgatesyaml--the-full-parameter-list) | 51 |
 | Minimum reporting cell size 5, and who may read `walle_metrics` | [§14](#14-the-suppression-rule) | 44 |

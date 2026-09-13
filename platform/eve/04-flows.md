@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 
 Seven things Eve actually does, end to end. Every one of them is a client-side loop: Eve
 polls, reads, recomputes and either signs, writes a row, or calls a control endpoint. Eve
@@ -52,7 +52,7 @@ Eve's return. Only a human does those.
 | | |
 |---|---|
 | **Trigger** | `eve-gate`, a Cloud Run job on Cloud Scheduler every 2 minutes, invoked with an **OAuth** token because the target is `run.googleapis.com` ([Cloud Scheduler — authentication with HTTP targets](https://docs.cloud.google.com/scheduler/docs/http-target-auth), verified 2026-09-12). Idempotency key is the job name plus the constant `X-CloudScheduler-ScheduleTime` header, which stays the same across retries ([Cloud Scheduler — create and configure jobs](https://docs.cloud.google.com/scheduler/docs/creating), verified 2026-09-12). Overlapping executions are skipped by Cloud Scheduler, and the handler is idempotent regardless. |
-| **Discovery** | Firestore `plans/{id}` where `state == pending_eve`, read through `roles/datastore.viewer`, strongly consistent, never cached. There is no topic, no subscription and no endpoint — Eve finds work by looking. |
+| **Discovery** | Firestore `plans/{id}` where `state == pending_eve`, strongly consistent, never cached — **with no grant behind it today.** The project-level `roles/datastore.viewer` of the 2026-09-12 design is not granted by Wall-E's runbook (SETUP Phase 6, `EVE_PROJECT_ROLES = ()`), so this row is blocked until topology decision 44 lands, in one of two forms: (a) the same role under an IAM Condition scoped to Wall-E's `(default)` database, if the spike binds — then Eve still finds work by looking, with no topic, no subscription and no endpoint; (b) `GET /v1/plans?state=pending_eve` on `walle-actions`, a list endpoint recorded as CC-33 in [08-contract-changes.md](08-contract-changes.md) and not slipped in — then discovery is one more authenticated read under `run.invoker`, and every returned id is still fetched through `GET /v1/plans/{id}` as a claim. Either way, never a project-level role. |
 | **Inputs** | `GET /v1/plans/{id}` (**a claim**); Eve's own Workspace reads through `eve@<domain>`; the CI-published ladder artefact in Eve's locked bucket; Eve's compiled ceiling table; `thresholds.yaml` and `reasons.yaml` from `eve/config`; Firestore `control/mode`, `overrides/{family}/{trigger}`, `ladder/current`; `eve_workspace_logs` for T2 trigger corroboration. |
 | **Outputs** | A per-item accept/reject vector; a KMS signature over an envelope Eve built; `POST /v1/plans/{id}/approve`; one `eve.verdicts` row per item with its input hashes, `eve_config_version`, the epochs read and a `replay_bundle` id. |
 | **Reason codes** | The pre-approval class, every one of which maps to **refuse**: `plan_hash_mismatch`, `pre_state_mismatch`, `predicate_unmet`, `level_overclaim`, `config_version_unknown`, `ceilings_sha_mismatch`, `target_protected`, `target_out_of_scope`, `rollback_absent`, `item_count_over_cap`, `trigger_uncorroborated`, `plan_expired`, `eve_read_failed`, `canonicalisation_failed`, `eve_config_stale`. |
@@ -148,7 +148,7 @@ sequenceDiagram
     participant OP as "Operator"
 
     SCH->>GATE: "run job, every 2 minutes, OAuth"
-    GATE->>FS: "read plans where state is pending_eve"
+    GATE->>FS: "discover plans at pending_eve (grant absent; decision 44)"
     FS-->>GATE: "plan ids, strongly consistent"
     GATE->>CR: "GET /v1/plans/{id}"
     CR-->>GATE: "frozen body, claimed hash, claimed level"
@@ -197,7 +197,7 @@ Eve said. That is what bounds the compromised-Eve case in
 |---|---|
 | **Trigger** | `eve-reconciler` post-hoc task every 5 minutes, polling the DAY-partitioned `actions` table for executed writes. Deep pass every 6 hours. No Pub/Sub subscription at any stage: the only latency-sensitive duty is the 60-minute L5 window, and a 5-minute poll meets it twelvefold. Default-stream writes are queryable immediately ([BigQuery Storage Write API](https://docs.cloud.google.com/bigquery/docs/write-api), verified 2026-09-12), so polling is not a lagging channel. |
 | **Inputs** | `walle_audit.{actions,runs,verifications}` as the **subject**; Eve's Workspace reads and `eve_workspace_logs` as the **evidence**; `GET /v1/runs/{id}` as a claim. |
-| **Outputs** | One `eve.verdicts` row per item; a row visible to `walle-actions` through the existence-only `eve.verdict_receipts` view, exposing `(run_id, item, verdict_ts)` and nothing more. |
+| **Outputs** | One `eve.verdicts` row per item; a row visible to `walle-actions` through the existence-only `verdict_receipts` view in the receipts dataset (`${EVE_RECEIPTS_DS}`, separate from `eve`; topology decision 48), exposing `(run_id, item, verdict_ts)` and nothing more. |
 | **Reason codes** | `post_state_mismatch`, `unverified_within_sla`, `audit_row_missing`, `admin_event_unmatched`, `licence_event_only`, `no_audit_stream`, `verification_deferred_lag` — the last two of which are explicitly **not** failures. |
 | **Failure branch** | `post_state_mismatch` and `admin_event_unmatched` past the lag budget halt writes. Separately and independently of Eve, `walle-actions`' `eve_evidence_stale` sweeper freezes promotions when an executed L5 item has no verdict receipt after 60 minutes, and drops that cell to L4 after four hours. That sweeper keys on **absence**; it never reads a verdict's content. |
 
@@ -330,8 +330,13 @@ Two things about this flow are deliberate and both are about who owns the eviden
 Wall-E's copy sits inside Wall-E's teardown blast radius; deleting it would make an audit
 completeness metric computed from it perfect. Eve's sink is created at **S2**, early and on
 purpose, so that Eve's first enforcing window has months of history rather than zero rows.
-Eve nonetheless asserts on every pass that Wall-E's own copy still carries no actor
-exclusion — that check is drift detection pointed at Wall-E (flow 4).
+The standing check that Wall-E's own copy still carries no actor exclusion is drift
+detection pointed at Wall-E (flow 4), and it needs a grant Eve does not hold today: the sink
+filter is an organisation resource, and the dataset is in `WALLE_PROJECT`. Topology decision
+47 gives it a form — dataset-level `READER` on `walle_workspace_logs` for `eve-verifier@`,
+made by Wall-E's runbook, and a data-level comparison of robot-actor admin events per day
+against Eve's own copy, a persistent deficit being the finding. Until that grant lands the
+check is not run.
 
 **Reconciliation is keyed on events attributable to the robot.** A human doing the same work
 in the Admin console is legitimate and expected: Eve sees a human-attributable event and a
@@ -348,7 +353,7 @@ limit 2 of the five named limits in [06-failure-modes.md](06-failure-modes.md).
 | | |
 |---|---|
 | **Trigger** | `eve-reconciler` hourly for config, ladder, epoch and Google-contract drift; daily for the operator-list reconciliation. Runs as SQL in Eve v0 from S0; the Google-side contract check is added at S2. |
-| **Inputs** | The CI-published ladder artefact at `gs://<eve-project>-eve-evidence/ladder/<config_version>.yaml` plus its git sha; Firestore `ladder/current`, `control/mode`, `overrides/{family}/{trigger}` with `halt_epoch`, `override_epoch` and `eve_authority`; `GET /v1/ladder`; `GET /healthz`; `walle_audit.config_versions`; a committed privilege- and event-name snapshot; `roleAssignments.list` through `eve@<domain>`; the Agent Registry entry through `roles/agentregistry.viewer`; Eve's project IAM policy and Wall-E's. |
+| **Inputs** | The CI-published ladder artefact at `gs://<eve-project>-eve-evidence/ladder/<config_version>.yaml` plus its git sha; Firestore `ladder/current`, `control/mode`, `overrides/{family}/{trigger}` with `halt_epoch`, `override_epoch` and `eve_authority`; `GET /v1/ladder`; `GET /healthz`; `walle_audit.config_versions`; a committed privilege- and event-name snapshot; `roleAssignments.list` through `eve@<domain>`; the Agent Registry entry through `roles/agentregistry.viewer` (project-level in `WALLE_PROJECT`, pending topology decision 43); `EVE_PROJECT`'s and `FOLDER_ID`'s IAM policies — `WALLE_PROJECT`'s is asserted by Wall-E's own drift job, since reading it needs `resourcemanager.projects.getIamPolicy` there, which no Eve identity holds. |
 | **Outputs** | Drift findings in `eve.findings`; the ladder-drift view in `eve-console`; halt or demote calls through flow 5. |
 | **Reason codes** | `ladder_drift`, `config_version_unknown`, `ceilings_sha_mismatch`, `epoch_regression`, `control_plane_divergence`, `google_contract_drift`, `audit_claim_divergence`, `registry_mismatch`. |
 | **Failure branch** | Per code, and all in the halt-or-demote direction. Rate-based triggers stay observe-only until their thresholds are calibrated at S2; the invariant class is live from S3 entry. |
@@ -360,8 +365,9 @@ Five distinct comparisons share one pass:
    service's is `ceilings_sha_mismatch`. Eve compares against the **CI-published artefact**,
    not against `ladder.yaml` in git — which means Eve needs no git credential, and the config
    it re-derives levels from cannot be rewritten by Wall-E's deployers. The artefact is
-   written append-only by Wall-E's CI identity, which holds `objectCreator` on that prefix
-   of Eve's locked bucket and nothing else.
+   written append-only by Wall-E's CI identity (`CI_DEPLOYER`, `WALLE_PROJECT`), which holds
+   `objectCreator` on that prefix of Eve's locked bucket and nothing else — one of the three
+   resource-level grants to Wall-E principals in `EVE_PROJECT`.
 2. **Ladder drift.** Firestore's effective level for a cell against the artefact's:
    `ladder_drift`. This is seeded fault 11.
 3. **Epoch regression.** `halt_epoch`, `override_epoch` and `eve_authority_epoch` are read
@@ -390,10 +396,14 @@ Two more assertions ride along, both cheap and both structural:
   `supportedInterfaces[].url` equals its committed value. A mismatch is `registry_mismatch`:
   Eve **stops its own pass** and alerts. It never follows the card. Eve stopping is itself
   safe, because Wall-E's absence sweepers take over within four business hours.
-- **The IAM boundary, both directions.** Eve asserts daily that Wall-E's deployers appear
-  nowhere in Eve's project's IAM policy; Wall-E's own drift job asserts the mirror image.
-  `eve-controller@` and `eve-verifier@` appear on no Wall-E secret; `walle-actions@` appears
-  on no Eve secret and holds no signing role.
+- **The IAM boundary, both directions — each half read by the principal that can read
+  it** (topology decision 46). Eve's drift job asserts daily, from inside `EVE_PROJECT`,
+  that no Wall-E deployer appears in `EVE_PROJECT`'s IAM policy nor in `FOLDER_ID`'s, that
+  `walle-actions@` appears on no Eve secret and holds no signing role on Eve's key, and that
+  the only Wall-E principals in `EVE_PROJECT` are the three resource-level carve-outs.
+  Wall-E's drift job asserts the mirror image from inside `WALLE_PROJECT`: that
+  `eve-controller@` and `eve-verifier@` appear on no Wall-E secret and hold no write or
+  project-level role beyond the E-12 exceptions. Neither job reads the other's project.
 
 ---
 
@@ -524,7 +534,8 @@ absence-only and why the blind sample, not Eve, is the precision input.
 **The load-bearing assumption.** Eve's independence from Wall-E is structural — separate
 project, separate credential, separate key, no shared IAM. Its independence from the ladder
 owner is not. The same human may write `thresholds.yaml`, approve the pull request that sets
-a cell to `eve_authority: binding`, and grade the blind sample. Decision 11's second grader
+a cell to `eve_authority: binding`, and grade the blind sample — and, until topology
+decision 52's owner groups exist, holds all four projects. Decision 11's second grader
 and decision 37's second reviewer in
 [../wall-e/09-open-decisions.md](../wall-e/09-open-decisions.md) are what this design rests
 on, and E-13 in [09-open-decisions.md](09-open-decisions.md) puts the grader's name at S3,

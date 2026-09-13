@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
+- Placement updated on 2026-09-13 to the four-project topology. Home projects are now
+  explicit on every principal; [../project-topology.md](../project-topology.md) is the
+  authority for every grant that crosses a project.
 
 This is the core of the design. Read it before anything else.
 
@@ -21,24 +24,37 @@ acts as exactly one identity — the robot account — and can never act as anyo
 
 Autonomy means machines now approve things, so who signs matters as much as who acts.
 
-| Principal | Type | Holds | May do |
-|---|---|---|---|
-| `walle@<domain>` | Workspace user | The OAuth refresh token, in Secret Manager | Everything the custom admin role allows. The only identity that touches Workspace. |
-| `walle-actions@<proj>` | GCP service account | Reads the refresh token and both HMAC keys | Runs the action service. The only reader of the credential secret. |
-| `walle-agent@<proj>` | GCP service account | Nothing | Runs the Wall-E agent on Agent Runtime. Can call the action service. Cannot read any secret. |
-| `walle-dispatcher@<proj>` | GCP service account | Nothing | Invokes the agent. Holds `aiplatform.reasoningEngines.query` on Wall-E's engine only. Reads halt flags. |
-| `eve-controller@<proj>` | GCP service account | Reads **Eve's own** approval key, and nothing of Wall-E's | Calls the control endpoints: approve, veto, halt, demote. Reads audit. Cannot execute an operation. |
+| Principal | Home project | Type | Holds | May do |
+|---|---|---|---|---|
+| `walle@<domain>` | — (Workspace) | Workspace user | The OAuth refresh token, in `WALLE_PROJECT`'s Secret Manager | Everything the custom admin role allows. The only identity that touches Workspace. |
+| `walle-actions@WALLE_PROJECT` | `WALLE_PROJECT` | GCP service account | Reads the refresh token and both HMAC keys | Runs the action service. The only reader of the credential secret. Holds **no** principal in `EVE_PROJECT` beyond the carve-outs of decision 48, and none in `MO_PROJECT`. |
+| `walle-agent@WALLE_PROJECT` | `WALLE_PROJECT` | GCP service account | Nothing | Runs the Wall-E agent on Agent Runtime. Can call the action service. Cannot read any secret. |
+| `walle-dispatcher@WALLE_PROJECT` | `WALLE_PROJECT` | GCP service account | Nothing | Invokes the agent. Holds `aiplatform.reasoningEngines.query` on Wall-E's engine only (same project). Reads halt flags. |
+| `eve-controller@EVE_PROJECT` | `EVE_PROJECT` | GCP service account | Signs with **Eve's own** Cloud KMS key `eve-approval` in `EVE_PROJECT`, and nothing of Wall-E's | Calls the control endpoints: approve, veto, halt, demote, over `roles/run.invoker` bound **on the `walle-actions` service** in `WALLE_PROJECT`. Reads audit over dataset-level `roles/bigquery.dataViewer` **on `walle_audit`**, jobs run in `EVE_PROJECT`. Never a project-level role in `WALLE_PROJECT`. Cannot execute an operation. |
 
-`Assumption:` Mo gets a sixth, read-only principal with BigQuery access and no path to
-anything else. Its design is out of scope here.
+Eve's other identities — `eve-v0@` (S0), `eve-verifier@` and `eve-console@` (S3) — are
+also homed in `EVE_PROJECT`; which of them holds which cross-project binding is
+[../project-topology.md](../project-topology.md) §3 rows 3–5.
+
+Mo has three identities, all in `MO_PROJECT` (designed 2026-09-12,
+[../mo/02-identity-and-access.md](../mo/02-identity-and-access.md)): `mo-metrics@` holds
+dataset-level `roles/bigquery.dataViewer` on `walle_audit` and `walle_workspace_logs` in
+`WALLE_PROJECT`; `mo-analyst@` holds `roles/run.invoker` on `walle-actions` for the two read
+endpoints only; `mo-narrator@` (S4) touches nothing of Wall-E's. Nothing of Mo's lives in
+`WALLE_PROJECT`.
 
 Two properties to preserve as you build:
 
 1. **`walle-agent@` can read no secret.** Check this after every IAM change. It is
    boundary 3 in one sentence.
 2. **`eve-controller@` and `walle-actions@` never share a key.** Eve signs approvals with
-   a key only Eve can read; the action service verifies with the public half or a
-   separate verification key. If they shared one, "Eve approved this" would mean nothing.
+   the Cloud KMS key `eve-approval` (ring `eve`) in `EVE_PROJECT`, where no Wall-E
+   principal exists to be granted `useToSign`; the action service verifies with Eve's
+   public key **pinned as PEM in Wall-E's repository**, per key version, which needs no
+   cross-project KMS grant at all. The optional fallback is `roles/cloudkms.publicKeyViewer`
+   granted in `EVE_PROJECT` on that one CryptoKey to `walle-actions@WALLE_PROJECT` — never
+   ring- or project-level ([../project-topology.md](../project-topology.md) §3 row 14). If
+   they shared one, "Eve approved this" would mean nothing.
 
 ## How the robot account gets a credential
 
@@ -244,9 +260,16 @@ action service as `principal.id`.
 **That email is asserted, not proven.** It is trustworthy exactly to the extent that only
 trusted callers can invoke the agent. So:
 
-1. Grant `aiplatform.reasoningEngines.query` on Wall-E's engine to **three principals
-   only**: the Gemini Enterprise Discovery Engine service agent, `walle-dispatcher@`, and
-   `eve-controller@`. Nothing else, ever.
+1. Grant `aiplatform.reasoningEngines.query` on Wall-E's engine to **two principals
+   only**: the Gemini Enterprise Discovery Engine service agent of `GEMINI_PROJECT`,
+   `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine.iam.gserviceaccount.com` — the
+   **app** project's number, never Wall-E's — through the custom role `walleEngineQuery`
+   bound **on the engine** (a resource-level binding to a principal homed in another
+   project; whether it suffices cross-project is decision 42's spike, with Google's
+   documented project-level `roles/discoveryengine.serviceAgent` on `WALLE_PROJECT` as the
+   fallback), and `walle-dispatcher@WALLE_PROJECT`. Nothing else, ever. An earlier draft
+   listed `eve-controller@` as a third; [C10](14-hld-challenge.md) removed it, and
+   [../project-topology.md](../project-topology.md) §3 row 13 records the absence.
 2. The action service **re-checks** the asserted email against `walle-operators@` through
    the Directory API on every write, failing closed if it cannot check.
 3. Optional hardening for the highest-risk approvals: configure a Gemini Enterprise
@@ -269,7 +292,12 @@ Values are never recorded here.
 | `walle-oauth-client` | OAuth client id and secret | `walle-actions@`, and the bootstrap operator once |
 | `walle-refresh-token` | The robot's credential | `walle-actions@` only |
 | `walle-confirm-hmac` | Signs the service's own approval requests | `walle-actions@` only |
-| `walle-eve-approval-key` | Eve signs approvals with it | **`eve-controller@` only** |
+
+Three secrets, all in `WALLE_PROJECT`. Eve's signing key is **not a secret and not here**:
+it is the Cloud KMS key `eve-approval` in `EVE_PROJECT`, and Eve's own secrets
+(`eve-oauth-client`, `eve-refresh-token`) live in `EVE_PROJECT`'s Secret Manager —
+[../eve/02-identity-and-auth.md](../eve/02-identity-and-auth.md). Wall-E holds only Eve's
+public key, as a pinned PEM in its repository.
 
 Create these as **regional secrets** (`projects/*/locations/europe-west1/secrets/*`, via
 the regional endpoint), not global secrets with user-managed replication. Regional secrets
@@ -290,6 +318,7 @@ Rotation is an explicit config change and a deploy.
 | Refresh token | Yearly, and immediately on any suspicion | Re-run bootstrap, add a new secret version, disable the old. Note this also happens involuntarily whenever the robot's password changes. |
 | HMAC keys | Yearly, independently of each other | Add a new version; the service accepts both for one overlap window, then the old is disabled. |
 | Robot password | Yearly | **Breaks the refresh token.** Always pair with a re-bootstrap in the same maintenance window. |
+| Eve's public key PEM | Whenever Eve rotates `eve-approval` in `EVE_PROJECT` | Eve's rotation is Eve's runbook; Wall-E's side is a commit of the new versioned PEM under `contracts/eve-public-keys/`, with the old version kept until its approvals have expired. No cross-project grant changes. |
 
 ## Rejected alternatives
 

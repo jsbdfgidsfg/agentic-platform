@@ -2,8 +2,9 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
 - Maturity: **design. Nothing is built and nothing is enabled.**
+- 2026-09-13: four projects. Eve's identities are in `EVE_PROJECT`, Mo's in `MO_PROJECT`, the app in `GEMINI_PROJECT`; every grant from one to a Wall-E resource is a resource-level binding named in [../project-topology.md](../project-topology.md). Section 5.1 and the commands in section 10 are corrected accordingly; the one project-level grant this chapter made to foreign identities, `roles/agentregistry.viewer`, is dropped (decision 43). Nothing about protocols, cards or the gateway changed.
 - Research basis: every product fact below was checked on 2026-09-09 against Google's documentation and release notes, the A2A specification and the `google/adk-python` source. Each fact carries its launch stage and a finding id in square brackets, resolved in section 12. A finding rated "likely" or "unverified" is named as such and nothing is built on it.
 - Reads with: [ARCHITECTURE.md](ARCHITECTURE.md) sections 4.2, 6, 7.4 and 7.5, [03-lld.md](03-lld.md), [08-team-eve-mo.md](08-team-eve-mo.md), [11-prompt-security.md](11-prompt-security.md) for the injection surface and [12-agent-identity.md](12-agent-identity.md) for the identity the agent presents.
 
@@ -25,7 +26,7 @@ The numbered documents already cover the action service, the caller allowlist an
 | [02-identity-and-auth.md](02-identity-and-auth.md), Agent Identity row | "Deferred, and probably wrong to defer" | Binding an engine to Agent Gateway and every Semantic Governance feature need `identity_type=AGENT_IDENTITY` at creation, and it is immutable afterwards. GA, verified [R29] [A10] | The decision is forced before the first production engine exists. [12-agent-identity.md](12-agent-identity.md) owns it. This chapter depends on it |
 | [08-team-eve-mo.md](08-team-eve-mo.md), interfaces | Control endpoints "are plain authenticated REST, not agent-to-agent messages" | Not wrong. Now backed by product facts: neither the A2A specification nor Google's platform supplies replay protection, peer allowlisting or confused-deputy guidance for agent-to-agent calls. Verified [R18] [R34] | Sections 4.3 and 5 |
 | [03-lld.md](03-lld.md) execute schema, [05](05-autonomy-ladder.md) ceilings, [ARCHITECTURE.md](ARCHITECTURE.md) 8.3 and 8.4 | Principal types `human`, `scheduler`, `event`, `inbox`, `eve`; ceiling columns T0 to T3 | A caller over an agent protocol fits none of them | **Applied 2026-09-11 in 03.** Principal type `agent` for any caller over A2A, Eve's reasoning layer included; `eve` stays for REST-originated calls from `eve-controller@`. A ceiling column `agent`, L5 for READ and L0 for every write tier, stamped into `ceilings_sha`. The effective-level line becomes `ceiling[risk]["agent" if principal.type == "agent" else trigger_for_ceiling]`. Section 5.4 |
-| [02](02-identity-and-auth.md) and [03](03-lld.md): `eve-controller@` and `mo-analyst@` are created in Wall-E's project | Not wrong. Section 5.1 explains what does move: reasoning engines only | None |
+| [02](02-identity-and-auth.md) and [03](03-lld.md) | `eve-controller@` and `mo-analyst@` are created in Wall-E's project | **Wrong since 2026-09-13.** `eve-controller@` is created in `EVE_PROJECT` and `mo-analyst@` in `MO_PROJECT`; everything of Eve's and Mo's moves, not only reasoning engines ([../project-topology.md](../project-topology.md) §2) | Section 5.1 rewritten; steps (a)-1 and (b)-1 in section 10 rewritten |
 | [03-lld.md](03-lld.md), "The agent" | `google-adk~=2.8` with the `a2a` extra | Keep the extra. It carries the A2A 1.0 and 0.3 compatibility layer for the day Wall-E serves A2A. Nothing in the pilot uses it | Section 4.1 |
 
 ---
@@ -104,7 +105,7 @@ wall_e = registry.get_remote_a2a_agent(
 | `wall-e` | Agent, automatic registration of the reasoning engine | Runtime identity, runtime reference, no card | Created by deploying to Agent Runtime in `europe-west1`. It is the discovery record for the pilot | GA [R4] |
 | `wall-e`, hand-written card | Agent, `A2A_AGENT_CARD`, at most 10 KB | Section 3. Read and plan skills, an explicit exclusions paragraph, a bearer security scheme | Registered in the same change that stands up an A2A interface, and not before. A card whose `supportedInterfaces` names a URL that does not serve A2A is not a card, it is a wrong entry in a directory other agents treat as trusted configuration. Whether the automatic entry can be updated in place with a card, or a second manual entry is needed, is an open question [R-OQ11] | GA [R3] |
 | `walle-actions` | Endpoint, `NO_SPEC`, interface `HTTP_JSON` | The action service's `run.app` URL | Required for Agent Gateway egress, section 7. It is the one destination Wall-E's reasoning layer may reach | GA [R2] |
-| `eve`, `mo` | Agent | `tbd`, when they are designed | Bindings `eve` to `wall-e` are documentation and discovery, not authorisation [R-b4] | GA |
+| `eve`, `mo` | Agent | Automatic entries in `EVE_PROJECT`'s and `MO_PROJECT`'s own registries, if they ever run on Agent Runtime — registration is limited to same-project resources (section 2.1). Whether Wall-E's registry lists them at all is *tbd* | Bindings `eve` to `wall-e` are documentation and discovery, not authorisation [R-b4] | GA |
 | Any MCP server entry | none | | Section 6 | |
 | Any skill entry | none | | Section 8 | |
 
@@ -114,7 +115,7 @@ A card fetched from the network passes ADK's same-origin check: every RPC URL in
 
 | Control | Mechanism | Where |
 |---|---|---|
-| Only CI writes the registry | `roles/agentregistry.admin` bound to the CI deploy identity only. No operator, no developer, no agent holds admin or editor. `roles/agentregistry.viewer` to `eve-controller@` and `mo-analyst@` so they can search and describe | IAM binding, section 10 (a)-1 |
+| Only CI writes the registry | `roles/agentregistry.admin` bound to the CI deploy identity only. No operator, no developer, no agent holds admin or editor. **No viewer grant to Eve or Mo**: `roles/agentregistry.viewer` is project-level (section 2.2 — the registry has no resource-level IAM), and a project-level role in `WALLE_PROJECT` to `eve-controller@EVE_PROJECT` or `mo-analyst@MO_PROJECT` is exactly what [../project-topology.md](../project-topology.md) forbids. Dropped, decision 43: Eve resolves Wall-E's endpoint from a value committed in its own configuration, and Mo never converses with Wall-E. If a duty ever needs registry search it is a named exception with its reason, never a silent grant | IAM binding, section 10 (a)-1 |
 | Registry edits are visible | Log-based alert on Agent Registry audit log entries for `services.create`, `services.update`, `services.delete` and `bindings.*` in the Wall-E project, routed to the operator channel. The registry's audit logging is documented [R-log5] | Cloud Logging alert, query committed in the repo |
 | Consumers resolve once and compare | Eve resolves Wall-E once at startup and asserts that the card's `supportedInterfaces[].url` equals the value committed in Eve's own configuration. A mismatch is a halt condition for Eve, not a redirect | Code hook in Eve, requirement for its design |
 | Card is reviewed like a ceiling | `agent-card.json` lives next to `ladder.yaml`; the same required reviewers; CI validates it against the registry's JSON schema rules and asserts that no skill id names a write, an approval or a control operation | CI check |
@@ -248,11 +249,11 @@ The one direction in which an LLM hop touches safety is Eve's own reasoning befo
 | Operators | Gemini Enterprise app, then Wall-E | Workspace SSO; the app calls `reasoningEngines` as the Discovery Engine service agent | Chat requests, T0 | Approvals: those go to the approval surface |
 | `walle-dispatcher@` | Wall-E | `reasoningEngines.streamQuery`, custom role bound on the engine resource [I7] | T1, T2, T3 job envelopes | Anything on the action service. It holds no `run.invoker` |
 | Wall-E, as `walle-agent@` or its agent principal | `walle-actions` | HTTPS, ID token, audience checked, in-app allowlist | `POST /v1/execute`, `POST /v1/plans`, `GET /v1/operations` | Any control, approval or read endpoint. Any other host at all |
-| Eve, as `eve-controller@` or its agent principal | `walle-actions` | HTTPS, ID token, audience checked, in-app allowlist | approve, veto, halt, demote, `GET /v1/plans`, `GET /v1/runs`, `GET /v1/ladder`, `GET /healthz` | `POST /v1/execute`. Eve gets 403 there, and the negative test is in 7.5 |
-| Eve | Wall-E | `reasoningEngines.streamQuery` now. A2A with an ID token later, optional | Read-only verification playbooks, narration | Any safety action. Any evidence: Eve's evidence is her own Workspace reads and Google's audit log, [08](08-team-eve-mo.md) rule 2 |
-| Eve | BigQuery `walle_audit`, Pub/Sub `walle-events` | Dataset and subscription IAM | Everything Wall-E has produced | |
-| Mo, as `mo-analyst@` | BigQuery `walle_audit` | Dataset read IAM. If Mo runs behind a gateway, `bigquery.googleapis.com` and its regional and mTLS variants must be registered [R36] | Metrics, scorecards, regressions | |
-| Mo | `walle-actions` | HTTPS, ID token | `GET /v1/plans/{id}`, `GET /v1/runs/{id}` only | Anything else |
+| Eve, as `eve-controller@EVE_PROJECT` or its agent principal | `walle-actions` in `WALLE_PROJECT` | HTTPS, ID token, audience checked, in-app allowlist; `roles/run.invoker` bound on the service to the foreign principal, a cross-project resource grant | approve, veto, halt, demote, `GET /v1/plans`, `GET /v1/runs`, `GET /v1/ladder`, `GET /healthz` | `POST /v1/execute`. Eve gets 403 there, and the negative test is in 7.5 |
+| Eve | Wall-E | `reasoningEngines.streamQuery` as first designed — removed by [14](14-hld-challenge.md) C10. A2A with an ID token later, optional | Read-only verification playbooks, narration | Any safety action. Any evidence: Eve's evidence is her own Workspace reads and Google's audit log, [08](08-team-eve-mo.md) rule 2 |
+| Eve, as `eve-controller@EVE_PROJECT` (and `eve-v0@`, `eve-verifier@`) | BigQuery `walle_audit`, Pub/Sub `walle-events`, both in `WALLE_PROJECT` | Dataset-level `roles/bigquery.dataViewer` on `walle_audit`, jobs in `EVE_PROJECT`; for the topic, a subscription in `EVE_PROJECT` with `roles/pubsub.subscriber` on the topic — target state, C30 | Everything Wall-E has produced | |
+| Mo, as `mo-metrics@MO_PROJECT` | BigQuery `walle_audit` and `walle_workspace_logs` in `WALLE_PROJECT` | Dataset-level `roles/bigquery.dataViewer` on each, jobs in `MO_PROJECT`; Mo's authorised views live in `MO_PROJECT.walle_metrics_views` and are authorised on `walle_metrics` there, never on a Wall-E dataset. If Mo runs behind a gateway, `bigquery.googleapis.com` and its regional and mTLS variants must be registered [R36] | Metrics, scorecards, regressions | |
+| Mo, as `mo-analyst@MO_PROJECT` | `walle-actions` in `WALLE_PROJECT` | HTTPS, ID token; `roles/run.invoker` on the service, cross-project, narrowed by the read-endpoint allowlist | `GET /v1/plans/{id}`, `GET /v1/runs/{id}` only | Anything else |
 | Mo | Wall-E | none | Mo has no reason to converse with Wall-E. Nothing is granted | |
 | `walle-tasks@` | `walle-actions` | OIDC, ID token | `POST /v1/tasks/item` | Any other endpoint |
 | Wall-E | Eve, Mo, any peer, any MCP server | none | Wall-E has no `RemoteA2aAgent` and no `McpToolset`. Its tools are generated from `/v1/operations` and nothing else | |
@@ -261,40 +262,47 @@ Nothing calls `POST /v1/execute` except Wall-E's own identity. Nothing calls `PO
 
 ```mermaid
 flowchart TB
-    subgraph REG["Agent Registry, europe-west1, GA 2026-06-18"]
-        RW["entry wall-e<br/>A2A 1.0 card, read and plan skills only"]
-        RA["entry walle-actions<br/>endpoint, NO_SPEC"]
+    subgraph WAL["WALLE_PROJECT"]
+        subgraph REG["Agent Registry, europe-west1, GA 2026-06-18"]
+            RW["entry wall-e<br/>A2A 1.0 card, read and plan skills only"]
+            RA["entry walle-actions<br/>endpoint, NO_SPEC"]
+        end
+
+        subgraph GWY["Agent Gateway walle-egress, GA 2026-06-18<br/>default deny, exact hostnames, Unified Access Policies"]
+            GWX["egress proxy<br/>Model Armor screens MCP and A2A v1 payloads only"]
+        end
+
+        WE["Wall-E, reasoning layer, no credential<br/>ADK 2.8 on Agent Runtime"]
+
+        subgraph CRED["Credential boundary"]
+            ACT["walle-actions, Cloud Run<br/>REST only, per-endpoint caller allowlist"]
+        end
+
+        BQ["BigQuery walle_audit, walle_workspace_logs"]
     end
 
-    subgraph GWY["Agent Gateway walle-egress, GA 2026-06-18<br/>default deny, exact hostnames, Unified Access Policies"]
-        GWX["egress proxy<br/>Model Armor screens MCP and A2A v1 payloads only"]
+    subgraph EVP["EVE_PROJECT"]
+        EVR["Eve's reasoning layer, if any<br/>own agent identity, no credential"]
+        EVE["eve-controller@EVE_PROJECT, deterministic<br/>KMS signer on eve-approval, own read-only Workspace credential"]
     end
 
-    subgraph AGENTS["Reasoning layer, no credential"]
-        WE["Wall-E<br/>ADK 2.8 on Agent Runtime"]
-        EVR["Eve's reasoning layer, if any<br/>not yet designed, own project"]
-        MO["Mo, analyst<br/>not yet designed"]
+    subgraph MOP["MO_PROJECT"]
+        MO["Mo: mo-metrics@, mo-analyst@<br/>no credential"]
     end
 
-    subgraph CRED["Credential boundary"]
-        ACT["walle-actions, Cloud Run<br/>REST only, per-endpoint caller allowlist"]
-        EVE["eve-controller, deterministic<br/>KMS signer, own read-only Workspace credential"]
-    end
-
-    BQ["BigQuery walle_audit"]
     WS["Workspace APIs"]
 
     WE -->|"HTTPS, ID token, audience checked<br/>execute, plans, operations"| GWX
     GWX -->|"registered endpoint only"| ACT
     ACT -->|"robot user token"| WS
     ACT -->|"insert only"| BQ
-    EVE -->|"REST, ID token<br/>approve, veto, halt, demote, GET plans and runs<br/>never through an LLM hop"| ACT
-    EVE -.->|"reasoningEngines.streamQuery now<br/>A2A later, optional, non-safety only<br/>reply is tainted input"| WE
+    EVE -->|"cross-project: run.invoker on the service<br/>REST, ID token: approve, veto, halt, demote, GET plans and runs<br/>never through an LLM hop"| ACT
+    EVE -.->|"streamQuery as first designed, removed by C10<br/>A2A later, optional, non-safety only<br/>reply is tainted input"| WE
     EVR -.->|"only through the controller"| EVE
-    EVE -->|"read"| BQ
-    MO -->|"read"| BQ
-    MO -->|"GET plans and runs only"| ACT
-    EVE -.->|"resolve once at startup<br/>get_remote_a2a_agent"| RW
+    EVE -->|"cross-project: dataset-level dataViewer on walle_audit"| BQ
+    MO -->|"cross-project: dataset-level dataViewer, mo-metrics@"| BQ
+    MO -->|"cross-project: run.invoker, mo-analyst@<br/>GET plans and runs only"| ACT
+    EVE -.->|"endpoint URL committed in Eve's config,<br/>no registry viewer (decision 43)"| RW
     GWX -.->|"destinations resolved from the registry"| RA
 
     classDef credzone fill:#fff0f0,stroke:#c62828,stroke-width:3px,color:#000
@@ -306,7 +314,7 @@ flowchart TB
     class RW,RA,GWX,BQ,WS plat
 ```
 
-Read it for what is absent, as with the diagrams in ARCHITECTURE. Eve's deterministic controller sits inside the credential boundary, because it holds the KMS signer and its own read credential; only a future reasoning layer of Eve's is credential-free, and it reaches nothing except through that controller. There is no arrow from Wall-E to Eve, to Mo, or to any registry entry. There is no arrow from any agent to the control endpoints that passes through another agent. There is no MCP server anywhere.
+Read it for what is absent, as with the diagrams in ARCHITECTURE. Eve's deterministic controller holds the KMS signer and its own read credential, in `EVE_PROJECT`; only a future reasoning layer of Eve's is credential-free, and it reaches nothing except through that controller. There is no arrow from Wall-E to Eve, to Mo, or to any registry entry. There is no arrow from any agent to the control endpoints that passes through another agent. There is no MCP server anywhere. Every arrow that crosses a project box is a grant on one resource — a Cloud Run service or a BigQuery dataset — and never a project-level role ([../project-topology.md](../project-topology.md)).
 
 ---
 
@@ -318,11 +326,11 @@ The specification requires it and does not do it: identity "is handled at the pr
 
 | Path into Wall-E | Authentication | Authorisation | Stage |
 |---|---|---|---|
-| `reasoningEngines.streamQuery` on Agent Runtime | A Google access token, IAM-checked | A custom role containing only `aiplatform.reasoningEngines.query`, bound on the engine resource, not the project, to the Discovery Engine service agent, `walle-dispatcher@` and `eve-controller@`. IAM conditions on `resource.name` are not documented for reasoning engines, so the binding is resource-level or nothing. GA, verified [I7] | GA |
+| `reasoningEngines.streamQuery` on Agent Runtime | A Google access token, IAM-checked | A custom role containing only `aiplatform.reasoningEngines.query`, bound on the engine resource, not the project, to the Discovery Engine service agent of `GEMINI_PROJECT` (`service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine…`, a cross-project binding — decision 42), `walle-dispatcher@` and, as first designed, `eve-controller@EVE_PROJECT` (removed by [14](14-hld-challenge.md) C10). IAM conditions on `resource.name` are not documented for reasoning engines, so the binding is resource-level or nothing. GA, verified [I7] | GA |
 | A future A2A server on Cloud Run | A Google-signed ID token: signature, `iss`, `exp`, and `aud` equal to Wall-E's A2A URL | A middleware ahead of the `to_a2a` routes that keys on the verified `email` or `sub` claim against a committed caller list. 401 on a missing or invalid token, 403 on a valid token from an unlisted caller. Both are audit rows | Design |
 | Anything else | none | The engine has no other ingress. The gateway's Client-to-Agent mode governs only `query` and `streamQuery` and does not support IAP, so it adds Model Armor and not authentication [R27] | |
 
-Note what the `discoveryengine.serviceAgent` role does to the first row. Google's cross-project guide grants it at project level, and it carries `aiplatform.reasoningEngines.query`, `update` and `delete` on every engine in the project. Verified [I6]. "Query is locked to three principals" is true only while Wall-E's engine is the only engine in its project. So each **reasoning engine** lives alone in its project: Wall-E's, and later Eve's and Mo's if they have one. The attached service accounts `eve-controller@` and `mo-analyst@` stay where [02](02-identity-and-auth.md) and [03](03-lld.md) create them, in Wall-E's project, because a service account is not an engine and the role that forces the split is project-wide over engines only. That is what the bindings in steps (a)-1 and (b)-1 assume. `Assumption:` the project structure is `tbd` and this becomes a line in the decision record that opens S0.
+Note what the `discoveryengine.serviceAgent` role does to the first row. Google's cross-project guide grants it at project level, and it carries `aiplatform.reasoningEngines.query`, `update` and `delete` on every engine in the project. Verified [I6]. "Query is locked to three principals" is true only while Wall-E's engine is the only engine in its project. So each **reasoning engine** lives alone in its project: Wall-E's in `WALLE_PROJECT`, and later Eve's and Mo's, if they have one, in `EVE_PROJECT` and `MO_PROJECT`. Since 2026-09-13 the same holds for everything else of theirs: `eve-controller@` lives in `EVE_PROJECT` and `mo-analyst@` in `MO_PROJECT`, and each reaches a Wall-E resource only through a binding on that resource — `run.invoker` on `walle-actions`, dataset-level `dataViewer` on `walle_audit` — never through a project-level role in Wall-E's project. The four-project structure was decided on 2026-09-13 ([../project-topology.md](../project-topology.md)); steps (a)-1 and (b)-1 in section 10 are written for it.
 
 ### 5.2 Which registered agents may call Wall-E
 
@@ -331,7 +339,7 @@ Two layers, and neither is the registry.
 | Layer | What it expresses | Mechanism | Stage |
 |---|---|---|---|
 | In-process caller list | "This verified identity may call this endpoint of Wall-E" | The committed caller list in the middleware of 5.1, keyed on the token claim. Same pattern as [ARCHITECTURE.md](ARCHITECTURE.md) 7.5 on the action service | Design |
-| Caller-side access policy | "Eve may reach `wall-e` and `walle-actions` and nothing else" | A Unified Access Policy binding `roles/iap.egressor` for Eve's principal on exactly those two registry entries, enforced by Eve's own egress gateway. GA [R6] | GA |
+| Caller-side access policy | "Eve may reach `wall-e` and `walle-actions` and nothing else" | A Unified Access Policy binding `roles/iap.egressor` for Eve's principal on exactly those two registry entries, enforced by Eve's own egress gateway in `EVE_PROJECT`. Whether a policy in Eve's project can name an endpoint registered in `WALLE_PROJECT`'s registry is *tbd*. GA [R6] | GA |
 
 The second layer restricts where Eve may go. It does not restrict who may reach Wall-E, because it is evaluated on the caller's gateway. A design that lists "registered agents allowed to call Wall-E" by registry name, rather than by verified principal at the point of receipt, has written a wish.
 
@@ -484,7 +492,7 @@ And the perimeter. Weakness 13 defers a VPC Service Controls perimeter to before
 | Wall-E to `aiplatform`, `agentregistry`, `logging`, `telemetry`, `cloudtrace`, `monitoring`, `cloudresourcemanager`, `iamcredentials`, the Sessions URI, each with its regional and mTLS variants | Yes, egress | Essential endpoints. Without them invocations fail with 498 |
 | Wall-E to Secret Manager, Firestore, `admin.googleapis.com`, any Workspace API host, BigQuery | **Never registered** | Wall-E has no business there. The absence is the control |
 | Dispatcher and Gemini Enterprise into Wall-E | Yes, ingress, once 7.3's `streamQuery` question and 7.5's header question are closed | Model Armor on the human and machine prompt path |
-| Eve into `walle-actions` control endpoints | Through Eve's own egress gateway if Eve runs on Agent Runtime, as an allowlist | Acceptable, because the operator andon cord does not depend on any gateway. Drill K0 from Eve through the gateway and record the time in `drills/{date}` |
+| Eve into `walle-actions` control endpoints | Through Eve's own egress gateway in `EVE_PROJECT` if Eve runs on Agent Runtime, as an allowlist; whether that policy can target an endpoint in `WALLE_PROJECT`'s registry is *tbd* (section 5.2) | Acceptable, because the operator andon cord does not depend on any gateway. Drill K0 from Eve through the gateway and record the time in `drills/{date}` |
 | Operators: IAP approval page, `curl` with an identity token to `/v1/control/halt` | No gateway | Kill switches never acquire a new dependency. The gateway is Google-managed and fail-closed, and that is exactly why the andon cord stays off it |
 | Cloud Tasks to the worker endpoint, the dispatcher's Firestore halt read, the reconciler, the log sinks | No gateway | None of these is agent egress |
 | The organisation's Gemini Enterprise app | Not as part of Wall-E | Binding the tenant app to a gateway changes every agent's egress and is a tenant-wide decision outside this design [R32] |
@@ -547,22 +555,21 @@ The question a reviewer asks about every Google feature in this chapter, answere
 
 ## 10. Ordered configuration steps
 
-All commands assume `PROJECT_ID`, `PROJECT_NUMBER` and `ORG_ID` are set, are `tbd` until the decision record that opens S0 names them, and target `europe-west1`. Every step is applied by the CI identity, never by an operator.
+All commands assume `PROJECT_ID`, `PROJECT_NUMBER` and `ORG_ID` are set, are `tbd` until the decision record that opens S0 names them, and target `europe-west1`. `PROJECT_ID` and `PROJECT_NUMBER` are **`WALLE_PROJECT`'s**; `EVE_PROJECT`, `EVE_PROJECT_NUMBER` and `MO_PROJECT` are set as well, for the member strings below ([../project-topology.md](../project-topology.md) §6). Every step is applied by the CI identity, never by an operator.
 
 ### (a) Register Wall-E in Agent Registry and publish a card
 
 ```bash
-# (a)-1 APIs and roles. Admin to CI only. Viewer to the readers.
+# (a)-1 APIs and roles. Admin to CI only. No viewer to Eve or Mo: roles/agentregistry.viewer
+#       is project-level (the registry has no resource IAM), eve-controller@ and mo-analyst@
+#       are homed in EVE_PROJECT and MO_PROJECT, and a project-level role in WALLE_PROJECT
+#       to a foreign identity is what ../project-topology.md forbids. Dropped, decision 43;
+#       an earlier draft granted it here with the wrong emails ($PROJECT_ID instead of
+#       $EVE_PROJECT / $MO_PROJECT). Re-grant only as a recorded, named exception.
 gcloud services enable agentregistry.googleapis.com apphub.googleapis.com \
   --project="$PROJECT_ID"
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$CI_DEPLOYER" --role=roles/agentregistry.admin
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:eve-controller@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role=roles/agentregistry.viewer
-gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:mo-analyst@$PROJECT_ID.iam.gserviceaccount.com" \
-  --role=roles/agentregistry.viewer
 
 # (a)-2 Deploy to Agent Runtime; the registry entry appears on its own.
 #       identity_type is set at create time and cannot be patched later.
@@ -602,21 +609,33 @@ Eve is the second agent. Two calls, two token types. Agent Runtime takes an acce
 
 ```bash
 # (b)-1 Eve may call the action service. run.invoker is per service, not per path,
-#       so the in-app allowlist does the rest (ARCHITECTURE 7.5).
+#       so the in-app allowlist does the rest (ARCHITECTURE 7.5). The member is a
+#       foreign principal, homed in EVE_PROJECT; the binding sits on the service in
+#       WALLE_PROJECT and is made by Wall-E's owner (../project-topology.md §3 row 3).
 gcloud run services add-iam-policy-binding walle-actions \
   --region=europe-west1 --project="$PROJECT_ID" \
-  --member="serviceAccount:eve-controller@$PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:eve-controller@$EVE_PROJECT.iam.gserviceaccount.com" \
   --role=roles/run.invoker
-#       When Eve has an Agent Identity: --member="principal://agents.global.org-$ORG_ID.system.id.goog/resources/aiplatform/projects/$PROJECT_NUMBER/locations/europe-west1/reasoningEngines/$EVE_ENGINE_ID"
+#       When Eve has an Agent Identity: --member="principal://agents.global.org-$ORG_ID.system.id.goog/resources/aiplatform/projects/$EVE_PROJECT_NUMBER/locations/europe-west1/reasoningEngines/$EVE_ENGINE_ID"
 #       That form is unverified for run.invoker until the spike in 12 passes.
+#       Mo's analyst identity gets the same binding, narrowed to the two read endpoints by
+#       the in-app allowlist (row 8):
+gcloud run services add-iam-policy-binding walle-actions \
+  --region=europe-west1 --project="$PROJECT_ID" \
+  --member="serviceAccount:mo-analyst@$MO_PROJECT.iam.gserviceaccount.com" \
+  --role=roles/run.invoker
 
-# (b)-2 Eve may query Wall-E's engine, and no other engine. Custom role, resource-level binding.
+# (b)-2 Eve may query Wall-E's engine, and no other engine. Custom role, resource-level binding
+#       to eve-controller@$EVE_PROJECT — a cross-project binding on the engine. This is the
+#       grant [14] C10 removes (two query principals remain); ../project-topology.md §3 row 13
+#       records the absence. The commands are kept for the wording of the binding form.
 # The role already exists from SETUP.md Phase 12 as walleEngineQuery; create it only if absent.
 gcloud iam roles describe walleEngineQuery --project="$PROJECT_ID" >/dev/null 2>&1 || \
 gcloud iam roles create walleEngineQuery --project="$PROJECT_ID" \
   --title="Wall-E engine query" --permissions=aiplatform.reasoningEngines.query
 #       Bind on projects/$PROJECT_ID/locations/europe-west1/reasoningEngines/$WALLE_ENGINE_ID
-#       with reasoningEngines.setIamPolicy or Terraform google_vertex_ai_reasoning_engine_iam_member.
+#       with reasoningEngines.setIamPolicy or Terraform google_vertex_ai_reasoning_engine_iam_member,
+#       member serviceAccount:eve-controller@$EVE_PROJECT.iam.gserviceaccount.com.
 #       Never at project level.
 
 # (b)-3 Eve mints an ID token for the action service from her own runtime.

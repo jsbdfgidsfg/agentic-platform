@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
+- 2026-09-13: placement only. `PROJECT_ID` and `PROJECT_NUMBER` below are `WALLE_PROJECT`'s;
+  Eve's and Mo's reads of Wall-E's datasets are named as cross-project grants per
+  [../project-topology.md](../project-topology.md). No screen, threshold or control changed.
 - Maturity: **design. Nothing is built and nothing is enabled.**
 - Product facts: verified on 2026-09-08 and 2026-09-09 against Google Cloud documentation
   and the `google-adk` 2.8.0 source. Each carries its launch stage. Where the research could
@@ -175,8 +178,10 @@ they belong to the security review, not the build notes: **SCC Agent Engine Thre
 Detection is unavailable** on a gateway-bound engine, **VPC Service Controls are not
 supported with Agent Gateway**, and **revisions** are not supported. All Agent Runtime
 engines in the same project and region must bind to the same ingress and the same egress
-gateway. `Assumption:` Wall-E has a dedicated project, as ARCHITECTURE.md section 9 already
-requires, so Eve and Mo are not forced onto its policy. The engine must have been created
+gateway. `WALLE_PROJECT` holds only Wall-E's engine by construction — the four-project
+topology of 2026-09-13, [../project-topology.md](../project-topology.md) — so Eve's and
+Mo's engines, if they ever have one, bind their own gateways in `EVE_PROJECT` and
+`MO_PROJECT` and are not forced onto Wall-E's policy. The engine must have been created
 after 2026-04-29. All GA constraints, from the runtime deployment page.
 
 ## 3. Tool results are not screened by the gateway
@@ -272,9 +277,11 @@ says only "the prompt-injection filter is enabled, at `HIGH` or stricter, and th
 URL filter is enabled". That guarantees no deployer can disable either filter, without
 fixing the confidence level before it has been measured. Tighten the floor to the chosen
 level after S0. Confirm the ordering at build by attempting to create a `HIGH` template under
-a `MEDIUM_AND_ABOVE` floor in a sandbox project; it should be refused. Set the floor at the
-folder holding Wall-E's project rather than at the organisation, unless the organisation
-wants that constraint everywhere. `Assumption:` such a folder exists or can be created.
+a `MEDIUM_AND_ABOVE` floor in a sandbox project; it should be refused. Set the floor at
+`FOLDER_ID`, the folder holding all four projects, rather than at the organisation, unless
+the organisation wants that constraint everywhere: a folder floor also binds Eve's and
+Mo's templates, and Mo's `generateContent` calls at S4 inherit it. The folder exists — it
+is the config key `FOLDER_ID` ([../project-topology.md](../project-topology.md) §5).
 
 **The prompt-injection filter changes under you on a schedule.** It is the only versioned
 filter: v1, v2, v3, with aliases `FILTER_VERSION_ALIAS_STABLE` and
@@ -313,6 +320,11 @@ routed to an access-controlled sink". The sink in section 5 exists before the te
 
 Every step is from the research and carries its launch stage. Placeholders: `PROJECT_ID`,
 `PROJECT_NUMBER`, `ORG_ID`, `FOLDER_ID`, `ENGINE_ID`. Everything is `europe-west1`.
+`PROJECT_ID` and `PROJECT_NUMBER` are **`WALLE_PROJECT`'s**: the service agents in steps 5
+and 10 (`gcp-sa-aiplatform-re`, `gcp-sa-dep`, `gcp-sa-aiplatform`) are Wall-E's own
+project's agents and are built from `WALLE_PROJECT_NUMBER`. Do not confuse that number
+with `GEMINI_PROJECT_NUMBER`, which builds only the Discovery Engine service agent that
+queries the engine ([12](12-agent-identity.md) section 7).
 
 **Step 0. Enable APIs and grant the builder.** GA.
 
@@ -644,7 +656,12 @@ linked BigQuery dataset on the observability bucket makes them joinable with `wa
 The linking command is on the `gcloud beta` track and needs `roles/observability.editor`.
 The `EVENT_ONLY` log records can also go to BigQuery through an ordinary log sink. Mo reads
 the linked Spans dataset and the sanitize logs joined to `walle_audit.actions` on
-`invocation_id` and, through `runs`, on `trace_id`.
+`invocation_id` and, through `runs`, on `trace_id`. The linked Spans dataset and the
+sanitize-log sink are in `WALLE_PROJECT`; Mo reads as `mo-metrics@MO_PROJECT` through a
+dataset-level `READER` on each, a resource-level binding made by Wall-E's owner — the
+`walle_audit` grant is [../project-topology.md](../project-topology.md) §3 row 6, and the
+observability-dataset grant is *tbd* (row 7, decision 49: whether a linked dataset's
+access array accepts a foreign entry is unverified).
 
 ```bash
 # Linked dataset on the observability bucket, beta track. Full arguments on the linked-dataset page.
@@ -696,7 +713,7 @@ a bucket the alert can read.
 
 | Signal | Mechanism | Threshold and response |
 |---|---|---|
-| **A blocked or flagged prompt** | Log filter: `jsonPayload.@type="type.googleapis.com/google.cloud.modelarmor.logging.v1.SanitizeOperationLogEntry" AND jsonPayload.sanitizationResult.filterMatchState="MATCH_FOUND"`, scoped to the content bucket. The dispatcher publishes `content.flagged` with `source: gateway` on the custom error code, and `walle-actions` publishes it with `source: actions` on its own screen | Any one, to the operator channel, severity high. During S0 it is an input to the injection precision metric. It is **never** an automatic demotion: a probabilistic verdict does not move the ladder. Eve receives it on `walle-events`, not through the model |
+| **A blocked or flagged prompt** | Log filter: `jsonPayload.@type="type.googleapis.com/google.cloud.modelarmor.logging.v1.SanitizeOperationLogEntry" AND jsonPayload.sanitizationResult.filterMatchState="MATCH_FOUND"`, scoped to the content bucket. The dispatcher publishes `content.flagged` with `source: gateway` on the custom error code, and `walle-actions` publishes it with `source: actions` on its own screen | Any one, to the operator channel, severity high. During S0 it is an input to the injection precision metric. It is **never** an automatic demotion: a probabilistic verdict does not move the ladder. Eve receives it through its subscription in `EVE_PROJECT` to `walle-events` in `WALLE_PROJECT`, not through the model |
 | **Silent non-coverage** | Log filter: `jsonPayload.sanitizationResult.invocationResult!="SUCCESS"`, and one clause per filter key such as `jsonPayload.sanitizationResult.filterResults.pi_and_jailbreak.executionState="EXECUTION_SKIPPED"`. Confirm the exact field path against a real entry in step 9 | Any one. A skipped filter on Wall-E's traffic means a limit was hit that the design says cannot be hit, so it is a finding against the slimming, not noise |
 | **Gateway extension or Model Armor errors** | Metric alert on `modelarmor.googleapis.com/template/request_count` error ratio, and on gateway extension failures. Also alert on approaching the 600 QPM `ExternalProcessor` and 1,200 QPM sanitize quotas, per Model Armor best practice | With `failOpen: false` these are Wall-E outages, not screening gaps. Page like any other outage of the request path |
 | **Taint on an untainted playbook** | BigQuery scheduled query, hourly, below. CI exports each playbook's `taints` declaration to a lookup table `walle_audit.playbook_declarations` from the playbook files | Any tainted run for a playbook declared untainted is a severity-3 finding: either the projection changed or a field nobody declared has started arriving, which is weakness 6 in ARCHITECTURE.md section 11 showing itself |
@@ -705,7 +722,12 @@ a bucket the alert can read.
 | **Span content capture drift** | The daily drift job reads the engine's environment and fails if `ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS` is not `false` or `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` is not the value the current decision record names | Any change. It is a data-protection breach in the making, not a tuning question |
 
 Taint on an untainted playbook, from `walle_audit.actions`, using the `trigger_id` shape in
-[03](03-lld.md) (`sched:leaver-checklist:2026-09-08T07:00Z`):
+[03](03-lld.md) (`sched:leaver-checklist:2026-09-08T07:00Z`). The dataset is
+`WALLE_PROJECT.walle_audit`. When these queries run as Wall-E's own alerts they are jobs
+in `WALLE_PROJECT` and cross nothing; when Eve v0 or Mo runs the same SQL, the job runs in
+`EVE_PROJECT` or `MO_PROJECT` (`bigquery.jobs.create` there) and reads through the
+dataset-level `dataViewer` of [../project-topology.md](../project-topology.md) §3 rows 4
+and 6 — never a `jobUser` grant in Wall-E's project:
 
 ```sql
 SELECT
@@ -713,8 +735,8 @@ SELECT
   SPLIT(a.trigger_id, ':')[OFFSET(1)] AS playbook,
   COUNT(DISTINCT IF(a.tainted, a.run_id, NULL)) AS tainted_runs,
   COUNT(DISTINCT a.run_id) AS runs
-FROM `PROJECT_ID.walle_audit.actions` AS a
-JOIN `PROJECT_ID.walle_audit.playbook_declarations` AS d
+FROM `WALLE_PROJECT.walle_audit.actions` AS a
+JOIN `WALLE_PROJECT.walle_audit.playbook_declarations` AS d
   ON d.playbook = SPLIT(a.trigger_id, ':')[OFFSET(1)]
 WHERE a.ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 DAY)
   AND a.principal_type != 'human'
@@ -728,7 +750,7 @@ Denial spike, ordinary reasons only:
 ```sql
 WITH hourly AS (
   SELECT TIMESTAMP_TRUNC(ts, HOUR) AS hour, denial_reason, COUNT(*) AS n
-  FROM `PROJECT_ID.walle_audit.actions`
+  FROM `WALLE_PROJECT.walle_audit.actions`
   WHERE decision = 'denied'
     AND ts >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
   GROUP BY hour, denial_reason

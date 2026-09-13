@@ -2,9 +2,14 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
-- Maturity: **design — nothing built.** No dataset, no scheduled query, no job, no bucket,
-  no service account. Not one grant in this set exists in the runbook today.
+- Last reviewed: 2026-09-13
+- Maturity: **design — nothing built.** No project, no dataset, no scheduled query, no job,
+  no bucket, no service account. Not one grant in this set exists in the runbook today.
+- Placement: Mo lives in **its own GCP project, `MO_PROJECT`**, under `FOLDER_ID` beside
+  `WALLE_PROJECT`, `EVE_PROJECT` and `GEMINI_PROJECT` (decided 2026-09-13, for least
+  privilege). `MO_PROJECT` does not exist yet. [`../project-topology.md`](../project-topology.md)
+  is the single authority for where each resource lives and for every grant that crosses a
+  project; this set points there rather than restating it.
 - Codename: `mo`. Resource prefix `mo-`. It is one of the three agents designed in
   [`../wall-e/08-team-eve-mo.md`](../wall-e/08-team-eve-mo.md); Wall-E's set is
   [`../wall-e/README.md`](../wall-e/README.md), Eve's is [`../eve/README.md`](../eve/README.md).
@@ -13,8 +18,12 @@
 
 Mo is about twelve BigQuery scheduled queries, a Cloud Run job that renders markdown, a
 Cloud Storage bucket, and — optionally, from S4 — one small model that writes sentences
-beside numbers it did not compute. It is built backwards from five artefacts and nothing
-else, and its organising property is one sentence:
+beside numbers it did not compute. All of it sits in `MO_PROJECT`. What Mo needs from
+Wall-E's project arrives as resource-level grants and nothing else: T0's two raw reads are
+cross-project, dataset-level `roles/bigquery.dataViewer` on `walle_audit` and
+`walle_workspace_logs` in `WALLE_PROJECT`, with the jobs running (and billed) in
+`MO_PROJECT`. It is built backwards from five artefacts and nothing else, and its organising
+property is one sentence:
 
 > **Every number Mo publishes is re-derivable from `walle_audit`, and the gate re-derives it
 > rather than believing it.**
@@ -46,9 +55,9 @@ because the views it reads do not carry one.
 
 | Tier | Runs as | Reads | Does | Exists from |
 |---|---|---|---|---|
-| **T0 — the metric queries** (`config/metrics/*.sql`) | `mo-metrics@` | `walle_audit`, `walle_workspace_logs` — raw | Computes every number and every selection, including the `ready` / `not_ready` / `insufficient_data` verdict, as a SQL `CASE`. No model, no network egress, nothing to prompt | **S0** |
-| **T1 — `mo-reporter`** | `mo-analyst@` | `walle_metrics` only — never `walle_audit` | Renders the five artefacts, recomputes `plan_hash` on a weekly sample against two read endpoints, writes proposal bundles to the drop box | **S1** (cost report), full set **S2** |
-| **T2 — `mo-narrator`** (optional) | `mo-narrator@` | the agent-facing authorised views in `walle_metrics_views` — ids, hashes, closed enums, counts, timestamps, surrogate keys | Writes prose beside numbers it did not compute. Computes nothing, selects nothing, ranks nothing, grades nothing. Its output never enters the evidence block | **S4**, and it is legitimate never to build it |
+| **T0 — the metric queries** (`config/metrics/*.sql`) | `mo-metrics@${MO_PROJECT}` | `walle_audit`, `walle_workspace_logs` — raw, in `WALLE_PROJECT`, read cross-project under a dataset-level `READER` | Computes every number and every selection, including the `ready` / `not_ready` / `insufficient_data` verdict, as a SQL `CASE`. No model, no network egress, nothing to prompt | **S0** |
+| **T1 — `mo-reporter`** | `mo-analyst@${MO_PROJECT}` | `walle_metrics` only — never `walle_audit` | Renders the five artefacts, recomputes `plan_hash` on a weekly sample against two read endpoints on `walle-actions` in `WALLE_PROJECT` (a cross-project `roles/run.invoker` on that service), writes proposal bundles to the drop box | **S1** (cost report), full set **S2** |
+| **T2 — `mo-narrator`** (optional) | `mo-narrator@${MO_PROJECT}` | the agent-facing authorised views in `walle_metrics_views` — ids, hashes, closed enums, counts, timestamps, surrogate keys | Writes prose beside numbers it did not compute. Computes nothing, selects nothing, ranks nothing, grades nothing. Its output never enters the evidence block | **S4**, and it is legitimate never to build it |
 
 ## What Mo is deliberately not
 
@@ -95,8 +104,8 @@ design set lives at `platform/mo/`, alongside Eve's.
 | 4 | [The five artefacts, and how a proposal becomes a merge](04-artefacts-and-proposals.md) | Each artefact in full, the grading chapter and its weekly human cost, the proposal bundle contract, the closed proposal type set, the path allowlist, CI ingestion and the validator |
 | 5 | [What exists at each stage](05-staging.md) | S0 to S5 and the pre-Phase-1 baseline, what Mo is trusted with at each, the six-criterion acceptance test, and the cost and effort tables |
 | 6 | [Failure modes](06-failure-modes.md) | Mo down, Mo wrong, Mo compromised, the narrator hallucinating, the blocked upstream tables, and the residuals stated unsoftened |
-| 7 | [Building Mo](07-build-runbook.md) | The two new SETUP phases in the runbook's own shape, with verify blocks, rollback and the denial tests authored from Mo's side |
-| 8 | [Open decisions, and what Mo forces on Wall-E](08-open-decisions.md) | The ten open decisions with their gates, the eighteen changes this design forces on Wall-E's set, and the reopen-when table |
+| 7 | [Building Mo](07-build-runbook.md) | Mo's phases against `MO_PROJECT` — the project itself first — in the runbook's own shape, with verify blocks, rollback and the denial tests authored from Mo's side; and the short cross-project steps Wall-E's runbook makes on Mo's behalf |
+| 8 | [Open decisions, and what Mo forces on Wall-E](08-open-decisions.md) | The eleven open decisions with their gates, the nineteen changes this design forces on Wall-E's set, and the reopen-when table |
 
 ## Reading order
 
@@ -122,12 +131,13 @@ disagreements will be.
 |---|---|
 | `config/metrics/toil_baseline.csv` | Not started, and it is the only part of Mo that must exist **before Wall-E does**: four weeks of measured baseline toil for the top three admin tasks, plus monthly human operating hours. Decision 38's denominator cannot be reconstructed afterwards. |
 | `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private`, `walle_metrics_views`, the ~12 scheduled queries, `gates.yaml`, the golden fixtures | Designed, not built. This is S0, and it is the whole of Mo through S1. |
-| Mo's three service accounts and their BigQuery grants | Not created. **No BigQuery read grant for Mo exists in the runbook today** — `add_dataset_access` is called exactly twice, for neither of these. Every grant is a build task. |
-| `MO_PRINCIPAL` | Resolves to `serviceAccount:mo-analyst@${PROJECT}.iam.gserviceaccount.com`. No edit to `walle_setup.py` is required; [`../wall-e/PREREQUISITES.md`](../wall-e/PREREQUISITES.md) items 11 and 13 are settled by this resolution. |
+| Mo's three service accounts and their in-project grants | Not created. They are created **in `MO_PROJECT` by Mo's own runbook** ([07-build-runbook.md](07-build-runbook.md)), never by Wall-E's. Every grant is a build task. |
+| The cross-project grants on Wall-E's resources | Not made. Exactly three: dataset-level `READER` on `walle_audit` and on `walle_workspace_logs` for `mo-metrics@${MO_PROJECT}`, and `roles/run.invoker` on the `walle-actions` service for `mo-analyst@${MO_PROJECT}`. All three are made **from Wall-E's runbook**, in `WALLE_PROJECT`, which gains `MO_PROJECT` as a config key for them. **No BigQuery read grant for Mo exists in the runbook today** — `add_dataset_access` is called exactly twice, for neither of these. Rows 6 and 8 of [`../project-topology.md`](../project-topology.md) §3. |
+| `MO_PRINCIPAL` | Resolves to `serviceAccount:mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com`. `walle_setup.py` and `walle.env.example` gain `MO_PROJECT` regardless; and the only use of `MO_PRINCIPAL` today — Phase 13b's `roles/agentregistry.viewer` at **project** level on Wall-E's project — is a project-level role in another project, which the topology forbids. That grant is dropped from Phase 13b unless a resource-level binding is verified (not verified as of 2026-09-13): see [02-identity-and-access.md](02-identity-and-access.md) §6 and [M-11 · 52](08-open-decisions.md). [`../wall-e/PREREQUISITES.md`](../wall-e/PREREQUISITES.md) items 11 and 13 are settled by the resolution. |
 | `walle_audit.grades`, `proposal_verdicts`, `drills`, and the new `ladder_events` table | **Blocking upstream dependencies.** Without them plan precision, drill freshness, dwell and the ratchet are not computable at all, and no cell can be reported ready. See [08-open-decisions.md](08-open-decisions.md) and [`../wall-e/03-lld.md`](../wall-e/03-lld.md). |
 | The drop box, CI ingestion, the bot author, the validator's recompute check | S2 exit, and a **precondition** for the first promotion that cites Mo — not an improvement to add later. Roughly three of its days belong to the validator custodian rather than to Mo. |
 | `mo-narrator` and the model-family comparison | S4 or never; that is an open decision with its gate at S4 entry. |
-| Cost, if it is built | `Assumption:` 24–37 person-days in Mo's own budget, none on the critical path to S0 or S1. `Assumption:` €25–60 a month of machine cost at pilot scale, `tbd` until the first billing cycle. Plus the human hour a week, which Mo does not create and cannot do without. |
+| Cost, if it is built | `Assumption:` 24–37 person-days in Mo's own budget, none on the critical path to S0 or S1. `Assumption:` €25–60 a month of machine cost at pilot scale, `tbd` until the first billing cycle — and it is **`MO_PROJECT`'s billing line**: BigQuery bills the querying project for the job, so the scans of `walle_audit` are Mo's cost, not Wall-E's ("the querying project is billed for the query job while the project storing the data is billed for the amount of data stored", [Run a query](https://docs.cloud.google.com/bigquery/docs/running-queries), verified 2026-09-13). Mo's machine cost is now separable per project in the billing export. Plus the human hour a week, which Mo does not create and cannot do without. |
 
 Mo's set has not been attacked yet the way Wall-E's has
 ([`../wall-e/10-adversarial-review.md`](../wall-e/10-adversarial-review.md),

@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 
 This page is the inside of Eve. [01-hld.md](01-hld.md) says what Eve is and is not;
 [02-identity-and-auth.md](02-identity-and-auth.md) says which principal holds which key.
@@ -60,14 +60,14 @@ sequenceDiagram
     autonumber
     participant SCH as Cloud Scheduler
     participant GATE as eve-gate
-    participant FS as Firestore in Wall-E project
+    participant FS as "Firestore, WALLE_PROJECT"
     participant ACT as walle-actions
     participant WS as Admin SDK as eve robot
     participant EVD as Ladder artefact and ceiling table
     participant KMS as Cloud KMS eve-approval
 
     SCH->>GATE: run job every 2 minutes
-    GATE->>FS: read plans where state is pending_eve
+    GATE->>FS: discover plans at pending_eve (grant absent; decision 44)
     FS-->>GATE: plan ids, hold window, epochs
     GATE->>FS: read control mode and overrides strongly consistently
     GATE->>ACT: GET /v1/plans/{id}
@@ -321,7 +321,8 @@ KMS `GetPublicKey` as fallback only:
 - A destroyed or disabled key version never orphans a stored approval: the `approvals` row
   carries `eve_key_version`, and the archived PEM for that version is still on disk.
 
-`walle-actions@` holds `roles/cloudkms.publicKeyViewer` cross-project and nothing more. That
+`walle-actions@<WALLE_PROJECT>` holds `roles/cloudkms.publicKeyViewer` on that one key in
+`EVE_PROJECT` — key-level, cross-project, for the fallback path only — and nothing more. That
 role carries `cloudkms.cryptoKeyVersions.viewPublicKey` and no signing permission;
 `roles/cloudkms.signerVerifier` and `roles/cloudkms.cryptoOperator` both carry
 `useToSign` and are therefore forbidden on it (verified 2026-09-12,
@@ -459,19 +460,21 @@ Eve's copy is the reference the two are asserted equal against.
 
 | Surface | Owner | Eve's access | Join key | Notes |
 |---|---|---|---|---|
-| `walle_audit.{actions,runs,plans,approvals,verifications,config_versions}` | Wall-E | dataset-level `dataViewer`, cross-project | `run_id`, plus ADK `invocation_id` | **This grant does not exist in the runbook today.** Query jobs run in Eve's project, so no `bigquery.jobUser` is needed in Wall-E's |
-| `walle_workspace_logs` | Wall-E | not used | — | Superseded by Eve's own sink. Eve asserts on every pass that Wall-E's copy still carries no actor exclusion, as a drift check on Wall-E |
+| `walle_audit.{actions,runs,plans,approvals,verifications,config_versions}` | Wall-E, `WALLE_PROJECT` | dataset-level `dataViewer` (`READER`) in `WALLE_PROJECT`, granted by Wall-E's runbook (CC-22) to `eve-v0@`, `eve-controller@`, `eve-verifier@` of `EVE_PROJECT`; jobs run in `EVE_PROJECT` | `run_id`, plus ADK `invocation_id` | Provided by Wall-E's runbook since 2026-09-13. Query jobs run in Eve's project, so no `bigquery.jobUser` is needed in Wall-E's |
+| `walle_workspace_logs` | Wall-E, `WALLE_PROJECT` | not used for reconciliation; dataset-level `READER` for `eve-verifier@` **proposed** (topology decision 47), no grant today | — | Superseded by Eve's own sink. The standing check that Wall-E's copy still carries no actor exclusion needs a mechanism: reading the organisation sink's filter would need organisation-level `logging.viewer`, refused. Decision 47's form is a data-level comparison — robot-actor admin events per day in `eve_workspace_logs` against `walle_workspace_logs`, a persistent deficit being the finding — which needs that dataset-level `READER` on `walle_workspace_logs` in `WALLE_PROJECT`, made by Wall-E's runbook. Until it lands the claim is not asserted by Eve |
 | `eve_workspace_logs` | Eve | owner | `insertId`, robot actor | Eve's evidence. One DAY-partitioned `cloudaudit_googleapis_com_activity` table, 400-day partition expiry — the sink is created with `--use-partitioned-tables` and the dataset's default partition expiration is set before it, neither of which is the default and neither retrofittable |
 | `eve.*` | Eve | owner | `run_id` | Wall-E's deployers hold no IAM |
 | `eve.walle_audit_mirror` | Eve | owner | `run_id` | Daily append-only copy, outside Wall-E's teardown blast radius |
-| Firestore (Wall-E) | Wall-E | `datastore.viewer` | plan id, `(family, trigger)` | Epochs read strongly consistently and stamped into every verdict |
-| Ladder artefact | Wall-E's CI | `objectViewer` | `config_version` | Append-only into Eve's bucket |
+| Firestore (Wall-E) | Wall-E, `WALLE_PROJECT` | **none today.** The project-level `datastore.viewer` of the 2026-09-12 design is not granted by Wall-E's runbook (`EVE_PROJECT_ROLES = ()`, SETUP Phase 6); `eve-gate` has no Firestore read until topology decision 44 lands — `datastore.viewer` under an IAM Condition scoped to the `(default)` database (spike, expression unverified), or `GET /v1/plans?state=pending_eve` on `walle-actions` (CC-33, a contract change). Epochs and drills come through `GET /v1/plans/{id}` and `GET /v1/ladder` meanwhile, as claims | plan id, `(family, trigger)` | Epochs read strongly consistently and stamped into every verdict once the read exists |
+| Ladder artefact | Wall-E's CI (`CI_DEPLOYER`, `WALLE_PROJECT`) | `objectViewer`; the writer holds `objectCreator` on the `ladder/` prefix only, a bucket-level cross-project grant made by Eve | `config_version` | Append-only into Eve's bucket |
 | Pub/Sub `walle-events` | Wall-E | **none** | — | No Eve subscription at any stage |
 
 The BigQuery grant is E-9 in [09-open-decisions.md](09-open-decisions.md): dataset-level
-`bigquery.dataViewer` on `walle_audit` for Eve's identities, and `bigquery.jobUser` in
-**Eve's own** project so job creation and query cost never touch Wall-E's. Never
-project-level `dataViewer`, which would be a lateral path into Wall-E's project.
+`bigquery.dataViewer` on `walle_audit` in `WALLE_PROJECT` for Eve's identities of
+`EVE_PROJECT`, made by Wall-E's runbook, and `bigquery.jobUser` in **Eve's own** project so
+job creation and query cost never touch Wall-E's. Never project-level `dataViewer`, which
+would be a lateral path into Wall-E's project. The full cross-project table is
+[../project-topology.md](../project-topology.md) §3.
 
 The declined topic is deliberate. The only latency-sensitive duty is L5 post-hoc
 verification within 60 minutes, and a 5-minute poll of the day-partitioned `actions` table
@@ -481,7 +484,7 @@ whoever later asks for the topic, most likely Mo — E-20.
 
 ## 9. The `eve` dataset
 
-BigQuery, location EU, in Eve's project. Every table DAY-partitioned with a 400-day
+BigQuery, location EU, in `EVE_PROJECT`. Every table DAY-partitioned with a 400-day
 partition expiry, pending the retention floor and ceiling of
 [decision 17](../wall-e/09-open-decisions.md) and
 [decision 31](../wall-e/09-open-decisions.md) (E-14). No table holds a Workspace payload:
@@ -492,7 +495,7 @@ ids, counts and hashes only.
 | `findings` | table | metric name, measured value, **Wilson 95 % interval bounds** rather than a point estimate, threshold, window, verdict, query hash, `ts` | S0 |
 | `walle_audit_mirror` | table | The daily append-only copy of yesterday's `walle_audit` partitions, schema as Wall-E's | S0 |
 | `verdicts` | table | `run_id`, item, verdict (section 10), reason code, `eve_config_version`, `config_version`, `ceilings_sha`, the epochs read, input hashes, `replay_bundle` id, `ts` | S3 entry |
-| `verdict_receipts` | **authorized view** over `verdicts` | `(run_id, item, verdict_ts)` — **existence only** | S4 entry |
+| `verdict_receipts` | **authorized view** over `verdicts`, in a **separate dataset** of `EVE_PROJECT` (name *tbd*, `Assumption:` `eve_receipts`; EU; topology decision 48), authorized on `eve` | `(run_id, item, verdict_ts)` — **existence only** | S4 entry |
 | `attestations` | table | promotion cell, every exit criterion with measured value, window and query hash, the observed decision-file approvers, every named limit on Eve's independence applying to that cell, bundle URL, signature over domain tag `eve-attestation/1` | S3 entry |
 | `review_queue` | table | The sampled items drawn for blind grading, with Eve's verdict and reason columns present | S3 entry |
 | `review_queue_blind` | **view** over `review_queue` | An allowlisted column set. Eve's verdict and reason columns are **absent by construction**, not hidden by the console | S3 entry, before the S3 exit gate |
@@ -500,6 +503,17 @@ ids, counts and hashes only.
 | `pages` | table | Every page Eve raised, its reason code, `ts` — the input to the page budget | S3 entry |
 
 Columns beyond those named are *tbd*.
+
+**`verdict_receipts` cannot live in `eve`.** An authorized view must be in a different
+dataset from the dataset its query reads, and the two must share a location
+([Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views), verified
+2026-09-13). So the view sits in its own dataset in `EVE_PROJECT` (name *tbd*, decision 48),
+is added to the `eve` dataset's access list as an authorized view, and
+`walle-actions@<WALLE_PROJECT>` holds `dataViewer` on that dataset — and nothing on `eve`.
+`review_queue_blind` stays in `eve`: its only reader, `eve-console@`, already holds
+`dataViewer` on `eve`, and it is a plain view whose blindness is the column allowlist.
+If `eve.walle_audit_mirror` is later read by Mo from S4 (topology decision 51), the mirror
+moves to a dataset of its own first, because a dataset-level `READER` covers every table.
 
 **`verdict_receipts` is the only thing `walle-actions@` may read in Eve's project**, and it
 exposes `(run_id, item, verdict_ts)` and nothing else. The service checks that evidence

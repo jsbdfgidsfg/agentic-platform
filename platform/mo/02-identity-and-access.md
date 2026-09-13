@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 
 Exactly who holds what, and — at least as important — what nothing holds. Mo runs as three
 service accounts, each strictly weaker than the last, and the seam between them is an **IAM
@@ -13,12 +13,18 @@ code review rather than about access control.
 
 Two facts frame everything below.
 
-- **None of it exists.** No Mo service account is created anywhere in Wall-E's runbook, and
-  **no BigQuery read grant for Mo exists today**: `add_dataset_access` is called exactly
-  twice in `setup/walle_setup.py`, once for the custom `walleAuditWriter` role on
+- **None of it exists, and the ownership is split by project.** Mo's accounts are never
+  created in Wall-E's runbook — they are created in `MO_PROJECT` by Mo's own runbook,
+  [07-build-runbook.md](07-build-runbook.md), together with every in-project grant. Wall-E's
+  runbook owns **exactly the cross-project grants on Wall-E's resources**: dataset-level
+  `READER` on `walle_audit` and `walle_workspace_logs` for `mo-metrics@${MO_PROJECT}`, and
+  `roles/run.invoker` on the `walle-actions` service for `mo-analyst@${MO_PROJECT}`, keyed on
+  a new `MO_PROJECT` config key ([`../project-topology.md`](../project-topology.md) §3 rows 6
+  and 8, §7.1). **No BigQuery read grant for Mo exists today**: `add_dataset_access` is called
+  exactly twice in `setup/walle_setup.py`, once for the custom `walleAuditWriter` role on
   `walle-actions@`, once for the `walle-audit-bq` sink writer identity on
   `walle_workspace_logs`. Neither call names a Mo principal. Every grant on this page is a
-  build task, and [07-build-runbook.md](07-build-runbook.md) is where each one is written.
+  build task.
 - **Mo holds no credential and no secret of any kind.** Not a Workspace credential, not a
   refresh token, not a signing key, not a git credential, not a Secret Manager grant on any
   secret in any project. There is no domain-wide delegation anywhere in this platform and Mo
@@ -32,22 +38,27 @@ it.
 
 ## 1. The three identities
 
-All three live in Wall-E's project, `${PROJECT}`, region `europe-west1`, BigQuery location
-`EU`.
+All three live in Mo's project, `${MO_PROJECT}`, region `europe-west1`, BigQuery location
+`EU`. `WALLE_PROJECT` is where the two datasets they read and the service one of them calls
+live; a principal here reaches those only through a grant on the resource, never through a
+project-level role in Wall-E's project ([`../project-topology.md`](../project-topology.md),
+"the one rule").
 
 | Identity | What it is | Grants — exactly | Holds no | Why it is separate |
 |---|---|---|---|---|
-| `mo-metrics@${PROJECT}.iam.gserviceaccount.com` | The pinned identity of the ~12 BigQuery scheduled queries, set with `--service_account_name`. **Never a human's user credentials**, which is the BigQuery Data Transfer Service default and an audit-independence defect when that human also administers Wall-E | `roles/bigquery.dataViewer` on `walle_audit` and `walle_workspace_logs`; `roles/bigquery.jobUser` on the project; `roles/bigquery.dataEditor` on `walle_metrics`, `walle_metrics_archive` and `walle_metrics_private`. Additionally, per Google's service-account guidance for the Data Transfer Service, the **updating human** needs `bigquery.transfers.update` and Service Account User on this account, and the **account** needs `bigquery.datasets.get` and `bigquery.datasets.update` on the target dataset | Secret, key, Workspace credential, Firestore role, Cloud Run invoker binding, git credential, network egress | It is the only identity that reads raw per-person rows, and it runs committed SQL with no model and no way to be prompted |
-| `mo-analyst@${PROJECT}.iam.gserviceaccount.com` | The attached service account of the `mo-reporter` Cloud Run job, workload identity only. **The name [../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) §7.5's caller allowlist already carries**, and the resolution of `MO_PRINCIPAL` | `roles/bigquery.dataViewer` on `walle_metrics` and `walle_metrics_archive` **only** — never on `walle_audit`, never on `walle_metrics_private`; `roles/bigquery.jobUser`; `roles/run.invoker` on `walle-actions`; `roles/storage.objectCreator` on `walle-mo-proposals`; `roles/agentregistry.viewer` (Phase 13b, currently unused) | Secret of any kind, key, Workspace credential, Firestore role, git credential, read on `walle_audit` | It is the only identity that talks to anything outside BigQuery, and it cannot see the raw evidence it would need to forge a number |
-| `mo-narrator@${PROJECT}.iam.gserviceaccount.com` | The attached service account of the optional T2 job, built at S4 or never | `roles/bigquery.dataViewer` on the **agent-facing authorised-view dataset `walle_metrics_views` only**; `roles/aiplatform.user`, for `generateContent` against a pinned model id | Everything else — no action-service invoker, no drop-box write, no raw read, no secret | It is the only identity that carries a model, and it can neither call the action service nor write a proposal bundle |
+| `mo-metrics@${MO_PROJECT}.iam.gserviceaccount.com` | The pinned identity of the ~12 BigQuery scheduled queries, set with `--service_account_name`. **Never a human's user credentials**, which is the BigQuery Data Transfer Service default and an audit-independence defect when that human also administers Wall-E | `roles/bigquery.dataViewer` **dataset-level** on `${WALLE_PROJECT}:walle_audit` and `${WALLE_PROJECT}:walle_workspace_logs` (cross-project, made by Wall-E's runbook); `roles/bigquery.jobUser` on `MO_PROJECT` **only** — none in `WALLE_PROJECT`, because the job runs and is billed where it is submitted ("`bigquery.jobs.create` on the project from which the query is being run, regardless of where the data is stored", [Run a query](https://docs.cloud.google.com/bigquery/docs/running-queries), verified 2026-09-13); `roles/bigquery.dataEditor` on the four `walle_metrics*` datasets in `MO_PROJECT`. Additionally, per Google's service-account guidance for the Data Transfer Service, the **updating human** needs `bigquery.transfers.update` and Service Account User on this account, and the **account** needs `bigquery.datasets.get` and `bigquery.datasets.update` on the target dataset | Secret, key, Workspace credential, Firestore role, Cloud Run invoker binding, git credential, network egress | It is the only identity that reads raw per-person rows, and it runs committed SQL with no model and no way to be prompted |
+| `mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com` | The attached service account of the `mo-reporter` Cloud Run job, workload identity only. **The name [../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) §7.5's caller allowlist already carries** — the allowlist row must now carry this **full cross-project email** — and the resolution of `MO_PRINCIPAL` | `roles/bigquery.dataViewer` on `walle_metrics` and `walle_metrics_archive` in `MO_PROJECT` **only** — never on `walle_audit`, never on `walle_metrics_private`; `roles/bigquery.jobUser` on `MO_PROJECT`; `roles/run.invoker` on the service `walle-actions` in `WALLE_PROJECT` (cross-project, resource-level, made by Wall-E's runbook); `roles/storage.objectCreator` on `walle-mo-proposals` in `MO_PROJECT`. **Not** `roles/agentregistry.viewer`: Phase 13b binds it at project level on `WALLE_PROJECT`, which the topology forbids for a `MO_PROJECT` principal — dropped, or bound at resource level once verified (§6) | Secret of any kind, key, Workspace credential, Firestore role, git credential, read on `walle_audit` | It is the only identity that talks to anything outside BigQuery, and it cannot see the raw evidence it would need to forge a number |
+| `mo-narrator@${MO_PROJECT}.iam.gserviceaccount.com` | The attached service account of the optional T2 job, built at S4 or never | `roles/bigquery.dataViewer` on the **agent-facing authorised-view dataset `walle_metrics_views` only**; `roles/aiplatform.user` on `MO_PROJECT`, for `generateContent` against a pinned model id — the Vertex AI API is enabled in `MO_PROJECT` at S4; nothing in `WALLE_PROJECT` | Everything else — no action-service invoker, no drop-box write, no raw read, no secret | It is the only identity that carries a model, and it can neither call the action service nor write a proposal bundle |
 
 The table is the grant set as of S1. Two further bindings arrive later and are listed with
 their reasons in [§2](#2-the-grant-list-account-by-account): `roles/run.invoker` for
 `mo-analyst@` on the `mo-reporter` **job** — a different resource from the `walle-actions`
 service — which is what lets Cloud Scheduler start the job at S1; and
-`roles/bigquery.dataViewer` for `mo-metrics@` on the linked Spans dataset at S3. Neither
-changes the ordering of the three tiers, and both are marked where they arrive rather than
-folded into the row above.
+`roles/bigquery.dataViewer` for `mo-metrics@` on the linked Spans dataset **in
+`WALLE_PROJECT`** at S3 — a cross-project, dataset-level grant made by Wall-E's owner
+(`Assumption:` the trace bucket is Wall-E's engine's; unverified that a linked dataset accepts
+the entry, [M-11 · 52](08-open-decisions.md) (b)). Neither changes the ordering of the three
+tiers, and both are marked where they arrive rather than folded into the row above.
 
 Three notes that belong with the table rather than under it.
 
@@ -65,27 +76,40 @@ printed in [../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) §7.5, which a
 `mo-analyst@` on exactly that row and on no other. That is structural weakness 2 of Wall-E's
 architecture, inherited here rather than solved here, and it is why the denial tests in
 §7 below exercise `/v1/control/demote` from `mo-analyst@` and expect a 403 from the
-application rather than from IAM.
+application rather than from IAM. It is also a **cross-project** grant: the binding is on the
+`walle-actions` service in `WALLE_PROJECT`, the member is
+`serviceAccount:mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com`, and it is made by Wall-E's
+runbook (the Phase 10 invoker loop) from the `MO_PROJECT` config key — never by Mo's runbook.
+The gcloud shape is `gcloud run services add-iam-policy-binding SERVICE --member=PRINCIPAL
+--role=roles/run.invoker` ([Cloud Run — managing access](https://docs.cloud.google.com/run/docs/securing/managing-access),
+verified 2026-09-13); Google documents no same-project restriction on the member, and the
+domain-restricted-sharing constraint admits any service account in the organisation
+([`../project-topology.md`](../project-topology.md) §5).
 
-**`roles/agentregistry.viewer` is granted and unused.** It is built in Phase 13b beside
-Eve's, it is read-only on a registry, and dropping it would mean editing `walle_setup.py`
-and deleting `MO_PRINCIPAL`. The scorecard records it as **granted-and-unused** rather than
-pretending it is needed; if a future stage still has no use for it, removing it is a
-one-line change and its own decision record.
+**`roles/agentregistry.viewer` is dropped, not kept.** On 2026-09-12 it was to be kept as
+granted-and-unused: built in Phase 13b beside Eve's, read-only on a registry, and dropping it
+meant editing `walle_setup.py`. Phase 13b binds it at **project** level on `WALLE_PROJECT`;
+for `mo-analyst@${MO_PROJECT}` that is a project-level role in another project, forbidden by
+the 2026-09-13 topology, and the Agent Registry v1 API offers no resource-level IAM. So the
+paragraph flips: drop it from Phase 13b (an edit to `walle_setup.py`, which gains
+`MO_PROJECT` in the same change; `MO_PRINCIPAL` may stay as a documented key), unless a
+resource-level binding is verified — a spike, recorded as [M-11 · 52](08-open-decisions.md)
+(a) and topology decision 43.
 
 ### 1.1 What no Mo identity holds, stated positively
 
 | Capability | Which Mo identity holds it | Where the enforcement is |
 |---|---|---|
 | A Workspace credential, admin role, OAuth client or refresh token | **None** | No Workspace account is created for Mo at all; there is nothing to consent, nothing to impersonate, and no domain-wide delegation anywhere |
-| `roles/secretmanager.secretAccessor` on any secret, in any project | **None** | Mo appears on no secret's IAM policy. The separation sweep that already asserts `walle-actions@` and `eve-controller@` share no secret gains a third name to assert absent |
+| `roles/secretmanager.secretAccessor` on any secret, in any project | **None** | Mo appears on no secret's IAM policy — none in `WALLE_PROJECT`, none in `EVE_PROJECT`, none in `GEMINI_PROJECT`, and no secret exists in `MO_PROJECT` at all. The separation sweep that already asserts `walle-actions@` and `eve-controller@` share no secret gains a third name to assert absent, in both projects that hold secrets |
 | A Cloud KMS role of any kind, in particular `signer`, `signerVerifier` or `cryptoOperator` | **None** | Mo cannot produce an Eve approval, and neither can any language model — the standing rule, restated here at the identity layer |
 | A git credential, GitHub App installation, deploy key or push right | **None** | Mo writes a bundle to a bucket. CI, under a bot identity that is **not** Mo, opens the pull request |
 | `roles/datastore.viewer` or any other Firestore role | **None** | Everything Mo needs is write-ahead in BigQuery. Reading Firestore would put Mo inside the control plane's read surface for no artefact's sake |
 | A Pub/Sub subscription on `walle-events` or any other topic | **None** | [C30](../wall-e/14-hld-challenge.md): no duty of Mo's needs it, default-stream writes are queryable immediately, and the `PS --> MO` edge leaves the component map |
-| Write access to anything in `walle_audit` | **None** | `mo-metrics@` holds `dataViewer` there, never `dataEditor`. Mo's only write targets are `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` and the drop box |
-| Any access to the restricted content-log bucket `walle-content-logs` | **None** | Its reader list is decision 25's: the operators group and IT security. Mo is not on it and does not ask to be |
-| `aiplatform.reasoningEngines.query`, or any engine-level permission | **None** | Mo asks Wall-E nothing about itself, reads none of Wall-E's memory, and is not an Agent Runtime agent in this design |
+| Write access to anything in `walle_audit` — or to anything else in `WALLE_PROJECT` | **None** | `mo-metrics@` holds `dataViewer` there, never `dataEditor`. Mo's only write targets are inside `MO_PROJECT`: `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` and the drop box |
+| Any access to the restricted content-log bucket `walle-content-logs`, in `WALLE_PROJECT` | **None** | Its reader list is decision 25's: the operators group and IT security. Mo is not on it and does not ask to be |
+| `aiplatform.reasoningEngines.query`, or any engine-level permission | **None** | The engine is in `WALLE_PROJECT` and no Mo principal appears in its IAM policy. Mo asks Wall-E nothing about itself, reads none of Wall-E's memory, and is not an Agent Runtime agent in this design |
+| Any **project-level** role in `WALLE_PROJECT`, `EVE_PROJECT` or `GEMINI_PROJECT` | **None** | The topology's one rule. Mo's only bindings outside `MO_PROJECT` are three resource-level ones — two dataset access entries and one Cloud Run service binding — plus, at S3, one on the linked Spans dataset. Asserted by MD-9b and by Wall-E's drift job ([`../project-topology.md`](../project-topology.md) §3 row 26) |
 | The right to call `/v1/ladder`, `/v1/control/*`, `/approve` or `/veto` | **None** | No IAM binding, no allowlist entry, no code path. `ladder.yaml` in git is what tells Mo what the level *should* be |
 
 ---
@@ -97,16 +121,16 @@ today" is `no` for every row but one, and that one is a placeholder.
 
 ### 2.1 `mo-metrics@` — the only identity that reads raw rows
 
-| Grant | Scope | Why | Exists today |
-|---|---|---|---|
-| `roles/bigquery.dataViewer` | dataset `walle_audit` | T0 computes every metric from `actions`, `runs`, `plans`, `approvals`, `verifications`, `config_versions`, and the new `grades`, `proposal_verdicts`, `drills` and `ladder_events` tables | no |
-| `roles/bigquery.dataViewer` | dataset `walle_workspace_logs` | Audit completeness joins Google's org-level admin events to Wall-E's requester and approver rows. Queried from BigQuery, never from org-level Cloud Logging, whose `_Default` bucket is fixed at 30 days for organisations | no |
-| `roles/bigquery.jobUser` | project `${PROJECT}` | A scheduled query is a job | no |
-| `roles/bigquery.dataEditor` | datasets `walle_metrics`, `walle_metrics_archive` | The `MERGE` target and the daily snapshot. This is the write that open decision 42 is about | no |
-| `roles/bigquery.dataEditor` | dataset `walle_metrics_private` — **the only principal on it, and no reader is ever granted there to anyone** | `principal_surrogates` lives in this dataset alone, so the mapping sits outside every dataset `mo-analyst@` or `mo-narrator@` can reach. See §4 | no |
-| `bigquery.datasets.get`, `bigquery.datasets.update` | the target dataset | Required of the service account a scheduled query is pinned to, per Google's Data Transfer Service documentation | no |
-| `bigquery.transfers.update` + Service Account User **on `mo-metrics@`** | held by the **human** who creates or edits a transfer config | Not a grant to Mo. It is what the build step needs, and it is why creating the scheduled queries is a named human act in the runbook | no |
-| `roles/bigquery.dataViewer` | the **linked Spans dataset** (`_AllSpans`) | `Assumption:` the design names the Spans join but not the grant that makes it possible. Token spend, tool-call counts and per-invocation latency, joined on `invocation_id` and, through `runs`, on `trace_id`. **Granted at S3 only**, when [07-build-runbook.md](07-build-runbook.md) Phase Mo-10 creates the link; it widens `mo-metrics@`'s read surface by one dataset of trace data, and the link itself is created by a human holding `roles/observability.editor`, never by Mo | no |
+| Grant | Scope | Made in, by | Why | Exists today |
+|---|---|---|---|---|
+| `roles/bigquery.dataViewer` (dataset access entry `READER`) | dataset `${WALLE_PROJECT}:walle_audit` — **cross-project, dataset-level** | `WALLE_PROJECT`, by Wall-E's owner: `walle_setup.py` `add_dataset_access` with member `mo-metrics@${MO_PROJECT}`, keyed on `MO_PROJECT` (SETUP Phase 7) | T0 computes every metric from `actions`, `runs`, `plans`, `approvals`, `verifications`, `config_versions`, and the new `grades`, `proposal_verdicts`, `drills` and `ladder_events` tables | no |
+| `roles/bigquery.dataViewer` (dataset access entry `READER`) | dataset `${WALLE_PROJECT}:walle_workspace_logs` — **cross-project, dataset-level** | `WALLE_PROJECT`, by Wall-E's owner, the same way | Audit completeness joins Google's org-level admin events to Wall-E's requester and approver rows. Queried from BigQuery, never from org-level Cloud Logging, whose `_Default` bucket is fixed at 30 days for organisations | no |
+| `roles/bigquery.jobUser` | project `${MO_PROJECT}` — and explicitly **none on `WALLE_PROJECT`** | `MO_PROJECT`, Mo's runbook (Mo-2) | A scheduled query is a job, and the job runs and is billed in the project it is submitted from, wherever the data is ([Run a query](https://docs.cloud.google.com/bigquery/docs/running-queries), verified 2026-09-13) | no |
+| `roles/bigquery.dataEditor` | datasets `${MO_PROJECT}:walle_metrics`, `${MO_PROJECT}:walle_metrics_archive` | `MO_PROJECT`, Mo's runbook (Mo-2) | The `MERGE` target and the daily snapshot. This is the write that open decision 42 is about. The destination must be in the transfer config's project — "The destination dataset and table for a scheduled query must be in the same project as the scheduled query" ([Scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries), verified 2026-09-13) — which is why these datasets are in `MO_PROJECT` and the sources are read cross-project, never the other way round | no |
+| `roles/bigquery.dataEditor` | dataset `${MO_PROJECT}:walle_metrics_private` — **the only principal on it, and no reader is ever granted there to anyone** | `MO_PROJECT`, Mo's runbook (Mo-2) | `principal_surrogates` lives in this dataset alone, so the mapping sits outside every dataset `mo-analyst@` or `mo-narrator@` can reach. See §4 | no |
+| `bigquery.datasets.get`, `bigquery.datasets.update` | the target dataset, in `MO_PROJECT` | `MO_PROJECT` (carried by `WRITER`) | Required of the service account a scheduled query is pinned to, per Google's Data Transfer Service documentation | no |
+| `bigquery.transfers.update` on `MO_PROJECT` + Service Account User **on `mo-metrics@`** | held by the **human** who creates or edits a transfer config | `MO_PROJECT` | Not a grant to Mo. It is what the build step needs, and it is why creating the scheduled queries is a named human act in the runbook | no |
+| `roles/bigquery.dataViewer` | the **linked Spans dataset** (`_AllSpans`) in `${WALLE_PROJECT}` (`Assumption:` the `_Trace` bucket is Wall-E's engine's) — **cross-project, dataset-level** | `WALLE_PROJECT`, by Wall-E's owner, after a human holding `roles/observability.editor` **in `WALLE_PROJECT`** creates the link | `Assumption:` the design names the Spans join but not the grant that makes it possible. Token spend, tool-call counts and per-invocation latency, joined on `invocation_id` and, through `runs`, on `trace_id`. **Granted at S3 only**, when [07-build-runbook.md](07-build-runbook.md) Phase Mo-10 creates the link; it widens `mo-metrics@`'s read surface by one dataset of trace data, and the link itself is never created by Mo. **Unverified** that a linked dataset's access array accepts the entry — [M-11 · 52](08-open-decisions.md) (b), topology decision 49 | no |
 
 The pin itself is the control: `bq query --schedule ... --service_account_name` rather than
 the default, which is the credentials of whoever pressed the button. A metrics pipeline that
@@ -115,14 +139,14 @@ it dies when that person leaves.
 
 ### 2.2 `mo-analyst@` — the only identity that leaves BigQuery
 
-| Grant | Scope | Why | Exists today |
-|---|---|---|---|
-| `roles/bigquery.dataViewer` | datasets `walle_metrics`, `walle_metrics_archive` | T1 renders the five artefacts from computed aggregates and snapshots | no |
-| `roles/bigquery.jobUser` | project `${PROJECT}` | Reading a view is a job | no |
-| `roles/run.invoker` | service `walle-actions` | The weekly `plan_hash` recomputation on a sample, through the two read endpoints. Phase 10's invoker loop covers `$SA_AGENT`, `$SA_DISPATCH`, `$SA_EVE`, `$SA_ACTIONS` and `$SA_OPS_CALLER` — **no Mo principal**, so this binding is new even though §7.5's allowlist row is not | no |
-| `roles/run.invoker` | **job** `mo-reporter` | A different resource from the `walle-actions` service. Cloud Scheduler's HTTP target on `run.googleapis.com` takes an OAuth token minted for the job's invoker, so the scheduling identity needs this binding on the job itself. `Assumption:` `mo-analyst@` is that scheduling identity — it invokes the job it also runs as | no |
-| `roles/storage.objectCreator` | bucket `walle-mo-proposals` | Write one proposal bundle per object. Create only: no read-back, no overwrite, no delete | no |
-| `roles/agentregistry.viewer` | project `${PROJECT}` | Granted in Phase 13b through `MO_PRINCIPAL`, currently unused by any Mo duty | **partly** — the grant is written in `walle_setup.py`, but `MO_PRINCIPAL` is an unresolved placeholder, so nothing is actually bound |
+| Grant | Scope | Made in, by | Why | Exists today |
+|---|---|---|---|---|
+| `roles/bigquery.dataViewer` | datasets `${MO_PROJECT}:walle_metrics`, `${MO_PROJECT}:walle_metrics_archive` | `MO_PROJECT`, Mo's runbook (Mo-6) | T1 renders the five artefacts from computed aggregates and snapshots | no |
+| `roles/bigquery.jobUser` | project `${MO_PROJECT}` | `MO_PROJECT`, Mo's runbook (Mo-6) | Reading a view is a job | no |
+| `roles/run.invoker` | service `walle-actions` **in `WALLE_PROJECT`** — cross-project, service-level | `WALLE_PROJECT`, by Wall-E's owner: SETUP Phase 10's invoker loop gains `mo-analyst@${MO_PROJECT}` from the `MO_PROJECT` config key | The weekly `plan_hash` recomputation on a sample, through the two read endpoints. Phase 10's invoker loop covers `$SA_AGENT`, `$SA_DISPATCH`, `$SA_EVE`, `$SA_ACTIONS` and `$SA_OPS_CALLER` — **no Mo principal**, so this binding is new even though §7.5's allowlist row is not; and the allowlist row must carry the full `@${MO_PROJECT}` email | no |
+| `roles/run.invoker` | **job** `mo-reporter`, in `MO_PROJECT` | `MO_PROJECT`, Mo's runbook (Mo-7) | A different resource from the `walle-actions` service. Cloud Scheduler's HTTP target on `run.googleapis.com` takes an OAuth token minted for the job's invoker, so the scheduling identity needs this binding on the job itself. `Assumption:` `mo-analyst@` is that scheduling identity — it invokes the job it also runs as | no |
+| `roles/storage.objectCreator` | bucket `walle-mo-proposals`, in `MO_PROJECT` | `MO_PROJECT`, Mo's runbook (Mo-9) | Write one proposal bundle per object. Create only: no read-back, no overwrite, no delete | no |
+| ~~`roles/agentregistry.viewer`~~ | ~~project `${WALLE_PROJECT}`~~ — **removed** | — | Phase 13b grants it through `MO_PRINCIPAL` at project level on Wall-E's project; for a `MO_PROJECT` principal that is a project-level role in another project, which the topology forbids, and the registry has no resource-level IAM. The row is retired unless a verified resource-level binding replaces it (§6, [M-11 · 52](08-open-decisions.md) (a)) | **no**, and must stay no — the grant written in `walle_setup.py` is deleted (topology decision 43) |
 
 Explicitly **not** granted to `mo-analyst@`: `roles/bigquery.dataViewer` on `walle_audit`,
 and `roles/bigquery.dataViewer` — or any other read — on `walle_metrics_private`. The first
@@ -134,10 +158,10 @@ that dataset, so the mapping cannot live there. See §4.
 
 ### 2.3 `mo-narrator@` — the only identity that carries a model
 
-| Grant | Scope | Why | Exists today |
-|---|---|---|---|
-| `roles/bigquery.dataViewer` | dataset `walle_metrics_views` — the **agent-facing authorised views only**, never `walle_metrics`, never `walle_metrics_archive`, never `walle_metrics_private`, never `walle_audit` | The model reads ids, hashes, closed enums, counts, timestamps and surrogate keys. Nothing else is selectable by it, anywhere. The grant is on the **view dataset**, which is what Google's authorized-view mechanism requires of the querying principal | no |
-| `roles/aiplatform.user` | project `${PROJECT}` | `generateContent` against a pinned model id in `europe-west1`. Deliberately not a reasoning engine, deliberately not Agent Runtime | no |
+| Grant | Scope | Made in, by | Why | Exists today |
+|---|---|---|---|---|
+| `roles/bigquery.dataViewer` | dataset `${MO_PROJECT}:walle_metrics_views` — the **agent-facing authorised views only**, never `walle_metrics`, never `walle_metrics_archive`, never `walle_metrics_private`, never `walle_audit` | `MO_PROJECT`, Mo's runbook (Mo-11) | The model reads ids, hashes, closed enums, counts, timestamps and surrogate keys. Nothing else is selectable by it, anywhere. The grant is on the **view dataset**, which is what Google's authorized-view mechanism requires of the querying principal | no |
+| `roles/aiplatform.user` | project `${MO_PROJECT}` | `MO_PROJECT`, Mo's runbook (Mo-11), after `aiplatform.googleapis.com` is enabled there | `generateContent` against a pinned model id in `europe-west1`. Deliberately not a reasoning engine, deliberately not Agent Runtime. The folder's Model Armor floor applies to these calls ([`../project-topology.md`](../project-topology.md) §5) | no |
 
 Explicitly **not** granted: any `run.invoker` binding, any `storage.objectCreator` on the
 drop box, any read on `walle_audit` or on the raw `walle_metrics` tables, any secret. T2
@@ -161,7 +185,7 @@ not exist rather than exist weakly:
 |---|---|---|
 | Separate dataset | The authorized view "must be a different dataset than the dataset used in the source query" | The views cannot live in `walle_metrics` beside `scorecard`. `walle_metrics_views` holds views and no tables |
 | Same location | "the source data dataset and authorized view dataset must be in the same regional location" | Every Mo dataset is `EU`, and the location is not a free choice later |
-| Grant on the view's dataset | The querying principal needs "`roles/bigquery.dataViewer` … to the dataset that contains the authorized view", and no permission on the source | `mo-narrator@` is granted on `walle_metrics_views`, not on the view as a table and not on `walle_metrics` |
+| Grant on the view's dataset | The querying principal needs "`roles/bigquery.dataViewer` … to the dataset that contains the authorized view", and no permission on the source — plus `roles/bigquery.jobUser` on the project where the query job runs (same page, verified 2026-09-13) | `mo-narrator@` is granted on `walle_metrics_views`, not on the view as a table and not on `walle_metrics`; its `jobUser` is on `MO_PROJECT`, where the view, its source and the job all are |
 
 "Principals can view the data you share and run queries on it, but they can't access the
 source dataset directly" is the property the tier rests on, and it is only available when all
@@ -177,7 +201,13 @@ therefore an access-control boundary, not a style guide.
 `walle_audit` would, the moment it was redefined to select `params_redacted`, hand raw free
 text to whichever principal may read it — a standing escalation path into the one dataset the
 three-tier split exists to fence off. The views read `walle_metrics.scorecard` and are
-registered on `walle_metrics` only.
+registered on `walle_metrics` only — an **intra-project** authorisation, since both datasets
+are in `MO_PROJECT`. The cross-project form exists: the source dataset's access entry names
+the view as `PROJECT_ID.DATASET_ID.VIEW_NAME` ([authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views),
+verified 2026-09-13), so authorising a `MO_PROJECT` view on `${WALLE_PROJECT}:walle_audit` is
+possible and is exactly what is refused. Mo-6's verify block checks that
+`${WALLE_PROJECT}:walle_audit`'s access array contains no `view` entry whose `projectId` is
+`MO_PROJECT` ([`../project-topology.md`](../project-topology.md) §3 row 9, an anti-grant).
 
 ### 3.1 The column allowlist
 
@@ -270,22 +300,29 @@ worth something if it is tested, so it is stated as an assertion with a named id
 and a denial-suite row.
 
 **The assertion.** No identity in Wall-E's enforcement path holds read access on
-`walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` or `walle_metrics_views`.
+`walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` or `walle_metrics_views` —
+and, since those datasets are in `MO_PROJECT`, no principal homed in `WALLE_PROJECT`,
+`EVE_PROJECT`, `GEMINI_PROJECT` or the validator custodian's project holds **any binding of
+any kind** in `MO_PROJECT`: `MO_PROJECT`'s project IAM policy names none of them, and no Mo
+dataset's access list does either ([`../project-topology.md`](../project-topology.md) §3
+row 24).
 
-| Identity | Role in enforcement | Must not hold |
-|---|---|---|
-| `walle-actions@` | Holds the Workspace credential; runs the policy chain, the breakers and the level check | `bigquery.dataViewer`, `jobUser` or any custom read role on any of the four Mo datasets |
-| `walle-dispatcher@` | Invokes the reasoning layer | the same |
-| The ladder deploy tool's identity (`config/deploy_ladder.py`) | Writes the effective level | the same |
-| `eve-controller@` and every other Eve identity | Approves, vetoes, halts, demotes | the same |
-| The CI gate validator's identity | Recomputes evidence and refuses merges | the same — **it reads `walle_audit` directly, never Mo's output.** A validator that read `walle_metrics` would be checking Mo against Mo |
+| Identity | Home | Role in enforcement | Must not hold |
+|---|---|---|---|
+| `walle-actions@` | `WALLE_PROJECT` | Holds the Workspace credential; runs the policy chain, the breakers and the level check | `bigquery.dataViewer`, `jobUser` or any custom read role on any of the four Mo datasets; any binding in `MO_PROJECT`'s IAM policy |
+| `walle-dispatcher@` | `WALLE_PROJECT` | Invokes the reasoning layer | the same |
+| The ladder deploy tool's identity (`config/deploy_ladder.py`) | `WALLE_PROJECT` | Writes the effective level | the same |
+| `eve-controller@${EVE_PROJECT}` and every other Eve identity | `EVE_PROJECT` | Approves, vetoes, halts, demotes | the same |
+| The CI gate validator's identity | The custodian's own project (*tbd*, decision 37) | Recomputes evidence and refuses merges | the same — **it reads `${WALLE_PROJECT}.walle_audit` directly, cross-project, never Mo's output.** A validator that read `walle_metrics` would be checking Mo against Mo |
+| `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com` | `GEMINI_PROJECT` | The Gemini Enterprise app's service agent, which queries Wall-E's engine | the same. It has no business in `MO_PROJECT`; its only cross-project grant is on Wall-E's engine |
 
 **The denial-suite row**, authored in [../wall-e/SETUP.md](../wall-e/SETUP.md) §4's format
 and listed with the rest of Mo's tests in [07-build-runbook.md](07-build-runbook.md):
 
 | # | Test | Expected result |
 |---|---|---|
-| *tbd* in SETUP §4; `MD-9` in [07-build-runbook.md](07-build-runbook.md) | Each of the five enforcement identities in the table above attempts `SELECT` on `walle_metrics.scorecard` | **403 at Google** for every one. The suite fails if any single identity succeeds |
+| *tbd* in SETUP §4; `MD-9` in [07-build-runbook.md](07-build-runbook.md) | Each of the enforcement identities in the table above attempts `SELECT` on `` `${MO_PROJECT}.walle_metrics.scorecard` ``, with the job submitted in the identity's **home** project (`WALLE_PROJECT`, `EVE_PROJECT`, the custodian's), so that the 403 comes from the table and not from a missing `bigquery.jobs.create` — a test refused at job creation passes for the wrong reason | **403 at Google** for every one. The suite fails if any single identity succeeds |
+| `MD-9b` in [07-build-runbook.md](07-build-runbook.md) | `gcloud projects get-iam-policy "$MO_PROJECT"` is read and every member checked | **Zero** members ending in `@${WALLE_PROJECT}.iam.gserviceaccount.com` or `@${EVE_PROJECT}.iam.gserviceaccount.com`, and none containing `gcp-sa-discoveryengine`. The same check over each Mo dataset's `access` array |
 
 Two consequences follow from making this a test rather than a sentence.
 
@@ -325,18 +362,19 @@ required key for `./walle registry` and is used once, to grant `roles/agentregis
 at project level in Phase 13b. No service account is created for it, and a grep for
 `mo-analyst` across the runbook returns only a comment.
 
-**It resolves to `serviceAccount:mo-analyst@${PROJECT}.iam.gserviceaccount.com`.**
+**It resolves to `serviceAccount:mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com`** — the
+value needs `MO_PROJECT` in `walle.env`.
 
 | Consequence | Detail |
 |---|---|
-| No code change | `walle_setup.py` needs no edit. The IAM member string is already in the documented form, and a bare email is taken as a service account |
-| [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) item 11 | "`MO_PRINCIPAL` is required by `./walle registry` while Mo does not exist" — settled by naming the principal, so the key stops being a blank that blocks every subcommand |
-| [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) item 13 | The registry-viewer holders disagree between SETUP prose, the SETUP command and the script. Resolution, not deletion, keeps the script's behaviour and makes the prose true |
-| The alternative, rejected | Dropping `roles/agentregistry.viewer` and deleting `MO_PRINCIPAL` is correct by the artefact test — no Mo duty uses the registry — and wrong on balance: the grant is already built, it is read-only on a registry, and deleting the key means editing the setup script. The scorecard records the grant as granted-and-unused instead |
+| A code change after all | On 2026-09-12 "no code change" held: the IAM member string is in the documented form and a bare email is taken as a service account. It no longer holds. `walle_setup.py` and `walle.env.example` gain `MO_PROJECT` for the cross-project grants regardless, and Phase 13b's **project-level** `roles/agentregistry.viewer` on `WALLE_PROJECT` to a `MO_PROJECT` principal is forbidden by the topology's one rule |
+| [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) item 11 | "`MO_PRINCIPAL` is required by `./walle registry` while Mo does not exist" — settled by naming the principal, so the key stops being a blank that blocks every subcommand; if the registry grant goes, the key is kept only where another subcommand needs it (`validate_config` then stops requiring it for `registry`) |
+| [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) item 13 | The registry-viewer holders disagree between SETUP prose, the SETUP command and the script. The resolution names the principal; the grant itself is removed from all three so they agree on absence |
+| The former alternative, now the recommendation | Dropping `roles/agentregistry.viewer` is correct by the artefact test — no Mo duty uses the registry — **and** required by placement: the registry v1 API has no `getIamPolicy`/`setIamPolicy` and its roles are project-level only, so there is no resource-level form to fall back to. Drop the grant from Phase 13b; keep `MO_PRINCIPAL` only if it has another use. A resource-level binding, if one is ever verified, is the only thing that would reinstate it — [M-11 · 52](08-open-decisions.md) (a), topology decision 43; not verified as of 2026-09-13 |
 
-`Assumption:` `mo-analyst@` rather than `mo-metrics@` is the right holder, because the
-registry grant is about the reporting tier's view of the platform, and `mo-metrics@` is
-deliberately confined to BigQuery.
+`Assumption:` `mo-analyst@` rather than `mo-metrics@` is the right principal for the key,
+because anything the key is ever used for is about the reporting tier's view of the platform,
+and `mo-metrics@` is deliberately confined to BigQuery.
 
 ---
 
@@ -350,16 +388,17 @@ floor assertion and the suppression rule — and live only in the runbook.
 
 | # | Test | Expected result | Which claim it tests |
 |---|---|---|---|
-| MD-1 | `mo-narrator@` selects a raw column (`params_redacted`, `result_summary`, `principal_id`) from `walle_audit` or from a `walle_metrics` base table | **403 / not found.** It holds `dataViewer` on the agent-facing views only | §3 — the model cannot see the data, and cannot see a free string |
-| MD-2 | `mo-analyst@` runs `SELECT` against `walle_audit.actions` | **403 at Google** | §2.2 — the reporting tier cannot reach the raw evidence |
-| MD-3 | `mo-analyst@` calls `POST /v1/control/demote` | **403** from the in-app allowlist. `run.invoker` allows the HTTP call; the allowlist refuses the path | §1 — Mo cannot demote, halt, approve or veto |
-| MD-4 | `mo-analyst@` calls `GET /v1/ladder` | **403.** Mo is not on that allowlist row | §1.1 — `ladder.yaml` in git is Mo's source for the declared level |
+| MD-1 | `mo-narrator@` selects a raw column (`params_redacted`, `result_summary`, `principal_id`) from `` `${WALLE_PROJECT}.walle_audit.*` `` or from a `` `${MO_PROJECT}.walle_metrics` `` base table, from a job in `MO_PROJECT` | **403 / not found.** It holds `dataViewer` on the agent-facing views only | §3 — the model cannot see the data, and cannot see a free string |
+| MD-2 | `mo-analyst@` runs `SELECT` against `` `${WALLE_PROJECT}.walle_audit.actions` ``, fully qualified, from a job in `MO_PROJECT` — a bare `walle_audit.actions` resolves in `MO_PROJECT`, fails as not-found and proves nothing | **403 at Google** | §2.2 — the reporting tier cannot reach the raw evidence |
+| MD-3 | `mo-analyst@` calls `POST /v1/control/demote` on `walle-actions` in `WALLE_PROJECT`, cross-project | **403** from the in-app allowlist. `run.invoker` allows the HTTP call; the allowlist refuses the path. The paired positive — `GET /v1/runs/{id}` returns 200 — proves the allowlist row carries the `@${MO_PROJECT}` email; an allowlist still carrying an old `@${PROJECT}` address 403s everything and passes this test for the wrong reason | §1 — Mo cannot demote, halt, approve or veto |
+| MD-4 | `mo-analyst@` calls `GET /v1/ladder`, cross-project | **403.** Mo is not on that allowlist row | §1.1 — `ladder.yaml` in git is Mo's source for the declared level |
 | MD-8 | `mo-analyst@` writes a second object over an existing bundle name in `walle-mo-proposals` | **Fails.** `objectCreator` does not permit overwrite | §1 — a duplicate bundle fails rather than replacing |
 | MD-8 | `mo-analyst@` reads back or deletes a bundle it wrote | **403** | the same |
 | MD-5 | A bundle whose diff touches the ceiling module, the policy chain, the catalogue risk tiers or the validator | **Rejected at ingestion, before CI** | [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) — the gate cannot be part of what it gates |
 | MD-6 | A bundle citing a `scorecard_sha256` that `mo-metrics@` never published | **Rejected at ingestion** | the same — evidence is hash-bound |
-| MD-9 | Each enforcement identity reads `walle_metrics` | **403 at Google**, for every one | §5 — the containment assertion |
-| MD-10 | Any Mo identity attempts `secretmanager.versions.access` on any secret | **403 at Google** | §1.1 — Mo holds no secret anywhere |
+| MD-9 | Each enforcement identity reads `` `${MO_PROJECT}.walle_metrics.*` `` cross-project, from a job in its **home** project (`WALLE_PROJECT`, `EVE_PROJECT`, the custodian's) | **403 at Google**, for every one | §5 — the containment assertion |
+| MD-9b | `MO_PROJECT`'s IAM policy and each Mo dataset's access array are enumerated | **No** member from `WALLE_PROJECT`, `EVE_PROJECT` or `GEMINI_PROJECT`, and no `gcp-sa-discoveryengine` agent | §5 — the containment assertion as a project-IAM fact |
+| MD-10 | Each of the three Mo identities attempts `secretmanager.versions.access` on every secret in `WALLE_PROJECT` and every secret in `EVE_PROJECT`, enumerated explicitly (there are none in `MO_PROJECT` or `GEMINI_PROJECT`) | **403 at Google** | §1.1 — Mo holds no secret anywhere |
 
 ---
 
@@ -419,13 +458,14 @@ Identity-shaped only; the full list of changes, with their targets and reference
 
 | Change | Target | Why |
 |---|---|---|
-| Create three service accounts and every BigQuery grant in §2, plus the `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private` and `walle_metrics_views` datasets and the authorised-view registration on **`walle_metrics`** | [../wall-e/SETUP.md](../wall-e/SETUP.md) Phases 7 and 13b; `walle_setup.py` `add_dataset_access` | The shared data plane [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) promises is entirely unbuilt |
-| Add `mo-analyst@` to Phase 10's `run.invoker` loop on `walle-actions` | [../wall-e/SETUP.md](../wall-e/SETUP.md) Phase 10 | §7.5's allowlist already names `mo-analyst@`; the IAM binding that lets the call arrive does not exist |
+| Make the two **cross-project** dataset grants: `add_dataset_access` `READER` on `walle_audit` and on `walle_workspace_logs` for `mo-metrics@${MO_PROJECT}`, driven by a new `MO_PROJECT` config key. The three accounts, the four datasets and the authorised-view registration on **`walle_metrics`** leave Wall-E's set — they are `MO_PROJECT` resources built by [07-build-runbook.md](07-build-runbook.md) Mo-1, Mo-2 and Mo-6 | [../wall-e/SETUP.md](../wall-e/SETUP.md) Phase 7; `walle_setup.py` `add_dataset_access` (gains a project argument); `walle.env.example` | The shared data plane [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) promises is entirely unbuilt, and the only part of it Wall-E's runbook can build is the grant on Wall-E's own datasets |
+| Add `mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com` to Phase 10's `run.invoker` loop on `walle-actions`, and write that full email into the read-endpoint allowlist | [../wall-e/SETUP.md](../wall-e/SETUP.md) Phase 10; [../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) §7.5 | §7.5's allowlist already names `mo-analyst@`; the IAM binding that lets the call arrive does not exist, and the allowlist row now names a foreign email |
 | Correct the Mo identities row and item 6 from "never call the action service" to "**the two read endpoints only**" | [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) | [C39](../wall-e/14-hld-challenge.md), decided and not landed; 08's own interfaces table and §7.5 already say the corrected thing |
 | Remove `walle-events` "subscribe" for Mo from the shared data plane | [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md), [../wall-e/01-hld.md](../wall-e/01-hld.md), [../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) | [C30](../wall-e/14-hld-challenge.md). Mo takes no subscription |
 | Add the denial-suite row asserting no enforcement identity reads `walle_metrics` | [../wall-e/SETUP.md](../wall-e/SETUP.md) §4 | Turns Mo's containment from a claim into a test, and is the mechanism behind open decision 42 |
 | Correct weakness 11's claim that Mo's reads are aggregated per organisational unit | [../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) | False at the pipeline layer: T0 reads per-person rows, and the data-protection assessment needs the true version |
-| Record `MO_PRINCIPAL = serviceAccount:mo-analyst@${PROJECT}.iam.gserviceaccount.com` | `setup/walle.env.example`; [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) items 11 and 13 | Resolution rather than deletion, so no code change is needed |
+| Record `MO_PRINCIPAL = serviceAccount:mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com`, and add `MO_PROJECT` to `walle.env.example` and `walle_setup.py` | `setup/walle.env.example`; `walle_setup.py`; [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) items 11 and 13 | The principal is named; the key needs the new project variable to resolve |
+| Remove Phase 13b's `roles/agentregistry.viewer` for `MO_PRINCIPAL`, or replace it with a verified resource-level binding | [../wall-e/SETUP.md](../wall-e/SETUP.md) Phase 13b; `walle_setup.py` `registry` | A project-level role in `WALLE_PROJECT` for a `MO_PROJECT` principal breaks the topology's one rule; no Mo duty needs the registry (§6, topology decision 43) |
 
 ---
 
@@ -438,6 +478,13 @@ Google product claims on this page, verified 2026-09-12:
 - [BigQuery — scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries) — scheduled queries run on the BigQuery Data Transfer Service and use user credentials by default; a service account can be configured instead.
 - [BigQuery — use service accounts with the Data Transfer Service](https://docs.cloud.google.com/bigquery/docs/use-service-accounts) — the updating user needs `bigquery.transfers.update` and access to the service account; the service account needs `bigquery.datasets.get` and `bigquery.datasets.update` on the target dataset.
 - [Cloud Run — execute jobs on a schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule) — a Cloud Scheduler HTTP target on `run.googleapis.com` uses an **OAuth** token and needs `roles/run.invoker` on the job.
+
+Cross-project claims added on 2026-09-13, verified that day:
+
+- [BigQuery — run a query](https://docs.cloud.google.com/bigquery/docs/running-queries) — "`bigquery.jobs.create` on the project from which the query is being run, regardless of where the data is stored"; "`bigquery.tables.getData` on all tables and views that your query references"; "the querying project is billed for the query job while the project storing the data is billed for the amount of data stored in BigQuery."
+- [BigQuery — scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries) — "The destination dataset and table for a scheduled query must be in the same project as the scheduled query"; "Queries can reference tables from different projects and different datasets."
+- [BigQuery — authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views) — the view is identified on the source dataset's access list by "the fully qualified name of the view, in the format `PROJECT_ID.DATASET_ID.VIEW_NAME`"; the querying principal needs `roles/bigquery.dataViewer` on the view's dataset and `roles/bigquery.jobUser` on the project where the query runs.
+- [Cloud Run — managing access](https://docs.cloud.google.com/run/docs/securing/managing-access) — `gcloud run services add-iam-policy-binding SERVICE_NAME --member=PRINCIPAL --role=ROLE`; the page states no same-project restriction on the member. The admissibility of a foreign service account as a member rests on the domain-restricted-sharing constraint, cited in [`../project-topology.md`](../project-topology.md) §5.
 
 Agent Gateway's default-deny, exact-hostname and 498 behaviour is taken from
 [../wall-e/13-agent-interconnection.md](../wall-e/13-agent-interconnection.md) §7, which

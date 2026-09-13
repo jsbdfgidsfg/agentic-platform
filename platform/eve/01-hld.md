@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 
 ## Thesis
 
@@ -42,8 +42,10 @@ Three negatives do more work in this design than any of the positives.
   safety interlock between the controller and the doer is plain authenticated REST, in one
   direction, and can therefore never run through a conversation.
 - **Eve is not a service inside Wall-E's project.** Its key, its secrets, its dataset, its
-  evidence bucket and its identities live in a project whose IAM policy contains no Wall-E
-  deployer. While Eve's key lives in Wall-E's project, a project owner there can grant
+  evidence bucket and its identities live in a project of its own — `EVE_PROJECT`, one of
+  the four under `FOLDER_ID` in [../project-topology.md](../project-topology.md) — whose
+  IAM policy contains no Wall-E deployer at project level, and in which the only Wall-E
+  principals are three resource-level grants (topology decision 48). While Eve's key lives in Wall-E's project, a project owner there can grant
   themselves `roles/cloudkms.signer` and mint an Eve approval, and the only control on that
   is a daily drift row — a detective control on the single artefact the whole controller
   role rests on.
@@ -63,27 +65,28 @@ flowchart LR
         REP["Admin SDK Reports API activities.list<br/>targeted trigger corroboration"]
     end
 
-    subgraph EVEP["Eve's GCP project"]
+    subgraph EVEP["Eve's GCP project, EVE_PROJECT"]
         LOGS["BigQuery eve_workspace_logs"]
         V0["eve-v0 query set<br/>ten scheduled queries, from S0"]
         REC["eve-reconciler job<br/>identity eve-verifier, no signer role"]
         GATE["eve-gate job<br/>identity eve-controller, holds signer"]
         CON["eve-console behind IAP<br/>read only"]
-        DS["eve dataset<br/>findings, verdicts, verdict_receipts view, attestations,<br/>review_queue_blind, grades_blind, pages, walle_audit_mirror"]
+        DS["eve dataset<br/>findings, verdicts, attestations,<br/>review_queue_blind, grades_blind, pages, walle_audit_mirror"]
+        RCPT["receipts dataset, separate from eve<br/>verdict_receipts authorized view (S4)"]
         KMS["Cloud KMS key eve-approval<br/>EC_SIGN_P256_SHA256"]
         SEC["Secret Manager, regional<br/>eve-oauth-client, eve-refresh-token"]
         BUCK["Locked evidence bucket, 400 days<br/>objectCreator only, holds the ladder artefact"]
     end
 
-    subgraph WALLEP["Wall-E's GCP project"]
+    subgraph WALLEP["Wall-E's GCP project, WALLE_PROJECT"]
         ACT["walle-actions<br/>plans, runs, ladder, healthz, approve, veto, halt, demote"]
         FS["Firestore<br/>plan lifecycle, control mode, overrides, ladder current"]
         AUD["BigQuery walle_audit, six tables"]
         SWEEP["Deterministic sweepers<br/>eve_silence, eve_evidence_stale, eve_last_seen stamp"]
+        CI["Wall-E's CI identity, CI_DEPLOYER"]
     end
 
     OPS["walle-operators, the human surface"]
-    CI["Wall-E's CI identity"]
     NOIN["No inbound arrow to any Eve process.<br/>Eve exposes no endpoint, no topic, no agent card.<br/>Eve being down is an absence, not a signal Eve sends."]
 
     SINK --> LOGS
@@ -91,12 +94,12 @@ flowchart LR
     DIR --> GATE
     REP --> REC
 
-    GATE -->|"poll for pending_eve, read epochs"| FS
+    GATE -.->|"poll for pending_eve, read epochs — no grant today, decision 44"| FS
     GATE -->|"GET plan body, then approve or veto"| ACT
     GATE --> KMS
     GATE --> SEC
     REC -->|"GET runs, ladder, healthz, then halt or demote"| ACT
-    REC -->|"dataViewer, cross project"| AUD
+    REC -->|"dataset READER in WALLE_PROJECT, cross project"| AUD
     REC --> FS
     REC --> SEC
     REC --> DS
@@ -108,9 +111,10 @@ flowchart LR
     CON -->|"GET plans, GET ladder"| ACT
     CON --> DS
     OPS --> CON
-    CI -->|"create only"| BUCK
+    CI -->|"objectCreator on ladder/ only, cross project"| BUCK
 
-    ACT -.->|"the one exception: existence-only<br/>verdict_receipts view, run_id, item, verdict_ts"| DS
+    ACT -.->|"the one exception: existence-only<br/>verdict_receipts view, run_id, item, verdict_ts"| RCPT
+    DS -.->|"authorizes the view"| RCPT
     SWEEP -.->|"lowers on absence, never raises on return"| FS
 
     NOIN -.- EVEP
@@ -118,30 +122,37 @@ flowchart LR
 
 Every solid arrow leaving Eve's project is a call Eve makes; nothing calls Eve. The three
 Google-written sources enter Eve's project directly, not by way of Wall-E. The single
-dashed arrow into Eve's dataset is `walle-actions` reading an authorized view that exposes
+dashed arrow from Wall-E into Eve's project is `walle-actions` reading an authorized view —
+in the receipts dataset, separate from `eve` because an authorized view cannot live in its
+source dataset (topology decision 48) — that exposes
 `(run_id, item, verdict_ts)` and nothing else, so the service can check that evidence
 arrived and can never branch on what it says — recorded as [E-17](09-open-decisions.md)
-and re-argued at S4 entry.
+and re-argued at S4 entry. Every arrow that crosses the two subgraphs is a grant **on the
+resource it points at**, never a project-level role in the other project; the complete
+list, with who makes each grant, is [../project-topology.md](../project-topology.md) §3.
+The other two projects of the topology, `GEMINI_PROJECT` and `MO_PROJECT`, are absent
+from this diagram on purpose: no Eve identity holds anything in either, and nothing in
+either reaches Eve.
 
 ## Components
 
 | Component | Runs on | Identity | Does | Never does | Exists from |
 |---|---|---|---|---|---|
-| **Eve v0 query set** | BigQuery Data Transfer Service scheduled queries, transfer configs owned by Eve's project, reading `walle_audit` cross-project, writing `eve.findings`. Twelve transfer configs: the ten [05](../wall-e/05-autonomy-ladder.md) §8 metrics — which include hard-invariant denials (with the T0-human `protected_principal` exclusion) and audit completeness — plus two of Eve's own, two-direction reconciliation and config/ladder drift. The query list is in [07-build-runbook.md](07-build-runbook.md) Phase 4. Scheduled **off the hour** — a query at exactly hh:00 can double-trigger. | `eve-v0@<eve-project>`, pinned on every transfer config with `--service_account_name`. The default is the creating user's credentials, and an evidence series that runs as the person who administers Wall-E is not independent, and dies when they leave. | Computes every ladder metric on a 30-day rolling window, hourly, each result with its threshold, verdict and query hash. A human reads them weekly. | Approve, halt, demote, hold any Workspace credential, write to Wall-E's project. | **S0**, and it is the whole of Eve through S2. |
-| **`eve` dataset and the `walle_audit` mirror** | BigQuery, EU, in Eve's project. Tables `findings`, `verdicts`, `verdict_receipts` (view), `attestations`, `review_queue`, `review_queue_blind` (view), `grades_blind`, `pages`, `walle_audit_mirror`. DAY-partitioned, 400-day expiry. One daily scheduled copy appends yesterday's `walle_audit` partitions. | Owned by Eve's project. Wall-E's deployers hold no IAM here. | Holds Eve's entire output and the off-project evidence copy [decision 31](../wall-e/09-open-decisions.md) and the C11 residual ask for. The mirror is append-only and outside Wall-E's teardown blast radius. | Accept a write from any Wall-E principal. Hold Workspace payloads beyond ids, counts and hashes. | `findings` and the mirror at **S0**; the rest at **S3 entry**. |
+| **Eve v0 query set** | BigQuery Data Transfer Service scheduled queries, transfer configs owned by Eve's project, reading `walle_audit` cross-project (dataset-level `READER` in `WALLE_PROJECT`, granted by Wall-E's runbook, CC-22; jobs run in `EVE_PROJECT`), writing `eve.findings`. Twelve transfer configs: the ten [05](../wall-e/05-autonomy-ladder.md) §8 metrics — which include hard-invariant denials (with the T0-human `protected_principal` exclusion) and audit completeness — plus two of Eve's own, two-direction reconciliation and config/ladder drift. The query list is in [07-build-runbook.md](07-build-runbook.md) Phase 4. Scheduled **off the hour** — a query at exactly hh:00 can double-trigger. | `eve-v0@<eve-project>`, pinned on every transfer config with `--service_account_name`. The default is the creating user's credentials, and an evidence series that runs as the person who administers Wall-E is not independent, and dies when they leave. | Computes every ladder metric on a 30-day rolling window, hourly, each result with its threshold, verdict and query hash. A human reads them weekly. | Approve, halt, demote, hold any Workspace credential, write to Wall-E's project. | **S0**, and it is the whole of Eve through S2. |
+| **`eve` dataset and the `walle_audit` mirror** | BigQuery, EU, in Eve's project. Tables `findings`, `verdicts`, `attestations`, `review_queue`, `review_queue_blind` (view), `grades_blind`, `pages`, `walle_audit_mirror`. The `verdict_receipts` authorized view lives in a **separate** dataset of `EVE_PROJECT` (name *tbd*, topology decision 48), because an authorized view cannot sit in its source dataset. DAY-partitioned, 400-day expiry. One daily scheduled copy appends yesterday's `walle_audit` partitions. | Owned by Eve's project. Wall-E's deployers hold no IAM here. | Holds Eve's entire output and the off-project evidence copy [decision 31](../wall-e/09-open-decisions.md) and the C11 residual ask for. The mirror is append-only and outside Wall-E's teardown blast radius. | Accept a write from any Wall-E principal. Hold Workspace payloads beyond ids, counts and hashes. | `findings` and the mirror at **S0**; the rest at **S3 entry**. |
 | **`eve_workspace_logs`** | BigQuery dataset in Eve's project, fed by a **third, Eve-owned organisation-level sink** `eve-workspace-audit`, `--include-children`, `--use-partitioned-tables`, filter `protoPayload.serviceName="admin.googleapis.com"`, **no actor exclusion**. Verified 2026-09-12: an aggregated org sink may route to a destination in another project, its writer identity needing `roles/bigquery.dataEditor` there ([aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks)); and a BigQuery sink writes **date-sharded** tables unless `--use-partitioned-tables` is given ([route logs to BigQuery](https://docs.cloud.google.com/logging/docs/export/bigquery)), with the dataset's `--default_partition_expiration` set to 400 days **before** the sink first writes, because it binds only tables created after it ([updating datasets](https://docs.cloud.google.com/bigquery/docs/updating-datasets)). | Sink writer identity, `dataEditor` on this dataset only. | Eve's independent record of what the robot actually did. Eve reconciles against **this** copy, never `walle_workspace_logs` in Wall-E's project. | Carry an actor exclusion. Live in Wall-E's project. | **S2** — early, deliberately, so Eve's first enforcing window has months of history rather than zero rows. |
 | **`eve-reconciler`** | Cloud Run **job** in Eve's project, europe-west1, four task entrypoints on Cloud Scheduler: post-hoc every 5 min, reconciliation and drift hourly, deep pass every 6 h, daily pass. Four scheduler jobs invoke the one Cloud Run job with a different entrypoint argument ([07-build-runbook.md](07-build-runbook.md) Phase 10). Triggered with an **OAuth** token to `run.googleapis.com` (OIDC is wrong for a `*.googleapis.com` target). Idempotency key = job name + the constant `X-CloudScheduler-ScheduleTime` header. | `eve-verifier@<eve-project>`. Holds **no** `cloudkms.signer`. | Post-hoc verification of L5 writes; two-direction reconciliation; config, ladder, epoch and Google-contract drift; daily operator-list reconciliation against `roleAssignments.list`; the blind sample draw; attestation bundles; the monthly refresh-token **exchange** that resets Google's six-month clock. Calls halt and demote on a declared threshold. | Sign anything. Write to Wall-E's project. Grade an item a human is due to grade blind. Expose any endpoint. | **S3 entry.** |
 | **`eve-gate`** | A fourth entrypoint of the same image, deployed as its own Cloud Run job, every 2 minutes. Polls Firestore `plans/{id}` for `state == pending_eve`, then fetches the body from `GET /v1/plans/{id}`. | `eve-controller@<eve-project>`, plus `roles/cloudkms.signer` on `eve-approval`. | The five recomputations, the per-item accept/reject vector, the signature, `POST .../approve`, and `POST .../veto` when a threshold fires after signing. | Sign over a hash the service reported. Take input from any agent protocol. Approve a cell whose `eve_authority` is advisory, or one whose hold window elapsed during an outage. Approve when its own re-read is inconclusive — it refuses, and refusal means the item waits. | **S4 entry**, after the seeded-fault exercise passes at 100 %. |
 | **`eve-console`** | Cloud Run service in Eve's project, fronted by Identity-Aware Proxy, `walle-operators@` only. Mobile-legible: the point is that a holiday-adjacent administrator can read it on a phone. | `eve-console@<eve-project>`, read-only: `dataViewer` on `eve`, `objectViewer` on the attestation bucket, `run.invoker` on `walle-actions` for `GET /v1/plans` and `GET /v1/ladder` only. | Four views — the live queue with each plan's age and deadline; the blind sampled review rendered from an allowlisted column set; ladder state beside Eve's drift findings; attestation bundles, one link per promotion. Writes grades to `eve.grades_blind`. | Approve, veto, halt or demote. Render Eve's verdict on a review page. Hold a Workspace credential. | **S3 entry.** The blind-review view must exist before the S3 exit gate, not before S4. |
 | **Eve's Workspace robot** | `eve@<domain>` in `/Automation/Service Identities`. Custom admin role `Eve — Verifier`, customer-scoped, **read privileges only, no write privilege at any stage, ever**. Hardware-key-only 2SV with its own key in the safe, separately labelled; no recovery options; short session; its own login activity rule on actor `eve@`. Member of `walle-protected@` and of the committed floor list. | Its own consented refresh token from a **new, separate Desktop OAuth client** marked Trusted in the same sitting. No domain-wide delegation. | Eve's independent view of the tenant. Scopes frozen at consent: `admin.directory.{user,group,orgunit,rolemanagement}.readonly`, `admin.reports.{audit,usage}.readonly`, `openid`, `userinfo.email`. **`apps.licensing` is dropped** per [C13](../wall-e/14-hld-challenge.md). | Write anything to Workspace. Hold a licence-management privilege. Be impersonated. | **S3 entry** — not Stage 0. The reason is the six-month unused-token expiry and the scope freeze, not the cost of repeating consent. |
 | **Eve's secrets** | Secret Manager, regional (europe-west1), **in Eve's project**: `eve-oauth-client`, `eve-refresh-token`. Version pinned by `EVE_TOKEN_VERSION`, never `versions/latest`. | `roles/secretmanager.secretAccessor` to `eve-controller@` and `eve-verifier@` only. | Holds Eve's Workspace credential where `walle-actions@` cannot be granted access even by mistake, because it has no principal in that project. Values never recorded in the wiki. | Be readable by any Wall-E principal. Sit in Wall-E's project. | **S3 entry.** |
-| **`eve-approval` KMS key and the PEM archive** | Key ring `eve`, key `eve-approval`, ASYMMETRIC_SIGN / `EC_SIGN_P256_SHA256`, europe-west1, **in Eve's project**. Each version's PEM exported at creation, **before first use**, to `gs://<eve-project>-eve-evidence/keys/` — the `keys/` prefix of the **locked** evidence bucket, not a separate bucket — **and** committed to `contracts/eve-public-keys/<version>.pem` in Wall-E's repo under `ladder.yaml`'s CODEOWNERS. | `roles/cloudkms.signer` to `eve-controller@`. `walle-actions@` holds `roles/cloudkms.publicKeyViewer` cross-project and nothing more — never `signerVerifier` or `cryptoOperator`, both of which carry `useToSign`. Data Access audit logging on `AsymmetricSign`. | Produces the only signature that can authorise an L4 execution. The envelope names the full key-version resource name, because a KMS signature carries no version identifier of its own. | Live in Wall-E's project. Rotate automatically — verified 2026-09-12: Cloud KMS states that "Automatic rotation isn't supported for asymmetric signing or asymmetric encryption keys" ([key rotation](https://docs.cloud.google.com/kms/docs/rotate-key)), so rotation is a dated manual procedure, annually and on suspicion, with a 30-day overlap. Be **destroyed** inside the 400-day evidence horizon; old versions are disabled. | **S4 entry.** |
+| **`eve-approval` KMS key and the PEM archive** | Key ring `eve`, key `eve-approval`, ASYMMETRIC_SIGN / `EC_SIGN_P256_SHA256`, europe-west1, **in Eve's project**. Each version's PEM exported at creation, **before first use**, to `gs://<eve-project>-eve-evidence/keys/` — the `keys/` prefix of the **locked** evidence bucket, not a separate bucket — **and** committed to `contracts/eve-public-keys/<version>.pem` in Wall-E's repo under `ladder.yaml`'s CODEOWNERS. | `roles/cloudkms.signer` to `eve-controller@`. `walle-actions@<WALLE_PROJECT>` holds `roles/cloudkms.publicKeyViewer` on this one key in `EVE_PROJECT` — key-level, cross-project, fallback path only — and nothing more; never `signerVerifier` or `cryptoOperator`, both of which carry `useToSign`. Data Access audit logging on `AsymmetricSign`. | Produces the only signature that can authorise an L4 execution. The envelope names the full key-version resource name, because a KMS signature carries no version identifier of its own. | Live in Wall-E's project. Rotate automatically — verified 2026-09-12: Cloud KMS states that "Automatic rotation isn't supported for asymmetric signing or asymmetric encryption keys" ([key rotation](https://docs.cloud.google.com/kms/docs/rotate-key)), so rotation is a dated manual procedure, annually and on suspicion, with a 30-day overlap. Be **destroyed** inside the 400-day evidence horizon; old versions are disabled. | **S4 entry.** |
 | **Evidence bucket** | `gs://<eve-project>-eve-evidence`, EU, **locked** retention policy of 400 days. A locked policy cannot be removed or shortened and objects cannot be deleted or replaced before expiry even by a project owner; locking applies a lien preventing project deletion. | `eve-verifier@` holds `roles/storage.objectCreator` — create only, no delete, no overwrite. | Attestation bundles, daily reconciliation extracts, archived PEMs, CI-published ladder artefacts. | Have its retention shortened. Be the destination of a sink Wall-E's project owners control. | **S3 entry.** |
 | **`eve/config`** | Eve's own git repository, separate from Wall-E's: `thresholds.yaml`, `reasons.yaml` (the closed reason vocabulary), `predicates/` (Eve's second implementation of the typed predicates), `ceilings.py` (Eve's own compiled ceiling table), `oncall.yaml`, `seeded_faults/`. Required reviewers: the ladder owner and the security reviewer of [decision 37](../wall-e/09-open-decisions.md). Validated by a CI JSON-Schema check owned **outside** the repository, exactly as `ladder.yaml`'s is. | Human-merged only. Neither Eve identity has a write path. | Every halt, demote, veto and refuse is a named threshold with a reason code. `eve_config_version` is stamped on every verdict row, every control call and every attestation. | Live in Wall-E's repository, where one pull request could widen Wall-E and loosen Eve together. Be merged by one human at S4+. | **S3 entry**; a stub schema and the CI assertions exist from Eve's first commit, and `thresholds.yaml`'s numbers are stubbed at S0 so v0 and the controller read the same values. |
-| **CI-published ladder artefact** | `gs://<eve-project>-eve-evidence/ladder/<config_version>.yaml` plus its git sha, written append-only by Wall-E's CI identity (`objectCreator`) into Eve's locked bucket. | Wall-E's CI identity, create-only. | Replaces "Eve reads `ladder.yaml` in git": Eve needs no git credential, and the config it compares against — and re-derives effective levels from — cannot be rewritten by Wall-E's deployers. | Be writable by `walle-actions@` or by a deployer. | **S3 entry.** |
-| **Two sweepers and one stamp in `walle-actions`** (Wall-E's side of this design) | Deterministic code in the action service, no Eve involvement. A 1-minute internal tick plus request-path evaluation. | `walle-actions@`, writing `config_versions` rows with origin `breaker`. | `eve_silence`: any plan at `pending_eve` for more than four business hours sets `no_autonomous` and writes an incident note. `eve_evidence_stale`: any executed L5 item with no row in `eve.verdict_receipts` after 60 minutes freezes promotions, and after four hours drops that cell to L4. `eve_last_seen`: stamped **passively** from any successfully authenticated Eve call, published as a metric with a Cloud Monitoring **absence** policy alerting at 15 minutes, and the source of Eve's S4 availability figure. | Raise anything, ever, on Eve's return. Treat the presence of an Eve row as permission — it only ever checks that evidence arrived. Read the content of a verdict. | Code from the **first commit** (the timers extend the existing L3 TTL sweeper); the `verdict_receipts` read is wired at **S4 entry**. |
+| **CI-published ladder artefact** | `gs://<eve-project>-eve-evidence/ladder/<config_version>.yaml` plus its git sha, written append-only by Wall-E's CI identity (`CI_DEPLOYER` of `WALLE_PROJECT`, `objectCreator` under an IAM Condition on the `ladder/` prefix — a bucket-level, cross-project grant made by Eve's owner) into Eve's locked bucket. | Wall-E's CI identity, create-only. | Replaces "Eve reads `ladder.yaml` in git": Eve needs no git credential, and the config it compares against — and re-derives effective levels from — cannot be rewritten by Wall-E's deployers. | Be writable by `walle-actions@` or by a deployer. | **S3 entry.** |
+| **Two sweepers and one stamp in `walle-actions`** (Wall-E's side of this design) | Deterministic code in the action service, no Eve involvement. A 1-minute internal tick plus request-path evaluation. | `walle-actions@`, writing `config_versions` rows with origin `breaker`. | `eve_silence`: any plan at `pending_eve` for more than four business hours sets `no_autonomous` and writes an incident note. `eve_evidence_stale`: any executed L5 item with no row in the `verdict_receipts` view (receipts dataset, separate from `eve`, decision 48) after 60 minutes freezes promotions, and after four hours drops that cell to L4. `eve_last_seen`: stamped **passively** from any successfully authenticated Eve call, published as a metric with a Cloud Monitoring **absence** policy alerting at 15 minutes, and the source of Eve's S4 availability figure. | Raise anything, ever, on Eve's return. Treat the presence of an Eve row as permission — it only ever checks that evidence arrived. Read the content of a verdict. | Code from the **first commit** (the timers extend the existing L3 TTL sweeper); the `verdict_receipts` read is wired at **S4 entry**. |
 | **CI-only stub caller** | Wall-E's test suite. | A test-only principal standing in for `eve-controller@`. | Exercises all eight [08](../wall-e/08-team-eve-mo.md) interfaces from commit one and proves denial tests 4, 5, 6 and 52, including Eve refused 403 on `POST /v1/execute` and an operator token accepted on halt. | Exist in any admitted image or deployed environment. There is no fault-injection or test-mode path reachable in a deployed Eve or Wall-E image; the seeded-fault exercise uses a separate sandbox deployment and dataset. | **S0**, in code only. This is the whole of what [decision 36](../wall-e/09-open-decisions.md) leaves at Stage 0. |
-| **`eve-advisor`** | Not built. Recorded so the slot is named and stays empty. If ever built: a Cloud Run job in a **third** project reading `eve.*` and writing only `eve.advice`. | `eve-advisor@`, holding by construction no `cloudkms.signer`, no `run.invoker` on `walle-actions`, no `secretAccessor` on Eve's secrets. | Nothing in v1 or v2. If built: commentary a human reads in the digest, and at S5 at the earliest a one-directional wire by which the verifier may **raise** a refusal it would otherwise not make. There is no path by which an advisory flag causes an acceptance or reduces a refusal. | Produce a signature, a halt, a demotion, a veto, or any input to one. The prohibition is IAM, not code discipline. | **Never**, on current evidence. Adding one is a decision record, not an implementation detail. |
+| **`eve-advisor`** | Not built. Recorded so the slot is named and stays empty. If ever built: a Cloud Run job in a project of its own, separate from `GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT` and `MO_PROJECT`, reading `eve.*` and writing only `eve.advice`. | `eve-advisor@`, holding by construction no `cloudkms.signer`, no `run.invoker` on `walle-actions`, no `secretAccessor` on Eve's secrets. | Nothing in v1 or v2. If built: commentary a human reads in the digest, and at S5 at the earliest a one-directional wire by which the verifier may **raise** a refusal it would otherwise not make. There is no path by which an advisory flag causes an acceptance or reduces a refusal. | Produce a signature, a halt, a demotion, a veto, or any input to one. The prohibition is IAM, not code discipline. | **Never**, on current evidence. Adding one is a decision record, not an implementation detail. |
 
 Principals and the grants behind this table are in
 [02-identity-and-auth.md](02-identity-and-auth.md); how a verdict is produced is
@@ -151,9 +162,12 @@ Principals and the grants behind this table are in
 
 ### 1. Eve gets its own GCP project
 
-The runbook as written fixes `SA_EVE = eve-controller@${PROJECT}` — Eve inside Wall-E's
-project. That is the choice this design reverses, and it is the most expensive one to
-reverse later.
+Wall-E's runbook before 2026-09-13 fixed `SA_EVE = eve-controller@${PROJECT}` — Eve
+inside Wall-E's project. That is the choice this design reversed, and it was the most
+expensive one to reverse later. Since 2026-09-13 the four-project topology
+([../project-topology.md](../project-topology.md)) places Eve in `EVE_PROJECT`, one of
+four projects under `FOLDER_ID`; Wall-E's `PROJECT` names Wall-E's own project only
+(`WALLE_PROJECT` everywhere outside Wall-E's script and runbook).
 
 While Eve's key lives in Wall-E's project, a project owner there can grant themselves
 `roles/cloudkms.signer` and mint an Eve approval. The only control on that is a daily
@@ -170,15 +184,19 @@ access to Eve's secrets even by mistake, because it has no principal in that pro
 project. Query jobs run in Eve's project, so Eve's BigQuery cost and job creation never
 touch Wall-E's either.
 
-Two honest caveats. If the answer to [E-1](09-open-decisions.md) is no, the single-project
-variant still works and offline pinned-PEM verification still prevents key substitution —
-but "`walle-actions@` must never mint an Eve approval" reverts to a policy assertion
-checked daily. And **the project boundary is only as real as the org chart**: with one
+Two honest caveats. [E-1](09-open-decisions.md) was answered yes on 2026-09-13; the
+single-project variant is kept here only as the record of what would have been lost. Had
+the answer been no, that variant still works and offline pinned-PEM verification still
+prevents key substitution — but "`walle-actions@` must never mint an Eve approval" reverts
+to a policy assertion checked daily. And **the project boundary is only as real as the org chart**: with one
 administrator, ownership of Eve's project is notional. The target is an `eve-owners@`
 group containing IT security and not Wall-E's deployers. It is recorded here, in writing,
 that the boundary is notional until [decision 11](../wall-e/09-open-decisions.md)'s second
-human exists, so that nobody later reads the two-project diagram as proof of a separation
-of duties that no rota supports. Making that second person a hard build prerequisite was
+human exists, so that nobody later reads the project-boundary diagram (four projects
+under one folder) as proof of a separation of duties that no rota supports. The folder
+adds one condition the diagram does not show: roles bound on `FOLDER_ID` are inherited by
+all four projects, so the boundary also requires that no Wall-E deployer holds a role on
+`FOLDER_ID` — Eve's daily drift job reads the folder policy as well as the project's. Making that second person a hard build prerequisite was
 considered and rejected: blocking Eve's build on an organisational change would leave the
 tenant with no controller at all.
 
@@ -228,7 +246,8 @@ to a model endpoint if it could. Everything else in [the deterministic boundary]
 is a useful regression guard on top of those two.
 
 The advisory model is named here so that the door stays visibly shut rather than blank.
-`eve-advisor` is not built. If it is ever built, it is a job in a third project, holding by
+`eve-advisor` is not built. If it is ever built, it is a job in a project of its own,
+separate from `GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT` and `MO_PROJECT`, holding by
 construction no signer role, no invoker on `walle-actions` and no access to Eve's secrets,
 and wired so that it can only ever turn an accept into a refuse. There is no path by which
 an advisory flag causes an acceptance or weakens a refusal, and the prohibition is IAM
@@ -314,7 +333,12 @@ boundary is enforced five ways, all mechanical — the first two are what actual
    same. The signature cannot be produced by a model because the process cannot reach one.
 2. **Permission absence.** Neither Eve identity holds any `aiplatform.*` permission.
    `reasoningEngines.query` is removed per [C10](../wall-e/14-hld-challenge.md), leaving two
-   query principals on Wall-E's engine. CI asserts the IAM policy. There is consequently no
+   query principals on Wall-E's engine in `WALLE_PROJECT`: the Gemini project's Discovery
+   Engine service agent,
+   `service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine.iam.gserviceaccount.com` (the
+   **app** project's number, not Wall-E's), and `walle-dispatcher@`. Whether the
+   engine-scoped custom role suffices for that cross-project agent is Wall-E's spike
+   (topology decision 42). CI asserts the IAM policy. There is consequently no
    Eve `streamQuery` caller for [06](../wall-e/06-security-guardrails.md)'s CI grep to
    police; the grep stays as a regression guard and finds nothing, which is the correct
    steady state.
@@ -389,7 +413,7 @@ reason given in structural choice 5.
 jobs on schedules and one scale-to-zero console: single-digit to low-tens of euros a month.
 BigQuery scanning day-partitioned tables at pilot volume: well under a gigabyte a day. KMS:
 one key, a few hundred signatures a month, cents. Locked bucket at 400 days: under a euro.
-A second GCP project: no charge. **Under €50 a month on GCP, plus one Workspace licence for
+Eve's own GCP project, one of the four under `FOLDER_ID`: no charge. **Under €50 a month on GCP, plus one Workspace licence for
 `eve@<domain>`** — the largest recurring line, and what buys the independent read. Cost
 grows with rows, not with autonomy.
 

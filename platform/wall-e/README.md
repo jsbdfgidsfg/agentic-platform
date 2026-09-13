@@ -2,8 +2,12 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 - Maturity: **design — nothing built, nothing enabled**
+- Projects: **four**, under one folder — `GEMINI_PROJECT` (the app), `WALLE_PROJECT`
+  (everything of Wall-E's), `EVE_PROJECT`, `MO_PROJECT`. Decided 2026-09-13;
+  [../project-topology.md](../project-topology.md) is the authority for names, placement and every
+  cross-project grant, and every page here points to it rather than restating it.
 - Codename: `wall-e`. Resource prefix `walle-`. Final naming is [decision 2](09-open-decisions.md).
 - Other writers: `Assumption:` no other automation already writes to the same Workspace objects ([decision 1](09-open-decisions.md))
 
@@ -56,7 +60,8 @@ someone else.
 | Document | For |
 |---|---|
 | [**PREREQUISITES.md**](PREREQUISITES.md) | Everything that must be true, decided, granted, bought or installed **before** the first command of SETUP.md, with a verification check per row and the long-lead items that block later stages. Read it first. |
-| [**SETUP.md**](SETUP.md) | The procedure to stand Wall-E up from nothing, executable by a Workspace super admin who owns a GCP project. Ends at Stage 0: it can read the tenant, and no autonomous write is possible. |
+| [**SETUP.md**](SETUP.md) | The procedure to stand Wall-E up from nothing, executable by a Workspace super admin who owns four GCP projects under one folder (`GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT`). SETUP.md stands up `WALLE_PROJECT` and makes the cross-project grants Wall-E owes the other three; Eve's and Mo's runbooks stand up theirs. Ends at Stage 0: it can read the tenant, and no autonomous write is possible. |
+| [**../project-topology.md**](../project-topology.md) | Which of the four projects holds each identity, key, secret, dataset, bucket, topic, service and job, and the exact resource-level form of every grant that crosses a project boundary. The single authority for placement; decisions 42–52 live there. |
 | [**ARCHITECTURE.md**](ARCHITECTURE.md) | The service architecture with diagrams. Written for a security reviewer deciding on a pilot, and for whoever builds Eve or Mo. |
 | [**setup/**](setup/README.md) | The automation for the procedure. One script, `walle`, with a subcommand per group of phases. It stops where the procedure does, and refuses to attest a console step you have not done. |
 
@@ -110,4 +115,7 @@ This design was written without access to your tenant. Every statement about you
 is marked `Assumption:` where it appears. The big ones, all in
 [09-open-decisions.md](09-open-decisions.md): the OU structure and whether a sandbox OU
 can be created, the domain list, who else can be an operator, whether an HR feed exists,
-the Workspace edition, and whether the Gemini Enterprise app is in the `eu` multi-region.
+the Workspace edition, and whether the Gemini Enterprise app is in the `eu` multi-region —
+and which project hosts it (`GEMINI_PROJECT`, number `GEMINI_PROJECT_NUMBER`), because
+Wall-E's engine grant is built from **that** number, never from Wall-E's own
+([../project-topology.md](../project-topology.md) §3 row 1).

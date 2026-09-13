@@ -2,8 +2,9 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
 - Maturity: **design. Nothing is built and nothing is enabled.**
+- 2026-09-13: four GCP projects. The Gemini Enterprise app is in `GEMINI_PROJECT`, everything of Wall-E's in `WALLE_PROJECT`, Eve's key, secrets, evidence and jobs in `EVE_PROJECT`, Mo's identities and datasets in `MO_PROJECT`, all under one folder. Every grant that crosses a project is a binding on one resource, never a project-level role, and is listed in [../project-topology.md](../project-topology.md), which is the authority for placement. Diagrams and tables below name the home project; the architecture, the five boundaries and the ladder are unchanged.
 - Standalone: this document is self-contained. You do not need to read anything else first.
 
 **Where the detail lives.** This is the consolidated view. The design set argues each part
@@ -75,21 +76,26 @@ Only `walle-actions` holds the Workspace credential. The red box holds the crede
 flowchart TB
     subgraph ZA["Zone A: human surface, authenticated by Workspace SSO"]
         OPS["Operators<br/>group walle-operators"]
-        GE["Gemini Enterprise app<br/>the front door for humans"]
+        subgraph GEM["GEMINI_PROJECT"]
+            GE["Gemini Enterprise app<br/>the front door for humans<br/>calls the engine as service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine"]
+        end
         APV["Approval surface<br/>IAP page, or Chat app with app auth<br/>sends a per-human assertion the service verifies"]
     end
 
-    subgraph ZB["Zone B: GCP, reasoning and orchestration, no credential"]
+    subgraph ZB["Zone B: WALLE_PROJECT, reasoning and orchestration, no credential"]
         DIS["Cloud Run walle-dispatcher<br/>acks triggers, opens run_id<br/>halt check before any token is spent"]
         AR["Agent Runtime, resource wall-e<br/>ADK 2.8 on reasoningEngines<br/>HOLDS NO CREDENTIAL, DECIDES NOTHING"]
         TQ["Cloud Tasks<br/>one durable task per plan item"]
     end
 
-    subgraph ZC["Zone C: the credential boundary"]
-        CR["Cloud Run walle-actions<br/>catalogue, policy engine, ladder,<br/>approvals, execution, verification, audit"]
+    subgraph ZC["Zone C: WALLE_PROJECT, the credential boundary"]
+        CR["Cloud Run walle-actions<br/>catalogue, policy engine, ladder,<br/>approvals, execution, verification, audit<br/>Eve's public key pinned as PEM"]
         SM["Secret Manager, regional<br/>refresh token at a PINNED version number"]
-        KMS["Cloud KMS<br/>EC_SIGN_P256_SHA256<br/>action service holds the public half only"]
         FS["Firestore, native, europe-west1<br/>halt flags, overrides, plans,<br/>approvals, counters, leases"]
+    end
+
+    subgraph ZE["EVE_PROJECT"]
+        KMS["Cloud KMS key eve-approval<br/>EC_SIGN_P256_SHA256<br/>signer: eve-controller@EVE_PROJECT only"]
     end
 
     subgraph ZD["Zone D: Google Workspace tenant"]
@@ -100,7 +106,7 @@ flowchart TB
     OPS --> GE
     OPS -->|"approve, veto, grade"| APV
     OPS -->|"halt and demote, run.invoker plus in-app allowlist"| CR
-    GE -->|"invokes the registered agent<br/>user_id equals the end-user email, asserted not proven"| AR
+    GE -->|"invokes the registered agent across projects<br/>walleEngineQuery on the engine, spike decision 42<br/>user_id equals the end-user email, asserted not proven"| AR
     DIS -->|"job envelope with run_id, playbook version, budget"| AR
     AR -->|"HTTPS, ID token with audience,<br/>typed operation from a fixed catalogue"| CR
     APV -->|"approve or veto, caller is never the agent"| CR
@@ -109,7 +115,7 @@ flowchart TB
     CR --> FS
     DIS -->|"halt flags, strongly consistent read"| FS
     CR -->|"read, cached with a TTL that is honoured"| SM
-    CR -->|"verify Eve signature"| KMS
+    CR -.->|"verify Eve signature against the pinned PEM, locally;<br/>optional fallback: publicKeyViewer on eve-approval, in EVE_PROJECT"| KMS
     CR -->|"short-lived OAuth access token of the robot user"| WAPI
     WAPI --- RB
 
@@ -121,7 +127,7 @@ flowchart TB
     class OPS,GE,APV human
 ```
 
-Read the diagram for what is missing as much as for what is there. There is no arrow from the agent to Secret Manager. There is no arrow from the agent to Workspace. There is no arrow from the agent to the approval surface or to any control endpoint. Those absences are the security model.
+Read the diagram for what is missing as much as for what is there. There is no arrow from the agent to Secret Manager. There is no arrow from the agent to Workspace. There is no arrow from the agent to the approval surface or to any control endpoint. Those absences are the security model. Since 2026-09-13 one more: no solid arrow from `WALLE_PROJECT` into `EVE_PROJECT` at all — Eve's key is verified from a file in Wall-E's repository, so no principal of Wall-E's holds anything on the key by default.
 
 ### 2.2 Trigger plane and evidence plane
 
@@ -143,11 +149,15 @@ flowchart LR
     DIS["walle-dispatcher<br/>deterministic trigger id, transactional dedup<br/>halt flags, per-job daily budget<br/>24 h per-principal cooldown, causation depth limit"]
     AR["Agent Runtime wall-e"]
     CR["walle-actions"]
-    PE["Pub/Sub walle-events"]
-    BQ["BigQuery dataset walle_audit, EU<br/>action service has INSERT ONLY"]
+    PE["Pub/Sub walle-events, WALLE_PROJECT"]
+    BQ["BigQuery dataset walle_audit, EU, WALLE_PROJECT<br/>action service has INSERT ONLY"]
     REC["walle-reconciler, scheduled job<br/>resolves orphaned in-flight writes<br/>against Google's own record"]
-    EVE["Eve, controller agent<br/>approves, verifies, halts, demotes"]
-    MO["Mo, improvement agent<br/>measures, proposes"]
+    subgraph EVP["EVE_PROJECT"]
+        EVE["Eve, controller agent<br/>approves, verifies, halts, demotes<br/>own org-level sink into eve_workspace_logs"]
+    end
+    subgraph MOP["MO_PROJECT"]
+        MO["Mo, improvement agent<br/>measures, proposes<br/>walle_metrics datasets"]
+    end
     GIT["ladder.yaml in git<br/>CI validator owned outside the repo"]
 
     SCH -->|"T1 scheduled"| DIS
@@ -161,12 +171,12 @@ flowchart LR
     CR --> BQ
     WSB -.->|"second sink, so audit completeness has something to reconcile"| BQ
     BQ -.->|"resolve orphaned in-flight writes"| REC
-    PE --> EVE
-    PE --> MO
-    BQ --> EVE
-    BQ --> MO
-    WSB -.->|"Google's own record of what the robot did"| EVE
-    EVE -->|"approve, veto, halt, demote, signed"| CR
+    PE -.->|"subscription in EVE_PROJECT, pubsub.subscriber on the topic; target state, C30"| EVE
+    PE -.->|"subscription in MO_PROJECT, pubsub.subscriber on the topic; target state, C30"| MO
+    BQ -->|"dataset-level dataViewer to eve-controller@EVE_PROJECT and eve-v0@"| EVE
+    BQ -->|"dataset-level dataViewer to mo-metrics@MO_PROJECT, walle_audit and walle_workspace_logs"| MO
+    WSB -.->|"Google's own record of what the robot did:<br/>Eve's own org-level sink lands in EVE_PROJECT"| EVE
+    EVE -->|"approve, veto, halt, demote, signed<br/>run.invoker on walle-actions from EVE_PROJECT"| CR
     MO -.->|"pull request that a human merges"| GIT
     GIT -->|"validated config version deployed to Firestore"| CR
 ```
@@ -183,7 +193,7 @@ The actor exclusion still leaves a second hop: Wall-E moves a user, Google's own
 
 | Service | What it is | Why it exists | What breaks if merged into its neighbour | Runs as |
 |---|---|---|---|---|
-| **Gemini Enterprise app** | The human front door. A registered custom agent, shared on its User permissions tab with the operators group only. | Gives every human request an authenticated Workspace identity and a conversation surface your organisation already runs. | Exposing the agent directly loses per-agent sharing and the end-user identity, so trust boundary 1 disappears and any staff member with project access reaches Wall-E. | End user via Workspace SSO. The call to the agent arrives as the Discovery Engine service agent. |
+| **Gemini Enterprise app** | The human front door. A registered custom agent, shared on its User permissions tab with the operators group only. | Gives every human request an authenticated Workspace identity and a conversation surface your organisation already runs. | Exposing the agent directly loses per-agent sharing and the end-user identity, so trust boundary 1 disappears and any staff member with project access reaches Wall-E. | End user via Workspace SSO. The app lives in `GEMINI_PROJECT`, and the call to the agent arrives as that project's Discovery Engine service agent, `service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine.iam.gserviceaccount.com`, bound on the engine in `WALLE_PROJECT` through the custom role `walleEngineQuery` (decision 42, a spike) — never a project-level role in `WALLE_PROJECT` unless the spike fails, in which case the documented `roles/discoveryengine.serviceAgent` is a recorded exception. |
 | **Approval surface** | An approval page behind Identity-Aware Proxy, bound to the plan hash. A Google Chat app with app authentication is the alternative, and it is a second identity with its own IAM and its own compromise story. | Human consent must arrive on a surface that authenticates the human itself **and passes a per-human assertion the action service verifies for itself**. Note that the robot's own user token can send **text only**, so one-click cards and buttons require a Chat app with app authentication. | Merging it into the agent means the model asserts that a human approved. That is exactly what a prompt injection produces, and it was the single worst defect found in review. | An IAP-authenticated human, whose assertion travels with the call. Never the agent's service account. |
 | **Cloud Scheduler** | One HTTP job per playbook, all created paused, enabled per ladder stage. | The T1 scheduled trigger class. | Scheduler *can* call a Google API target directly with an OAuth token, so this is not about capability. Its attempt deadline defaults to three minutes while an agent turn takes longer, so a direct synchronous call is recorded as failed and retried, and the same run happens twice. | OIDC token as the dispatcher service account. |
 | **Workspace audit log sinks, two of them** | Two organisation-level Cloud Logging sinks on the same admin-activity filter. The Pub/Sub sink **excludes** the robot's principal, or every write Wall-E makes starts another run. The BigQuery sink does **not** exclude it, because reconciling audit completeness needs Google's own record of what the robot itself did. | Sink one is the T2 event trigger class, with no credential at all, replacing the Alert Center API which requires domain-wide delegation. Sink two is the evidence copy Eve reconciles against. | Without the actor exclusion on sink one the system feeds itself. With the actor exclusion applied to sink two, the audit-completeness metric and Eve's independent record contain nothing about the robot, and the control is decoration. | Sink writer identities, one with publish rights on the topic and one with write rights on the dataset. Creating both needs organisation-level log configuration rights. |
@@ -194,9 +204,9 @@ The actor exclusion still leaves a second hop: Wall-E moves a user, Google's own
 | **Cloud Tasks** | One durable task per plan item, executed one at a time back into the action service. | Approving a plan must return immediately. Running a 25-item loop inside the approve request exceeds Cloud Run's timeout and leaves a half-applied plan, a consumed nonce and no terminal state. | Merged back into the request handler, that failure mode returns and there is no per-item halt check. | OIDC as a dedicated service account, **`walle-tasks@`**, which holds `run.invoker` and nothing else and appears on the in-app allowlist for the worker endpoint and no other endpoint. |
 | **Firestore** (native, europe-west1) | The live control plane: halt flags, overrides, frozen plans, approvals and nonces, durable counters, leases, cooldowns, dedup, drill records, canary state, proposal and grade queues. | Every budget and rate limit must be global and honest across instances. An in-memory counter under two workers and autoscaling means the documented cap is a fiction. | Merged into process memory, budgets and rate limits stop being real and the andon cord has nowhere durable to live. | Accessed by `walle-actions@`, and by `walle-dispatcher@` for halt flags and trigger dedup. Halt and override reads are strongly consistent and never cached. |
 | **Secret Manager** (regional) | The OAuth client, the robot's refresh token, and the service's own confirmation HMAC key. Regional secrets, not global secrets with user-managed replication. | Regional secrets keep the data in the location at rest, in use and in transit. The version number is pinned in config: `latest` resolves to the newest **enabled** version, so disabling the newest silently falls back to the previous, still-valid token. Pinning closes that fallback, but disabling a version still only stops future refreshes, and an access token already in hand stays valid for up to an hour. The credential kill switch is therefore the action service **revoking its own refresh token at Google**: it holds the token, so it can revoke it, instantly and without a second person. Revoking the grant as the robot user is the backstop for when the service itself is unresponsive. See section 4.6. | Baking the token into an image or an environment variable removes rotation, secret-access auditing and the pinned-version property in one step. | Read by `walle-actions@` only. |
-| **Cloud KMS** | Eve's approval signing key, `EC_SIGN_P256_SHA256`. | A shared symmetric secret cannot express "Eve approved this": either the action service cannot verify Eve's signature, or it can also mint one. Asymmetric signing is the only shape that works. | Merging the key into a shared HMAC makes every Eve-gated level meaningless, and the obvious build-time fix quietly destroys the property the controller role rests on. | `eve-controller@` holds `cloudkms.signer`. `walle-actions@` holds `publicKeyViewer` and verifies locally. |
-| **BigQuery `walle_audit`** (EU) | Six tables: `actions`, `runs`, `plans`, `approvals`, `verifications`, `config_versions`. Partitioned by timestamp, clustered by operation. Plus the **second** Workspace audit log sink, the one with no principal filter. | The answer to "what has the robot done", and the evidence every autonomy promotion is argued from. Writes are refused when this sink is unavailable. | Merged into Cloud Logging or Firestore, the insert-only property is lost and the service can delete its own evidence. | `walle-actions@` holds **insert-only** rights on the dataset, deliberately. |
-| **Pub/Sub `walle-events`** | The event stream: `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged`. | Eve and Mo observe Wall-E without asking Wall-E. A safety interlock that runs through an LLM is not an interlock. | Merged into an agent-to-agent conversation, Eve cannot stop Wall-E when the model layer is wedged, hallucinating or looping. | Published by `walle-actions@`. Subscribed by Eve and Mo. |
+| **Cloud KMS** (in `EVE_PROJECT`) | Eve's approval signing key `eve-approval`, `EC_SIGN_P256_SHA256`, created and held in Eve's project. | A shared symmetric secret cannot express "Eve approved this": either the action service cannot verify Eve's signature, or it can also mint one. Asymmetric signing is the only shape that works. | Merging the key into a shared HMAC makes every Eve-gated level meaningless, and the obvious build-time fix quietly destroys the property the controller role rests on. | `eve-controller@EVE_PROJECT` holds `cloudkms.signer` there. `walle-actions@` verifies locally against Eve's public key pinned as PEM in Wall-E's repository, per key version, and needs no KMS grant; `roles/cloudkms.publicKeyViewer` on that one key, granted in `EVE_PROJECT`, is the optional fallback ([../project-topology.md](../project-topology.md) §3 row 14). |
+| **BigQuery `walle_audit`** (EU) | Six tables: `actions`, `runs`, `plans`, `approvals`, `verifications`, `config_versions`. Partitioned by timestamp, clustered by operation. Plus the **second** Workspace audit log sink, the one with no principal filter. | The answer to "what has the robot done", and the evidence every autonomy promotion is argued from. Writes are refused when this sink is unavailable. | Merged into Cloud Logging or Firestore, the insert-only property is lost and the service can delete its own evidence. | `walle-actions@` holds **insert-only** rights on the dataset, deliberately. Cross-project readers, each a dataset-level `roles/bigquery.dataViewer` on `walle_audit` (and `walle_workspace_logs` for Mo) with jobs run in the reader's own project: `eve-v0@`, `eve-controller@` and `eve-verifier@` in `EVE_PROJECT`, `mo-metrics@` in `MO_PROJECT`, the validator custodian. No authorised view outside `WALLE_PROJECT` is ever authorised on these datasets; Mo's views are authorised on `walle_metrics` inside `MO_PROJECT`. |
+| **Pub/Sub `walle-events`** | The event stream: `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged`. | Eve and Mo observe Wall-E without asking Wall-E. A safety interlock that runs through an LLM is not an interlock. | Merged into an agent-to-agent conversation, Eve cannot stop Wall-E when the model layer is wedged, hallucinating or looping. | Published by `walle-actions@`. Subscribed by Eve and Mo from `EVE_PROJECT` and `MO_PROJECT` — a subscription in the reader's project with `roles/pubsub.subscriber` bound on the topic — as target state ([14](14-hld-challenge.md) C30; decision 45); no subscription exists at Stage 0. |
 | **In-flight reconciler** | A scheduled job that reads `in_flight/{run_id}#{item}` in Firestore and resolves any unresolved record against the Workspace audit log copy in BigQuery. | The nonce is consumed **before** the Workspace call, because no transaction spans Firestore and an Admin SDK call. A crash in between leaves an operation whose outcome is unknown, and Google's own audit record is the only independent answer. | Without it, every crashed write is a permanent unknown in the evidence trail, and the audit-completeness metric cannot reach 100 per cent. Any orphan older than one hour alerts. | Its own service account with Firestore access and BigQuery read. No Workspace credential, no write path. |
 | **Group-classification job** | Recomputes every group's class from the transitive closure of its ancestors and the admin roles attached to them. | Nesting is invisible in the console. A small distribution list inside `walle-operators@` looks like an ordinary group, and one membership write into it grants approval authority. | Without it the class is a hand-maintained file, which is a guess. CI fails when the human file diverges from the computed closure. | `walle-actions@`, using the customer-scoped read role and `admin.directory.rolemanagement.readonly`. |
 | **Protected-principal refresher** | A background job that fills the protected-principal cache: super admins, delegated admins, the robot, its OU and the transitive members of `walle-protected@`. | Two uncached Admin SDK calls per directory operation is not viable, and a stale set is a hole. | Without it the check is either slow or wrong. If the cache cannot be filled, the service **fails closed** and directory writes are denied. | `walle-actions@`, customer-scoped, never OU-scoped. |
@@ -223,22 +233,22 @@ Workspace APIs authorise against a *user*. A GCP service account is not a Worksp
 
 ### 4.2 The principals
 
-| Principal | Type | Holds | May read | May do | `run.invoker` on `walle-actions` | Must never |
-|---|---|---|---|---|---|---|
-| Robot user, `walle@` domain, name tbd | Workspace user | The OAuth refresh token, stored in Secret Manager | Everything its custom admin role allows | The only identity that ever touches Workspace | Not applicable. It is a Workspace identity, never a GCP caller | Be signed into interactively after bootstrap. That is by definition an incident. |
-| `walle-actions@` | GCP service account | Reads the refresh token, the OAuth client and the confirmation HMAC key | Those secrets, Firestore, BigQuery insert, KMS public key | Run the action service, decide authorisation, execute, audit | No. It runs the service, it does not call it | Read Eve's private key. Mint an Eve approval. Delete audit rows. |
-| `walle-agent@` | GCP service account | Nothing | No secret at all | Run the agent. Call the execute and plan endpoints of the action service | **Yes** | Read any secret. Reach any control or approval endpoint. Hold a Workspace token. |
-| `walle-dispatcher@` | GCP service account | Nothing | Halt flags | Invoke the agent. Holds `aiplatform.reasoningEngines.query` on Wall-E's engine only | **No.** It calls the agent and reads Firestore, never the action service | Call the action service at all. |
-| `walle-tasks@` | GCP service account | Nothing | Nothing | Deliver one queued plan item back into the worker endpoint | **Yes**, and it is on the in-app allowlist for the worker endpoint only | Call any endpoint but the worker endpoint. |
-| `eve-controller@` | GCP service account | `cloudkms.signer` on Eve's own asymmetric key | Audit dataset, plans, runs, and, per an open decision, its **own** read-only Workspace credential | Approve, veto, halt, demote. Read everything Wall-E has produced | **Yes** | Execute any Workspace operation. Raise any level. Read any secret or signing key of Wall-E's. |
-| Human operators, `walle-operators@` | Workspace group, presenting an identity token | Nothing | The control and read endpoints | Approve, veto, halt, demote, grade | **Yes**, or none of the kill switches has a handle | Also hold `run.developer` on the action service. |
-| **Deployers** | Human plus CI | `run.developer` on `walle-actions`, `iam.serviceAccountUser` on `walle-actions@` | The service's image and configuration | Ship a revision of the credential holder | Not the point. A revision defines what every allowlist means | Be an operator or an approver at the same time. |
+| Principal | Home project | Type | Holds | May read | May do | `run.invoker` on `walle-actions` | Must never |
+|---|---|---|---|---|---|---|---|
+| Robot user, `walle@` domain, name tbd | The Workspace tenant | Workspace user | The OAuth refresh token, stored in Secret Manager | Everything its custom admin role allows | The only identity that ever touches Workspace | Not applicable. It is a Workspace identity, never a GCP caller | Be signed into interactively after bootstrap. That is by definition an incident. |
+| `walle-actions@` | `WALLE_PROJECT` | GCP service account | Reads the refresh token, the OAuth client and the confirmation HMAC key | Those secrets, Firestore, BigQuery insert, Eve's public key from the pinned PEM | Run the action service, decide authorisation, execute, audit | No. It runs the service, it does not call it | Read Eve's private key. Mint an Eve approval. Delete audit rows. |
+| `walle-agent@` | `WALLE_PROJECT` | GCP service account | Nothing | No secret at all | Run the agent. Call the execute and plan endpoints of the action service | **Yes** | Read any secret. Reach any control or approval endpoint. Hold a Workspace token. |
+| `walle-dispatcher@` | `WALLE_PROJECT` | GCP service account | Nothing | Halt flags | Invoke the agent. Holds `aiplatform.reasoningEngines.query` on Wall-E's engine only | **No.** It calls the agent and reads Firestore, never the action service | Call the action service at all. |
+| `walle-tasks@` | `WALLE_PROJECT` | GCP service account | Nothing | Nothing | Deliver one queued plan item back into the worker endpoint | **Yes**, and it is on the in-app allowlist for the worker endpoint only | Call any endpoint but the worker endpoint. |
+| `eve-controller@EVE_PROJECT` | `EVE_PROJECT` | GCP service account | `cloudkms.signer` on Eve's own asymmetric key `eve-approval`, in `EVE_PROJECT` | Audit dataset (dataset-level `dataViewer` on `walle_audit`, a cross-project resource grant), plans and runs through the read endpoints, and, per an open decision, its **own** read-only Workspace credential, stored in `EVE_PROJECT` | Approve, veto, halt, demote. Read everything Wall-E has produced | **Yes** — a cross-project resource-level binding on the service, made by Wall-E's owner | Execute any Workspace operation. Raise any level. Read any secret or signing key of Wall-E's. Hold any project-level role in `WALLE_PROJECT`. |
+| Human operators, `walle-operators@` | The Workspace tenant | Workspace group, presenting an identity token | Nothing | The control and read endpoints | Approve, veto, halt, demote, grade | **Yes**, or none of the kill switches has a handle | Also hold `run.developer` on the action service. |
+| **Deployers** | `WALLE_PROJECT` | Human plus CI | `run.developer` on `walle-actions`, `iam.serviceAccountUser` on `walle-actions@` | The service's image and configuration | Ship a revision of the credential holder | Not the point. A revision defines what every allowlist means | Be an operator or an approver at the same time. |
 
 **The deploy grant is the largest control in the system, and it is held by a human.** A deploy to `walle-actions` changes the credential holder and the policy engine in one act: the new revision keeps the service account, reads the pinned secret version, and can do anything at all with it. That single grant defeats the policy engine, the catalogue, the ladder, the in-app allowlist, the approval endpoints and the insert-only audit rights simultaneously. So: deploys come only from a CI pipeline whose identity no operator holds, from a branch requiring a second reviewer on the ceiling module, the policy chain and the catalogue. **No human holds `run.developer` on this service in steady state**, and a break-glass grant is time-boxed and alerted. Weakness 12 in section 11 records what remains.
 
-**Why Eve may invoke the agent.** `eve-controller@` holds `aiplatform.reasoningEngines.query` so it can run its own read-only verification playbooks through the agent rather than through the service it is checking. It cannot reach the execute path, which requires a principal on the in-app allowlist for that endpoint, and the agent it invokes holds no credential either way.
+**Why Eve may invoke the agent.** `eve-controller@EVE_PROJECT` holds `aiplatform.reasoningEngines.query`, bound on the engine in `WALLE_PROJECT` — a cross-project resource binding, never project-level — so it can run its own read-only verification playbooks through the agent rather than through the service it is checking. [14](14-hld-challenge.md) C10 removes this binding (two query principals remain); [../project-topology.md](../project-topology.md) §3 row 13 records the absence. It cannot reach the execute path, which requires a principal on the in-app allowlist for that endpoint, and the agent it invokes holds no credential either way.
 
-Three further principals exist around the edges. `Assumption:` **Mo** gets a read-only principal, `mo-analyst@`, with BigQuery access and no path to anything else. Two more Workspace groups carry policy rather than access: **`walle-readers@`**, whose members may invoke READ operations only and who see nothing until the agent is also shared with them in Gemini Enterprise, and **`walle-protected@`**, whose transitive members can never be the target of a write.
+Three further principals exist around the edges. **Mo** has three identities in `MO_PROJECT` — `mo-metrics@`, `mo-analyst@` and `mo-narrator@` ([../mo/02-identity-and-access.md](../mo/02-identity-and-access.md)) — of which only two touch `WALLE_PROJECT`, each through a resource-level binding: `mo-metrics@` holds dataset-level `dataViewer` on `walle_audit` and `walle_workspace_logs`, and `mo-analyst@` holds `run.invoker` on `walle-actions` for the two read endpoints. Nothing of Mo's lives in Wall-E's project. Two more Workspace groups carry policy rather than access: **`walle-readers@`**, whose members may invoke READ operations only and who see nothing until the agent is also shared with them in Gemini Enterprise, and **`walle-protected@`**, whose transitive members can never be the target of a write.
 
 Two properties to re-verify after every IAM change:
 
@@ -247,44 +257,51 @@ Two properties to re-verify after every IAM change:
 
 ```mermaid
 flowchart TB
-    subgraph NOCRED["Principals holding no credential and reading no secret"]
-        AGT["walle-agent<br/>runs the ADK agent"]
-        DSP["walle-dispatcher<br/>invokes the agent, reads halt flags"]
-        MOA["mo-analyst, assumption<br/>BigQuery reads only, no path to anything else"]
+    subgraph WAL["WALLE_PROJECT"]
+        subgraph NOCRED["Principals holding no credential and reading no secret"]
+            AGT["walle-agent<br/>runs the ADK agent"]
+            DSP["walle-dispatcher<br/>invokes the agent, reads halt flags"]
+        end
+
+        subgraph KEYED["Principals holding a key"]
+            ACT["walle-actions<br/>the only reader of the robot credential<br/>holds Eve's public key as a pinned PEM"]
+        end
+
+        subgraph VAULT["Secret Manager, regional, europe-west1, WALLE_PROJECT"]
+            SEC["refresh token<br/>PINNED VERSION NUMBER, never latest"]
+            CLI["OAuth client id and secret"]
+            HM["confirmation HMAC key"]
+        end
+
+        CRS["walle-actions service, WALLE_PROJECT"]
     end
 
-    subgraph KEYED["Principals holding a key"]
-        ACT["walle-actions<br/>the only reader of the robot credential"]
-        EVC["eve-controller<br/>signs approvals with its own key"]
+    subgraph EVP["EVE_PROJECT"]
+        EVC["eve-controller@EVE_PROJECT<br/>signs approvals with its own key"]
+        EK["Cloud KMS key eve-approval<br/>EC_SIGN_P256_SHA256"]
+    end
+
+    subgraph MOP["MO_PROJECT"]
+        MOA["mo-metrics@, mo-analyst@, mo-narrator@<br/>no credential; dataset reads and the two read endpoints"]
     end
 
     subgraph HUMANP["Human principals"]
         OPG["walle-operators<br/>run.invoker plus the approval surface"]
     end
 
-    subgraph VAULT["Secret Manager, regional, europe-west1"]
-        SEC["refresh token<br/>PINNED VERSION NUMBER, never latest"]
-        CLI["OAuth client id and secret"]
-        HM["confirmation HMAC key"]
-    end
-
-    subgraph KMSB["Cloud KMS"]
-        EK["Eve approval key<br/>EC_SIGN_P256_SHA256"]
-    end
-
     ROBOT["Workspace robot user<br/>customer-scoped read-only role<br/>plus OU-scoped write role"]
-    CRS["walle-actions service"]
 
     ACT -->|"read"| SEC
     ACT -->|"read"| CLI
     ACT -->|"read"| HM
-    ACT -->|"public half only, verify"| EK
+    ACT -.->|"pinned PEM, verified locally;<br/>optional fallback publicKeyViewer on this key only"| EK
     EVC -->|"signer, sign only"| EK
     ACT -->|"refresh token becomes a 1 h access token<br/>acts as this identity and no other"| ROBOT
     AGT -->|"execute and plan endpoints only"| CRS
     DSP -->|"reasoningEngines.query on one engine"| AGT
     OPG -->|"approve, veto, halt, demote"| CRS
-    EVC -->|"approve, veto, halt, demote"| CRS
+    EVC -->|"approve, veto, halt, demote<br/>cross-project run.invoker on the service"| CRS
+    MOA -->|"GET plans and runs only, mo-analyst@<br/>cross-project run.invoker on the service"| CRS
 
     classDef keyed fill:#fff0f0,stroke:#c62828,stroke-width:3px,color:#000
     classDef plain fill:#f2f7ff,stroke:#1565c0,stroke-width:1.5px,color:#000
@@ -526,7 +543,7 @@ Five boundaries. The first four answer "may this action happen at all". The fift
 | # | Boundary | Enforced by | What it stops | How it can still fail |
 |---|---|---|---|---|
 | **1** | Human to Gemini Enterprise | Workspace SSO. The agent is shared only with the operators group on its User permissions tab. | Non-allowlisted staff reaching Wall-E at all. | The end user's email is **asserted** by the caller, not cryptographically bound to the user, which is why boundary 2 must be tight and the service re-checks group membership. |
-| **2** | Agent to action service | Cloud Run IAM `run.invoker`, ID-token verification **with audience**, plus an **in-app per-endpoint caller allowlist** keyed on the verified email claim. `aiplatform.reasoningEngines.query` granted to exactly three principals: the Gemini Enterprise service agent, the dispatcher and Eve. Section 4.2 says why Eve is one of them. | Anything but Wall-E's own identity calling the action service, and the agent reaching the control or approval endpoints. | `run.invoker` is granted **per service, not per path**, so IAM alone cannot express this. The in-app allowlist is doing real work, and splitting the control plane onto a second service is the stronger version of the same idea. |
+| **2** | Agent to action service | Cloud Run IAM `run.invoker`, ID-token verification **with audience**, plus an **in-app per-endpoint caller allowlist** keyed on the verified email claim. `aiplatform.reasoningEngines.query` granted, on the engine, to exactly three principals: the service agent of `GEMINI_PROJECT` (`service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine…`), `walle-dispatcher@WALLE_PROJECT` and `eve-controller@EVE_PROJECT` — two of the three bindings are to identities homed in other projects, and the third is removed by [14](14-hld-challenge.md) C10. Section 4.2 says why Eve was one of them. The caller allowlist likewise lists cross-project emails, `eve-controller@EVE_PROJECT…` and `mo-analyst@MO_PROJECT…`. | Anything but Wall-E's own identity calling the action service, and the agent reaching the control or approval endpoints. | `run.invoker` is granted **per service, not per path**, so IAM alone cannot express this. The in-app allowlist is doing real work, and splitting the control plane onto a second service is the stronger version of the same idea. |
 | **3** | LLM to credential | Architecture. The refresh token exists only inside the action service, never in the model's process or context. No catalogue operation returns it. | Prompt injection exfiltrating an admin credential. | Nothing in the model's process is authoritative, so an ADK plugin mirroring the policy is defence in depth and never the boundary. |
 | **4** | Requested action to executed action | The deterministic policy engine: catalogue allowlist, Pydantic parameter models with `extra="forbid"`, protected principals, OU and group-class scope, durable budgets, rate limits, business hours, idempotency. | The model inventing a destructive call and it simply running. | Every control runs in one process. See section 11. |
 | **5** | Permitted action to autonomously executed action | The autonomy ladder: a level per (operation family, trigger class), approval ids the service mints and only a human or Eve releases, hold windows, breakers, and ceilings that live in code. | An operation that is legitimate on request being taken unattended before it has earned the right. | The taint bit depends on the catalogue correctly declaring which returned fields are attacker-writable. A missed field is a silent hole. |
@@ -563,10 +580,10 @@ The place the three agents meet is one shared set of facts with three different 
 | `control/mode`, `control/freeze` | Halt state with a monotone `halt_epoch` | Dispatcher and action service, strongly consistent, never cached | Operators, Eve, breakers |
 | `overrides/{family}/{trigger}` | Live demotions with `override_epoch`. **An absent read means L0, never L5** | Action service | Operators, Eve, breakers |
 | `ladder/current` | Deployed config version and `ceilings_sha` | Action service, and the ladder endpoint | The config deploy tool, after CI validation |
-| `plans/{id}` | Frozen plan and its lifecycle: pending, held, released, vetoed, expired, done. **Create-only for the action service**, so a signed plan cannot be rewritten between signature and execution | Action service, Eve, Mo | Action service |
+| `plans/{id}` | Frozen plan and its lifecycle: pending, held, released, vetoed, expired, done. **Create-only for the action service**, so a signed plan cannot be rewritten between signature and execution | Action service; Eve and Mo via `GET /v1/plans/{id}` and `walle_audit.plans` — a direct Firestore read from `EVE_PROJECT` or `MO_PROJECT` would need a project-level `datastore` role in `WALLE_PROJECT`, which the topology forbids; Eve's polling read is decision 44 | Action service |
 | `approvals/{id}` | Nonce, binding, consumer, timestamps | Action service | Action service |
 | `in_flight/{run_id}#{item}` | Written before a Workspace call, resolved after. The reconciler's input | Reconciler | Action service |
-| `proposals/{id}`, `grades/{run_id}#{item}` | Proposal queue with verdict and reason code; operator gradings of shadow items | Operators, Eve, Mo | Action service creates the proposal; operators write the verdict and the grade |
+| `proposals/{id}`, `grades/{run_id}#{item}` | Proposal queue with verdict and reason code; operator gradings of shadow items | Operators; Eve and Mo via `GET /v1/runs/{id}` and the write-ahead copy in `walle_audit` — no cross-project Firestore grant exists | Action service creates the proposal; operators write the verdict and the grade |
 | `leases/{principal}`, `cooldown/{principal}` | One active run per target; no autonomous write to a principal written to in the last 24 hours | Action service | Action service |
 | `counters/{scope}/{window}` | Durable transactional budgets, rate limits and novelty caps over rolling 7-day and 30-day windows | Action service | Action service |
 | `idempotency/{key}`, `dedup/{trigger_id}` | Replay suppression | Action service, dispatcher | Both |
@@ -577,6 +594,8 @@ The place the three agents meet is one shared set of facts with three different 
 ### 7.2 BigQuery `walle_audit`: the evidence
 
 Partitioned by timestamp, clustered by operation. The action service holds **insert-only** rights, deliberately.
+
+**Placement.** `walle_audit` and `walle_workspace_logs` are in `WALLE_PROJECT`. Eve reads `walle_audit` through a dataset-level `roles/bigquery.dataViewer` granted to its identities in `EVE_PROJECT`, and keeps its own organisation-level sink of the Workspace audit logs in `EVE_PROJECT` (`eve_workspace_logs`) plus a daily mirror of `walle_audit`. Mo reads both datasets through dataset-level `dataViewer` granted to `mo-metrics@MO_PROJECT`; Mo's authorised views live in `MO_PROJECT` and are authorised on Mo's own `walle_metrics`, never on a Wall-E dataset. All reader jobs run and are billed in the reader's project; no `jobUser` and no project-level `dataViewer` is ever granted in `WALLE_PROJECT` ([../project-topology.md](../project-topology.md) §3 rows 4, 6, 9).
 
 | Table | Purpose | Consumed by Eve | Consumed by Mo |
 |---|---|---|---|
@@ -594,7 +613,7 @@ Three rules on the audit trail. Writes are **write-ahead and fail-closed**: if t
 
 ### 7.3 Pub/Sub `walle-events`: the stream
 
-Published events: `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged`. Eve and Mo both subscribe. The join key is `run_id` throughout, plus the ADK `invocation_id` linking Agent Runtime traces to audit rows.
+Published events: `run.started`, `plan.ready`, `step.pending`, `step.executed`, `run.verified`, `override.applied`, `halt.set`, `content.flagged`. Eve and Mo both subscribe, from `EVE_PROJECT` and `MO_PROJECT`: the subscription lives in the reader's project and `roles/pubsub.subscriber` is bound on the topic, never project-wide — target state per [14](14-hld-challenge.md) C30, with no subscription at Stage 0. The join key is `run_id` throughout, plus the ADK `invocation_id` linking Agent Runtime traces to audit rows.
 
 ### 7.4 The interfaces Eve consumes, and why they are plain REST
 
@@ -621,14 +640,16 @@ They are plain authenticated REST rather than agent-to-agent messages, because E
 | `POST /v1/execute` | `walle-agent@` | Eve and an operator both get 403 |
 | `POST /v1/plans` | `walle-agent@` | Same |
 | `POST /v1/tasks/item`, the Cloud Tasks worker endpoint | `walle-tasks@` | The agent gets 403. This is the most execution-capable path in the system |
-| `POST /v1/plans/{id}/approve` | The approval surface's verified human assertion, and `eve-controller@` | The agent gets 403 with `approver_is_agent`, a hard invariant |
-| `POST /v1/plans/{id}/veto` | Members of `walle-operators@`, `eve-controller@` | The agent gets 403 |
-| `POST /v1/control/halt` | Members of `walle-operators@`, `eve-controller@` | The agent gets 403 |
-| `POST /v1/control/demote` | Members of `walle-operators@`, `eve-controller@` | The agent gets 403 |
-| `GET /v1/plans/{id}`, `GET /v1/runs/{id}` | `eve-controller@`, `mo-analyst@`, members of `walle-operators@` | The agent gets 403 |
+| `POST /v1/plans/{id}/approve` | The approval surface's verified human assertion, and `eve-controller@EVE_PROJECT.iam.gserviceaccount.com` | The agent gets 403 with `approver_is_agent`, a hard invariant |
+| `POST /v1/plans/{id}/veto` | Members of `walle-operators@`, `eve-controller@EVE_PROJECT.iam.gserviceaccount.com` | The agent gets 403 |
+| `POST /v1/control/halt` | Members of `walle-operators@`, `eve-controller@EVE_PROJECT.iam.gserviceaccount.com` | The agent gets 403 |
+| `POST /v1/control/demote` | Members of `walle-operators@`, `eve-controller@EVE_PROJECT.iam.gserviceaccount.com` | The agent gets 403 |
+| `GET /v1/plans/{id}`, `GET /v1/runs/{id}` | `eve-controller@EVE_PROJECT.iam.gserviceaccount.com`, `mo-analyst@MO_PROJECT.iam.gserviceaccount.com`, members of `walle-operators@` | The agent gets 403; `mo-analyst@` gets 403 on every other endpoint |
 | `GET /v1/operations` | `walle-agent@` | Catalogue introspection, from which the agent's tools are generated |
-| `GET /v1/ladder` | Members of `walle-operators@`, `eve-controller@`. **Never the agent** | The agent gets 403. The effective matrix tells a steered model exactly which family and trigger pair executes unattended right now, which is reconnaissance rather than information |
-| `GET /healthz` | `eve-controller@`, members of `walle-operators@`. The unauthenticated response carries liveness only, never the last-audit-write timestamp | An anonymous caller sees no timing signal |
+| `GET /v1/ladder` | Members of `walle-operators@`, `eve-controller@EVE_PROJECT.iam.gserviceaccount.com`. **Never the agent** | The agent gets 403. The effective matrix tells a steered model exactly which family and trigger pair executes unattended right now, which is reconnaissance rather than information |
+| `GET /healthz` | `eve-controller@EVE_PROJECT.iam.gserviceaccount.com`, members of `walle-operators@`. The unauthenticated response carries liveness only, never the last-audit-write timestamp | An anonymous caller sees no timing signal |
+
+The foreign emails are written in full because they are compared byte for byte. This allowlist is the **only** place a foreign identity's reach is narrowed below `run.invoker`: `eve-controller@EVE_PROJECT` and `mo-analyst@MO_PROJECT` hold `run.invoker` on the whole service, granted in `WALLE_PROJECT` as a resource-level binding, and it is these rows, tested per row, that keep Mo to two read endpoints and Eve off `/v1/execute`.
 
 **Operator authorisation is not circular, deliberately.** The control and approval endpoints authorise against a **committed operator list carried in the deployed configuration**, never against a live Directory read. K0 halt and K1 demote therefore work when the Workspace credential is revoked, expired or rate-limited, which is exactly when they are most needed. The live Directory re-check applies to the **write path only**, where failing closed denies an action rather than removing a brake. The committed list and the group are reconciled daily and any divergence alerts.
 
@@ -744,7 +765,10 @@ After any automatic demotion: a minimum five business days at the lower level, a
 
 | Component | Location | Residency | Retention |
 |---|---|---|---|
-| GCP project | Dedicated, never shared with another workload. Id `tbd`, `walle-` prefix proposed | — | — |
+| `GEMINI_PROJECT` | The Gemini Enterprise app, its Discovery Engine service agent, the registration of Wall-E and the share to `walle-operators@`. Nothing of Wall-E's. `Assumption:` it already exists, owned by the Gemini Enterprise administrators; whether it moves under `FOLDER_ID` is decision 52 | Per the app's location | — |
+| `WALLE_PROJECT` | Everything of Wall-E's: the one engine, both Cloud Run services, Firestore, the three secrets, `walle_audit`, `walle_workspace_logs`, the topics, the queue, the registry entry, the gateways, the Model Armor templates. Dedicated, never shared with another workload; holds nothing of Eve's, Mo's or the app's. Id `tbd`, `walle-` prefix proposed; `PROJECT` in Wall-E's own runbook and script | `europe-west1`, BigQuery `EU`, under `FOLDER_ID` | — |
+| `EVE_PROJECT` | Eve's identities, the KMS key `eve-approval`, the secrets `eve-refresh-token` and `eve-oauth-client`, the `eve` dataset with the `walle_audit` mirror, `eve_workspace_logs`, Eve's jobs and console. Created by Eve's runbook | `europe-west1`, BigQuery `EU`, under `FOLDER_ID` | Eve's design |
+| `MO_PROJECT` | `mo-metrics@`, `mo-analyst@`, `mo-narrator@`; `walle_metrics`, `walle_metrics_archive`, `walle_metrics_private`, `walle_metrics_views`; the scheduled queries; the drop-box bucket; Mo's jobs. Created by Mo's runbook | `europe-west1`, BigQuery `EU`, under `FOLDER_ID` | Mo's design |
 | Agent Runtime `wall-e` | `europe-west1` | **EU at rest.** GA in this region, with Sessions and Memory Bank. Memory Bank is switched off by choice | Sessions `tbd`, pending your retention policy. Memory Bank holds nothing, by choice |
 | Agent Runtime traces | `europe-west1`, tracing on | EU | `Assumption:` the platform default of 30 days. Traces carry prompt and tool-call content, so this figure is a data-protection input, not an operations detail. Confirm at build |
 | Cloud Run `walle-actions`, `walle-dispatcher` | `europe-west1` | EU | — |
@@ -752,11 +776,11 @@ After any automatic demotion: a minimum five business days at the lower level, a
 | **Workspace audit sink, organisation level** | Cloud Logging at organisation level. **Region not selectable** | **Exception, see below** | Governed by the organisation's log retention, outside this project's control. `tbd` |
 | Firestore, native mode | `europe-west1` | EU | Plans, approvals and grades kept for the audit window. Counters and dedup expire on their own windows |
 | Secret Manager | **Regional secrets** at `projects/*/locations/europe-west1/secrets/*`, via the regional endpoint | EU at rest, in use and in transit. Global secrets with user-managed replication pin only the payload at rest, and automatic replication stores payloads worldwide | Versions kept until rotation, then disabled and destroyed on the rotation runbook |
-| Cloud KMS key ring | Must be created in `europe-west1` | EU | — |
+| Cloud KMS key ring (Eve's, ring `eve`) | In `EVE_PROJECT`, created in `europe-west1`; Wall-E holds only the pinned public PEM | EU | — |
 | BigQuery `walle_audit` | Dataset location `EU` | EU | **400 days**, set as a table expiry on every table, pending your retention policy |
 | Pub/Sub topics | EU. Confirm the message storage policy at build | EU, subject to that build check | 7-day message retention, dead-letter topics included |
 | Cloud Scheduler, Cloud Tasks, Artifact Registry | `europe-west1` | EU | — |
-| Gemini Enterprise app | `Assumption:` `tbd`. An `eu` app can front a `europe-west1` agent, a `global` app can front any region. Confirm in console | tbd | **`tbd`, and it must be resolved before the pilot.** This is the front door, so it holds every operator conversation about named employees. An unresolved region and an unresolved retention on the conversation store is not a story that survives a data-protection review |
+| Gemini Enterprise app | Hosted in `GEMINI_PROJECT` (number `GEMINI_PROJECT_NUMBER`, from which the service agent is built). Location `Assumption:` `tbd`, `eu` or `global`: an `eu` app can front a `europe-west1` agent, a `global` app can front any region. Confirm in console | tbd | **`tbd`, and it must be resolved before the pilot.** This is the front door, so it holds every operator conversation about named employees. An unresolved region and an unresolved retention on the conversation store is not a story that survives a data-protection review |
 | Model | Pinned by id, recorded in `config_versions`. **Not every current model has EU residency**, so check the per-model table before pinning | must be EU | No training on the data, no prompt retention beyond abuse monitoring. Confirm per model at build |
 | Workspace tenant data regions | Out of scope of this document. `Assumption:` governed by your organisation's existing policy | tbd | Your organisation's policy |
 
@@ -773,7 +797,7 @@ One related configuration constraint, not an exception: **CMEK is unavailable** 
 
 Said plainly, because the ingress note in section 6 stops one sentence short of the consequence. **`walle-actions` is deployed with ingress `all` and authentication required.** The only holder of a Workspace admin credential is therefore reachable from the public internet, with IAM as the sole gate. Internal-only ingress is not available: Agent Runtime egresses from a Google-managed tenant project, which Cloud Run treats as external, so internal-only blocks the agent entirely. An internal load balancer or a Private Service Connect endpoint would work but changes the agent's egress path, and a PSC interface alone does not, because `run.app` traffic keeps taking the Google network path without private DNS peering.
 
-A **VPC Service Controls perimeter** covering Secret Manager, BigQuery, Firestore and the Agent Runtime tenant project would bound exfiltration regardless of the ingress problem, and it is the control a corporate security function asks about first. It is **deferred for the pilot stage**, because the pilot executes no writes, because the perimeter has to include a Google-managed tenant project whose interaction with the perimeter is untested here, and because getting it wrong blocks the agent in a way that looks like an application fault. It is an open decision that must be answered before S1, the first stage that writes.
+A **VPC Service Controls perimeter** covering Secret Manager, BigQuery, Firestore and the Agent Runtime tenant project would bound exfiltration regardless of the ingress problem, and it is the control a corporate security function asks about first. Under four projects a perimeter around `WALLE_PROJECT` must also admit the cross-project callers — ingress rules for Eve's and Mo's identities from `EVE_PROJECT` and `MO_PROJECT` reading `walle_audit` and calling `walle-actions`, and for `GEMINI_PROJECT`'s service agent querying the engine — which is a cost recorded here; [09](09-open-decisions.md) decision 21 is unchanged. It is **deferred for the pilot stage**, because the pilot executes no writes, because the perimeter has to include a Google-managed tenant project whose interaction with the perimeter is untested here, and because getting it wrong blocks the agent in a way that looks like an application fault. It is an open decision that must be answered before S1, the first stage that writes.
 
 While it is deferred the compensating controls are: the per-endpoint caller allowlist in section 7.5; an alert on any secret access by a non-service identity, read from Cloud Audit Logs; and the deploy separation in section 4.2. This is recorded as weakness 13 in section 11 rather than left as silence, because silence reads as "not considered" rather than "considered and deferred".
 
@@ -810,7 +834,7 @@ Stated plainly, because a design that quietly corrects itself teaches nothing. T
 
 **1. Every control still runs in one process.** The credential, the policy chain, approval minting *and* approval verification, plan hashing, execution, verification and the audit write all live in `walle-actions`. The three agents cannot collapse into one, but the service beneath them was never decomposed, and there is no genuine control for a compromised or badly bugged action service. What makes it survivable rather than fatal: Eve's key is asymmetric, so the service cannot mint an Eve approval; frozen plans are create-only, so a signed plan cannot be rewritten; and the Workspace audit log is written by Google, not by us. Splitting the control endpoints onto a second Cloud Run service with their own IAM is the recognised fix, and it should land before the Eve-gated stage.
 
-**2. Cloud Run IAM is per service, not per path.** `run.invoker` on `walle-actions` is granted to the agent, Eve, the Cloud Tasks worker identity and the operator group, exactly as the column in section 4.2 states, and it gives all four the right to call *every* endpoint. The dispatcher does **not** hold it and never calls the action service. The exclusion of the agent from the control and approval endpoints is therefore an **in-app allowlist keyed on the verified email claim of the caller's ID token**, which is application code rather than platform enforcement. Every row of the table in section 7.5 carries its own negative test, not just the demote endpoint.
+**2. Cloud Run IAM is per service, not per path.** `run.invoker` on `walle-actions` is granted to the agent, `eve-controller@EVE_PROJECT`, `mo-analyst@MO_PROJECT`, `walle-tasks@`, `walle-approvals@`, `walle-operators-caller@` and the operator group, as section 4.2 and [12](12-agent-identity.md) section 8.1 step 12 state — two of them foreign identities, bound on the service from other projects — and it gives every one of them the right to call *every* endpoint. The dispatcher does **not** hold it and never calls the action service. The exclusion of the agent from the control and approval endpoints is therefore an **in-app allowlist keyed on the verified email claim of the caller's ID token**, which is application code rather than platform enforcement. Every row of the table in section 7.5 carries its own negative test, not just the demote endpoint.
 
 **3. The end user's identity is asserted, never proven.** Gemini Enterprise passes the signed-in user's email as `user_id`, asserted by the Discovery Engine service agent. Its trustworthiness rests entirely on `aiplatform.reasoningEngines.query` being locked to three principals and on the action service re-checking group membership on every write, failing closed. That live re-check is confined to the write path on purpose: applying it to the control endpoints would make halt and demote depend on the very credential that may be the problem, which is why section 7.5 authorises those endpoints against a committed operator list instead. Binding an approval to a verified token is available as hardening for the highest-risk cases, and is not yet the default.
 
@@ -838,7 +862,7 @@ Stated plainly, because a design that quietly corrects itself teaches nothing. T
 
 ## 12. Pointers for whoever builds Eve or Mo
 
-Build against sections 7.2, 7.3, 7.4 and 7.5. Note first that neither of you exists yet, so nothing in section 0's pilot depends on you, and the interfaces below are built in the action service from the first commit and exercised by a stub caller until you do. Three rules from the team design are non-negotiable, because breaking any of them collapses three agents back into one.
+Build against sections 7.2, 7.3, 7.4 and 7.5, and build in your own project — `EVE_PROJECT` or `MO_PROJECT`, under `FOLDER_ID` ([../project-topology.md](../project-topology.md)). Request from Wall-E's owner only these resource-level grants, on Wall-E's resources: `roles/run.invoker` on `walle-actions`, dataset-level `roles/bigquery.dataViewer` on `walle_audit` (and on `walle_workspace_logs` for Mo), and, when a duty needs the topic, `roles/pubsub.subscriber` on `walle-events`. Never ask for a project-level role in `WALLE_PROJECT`, never a `jobUser` there, and never an authorised view on a Wall-E dataset. Note first that neither of you exists yet, so nothing in section 0's pilot depends on you, and the interfaces below are built in the action service from the first commit and exercised by a stub caller until you do. Three rules from the team design are non-negotiable, because breaking any of them collapses three agents back into one.
 
 1. **No agent both decides and acts.** Wall-E acts and never approves. Eve approves and never acts on Workspace. Mo proposes and does neither.
 2. **No agent grades its own work.** Wall-E's re-read after a write is a sanity check, not evidence. Eve verifies independently, with its own read-only credential and against Google's audit log.

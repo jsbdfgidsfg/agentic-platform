@@ -1,7 +1,11 @@
 # Wall-E setup automation
 
-Executes [SETUP.md](../SETUP.md), the 18-phase runbook, as far as a script
-honestly can. SETUP.md is authoritative: where it and ARCHITECTURE.md disagree,
+## Status
+- Owner: the platform owner
+- Last reviewed: 2026-09-13 — four GCP projects ([../../project-topology.md](../../project-topology.md)). The script and the self-test implement the four-project placement as of 2026-09-13; the section "Topology change 2026-09-13" records what landed and the two spikes still open.
+
+Executes [SETUP.md](../SETUP.md), the 21-phase runbook (18 numbered phases plus
+12b, 12c and 13b), as far as a script honestly can. SETUP.md is authoritative: where it and ARCHITECTURE.md disagree,
 this follows SETUP.md, and the disagreements are listed at the bottom of this
 page.
 
@@ -24,9 +28,8 @@ in place, with the check that proves each one. `./walle preflight` tests only a 
 cp walle.env.example ~/.walle-env && $EDITOR ~/.walle-env   # fill in every <...>
 ./walle preflight            # tools, permissions, config, manual step list
 ./walle workspace            # phases 1 and 2
-./walle gcp                  # phases 6, 7, 8
+./walle gcp                  # phases 6, 7, 8 — WALLE_PROJECT only, created with --folder
 ./walle consent              # phase 9   — the one interactive step
-./walle consent --eve        # phase 15
 ./walle armor                # phase 12c — Model Armor, inspect-only; BEFORE deploy
 ./walle spike                # phase 12b step 3 — the Agent Identity spike; BEFORE deploy
 ./walle rollback --phase 12b #   then delete the throwaway spike engine
@@ -34,6 +37,10 @@ cp walle.env.example ~/.walle-env && $EDITOR ~/.walle-env   # fill in every <...
 ./walle register             # phase 13
 ./walle registry             # phase 13b — Agent Registry, egress gateway in dry-run
 ./walle triggers             # phase 16
+# There is no `grants` subcommand: the cross-project grants on Wall-E's resources are made
+# by `gcp` (phase 7, dataset READER for Eve's and Mo's readers) and `deploy` (phase 10,
+# run.invoker and the two caller allowlists); re-run either once the other runbook has
+# created a principal that was reported PENDING.
 ./walle verify               # every invariant, as a pass/fail table
 ./walle denials              # phase 17
 ./walle stage0               # phase 18 — verify, attest M10, resume the schedules
@@ -63,7 +70,8 @@ subcommand uses, and a refusal names which subcommands want the missing key.
 
 Every subcommand is independently re-runnable: each create is a get-or-create,
 and nothing is deleted outside `teardown`, which makes you type the project id.
-Fill `~/.walle-env` in as each phase produces a value — `PROJECT_NUMBER`,
+Fill `~/.walle-env` in as each phase produces a value — `PROJECT_NUMBER` (Wall-E's
+own), `GEMINI_PROJECT_NUMBER` (the app project's, at D8 / phase 6),
 `REFRESH_TOKEN_VERSION`, `ACTIONS_URL`, `DISPATCHER_URL`, `ENGINE_ID` — because
 a missing value expands to an empty string and produces a deployed resource that
 is wrong rather than a command that fails.
@@ -82,9 +90,21 @@ Three subcommands implement the chapters
 Phases 12c, 12b and 13b carry them. The gcloud invocations are SETUP.md's,
 verbatim. The config keys they need are documented in `walle.env.example`
 with the subcommand that validates each: `AGENT_IDENTITY_MODE`,
-`AGENT_IDENTITY_SPIKE_RESULT`, `INGRESS_GATEWAY`, `EGRESS_GATEWAY`, `FOLDER_ID`,
-`CI_DEPLOYER`, `MO_PRINCIPAL`, `MODEL_ARMOR_ENFORCE_DECISION`,
-`CONTENT_LOG_RETENTION_DAYS` (default 30).
+`AGENT_IDENTITY_SPIKE_RESULT`, `INGRESS_GATEWAY`, `EGRESS_GATEWAY`, `FOLDER_ID`
+(now also required by `gcp`, for `projects create --folder`), `CI_DEPLOYER`,
+`MO_PRINCIPAL`, `GEMINI_ACCESS_SPIKE_RESULT` (decision 42's recorded result; empty
+means no project-level fallback), `MODEL_ARMOR_ENFORCE_DECISION`,
+`CONTENT_LOG_RETENTION_DAYS` (default 30). The four-project keys: `GEMINI_PROJECT`
+and `GEMINI_PROJECT_NUMBER` (validated by `gcp`, `register` and by `deploy`'s engine
+lock-down), `EVE_PROJECT` and `MO_PROJECT` (validated by `gcp` for the Phase 7
+dataset readers and by `deploy` for the `run.invoker` loop and the allowlists).
+`validate_config` refuses any two of the four project ids being equal,
+`GEMINI_PROJECT_NUMBER` equal to `PROJECT_NUMBER`, and any of `SA_EVE`,
+`SA_EVE_VERIFIER`, `SA_EVE_CONSOLE`, `SA_EVE_V0`, `SA_MO_METRICS`, `SA_MO_ANALYST`,
+`SA_MO_NARRATOR` or `MO_PRINCIPAL` whose domain is `${PROJECT}.iam.gserviceaccount.com`
+or is not its home project's: Eve's and Mo's identities live in their own projects and
+appear in this config only as grantees on Wall-E's resources. `SA_MO_METRICS` is
+derived from `MO_PROJECT` and is not a key of its own.
 
 **`walle armor`** (Phase 12c, before the first `deploy`). Enables the APIs;
 creates the `walle-content-logs` bucket, the `walle-content-sink` sink and the
@@ -141,8 +161,14 @@ constraints explicitly, and refuses an agent package that mentions
 `google-auth>=2.45.0`.
 
 **`walle registry`** (Phase 13b, after `register`). Enables the APIs; grants
-`agentregistry.admin` to `CI_DEPLOYER` only and `viewer` to `eve-controller@`
-and `MO_PRINCIPAL`; lists and describes the automatic `wall-e` entry and fails
+`agentregistry.admin` to `CI_DEPLOYER` only (Wall-E's own deployer, in
+`WALLE_PROJECT`) and **nothing to Eve or Mo**: the `agentregistry.viewer` grants
+to `eve-controller@` and `MO_PRINCIPAL` are dropped (topology decision 43). Agent
+Registry's roles are project-level only — the v1 API has no resource-level
+`getIamPolicy`/`setIamPolicy` — so the old grant was a project-level role in
+`WALLE_PROJECT` for principals from `EVE_PROJECT` and `MO_PROJECT`, and no duty
+of theirs needs it. `MO_PRINCIPAL` stays a config key because `deploy` binds it
+as `run.invoker` on `walle-actions`; lists and describes the automatic `wall-e` entry and fails
 if it lacks `RuntimeIdentity` or `RuntimeReference`; prints the registry-write
 audit filter to commit and wire to the operator channel; imports the
 `walle-egress` gateway; registers `walle-actions` as a `NO_SPEC` endpoint and
@@ -194,7 +220,7 @@ no verifier (M3, M5, M6, M10) is therefore the only thing standing between
 | M5 | 9 | The OAuth consent screen and the OAuth client are console objects. Internal + In production, or refresh tokens expire after seven days. | **no** |
 | M6 | 9 | Marking the client Trusted in API controls. The Gmail scopes are "restricted" and your tenant's own API controls can cut an untrusted client off weeks later, with an error that looks nothing like the cause. | **no** |
 | M7 | 9 | The consent itself is interactive by design. The script drives it but **prints the URL and waits**: a desktop OAuth flow opens the machine's *default* browser, which is signed in as you, and the grant then lands on a super admin with none of the role constraints. That is SETUP.md §7.1, the most likely single mistake in the runbook. The script calls `userinfo` afterwards and refuses to store the token if the account that consented is not the robot. | partly: the consent flow itself checks the account through `userinfo` and the exact scope set, and prints the version number. The manual block is operator-attested |
-| M8 | 13 | Gemini Enterprise agent registration. The REST surface for it is `v1alpha` and its shape is not stable, so SETUP.md's console steps are what this prints. | yes where the alpha listing answers; otherwise it says it cannot |
+| M8 | 13 | Gemini Enterprise agent registration. It happens **in `GEMINI_PROJECT`** (`GEMINI_APP_ID`, `GEMINI_APP_LOCATION`), not in `PROJECT`. The REST surface for it is `v1alpha` and its shape is not stable, so SETUP.md's console steps are what this prints. The engine-level `walleEngineQuery` binding for `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine` in `WALLE_PROJECT` is made by `deploy` (`lock_engine_iam`, Phase 12), not by `register`, which only tells the operator it must already be in place; Google's documented project-level `roles/discoveryengine.serviceAgent` fallback is applied by `deploy` only when the config key `GEMINI_ACCESS_SPIKE_RESULT` points at a recorded `{"verdict":"fail"}` from the decision-42 spike, and `verify`'s `engine_two_principals` then tolerates that one binding. | yes where the alpha listing answers, targeting `GEMINI_PROJECT` and the app's location, never `PROJECT`; otherwise it says it cannot |
 | M9 | 16 | A monitoring notification channel. An alert policy with no channel is a dashboard. | yes |
 | M10 | 18 | The Stage 0 decision record is a document, and writing it is the point. Printed by `walle verify` and gated by `walle stage0`. | no |
 | — | 14 | Not a console step, but a human judgement the machine cannot make: after the forced shadow run, `walle deploy` asks whether the operator notification **actually arrived**. It is the one answer that proves `notify.operators` is really outside the ladder; if the report never arrives, F2-notify is back on the ladder at L1 and Stage 0 collects evidence nobody sees. | no |
@@ -220,18 +246,34 @@ no secret and no KMS key, counting bindings inherited from the key ring and the
 project; the Stage 0 role holds nothing beyond the resolved read set; the robot
 holds **exactly one** role assignment, customer-scoped, and the Stage 1 write
 role is assigned to nobody; the secrets are regional and the service pins a
-version **number** that still exists and is `ENABLED`, never `latest`; the KMS
-key is `ASYMMETRIC_SIGN`/`EC_SIGN_P256_SHA256` with Eve signing and the action
-service holding only `publicKeyViewer` at every level; the action service cannot
-delete BigQuery audit data; the Pub/Sub sink excludes the robot principal and
-the BigQuery sink does not; exactly three principals can query the engine, and
-no project- or organisation-level binding confers query on a fourth; the engine
+version **number** that still exists and is `ENABLED`, never `latest`; every
+committed PEM under `contracts/eve-public-keys/` carries a `BEGIN PUBLIC KEY`
+header (`kms_separation`: a header check, not a parse — a real EC P-256 parse is
+not implemented; the directory is empty until S4 and the check passes vacuously
+then) and `walle-actions@` holds **no** `cloudkms` role in `WALLE_PROJECT` — the
+key itself is in `EVE_PROJECT`, where `verify` may not be able to read it, so its
+shape is Eve's runbook's assertion; `project_roles`: no identity from
+`EVE_PROJECT` or `MO_PROJECT` holds any project-level role in `WALLE_PROJECT`,
+and no `eve-*` or `mo-*` service account exists there (both assertions live in
+that one check; the decision-42 fallback for the Gemini project's service agent
+is tolerated by `engine_two_principals`, not here); the action service cannot delete BigQuery audit data; the
+Pub/Sub sink excludes the robot principal and the BigQuery sink does not;
+exactly **two** principals can query the engine — `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine`
+(the app project's number, never `PROJECT_NUMBER`) and `walle-dispatcher@`,
+no Eve identity (SETUP.md Phase 12, C10) — and no project- or
+organisation-level binding confers query on a third; `walle_audit`'s access
+array carries dataset-level `READER` for the Eve and Mo identities Phase 7
+names (`cross_project_dataset_access`) and **no** `view` entry; the four foreign `run.invoker` members on
+`walle-actions` carry `EVE_PROJECT` or `MO_PROJECT` domains; the engine
 runs as `walle-agent@` with `min_instances 0`, no Memory Bank and no Code
 Execution; every playbook scheduler is paused and the watch-renewal job is
 running; the ladder has no `notify.operators` family, has `ou_allowlist` in
 `defaults`, stamps a `ceilings_sha` and reads `config_version 2026.09.0-1`; the
-control caller allowlist holds the operators as well as Eve; and both Cloud Run
-services require authentication.
+control caller allowlist holds the operators as well as Eve's controller and
+verifier at their full cross-project addresses and neither read-only caller
+(`control_caller_allowlist`); the read caller allowlist holds `eve-console@` and
+`mo-analyst@` at theirs and neither of them is on the control list
+(`read_caller_allowlist`); and both Cloud Run services require authentication.
 
 One check asks Google rather than Wall-E: `no_robot_writes_at_google` queries
 the organisation-level Workspace admin audit log for rows attributed to the
@@ -264,8 +306,8 @@ made; `verify` is the subcommand this sentence is about.)
 
 **One secret is written to disk, deliberately.** The robot's refresh token never
 is: it goes from the token exchange straight into Secret Manager. The operator's
-*own* OAuth token is cached 0600 at `OPERATOR_TOKEN_CACHE` so phases 1, 2 and 15
-do not re-consent on every run. It is your own super-admin credential, it is
+*own* OAuth token is cached 0600 at `OPERATOR_TOKEN_CACHE` so phases 1 and 2
+do not re-consent on every run (Phase 15 no longer consents anything here). It is your own super-admin credential, it is
 re-consentable at zero cost, and setting `OPERATOR_TOKEN_CACHE=""` disables the
 cache entirely.
 
@@ -274,15 +316,17 @@ failures.
 
 ## Where this differs from the documents
 
-- **SETUP.md Phase 10 says "all sixteen environment variables" and lists
-  seventeen.** The script asserts the exact name set, not a count.
+- **SETUP.md Phase 10 lists the environment variables by name** (nineteen since
+  2026-09-13, with `EVE_PUBLIC_KEY_PEM` and `READ_CALLER_ALLOWLIST`). The script
+  asserts the exact name set, not a count.
 - **SETUP.md Phase 8's BigQuery `DELETE` check runs as the operator**, who is
   normally a project owner, so it succeeds and reads as a control failure that
   is not one. The script runs it impersonating `walle-actions@`, which is the
   only way it proves anything.
 - **ARCHITECTURE.md §4.2 and §7.5 give the Cloud Tasks worker its own service
-  account, `walle-tasks@`.** SETUP.md Phase 6 creates five service accounts and
-  has `walle-actions@` call itself back. SETUP.md wins; the split is worth doing
+  account, `walle-tasks@`.** SETUP.md Phase 6 creates four service accounts
+  (`eve-controller@` is Eve's runbook's, in `EVE_PROJECT`) and has
+  `walle-actions@` call itself back. SETUP.md wins; the split is worth doing
   before Stage 4, alongside open decision 18.
 - **ARCHITECTURE.md §4.2 says `walle-dispatcher@` never calls the action
   service.** SETUP.md Phases 10 and 16 give it `run.invoker` and make it the
@@ -306,7 +350,7 @@ failures.
   and aborted with `Bad syntax for dict arg`. Both documents now say `^;^`, and
   the script validates names *and* values against it.
 - **There is no `gcloud ai reasoning-engines` command group**, in GA, beta or
-  alpha. Listing engines, the three-principal IAM lock, `getIamPolicy` and the
+  alpha. Listing engines, the two-principal IAM lock, `getIamPolicy` and the
   engine delete all use the Agent Runtime REST API on
   `$REGION-aiplatform.googleapis.com`, which is the escape hatch SETUP.md
   Phase 12 already names.
@@ -318,10 +362,16 @@ failures.
   13's verify distinguishes the pre-14 denial reason `control_plane_unavailable`
   from the post-14 `level_off`; after this reordering only `level_off` is
   observable, which is the reason SETUP.md wants it recorded either way.
-- **Eve's admin role is created in `workspace`, not `consent --eve`.** SETUP.md
-  puts it in Phase 15 ("repeat phases 1, 2, 3 and 9"); doing it alongside
-  Wall-E's roles means one pass over the privilege catalogue and one console
-  sitting. `consent --eve` still does Phase 15's credential half.
+- **Eve's `Eve — Verifier` Workspace role is still created in `workspace`, and
+  `consent --eve` is retired.** The role is a tenant-level object, not a GCP
+  resource, so creating it alongside Wall-E's roles still means one pass over
+  the privilege catalogue and one console sitting; Eve's runbook Phase 8 then
+  finds it present. Everything else the old Phase 15 did — Eve's OAuth client,
+  consent, `eve-refresh-token` and `eve-oauth-client` — is a GCP resource and
+  belongs in `EVE_PROJECT`, built by Eve's runbook Phase 9 with Eve's tooling.
+  `consent --eve` would create those secrets in `WALLE_PROJECT`; it is removed,
+  and a config whose `PROJECT` equals `EVE_PROJECT` is refused rather than
+  treated as a way to run it.
 - **The floor list carries the two robot accounts**, which SETUP.md Phase 1
   step 5 does not ask for. Denial test 17 requires a write targeting `$ROBOT` or
   anything in `$SVC_OU` to be refused as `protected_principal`, so the runtime
@@ -353,6 +403,46 @@ failures.
   `/sessions` collection on the regional aiplatform host, which is how the
   runtime-gateway page describes it; confirm the exact form on the first
   dry-run deny log.
+
+## Topology change 2026-09-13 — landed
+
+[../../project-topology.md](../../project-topology.md) moved Eve's and Mo's resources out
+of Wall-E's project and made the Gemini app's project explicit. SETUP.md,
+`walle.env.example`, `walle_setup.py` and `selftest/selftest.sh` were all brought to the
+four-project placement on 2026-09-13, and the self-test asserts it ("Checking the script
+before you trust it", below). In one list, what the script now does:
+
+- `SERVICE_ACCOUNT_IDS` holds Wall-E's four only; no `eve-*` or `mo-*` account is created
+  here, and `project_roles` fails if one exists.
+- `EVE_PROJECT_ROLES` is `()`; no project-level role is granted to any Eve or Mo identity,
+  and `project_roles` fails on one. Decision 44 (Eve's Firestore discovery read) is open
+  and nothing is granted meanwhile.
+- `SA_EVE`, `SA_EVE_VERIFIER`, `SA_EVE_CONSOLE`, `SA_EVE_V0` derive from `EVE_PROJECT`;
+  `SA_MO_METRICS`, `SA_MO_ANALYST`, `SA_MO_NARRATOR` and `MO_PRINCIPAL` from `MO_PROJECT`;
+  `validate_config` refuses a `${PROJECT}` domain, or the wrong home, on any of them.
+- `gcp` creates the project with `--folder="$FOLDER_ID"`, enables neither
+  `discoveryengine` nor `cloudkms`, reads `GEMINI_PROJECT`'s number for the build log, and
+  in Phase 7 makes the dataset-level `READER` entries for Eve's and Mo's readers
+  (`grant_cross_project_dataset_readers`), recording a not-yet-created principal as
+  PENDING. There is no `ensure_kms`, no `consent --eve`, no `EVE_TOKEN_VERSION` and no
+  `teardown --destroy-key-versions`.
+- `deploy` emits SETUP.md Phase 10's nineteen names, `EVE_PUBLIC_KEY_PEM` and
+  `READ_CALLER_ALLOWLIST` included, with `EVE_KMS_KEY` under `EVE_PROJECT` (ring `eve`);
+  binds `run.invoker` on `walle-actions` for the three Eve identities and `MO_PRINCIPAL`
+  (PENDING if absent); locks the engine to `service-${GEMINI_PROJECT_NUMBER}@…` and
+  `walle-dispatcher@`, applying the project-level `roles/discoveryengine.serviceAgent`
+  fallback only on a recorded `GEMINI_ACCESS_SPIKE_RESULT` of `fail`.
+- `registry` grants `agentregistry.admin` to `CI_DEPLOYER` and nothing to anyone else.
+- `register` reads the app under `GEMINI_PROJECT`; every cross-project read goes through
+  `gcloud_probe_json_in`, which refuses Wall-E's own project id.
+- `verify` carries `project_roles`, `kms_separation`, `cross_project_dataset_access`,
+  `engine_two_principals`, `control_caller_allowlist` and `read_caller_allowlist`, as
+  listed under "What `verify` asserts".
+
+**Still open, by design:** decision 42 (whether the engine-scoped role suffices
+cross-project — recorded through `GEMINI_ACCESS_SPIKE_RESULT`) and decision 44 (Eve's
+Firestore read — an IAM Condition on the database, or Eve's CC-33 list endpoint; nothing
+is granted until one lands).
 
 ## Not implemented
 
@@ -398,7 +488,14 @@ tenant:
 - global flags work before or after the subcommand
 - the corrections that were expensive to find are still in the emitted commands: no
   `--paused` on scheduler create, no non-existent role or command group, regional
-  secrets, an asymmetric key for Eve, project roles on the service accounts
+  secrets, project roles on the service accounts; and the four-project invariants:
+  no `gcloud kms` command at all, no `eve-controller` create, no `datastore.viewer`
+  for a foreign principal, `projects create` carries `--folder` and never
+  `--organization`, the engine policy names `service-${GEMINI_PROJECT_NUMBER}@` and
+  never `service-${PROJECT_NUMBER}@gcp-sa-discoveryengine`, and no
+  `projects add-iam-policy-binding` names a member outside
+  `${PROJECT}.iam.gserviceaccount.com` except `CI_DEPLOYER`, the Google service
+  agents and the recorded decision-42 fallback
 - the Cloud Run environment flag survives email-shaped values, which is the bug that
   would otherwise have stopped the first deploy
 - Phase 12c: `armor --dry-run` issues no mutating command; both templates are
@@ -419,10 +516,23 @@ tenant:
   runs, and with one it passes `walle-agent@` and restores the grant; a `fail`
   spike on file refuses the identity path; `spike --dry-run` mutates nothing
 - Phase 13b: `registry --dry-run` mutates nothing; `agentregistry.admin` goes to
-  `CI_DEPLOYER` and nobody else, viewer to Eve and Mo; `walle-actions` is a
+  `CI_DEPLOYER` and nobody else, and **no** `agentregistry.viewer` is granted to
+  any `EVE_PROJECT` or `MO_PROJECT` principal (decision 43); `walle-actions` is a
   `NO_SPEC` endpoint; the essential endpoints are registered and **no forbidden
   host ever is**; the egressor policy is applied per endpoint; the IAP extension
   starts fail-closed in `DRY_RUN`; `--card` refuses a `tbd` url and a forbidden host
+- The four-project paths added on 2026-09-13: `phase10 --dry-run` and `phase12 --dry-run`
+  issue no mutating command and no engine `setIamPolicy`; the deployed env carries
+  `READ_CALLER_ALLOWLIST` with `eve-console@${EVE_PROJECT}` and `mo-analyst@${MO_PROJECT}`
+  and `EVE_PUBLIC_KEY_PEM` naming the pinned-PEM directory; `validate_config` refuses an
+  Eve or Mo key spelled in `${PROJECT}` or in the wrong home, and `GEMINI_PROJECT_NUMBER`
+  equal to `PROJECT_NUMBER`; a foreign principal BigQuery or IAM reports as absent is a
+  PENDING note and exit 0 on both grant paths, while any other error stops the run;
+  `run_invoker_handles` is SKIP (not PASS) while the cross-project invokers are unbound;
+  `control_caller_allowlist` and `read_caller_allowlist` pass on the right lists and fail
+  on the old placement, on a read-only caller on the control list, on a missing
+  `mo-analyst@` and on a missing read list; `gcloud_probe_json_in` refuses Wall-E's own
+  project id; `register` reads the app under `GEMINI_PROJECT`, never `PROJECT`
 - the nine new `verify` checks pass on a good repo, and three of them are shown
   to fail: on `.query(` in the dispatcher, on `McpToolset` in the agent, and on
   `failOpen: true` in the committed YAML

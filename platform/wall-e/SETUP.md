@@ -8,7 +8,7 @@
 |---|---|
 | Owner | the platform owner |
 | Written | 2026-09-08 |
-| Last reviewed | 2026-09-09 — reworded as a standalone guide usable by any organisation. 2026-09-08 — Phase 10/11 `--set-env-vars` delimiter corrected from `^@^` to `^;^`, and Phase 16's notification-channel command from `gcloud monitoring channels` to `gcloud beta monitoring channels` |
+| Last reviewed | 2026-09-13 — four GCP projects under one folder, per [../project-topology.md](../project-topology.md): `GEMINI_PROJECT` holds the Gemini Enterprise app, `PROJECT` (this runbook's name for `WALLE_PROJECT`) holds Wall-E and nothing else, Eve's key, secrets and identities move to `EVE_PROJECT`, Mo's identities and datasets to `MO_PROJECT`. Every crossing is a resource-level grant (dataset `READER` in Phase 7, `run.invoker` and the allowlists in Phase 10, the engine policy in Phase 12; Phase 15 is retired and keeps only the collected verify), and the Discovery Engine service agent bound on the engine is the **app** project's, `service-${GEMINI_PROJECT_NUMBER}@…`, never this project's. 2026-09-09 — reworded as a standalone guide usable by any organisation. 2026-09-08 — Phase 10/11 `--set-env-vars` delimiter corrected from `^@^` to `^;^`, and Phase 16's notification-channel command from `gcloud monitoring channels` to `gcloud beta monitoring channels` |
 | Last executed | never |
 | Applies to | [platform/wall-e](README.md) design set, documents 01 to 10 |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), the standalone service view |
@@ -22,7 +22,7 @@ This document is standalone. You can execute it without having read the design s
 
 ### 0.1 The thing you are building, in one paragraph
 
-One Google Workspace user account, `walle@<domain>`, holds a narrow custom admin role. A Cloud Run service in a dedicated GCP project is the only process that ever holds that account's credential, and it decides in deterministic Python whether any requested operation may run. A language model agent on Agent Runtime asks that service for operations by name. The agent holds no credential, cannot approve anything, and cannot change its own limits. There is **no domain-wide delegation** anywhere in this system, and there never will be.
+One Google Workspace user account, `walle@<domain>`, holds a narrow custom admin role. A Cloud Run service in a dedicated GCP project is the only process that ever holds that account's credential, and it decides in deterministic Python whether any requested operation may run. Wall-E's project holds nothing of Eve's, Mo's or the Gemini Enterprise app's; those live in `EVE_PROJECT`, `MO_PROJECT` and `GEMINI_PROJECT`, and every interaction between them is a resource-level grant made in Phases 7, 10 and 12, verified in one place in Phase 15, and listed in [../project-topology.md](../project-topology.md) §3. A language model agent on Agent Runtime asks that service for operations by name. The agent holds no credential, cannot approve anything, and cannot change its own limits. There is **no domain-wide delegation** anywhere in this system, and there never will be.
 
 ### 0.2 What finishing this runbook actually gives you
 
@@ -53,12 +53,12 @@ Unit prices are deliberately not quoted. The Agent Runtime and Sessions pricing 
 | Agent Runtime | Near zero when idle, `min_instances=0` | Deployed cold. `min_instances=1` bills around the clock and is the single easiest way to waste money here. | Instance-hour price in europe-west1 |
 | Cloud Run (two services) | Near zero, scale to zero | Both services are request-driven and idle most of the week. | Standard Cloud Run pricing |
 | BigQuery storage | Small for `walle_audit`. **The larger line is the Workspace audit log sink**, which carries organisation-wide admin activity, not just Wall-E's. | Reconciliation needs Google's own record of what the robot did, so the sink cannot be narrowed to the robot. | Active and long-term storage price, EU |
-| Cloud KMS | One key, one key version, flat monthly | Eve's asymmetric signing key exists from day one even though Eve does not. | Per key version per month |
-| Secret Manager | Three regional secrets, a few versions, negligible access volume | | Per secret version per month |
+| Cloud KMS | **Nothing in this project.** | Eve's signing key `eve-approval` lives in `EVE_PROJECT` (Eve's runbook, Phase 11). Wall-E verifies against a pinned PEM and holds no KMS role here. | — |
+| Secret Manager | Three regional secrets, a few versions, negligible access volume. Exactly three. | Eve's two secrets (`eve-refresh-token`, `eve-oauth-client`) are in `EVE_PROJECT`, not here; Phase 15 no longer adds them. | Per secret version per month |
 | Firestore | Negligible | Counters, halt flags, plans, grades. Tiny documents, low volume. | |
 | Pub/Sub, Cloud Scheduler, Artifact Registry, Cloud Tasks | Negligible | | |
 | Cloud Logging | Routing to a sink is not charged. Ingestion into log buckets is. | | Whether the org already excludes these logs from `_Default` |
-| Workspace licences | One for `$ROBOT`, one for `$EVE_ROBOT`, and one per sandbox account. Five or six seats in total. | Every Workspace user account consumes a licence, and the robot's must include Gmail because the frozen scope list and the Phase 16 mailbox watch depend on it. | Per-seat price of the edition you park them on. `Assumption:` seats are available without a purchase order. |
+| Workspace licences | One for `$ROBOT`, one for `$EVE_ROBOT`, and one per sandbox account. Five or six seats in total. Seats are tenant-level and do not move with the project split; Eve's seat is provisioned by Eve's runbook. | Every Workspace user account consumes a licence, and the robot's must include Gmail because the frozen scope list and the Phase 16 mailbox watch depend on it. | Per-seat price of the edition you park them on. `Assumption:` seats are available without a purchase order. |
 
 `Assumption:` at Stage 0 the infrastructure sits in the low tens of euros per month and the model spend sits below it. Treat that as an estimate to verify in the first billing cycle, not as a commitment. Set a budget alert in Phase 6 so the first surprise is an email rather than a quarterly review.
 
@@ -74,19 +74,19 @@ Unit prices are deliberately not quoted. The Agent Runtime and Sessions pricing 
 | 3 | Harden the robot account | 30 min | 30 min |
 | 4 | Login reporting rule | 20 min | up to 24 h for the first alert to be observed |
 | 5 | Enable Workspace audit-log sharing to Cloud Logging | 10 min | **up to 24 h** before logs appear |
-| 6 | GCP project, APIs, service accounts, budget alert | 30 min | 30 min |
+| 6 | GCP project (`WALLE_PROJECT`, under `FOLDER_ID`), APIs, service accounts, budget alert | 30 min | 30 min |
 | 7 | Firestore, BigQuery, Pub/Sub, Cloud Tasks | 45 min | 45 min |
-| 8 | KMS asymmetric key, regional secrets, insert-only audit role | 30 min | 30 min |
+| 8 | Regional secrets, insert-only audit role, Eve's public-key pin | 30 min | 30 min |
 | 9 | OAuth client and the one interactive consent | 45 min | 45 min |
 | 10 | Deploy the action service | 30 min, **assuming the code exists** | 30 min |
 | 11 | Dispatcher and the two organisation-level log sinks | 45 min | 45 min |
 | 12 | Deploy the agent on Agent Runtime | 30 min | 30 min |
 | 12b | Agent Identity: constraints, CI checks, the spike, baseline grants, deny policy | 90 min plus a one-day spike | 1 to 2 days |
 | 12c | Model Armor: log routing, templates, ingress gateway, floor settings | 90 min | 90 min, plus the Stage 0 measurement before blocking |
-| 13 | Register and share in Gemini Enterprise | 30 min | 30 min |
+| 13 | Cross-project grant to the Gemini app project's service agent, then register and share in Gemini Enterprise (`GEMINI_PROJECT`) | 45 min | 45 min, plus the `walleEngineQuery`-only spike (decision 42) |
 | 13b | Agent Registry entry check and alert; egress gateway in dry-run | 60 min | 60 min, plus two spikes before enforcement |
 | 14 | Ladder config v1 and paused schedulers | 45 min | 45 min |
-| 15 | Eve's own read-only credential | 60 min | 60 min |
+| 15 | Cross-project grants to Eve's and Mo's identities (Eve's credential itself is Eve's runbook, in `EVE_PROJECT`) | 45 min | 45 min, after `EVE_PROJECT` and `MO_PROJECT` exist and their identities are created |
 | 16 | Gmail watch and its daily renewal | 45 min | 45 min |
 | 17 | Denial suite (§4) and kill-switch drill (§5) | **1 to 2 days** | 1 to 2 days |
 | 18 | Stage 0 entry checklist and decision record | 2 hours | 2 hours |
@@ -110,14 +110,14 @@ Do not begin Phase 1 until every row below has an answer written down. Four of t
 
 | # | Decision | Why it must be closed first | Recommendation |
 |---|---|---|---|
-| **D1** | **Names.** Project id, robot account address, organisational unit paths, group addresses, BigQuery dataset, and the **OAuth app name**. | The OAuth app name is shown to the robot on the consent screen and is awkward to change later. Every command below hard-codes the rest. | `walle-` prefix throughout. Robot `walle@<primary domain>`. Decide in one sitting. [09](09-open-decisions.md) decision 2. |
+| **D1** | **Names.** Project ids, four of them: `GEMINI_PROJECT` (exists already, holds the app), `WALLE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT`, all under `FOLDER_ID` ([../project-topology.md](../project-topology.md) §2). Robot account address, organisational unit paths, group addresses, BigQuery dataset, and the **OAuth app name**. | The OAuth app name is shown to the robot on the consent screen and is awkward to change later. A project id can never be reused after a delete. Every command below hard-codes the rest. | `walle-`, `eve-`, `mo-` prefixes; `PROJECT` in this runbook is `WALLE_PROJECT`. Robot `walle@<primary domain>`. Decide in one sitting. [09](09-open-decisions.md) decision 2; ownership and the Gemini project's identity are decision 52. |
 | **D2** | **The complete OAuth scope list.** | **Scopes freeze permanently at consent.** See §1.2. | Take §1.3 as the proposal. Two live questions: do you want `admin.directory.user.security`, and do you confirm you do **not** want `drive`. |
 | **D3** | **Which organisational units.** A sandbox unit with synthetic accounts, plus one small real pilot unit. | Phase 2 creates a write role scoped to a unit that has to exist. Stage 0 shadow plans need somewhere safe to point. Without a sandbox, Stage 1's first real writes land on real employees. | Create a sandbox. If the tenant genuinely cannot have one, that is a finding to record before Stage 1, not a detail. [09](09-open-decisions.md) decision 5. |
 | **D4** | **Ratify the blast-radius ceiling.** The nine "must never happen" rows in [06-security-guardrails.md](06-security-guardrails.md). | Every other control is calibrated against that list. It was written without you. | Read the nine rows. Say which you disagree with, before build, not after. |
 | **D5** | **Who else is an operator, and who is the second approver.** | `walle-operators@` is the group that can halt, demote, veto and approve. A one-person group means every kill switch depends on you being reachable. Levels L4 and L5 need two named humans, and that is Stage 4, but the second person should be named now. | At least one more Workspace admin in `walle-operators@`. Someone from IT security as the second approver. [09](09-open-decisions.md) decision 11. |
 | **D6** | **Does any other automation already write to the same Workspace objects?** An HR-driven directory sync, a licence-management script, a joiner/leaver tool. | Two writers on one object is the collision this design's pre-state re-read exists to catch, but it is far better to know up front. | Inventory every existing writer before Stage 1 and give each a named owner. |
 | **D7** | **Ask the data-protection question, and put it to employee representative bodies where your jurisdiction has them.** | Not a blocker for Phase 1, but it has the **longest lead time in the entire plan** and it blocks Stage 3. Ask in week one, in parallel. | Frame it in two parts: reads now, autonomous writes before Stage 3. Autonomous action is a different processing activity from human-requested action. [09](09-open-decisions.md) decision 8. |
-| **D8** | **Confirm the Gemini Enterprise app's location.** Gemini Enterprise console → app → settings. | It is a five-minute console lookup and it is a precondition, not a verification. An `eu` app can front a `europe-west1` agent. A `global` app can front any region. A `us` app cannot, and if that is what your tenant has, either a new `eu` app is created or the whole region decision reopens. **Check this before Phase 6, because everything after it is regional.** | `Assumption:` the app's location is unknown to this document. Look it up, write the answer down, and only then start Phase 6. Phase 13 assumes the answer is `eu` or `global`. |
+| **D8** | **Confirm the Gemini Enterprise app's location AND its project.** Gemini Enterprise console → app → settings. Record `GEMINI_PROJECT` and `GEMINI_PROJECT_NUMBER` (`gcloud projects describe "$GEMINI_PROJECT" --format="value(projectNumber)"`). | It is a five-minute console lookup and it is a precondition, not a verification. An `eu` app can front a `europe-west1` agent. A `global` app can front any region. A `us` app cannot, and if that is what your tenant has, either a new `eu` app is created or the whole region decision reopens. **Check this before Phase 6, because everything after it is regional.** The app fronts an agent in `WALLE_PROJECT` cross-project (Google: [Configure cross-project ADK agent access](https://docs.cloud.google.com/gemini/enterprise/docs/configure-cross-project-adk-agents)), and the principal it calls with is `service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine.iam.gserviceaccount.com` — the **app** project's number, never Wall-E's. Phase 12 binds that principal; Phase 13 registers. | `Assumption:` the app's location and project are unknown to this document. Look both up, write them down, and only then start Phase 6. Phase 13 assumes the location is `eu` or `global`. Whether the app's project sits under `FOLDER_ID` is decision 52. |
 
 Three more that are not blocking for Stage 0 but that you should have an opinion on before Phase 14: business hours and timezone (`Assumption:` Europe/Paris, Monday to Friday, last write 16:00), audit retention (`Assumption:` 400 days), and which three admin tasks waste the most of your time, because those are the playbooks Stage 0 should shadow.
 
@@ -177,16 +177,16 @@ Note that the Gmail scopes are "restricted" in Google's classification. For an *
 
 | Role | Held by | Needed for |
 |---|---|---|
-| Workspace **super admin** | you | Phases 1 to 5, 9 step 4, 15 |
-| GCP **project creator** on the organisation | you | Phase 6 |
+| Workspace **super admin** | you | Phases 1 to 5, 9 step 4. Eve's consent is Eve's runbook |
+| GCP **project creator** on `FOLDER_ID` (`roles/resourcemanager.projectCreator` on the folder) | you | Phase 6 creates `WALLE_PROJECT` only; `EVE_PROJECT` and `MO_PROJECT` are created by their own runbooks with the same `--folder`; `GEMINI_PROJECT` already exists |
 | **Billing account user** to link the project, plus **Billing Account Costs Manager** on the billing account to create the budget | you | Phase 6. Ask for both at once. Billing account user alone cannot call `billing.budgets.create`, and the failure lands on the last command of the phase. |
 | `roles/iam.serviceAccountTokenCreator` on `walle-operators-caller@` | you, and every member of `$OPERATORS` | Phases 10, 14 and 17. It is the only way a human can mint an ID token with the right **audience**: `gcloud auth print-identity-token --audiences=` is refused for user credentials and needs a service account to impersonate. Without it the andon cord in §5 has no handle you can pull from a terminal. |
 | **Organisation-level** `roles/logging.configWriter` | you | Phase 11. Workspace audit logs land at organisation level, so a project-level sink cannot see them. If you do not hold this, get it before Phase 11 or that phase stalls. |
-| Gemini Enterprise **app administrator** | you | Phase 13 |
+| Gemini Enterprise **app administrator** in `GEMINI_PROJECT`, plus `roles/resourcemanager.projectIamAdmin` (or equivalent) on `WALLE_PROJECT` and `setIamPolicy` on the engine resource | you | Phase 13; Phase 12 binds the Gemini project's service agent on the engine (and, only on the decision-42 fallback, at project level) |
 | Access to a **corporate password vault** | you | Phase 1. `Assumption:` one exists. |
 | A **physical security key** and a safe to keep it in | you | Phase 3 |
-| A **clean browser profile**, signed into nothing | you | Phase 9 and Phase 15 |
-| **Spare Workspace licences.** One for `$ROBOT`, one for `$EVE_ROBOT`, and one per sandbox account, so three or four for the sandbox | the tenant | Phases 1 and 15. The robot's licence **must include Gmail**, because the frozen scope list and the Phase 16 mailbox watch depend on it. A licence type without Gmail gives a clean Phase 9 and an unexplained failure at Phase 16. `Assumption:` seats are available without a purchase order. |
+| A **clean browser profile**, signed into nothing | you | Phase 9 (Eve's consent, in Eve's runbook, needs the same) |
+| **Spare Workspace licences.** One for `$ROBOT`, one for `$EVE_ROBOT`, and one per sandbox account, so three or four for the sandbox | the tenant | Phase 1 here; Eve's seat in Eve's runbook. The robot's licence **must include Gmail**, because the frozen scope list and the Phase 16 mailbox watch depend on it. A licence type without Gmail gives a clean Phase 9 and an unexplained failure at Phase 16. `Assumption:` seats are available without a purchase order. |
 
 ### 1.5 Tools to install
 
@@ -221,7 +221,11 @@ Every value below marked `<...>` is unknown to this document. Fill them in befor
 | `<customer-id>` | Workspace customer id | Admin console, Account settings. `my_customer` works in most API calls. |
 | `<pilot-ou>` | Path of the small real pilot organisational unit | D3 |
 | `<sandbox-ou>` | Path of the synthetic-account sandbox unit | D3 |
-| `<project-number>` | Numeric GCP project number | Available after Phase 6. Export it as `PROJECT_NUMBER`; Phases 11 and 12 need it. |
+| `<project-number>` | Wall-E's **own** numeric GCP project number | Available after Phase 6. Export it as `PROJECT_NUMBER`; Phases 11, 12 (the `aiplatform-re` service agent, `AGENT_PRINCIPAL`) and 12c need it. It is **never** the number in the Discovery Engine service agent address; that is `<gemini-project-number>`. |
+| `<gemini-project>`, `<gemini-project-number>` | The project that holds the Gemini Enterprise app, and its number | D8, before Phase 6. Export as `GEMINI_PROJECT` and `GEMINI_PROJECT_NUMBER`; the Phase 12 engine lock-down and Phase 13 need them. |
+| `<eve-project>` | Eve's project id | Eve's runbook creates it. Export as `EVE_PROJECT`; Phases 10, 12 and 15 name its principals. |
+| `<mo-project>` | Mo's project id | Mo's runbook creates it. Export as `MO_PROJECT`; Phases 10, 13b and 15 name its principals. |
+| `<folder-id>` | Numeric folder that holds all four projects | `gcloud resource-manager folders list --organization="$ORG_ID"`. Export as `FOLDER_ID`; Phase 6 (`--folder`) and Phase 12c (the Model Armor floor) need it. |
 | `<engine-id>` | Agent Runtime `reasoningEngines` id | Available after Phase 12. Export it as `ENGINE_ID`; Phase 13 needs it. |
 | `<actions-url>` | Cloud Run URL of the action service | Available after Phase 10. Export it as `ACTIONS_URL`; Phases 11, 12, 14 and 16 need it. |
 | `<dispatcher-url>` | Cloud Run URL of the dispatcher | Available after Phase 11. Export it as `DISPATCHER_URL`; Phases 14 and 16 need it. |
@@ -237,7 +241,11 @@ Every command block in this document assumes this block has been run in the same
 ```bash
 # ---- identity and naming (decision D1) --------------------------------------
 export DOMAIN="<primary-domain>"
-export PROJECT="<project-id>"                      # placeholder, decision D1
+export PROJECT="<project-id>"                      # placeholder, decision D1. PROJECT is Wall-E's project, WALLE_PROJECT elsewhere in the wiki
+export GEMINI_PROJECT="<gemini-project>"           # D8: the project that holds the Gemini Enterprise app; never this one
+export EVE_PROJECT="<eve-project>"                 # Eve's project; created by Eve's runbook
+export MO_PROJECT="<mo-project>"                   # Mo's project; created by Mo's runbook
+export FOLDER_ID="<folder-id>"                     # all four projects sit under it; also the Model Armor floor (Phase 12c)
 export REGION="europe-west1"                       # do not change: Agent Runtime GA + EU residency
 export BQ_LOCATION="EU"
 export ORG_ID="<org-id>"
@@ -259,8 +267,16 @@ export SANDBOX_OU="<sandbox-ou>"
 export SA_ACTIONS="walle-actions@${PROJECT}.iam.gserviceaccount.com"
 export SA_AGENT="walle-agent@${PROJECT}.iam.gserviceaccount.com"
 export SA_DISPATCH="walle-dispatcher@${PROJECT}.iam.gserviceaccount.com"
-export SA_EVE="eve-controller@${PROJECT}.iam.gserviceaccount.com"
 export SA_OPS_CALLER="walle-operators-caller@${PROJECT}.iam.gserviceaccount.com"
+
+# ---- foreign principals: they live in EVE_PROJECT / MO_PROJECT and appear here only as grantees on Wall-E's resources ----
+export SA_EVE="eve-controller@${EVE_PROJECT}.iam.gserviceaccount.com"          # approve, veto, halt, demote (S3)
+export SA_EVE_VERIFIER="eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com"   # halt, demote, verify (S3)
+export SA_EVE_CONSOLE="eve-console@${EVE_PROJECT}.iam.gserviceaccount.com"     # read endpoints only (S3)
+export SA_EVE_V0="eve-v0@${EVE_PROJECT}.iam.gserviceaccount.com"               # reads walle_audit from S0
+export SA_MO_ANALYST="mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com"        # read endpoints only
+export SA_MO_METRICS="mo-metrics@${MO_PROJECT}.iam.gserviceaccount.com"        # reads walle_audit and walle_workspace_logs
+# mo-narrator@ never touches Wall-E and is not named here.
 export AR_REPO="${REGION}-docker.pkg.dev/${PROJECT}/walle"
 
 echo "PROJECT=$PROJECT REGION=$REGION DOMAIN=$DOMAIN ROBOT=$ROBOT"
@@ -269,7 +285,8 @@ echo "PROJECT=$PROJECT REGION=$REGION DOMAIN=$DOMAIN ROBOT=$ROBOT"
 **Fill these in as each phase produces them, and keep this block in a file you re-source.** The build spans about a working week. Come back on day three in a new terminal and half the commands below silently expand to empty strings, which for `--set-env-vars` and `--uri` produces a deployed resource that is wrong rather than a command that fails.
 
 ```bash
-export PROJECT_NUMBER=""          # Phase 6
+export PROJECT_NUMBER=""          # Phase 6. Wall-E's OWN number: Pub/Sub, Reasoning Engine, Vertex service agents, AGENT_PRINCIPAL
+export GEMINI_PROJECT_NUMBER=""   # D8 / Phase 6, from gcloud projects describe "$GEMINI_PROJECT". The Discovery Engine service agent's number
 export REFRESH_TOKEN_VERSION=""   # Phase 9, the number the bootstrap prints
 export ACTIONS_URL=""             # Phase 10
 export DISPATCHER_URL=""          # Phase 11
@@ -348,7 +365,7 @@ Then, in a browser, confirm the three groups resolve and that `$OPERATORS` has a
 An organisational unit that still contains a user cannot be deleted, and suspending the robot does not remove it from the unit. So the order matters:
 
 1. Remove the unit-scoped Phase 3 overrides, if Phase 3 has run.
-2. Move `$ROBOT`, `$EVE_ROBOT` and every sandbox account to the root organisational unit, or delete them if they were created for this build and hold nothing.
+2. Move `$ROBOT` and every sandbox account to the root organisational unit, or delete them if they were created for this build and hold nothing. `$EVE_ROBOT` is created and rolled back by Eve's runbook.
 3. Delete `/Automation/Service Identities`, then `/Automation`. Delete `$SANDBOX_OU` once it is empty.
 4. Delete the three groups. Deleting a group frees its address but does not restore its membership, so export the members first if `$PROTECTED` was populated by hand.
 
@@ -533,19 +550,22 @@ Turn the setting off. This is a tenant-wide setting, so confirm nothing else in 
 ### Steps
 
 ```bash
-gcloud projects create "$PROJECT" --organization="$ORG_ID"
+gcloud projects create "$PROJECT" --folder="$FOLDER_ID"     # not --organization: the four projects share one folder, where the Model Armor floor is pinned
 gcloud config set project "$PROJECT"
 gcloud billing projects link "$PROJECT" --billing-account="$BILLING"
 
 export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')"
-echo "PROJECT_NUMBER=$PROJECT_NUMBER"   # note this down; Phases 11, 12 and 13 need it
+echo "PROJECT_NUMBER=$PROJECT_NUMBER"   # note this down; Phases 11, 12 (aiplatform-re agent, AGENT_PRINCIPAL) and 12c need it. Phase 13 does NOT.
+
+export GEMINI_PROJECT_NUMBER="$(gcloud projects describe "$GEMINI_PROJECT" --format='value(projectNumber)')"
+echo "GEMINI_PROJECT_NUMBER=$GEMINI_PROJECT_NUMBER"   # Phase 12's engine lock-down and Phase 13 need it
 
 gcloud services enable \
-  aiplatform.googleapis.com discoveryengine.googleapis.com \
+  aiplatform.googleapis.com \
   run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
   secretmanager.googleapis.com firestore.googleapis.com cloudscheduler.googleapis.com \
   cloudtasks.googleapis.com pubsub.googleapis.com bigquery.googleapis.com \
-  cloudkms.googleapis.com logging.googleapis.com monitoring.googleapis.com \
+  logging.googleapis.com monitoring.googleapis.com \
   iamcredentials.googleapis.com billingbudgets.googleapis.com \
   storage.googleapis.com \
   admin.googleapis.com licensing.googleapis.com gmail.googleapis.com \
@@ -554,12 +574,14 @@ gcloud services enable \
 
 `billingbudgets.googleapis.com` is in that list because the budget alert at the end of this phase calls it, and on a fresh project the call fails with `SERVICE_DISABLED` otherwise. `storage.googleapis.com` is there for the Agent Runtime staging bucket below.
 
+**Two APIs an earlier revision enabled here are deliberately absent.** `discoveryengine.googleapis.com`: the Gemini Enterprise app lives in `GEMINI_PROJECT`, where it is already enabled; Google's cross-project page names no API to enable in the agent project. `Assumption:` not required in `WALLE_PROJECT`; enable it only if the Phase 13 registration fails without it, and record which error. `cloudkms.googleapis.com`: Eve's key is in `EVE_PROJECT` and Wall-E's pinned-PEM verification path (Phase 8.1) needs no KMS API. Enable it only if you take the optional `publicKeyViewer` fallback, and say so in the build log.
+
 `cloudtasks.googleapis.com` is in that list because approving a plan must **not** execute it inside the request. [03-lld.md](03-lld.md) requires a queue worker that executes one item at a time, each with its own halt check and its own full pass through the policy chain. An earlier design ran the loop inside the approve request, which at 25 items and a five-per-minute rate limit exceeds Cloud Run's default 300 second timeout and leaves a half-applied plan with a consumed approval and no terminal state.
 
 Service accounts. The point of this block is what is **absent** from it later.
 
 ```bash
-for SA in walle-actions walle-agent walle-dispatcher eve-controller walle-operators-caller; do
+for SA in walle-actions walle-agent walle-dispatcher walle-operators-caller; do   # eve-controller@ is created in EVE_PROJECT by Eve's runbook; mo-* in MO_PROJECT by Mo's
   gcloud iam service-accounts create "$SA" --display-name="$SA"
 done
 ```
@@ -569,8 +591,17 @@ done
 | `walle-actions@` | The action service | The refresh token, the OAuth client, the confirm HMAC | Eve's signing key |
 | `walle-agent@` | The Wall-E agent on Agent Runtime | **Nothing.** No secret, ever. | Any secret at all |
 | `walle-dispatcher@` | The dispatcher | Nothing. Invokes the agent, reads halt flags | Any secret |
-| `eve-controller@` | Eve, later | `cloudkms.signer` on Eve's own key | Anything of Wall-E's |
 | `walle-operators-caller@` | Nothing. It is never a workload identity. | Only the right to be **impersonated** by a human operator, so that a human can mint an ID token with the right audience | Any secret, any Workspace role |
+
+**Foreign identities that will be granted on Wall-E's resources, and are never given a project role here.** They are created in their own projects by their own runbooks; this runbook only names them as grantees, always on one resource, in Phase 7 (dataset `READER`, `walle gcp`) and Phase 10 (`run.invoker` and the allowlists, `walle deploy`) ([../project-topology.md](../project-topology.md) §3):
+
+| Foreign identity | Home | Holds on Wall-E's resources | Never holds here |
+|---|---|---|---|
+| `eve-controller@${EVE_PROJECT}`, `eve-verifier@${EVE_PROJECT}`, `eve-console@${EVE_PROJECT}` | `EVE_PROJECT` | `run.invoker` on the service `walle-actions` (Phase 10); `READER` on dataset `walle_audit` (Phase 7, from S3 entry); `eve-verifier@` additionally `READER` on `walle_workspace_logs` if decision 47 lands | Any project-level role, `walleEngineQuery` on the engine (C10, topology row 13), any secret, any KMS role, `datastore.viewer` (decision 44) |
+| `eve-v0@${EVE_PROJECT}` | `EVE_PROJECT` | `READER` on dataset `walle_audit` (Phase 7, from S0) | Anything else |
+| `mo-analyst@${MO_PROJECT}` | `MO_PROJECT` | `run.invoker` on `walle-actions`, read endpoints only (Phase 10) | The control list, any dataset, any project-level role |
+| `mo-metrics@${MO_PROJECT}` | `MO_PROJECT` | `READER` on datasets `walle_audit` and `walle_workspace_logs` (Phase 7) | `run.invoker`, any project-level role |
+| `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com` | `GEMINI_PROJECT` | `walleEngineQuery` on the engine (Phase 12) | A project-level role, unless decision 42's documented fallback is taken and recorded |
 
 **Now grant the project-level roles, because a new service account holds nothing at all.** This is easy to skip and the failure is total: the action service's first policy-chain step is a Firestore read, and any Firestore error is a hard invariant, so without `datastore.user` every single request, including reads, is denied with `control_plane_unavailable`. The system fails closed, which is correct behaviour and completely non-functional.
 
@@ -586,8 +617,13 @@ for ROLE in roles/datastore.user roles/logging.logWriter; do
     --member="serviceAccount:${SA_DISPATCH}" --role="$ROLE"
 done
 
-gcloud projects add-iam-policy-binding "$PROJECT" \
-  --member="serviceAccount:${SA_EVE}" --role=roles/datastore.viewer
+# No project-level role for any Eve or Mo identity, ever. An earlier revision granted
+# roles/datastore.viewer to eve-controller@ here; that is a project-wide read of every
+# Firestore document for a foreign principal, and Firestore has no dataset-style
+# resource-level IAM. Eve reads control-plane state through the authorised read endpoints
+# (/v1/ladder, /v1/plans/{id}, /healthz) with run.invoker. If Eve's design proves it needs a
+# direct Firestore read, decision 44 (an IAM Condition scoped to the database resource,
+# unverified) is the only acceptable form; never restore the project-level line.
 
 # the Cloud Tasks worker calls walle-actions back with an OIDC token for its own SA
 gcloud iam service-accounts add-iam-policy-binding "$SA_ACTIONS" \
@@ -623,7 +659,7 @@ gcloud billing budgets create \
   --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0
 ```
 
-`--filter-projects` takes `projects/{project_id}`, not the project number. Get it wrong and the budget silently scopes to the **whole billing account**, which alerts on your organisation's entire spend and looks like it worked. This command also needs **Billing Account Costs Manager** on the billing account; Billing account user is enough to link the project and not enough to create a budget. See §1.4.
+`--filter-projects` takes `projects/{project_id}`, not the project number. Get it wrong and the budget silently scopes to the **whole billing account**, which alerts on your organisation's entire spend and looks like it worked. This budget covers `WALLE_PROJECT` only; Eve's and Mo's projects carry their own budgets in their runbooks (decision 52). This command also needs **Billing Account Costs Manager** on the billing account; Billing account user is enough to link the project and not enough to create a budget. See §1.4.
 
 `Assumption:` 200 EUR per month is a sane Stage 0 ceiling. Adjust once the first cycle is measured.
 
@@ -651,7 +687,17 @@ gcloud billing budgets list --billing-account="$BILLING" \
 # expect: walle-stage-0  200  ['projects/<project-id>']
 ```
 
-All five service accounts present and enabled. Every API in the list above enabled.
+All four service accounts present and enabled, and no `eve-*` or `mo-*` service account exists in this project. Every API in the list above enabled.
+
+```bash
+# no foreign identity holds a project-level role here
+gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' \
+  --filter="bindings.members:${EVE_PROJECT} OR bindings.members:${MO_PROJECT} OR bindings.members:${GEMINI_PROJECT}" \
+  --format='value(bindings.role,bindings.members)'
+# expect: nothing. Re-run after Phase 12: the only admissible line, ever, is
+# roles/discoveryengine.serviceAgent for service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine,
+# and only if decision 42's documented fallback was taken and recorded.
+```
 
 ### Rollback
 
@@ -659,7 +705,7 @@ All five service accounts present and enabled. Every API in the list above enabl
 gcloud projects delete "$PROJECT"
 ```
 
-> **Irreversible in two ways.** The project id can never be reused, so a rebuild needs a new name, and this is a thirty-day soft delete after which nothing is recoverable. It also destroys the KMS key ring, which cannot be recreated under the same name for the same reason.
+> **Irreversible in two ways.** The project id can never be reused, so a rebuild needs a new name, and this is a thirty-day soft delete after which nothing is recoverable. No KMS key ring lives in this project (Eve's is in `EVE_PROJECT`), so nothing of Eve's is destroyed with it. Deleting this project does orphan the cross-project bindings made **on Wall-E's behalf in the other projects** — the optional `publicKeyViewer` fallback on Eve's key (`EVE_PROJECT`, Phase 8.1) and any binding in `MO_PROJECT` that names a Wall-E principal (there should be none, topology row 24); ask their owners to remove those first.
 >
 > At Phase 6 nothing outside the project has been changed and Phases 1 to 5 are unaffected. That stops being true from Phase 11, when the two log sinks are created at **organisation** level. Before deleting the project, delete anything created outside it, or the sinks keep exporting to a destination that no longer exists:
 >
@@ -667,6 +713,8 @@ gcloud projects delete "$PROJECT"
 > gcloud logging sinks delete walle-workspace-audit --organization="$ORG_ID" --quiet
 > gcloud logging sinks delete walle-audit-bq --organization="$ORG_ID" --quiet
 > ```
+>
+> Eve's organisation-level sink `eve-workspace-audit` writes into `EVE_PROJECT` and is Eve's runbook's to delete; deleting this project does not affect it.
 >
 > Phases 1 to 5 in Workspace are untouched and the OAuth grant survives project deletion, so revoke it as in the Phase 9 rollback if you are abandoning the build.
 
@@ -726,7 +774,7 @@ Cluster each table only on a column its own schema actually has. Check `schemas/
 **Pub/Sub.** Four topics.
 
 ```bash
-gcloud pubsub topics create walle-events        # Eve and Mo subscribe
+gcloud pubsub topics create walle-events        # Eve and Mo may subscribe, FROM THEIR OWN PROJECTS: target state only, no grant at Stage 0 (C30, decision 45)
 gcloud pubsub topics create walle-triggers      # Workspace audit log sink lands here
 gcloud pubsub topics create walle-inbox         # Gmail watch lands here (Phase 16)
 gcloud pubsub topics create walle-dead-letter
@@ -744,6 +792,44 @@ gcloud tasks queues create walle-plan-items \
 
 `max-concurrent-dispatches=1` is a deliberate belt to the durable rate limits' braces. Item execution is serialised, so a burst cannot outrun the per-tier rate limit even briefly.
 
+**`walle-events` and the other projects.** When a consumer in Eve's or Mo's design names a duty BigQuery cannot serve, the subscription is created in `EVE_PROJECT` or `MO_PROJECT` against this topic, and that needs `roles/pubsub.subscriber` for the consumer's identity **on the topic** (it carries `pubsub.topics.attachSubscription`; [Create a subscription](https://docs.cloud.google.com/pubsub/docs/create-subscription)). Never a project-level Pub/Sub role for a foreign identity here. The form is written down in Phase 15 (c); no such grant exists at Stage 0.
+
+**Cross-project readers of the audit datasets** (`walle gcp`, `grant_cross_project_dataset_readers`; [../project-topology.md](../project-topology.md) §7.1 Phase 7, rows 4, 6 and 21). Eve's and Mo's identities read `walle_audit` — and `mo-metrics@` reads `walle_workspace_logs` — from their own projects. The grant is a **dataset-level** `READER` entry (`roles/bigquery.dataViewer` at dataset level) in each dataset's `access` array, against the foreign principal's full email; never a project-level role, and never `roles/bigquery.jobUser` here, because the reader's jobs run and are billed in the reader's own project, which holds `jobUser` **there** ([Run a query](https://docs.cloud.google.com/bigquery/docs/running-queries)). `bq add-iam-policy-binding` does not work on datasets (tables, views and connections only), so the access array is read, appended and written back. A principal the other runbook has not created yet cannot be granted: the script records it as PENDING and `walle gcp` is re-run after Eve's Phase 8 or Mo-2.
+
+```bash
+add_dataset_reader() {   # $1 dataset, $2 foreign service-account email
+  bq show --format=prettyjson "${PROJECT}:$1" > "/tmp/$1.json"
+  DS="$1" MEMBER="$2" python3 - <<'EOF'
+import json, os
+p = "/tmp/%s.json" % os.environ['DS']
+d = json.load(open(p))
+entry = {"role": "READER", "userByEmail": os.environ['MEMBER']}
+if entry not in d.setdefault('access', []):
+    d['access'].append(entry)
+json.dump(d, open(p, 'w'))
+EOF
+  bq update --source="/tmp/$1.json" "${PROJECT}:$1"
+}
+
+# Eve: walle_audit. eve-v0@ from S0 (Eve v0's twelve scheduled queries and the daily
+# walle_audit_mirror); eve-controller@ and eve-verifier@ at S3 entry. Topology row 4.
+add_dataset_reader walle_audit "$SA_EVE_V0"
+add_dataset_reader walle_audit "$SA_EVE"            # S3 entry
+add_dataset_reader walle_audit "$SA_EVE_VERIFIER"   # S3 entry
+
+# Eve: walle_workspace_logs for eve-verifier@ — ONLY if decision 47 lands (row 5).
+# add_dataset_reader walle_workspace_logs "$SA_EVE_VERIFIER"
+
+# Mo: walle_audit and walle_workspace_logs for mo-metrics@, at Mo's Stage-0 phase (row 6).
+add_dataset_reader walle_audit "$SA_MO_METRICS"
+add_dataset_reader walle_workspace_logs "$SA_MO_METRICS"
+
+# The validator custodian's identity (decision 37, identity tbd) gets READER on walle_audit
+# the same way, and nothing in MO_PROJECT (row 21).
+```
+
+`mo-analyst@` gets no dataset here: it reads Mo's own datasets in `MO_PROJECT` and calls the two read endpoints (Phase 10). `eve-console@` gets no dataset here either. No Eve or Mo identity ever gets `WRITER`, `OWNER` or any project-level BigQuery role in this project. **Authorised views: none, on purpose.** Mo's views in `${MO_PROJECT}.walle_metrics_views` are authorised on `walle_metrics` **inside `MO_PROJECT`** and never on a Wall-E dataset: a view runs with its own authorisation and `mo-metrics@` can `CREATE OR REPLACE` it, so a view authorised on `walle_audit` could be redefined to select `params_redacted` and hand raw free text to any reader of the view dataset. **No `{"view": {...}}` entry naming a Mo or Eve view is ever added to `walle_audit` or `walle_workspace_logs`** ([../project-topology.md](../project-topology.md) row 9; [../mo/02-identity-and-access.md](../mo/02-identity-and-access.md) §3); `./walle verify` (`cross_project_dataset_access`) asserts the absence. The cross-project authorised-view form exists ([Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views)) and is not used.
+
 ### Verify
 
 ```bash
@@ -759,6 +845,18 @@ bq show --format=prettyjson "${PROJECT}:walle_audit.actions" \
 
 gcloud pubsub topics list --format='value(name)'
 gcloud tasks queues describe walle-plan-items --location="$REGION" --format='value(state)'
+
+# the cross-project readers landed as dataset-level entries, and no view entry exists
+bq show --format=prettyjson "${PROJECT}:walle_audit" \
+  | python3 -c "import json,sys;print('\n'.join(str(x) for x in json.load(sys.stdin)['access']))"
+# expect: READER for eve-v0@${EVE_PROJECT} and mo-metrics@${MO_PROJECT} (and, from S3,
+#         eve-controller@ and eve-verifier@); NO entry with a "view" key; NO WRITER/OWNER
+#         for any foreign email. A READER spelled @${PROJECT}.iam.gserviceaccount.com for
+#         an eve-* or mo-* account is the old placement and a defect.
+bq show --format=prettyjson "${PROJECT}:walle_workspace_logs" \
+  | python3 -c "import json,sys;print('\n'.join(str(x) for x in json.load(sys.stdin)['access']))"
+# expect: READER for mo-metrics@${MO_PROJECT}; no "view" entry (the sink writer's
+#         dataEditor arrives in Phase 11)
 ```
 
 Everything reports `europe-west1` or `EU`. If Firestore reports anything else, delete and recreate before anything writes to it, because a Firestore database's location is fixed at creation.
@@ -777,38 +875,43 @@ done
 gcloud tasks queues delete walle-plan-items --location="$REGION" --quiet
 ```
 
-Firestore databases cannot be deleted immediately in every configuration. If it must go, delete the project, and read the warning on the Phase 6 rollback first: the project id is burned permanently, the KMS key ring goes with it, and from Phase 11 onward the organisation-level sinks must be deleted separately.
+Firestore databases cannot be deleted immediately in every configuration. If it must go, delete the project, and read the warning on the Phase 6 rollback first: the project id is burned permanently, and from Phase 11 onward the organisation-level sinks must be deleted separately.
 
 ---
 
-## Phase 8 — KMS key, regional secrets, insert-only audit role
+## Phase 8 — Regional secrets, insert-only audit role, and Eve's public-key pin
 
 ### 8.1 Eve's signing key is asymmetric, and this is not a preference
 
 Eve approves plans at level L4. For "Eve approved this" to mean anything, the action service must be able to **verify** Eve's signature and must be **unable to produce one**. A shared symmetric secret cannot express that: either the service cannot read the key and cannot verify, or it can read the key and can also forge. An earlier draft of this design specified a random symmetric secret readable only by Eve, which makes the Eve-gated level unbuildable, and the obvious fix at build time, sharing the key, would have quietly destroyed the property the entire controller role rests on.
 
-So: a Cloud KMS asymmetric signing key, `EC_SIGN_P256_SHA256`. Eve holds `roles/cloudkms.signer`. The action service holds only `roles/cloudkms.publicKeyViewer` and verifies locally.
+So: a Cloud KMS asymmetric signing key, `EC_SIGN_P256_SHA256`. Eve holds `roles/cloudkms.signer` on its own key, ring `eve`, **in `EVE_PROJECT`**. The action service verifies locally against a **pinned public key** committed in Wall-E's repository; the optional `roles/cloudkms.publicKeyViewer` fallback is a key-level grant on Eve's key in Eve's project, not a role in this project. `walle-actions@` holds **no KMS role of any kind in `WALLE_PROJECT`**, and there is no key ring here to hold one on.
 
-The key is created now even though Eve does not exist yet. It costs a small monthly fee and it means Eve's design attaches to a fixed interface rather than inventing one.
+The interface is fixed now even though Eve does not exist yet: the algorithm, the PEM pin location, and the environment variable names. The key itself is created by Eve's runbook ([../eve/07-build-runbook.md](../eve/07-build-runbook.md) Phase 11, at S4 entry), which also exports the public key and commits it to Wall-E's repository. Placement and the grant forms are [../project-topology.md](../project-topology.md) §3 row 14.
 
-```bash
-gcloud kms keyrings create walle --location="$REGION"
+**Wall-E's side of the interface, in this phase:**
 
-gcloud kms keys create eve-approval \
-  --keyring=walle --location="$REGION" \
-  --purpose=asymmetric-signing \
-  --default-algorithm=ec-sign-p256-sha256
+1. **The pin directory.** `contracts/eve-public-keys/<version>.pem` in Wall-E's repository, one file per Eve key version, committed by Eve's owner with the fingerprint recorded in both build logs. The action service loads every file in that directory at start-up and verifies an approval against the file named by the approval's `eve_key_version`. **At Stage 0 the directory is empty**, because Eve's key does not exist before S4; an approval that names a version with no pinned PEM is refused, which is the correct fail-closed state for every stage below L4.
 
-gcloud kms keys add-iam-policy-binding eve-approval \
-  --keyring=walle --location="$REGION" \
-  --member="serviceAccount:${SA_EVE}" \
-  --role=roles/cloudkms.signer
+   ```bash
+   mkdir -p ~/Claude/wall-e/contracts/eve-public-keys
+   printf 'Eve approval public keys, one <version>.pem per KMS key version, committed by the Eve owner with the fingerprint in both build logs.\n' \
+     > ~/Claude/wall-e/contracts/eve-public-keys/README
+   git -C ~/Claude/wall-e add contracts/eve-public-keys/README
+   git -C ~/Claude/wall-e commit -m "Eve public-key pin directory, empty until S4"
+   ```
 
-gcloud kms keys add-iam-policy-binding eve-approval \
-  --keyring=walle --location="$REGION" \
-  --member="serviceAccount:${SA_ACTIONS}" \
-  --role=roles/cloudkms.publicKeyViewer
-```
+2. **OPTIONAL fallback, executed by Eve's owner in `EVE_PROJECT`, never by this runbook.** Only if the service must fetch the public key at runtime instead of reading the pin:
+
+   ```bash
+   # run by Eve's owner, against Eve's project. Key-level, on Eve's key only, never a project role.
+   gcloud kms keys add-iam-policy-binding eve-approval \
+     --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+     --member="serviceAccount:${SA_ACTIONS}" \
+     --role=roles/cloudkms.publicKeyViewer
+   ```
+
+   `publicKeyViewer` carries only `cryptoKeyVersions.viewPublicKey`; never `signerVerifier` or `cryptoOperator`, which both carry `useToSign` ([Cloud KMS permissions and roles](https://docs.cloud.google.com/kms/docs/reference/permissions-and-roles)). It is carve-out 1 of decision 48 in Eve's project.
 
 ### 8.2 Regional secrets, and why not global ones with replication
 
@@ -887,6 +990,10 @@ bq update --source=/tmp/walle_audit.json "${PROJECT}:walle_audit"
 
 If the service writes audit rows using **load jobs** rather than the Storage Write API, it also needs `bigquery.jobs.create` at project level. Grant that as a second, separate custom role rather than reaching for `roles/bigquery.jobUser`, and keep `deleteData` out of both.
 
+### 8.5 Cross-project readers of the audit datasets
+
+Made in **Phase 7** (`walle gcp`, `grant_cross_project_dataset_readers`), not here: dataset-level `READER` entries in the `access` arrays of `walle_audit` and `walle_workspace_logs` for `eve-v0@${EVE_PROJECT}`, `eve-controller@${EVE_PROJECT}`, `eve-verifier@${EVE_PROJECT}` and `mo-metrics@${MO_PROJECT}`, with the same `bq show` / edit `access` / `bq update` pattern as 8.4. Recorded here because the same access array holds 8.4's `walleAuditWriter` entry for `walle-actions@`: the verify below and Phase 15's collected verify read the whole array, and the only entries it may hold are 8.4's insert-only writer, Phase 7's foreign `READER`s, and nothing with a `view` key ([../project-topology.md](../project-topology.md) rows 4, 6, 9 and 21).
+
 ### Verify
 
 ```bash
@@ -901,10 +1008,23 @@ done
 # 2. the secrets are regional
 gcloud secrets list --location="$REGION" --format='table(name)'
 
-# 3. the KMS key is asymmetric and in region
-gcloud kms keys describe eve-approval --keyring=walle --location="$REGION" \
-  --format='value(purpose,versionTemplate.algorithm)'
-# expect: ASYMMETRIC_SIGN  EC_SIGN_P256_SHA256
+# 3. every pinned Eve public key parses as EC P-256 and matches what Eve published.
+#    At Stage 0 the directory holds only the README, so the loop runs zero times and
+#    the pin is empty on purpose; from S4, compare each fingerprint with the one
+#    Eve's runbook (Phase 11) recorded.
+for PEM in ~/Claude/wall-e/contracts/eve-public-keys/*.pem; do
+  [ -e "$PEM" ] || { echo 'no pinned key yet (expected before S4)'; break; }
+  openssl pkey -pubin -in "$PEM" -text -noout | head -2
+  openssl pkey -pubin -in "$PEM" -outform DER | openssl dgst -sha256
+done
+# expect: 'Public-Key: (256 bit)' with NIST CURVE: P-256 for each file
+
+# 3b. walle-actions@ holds no KMS role in this project. Must print nothing.
+gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' \
+  --filter="bindings.members:${SA_ACTIONS} AND bindings.role:cloudkms" \
+  --format='value(bindings.role)'
+# The key-shape check (ASYMMETRIC_SIGN, EC_SIGN_P256_SHA256) is Eve's runbook's,
+# against EVE_PROJECT; this project has no key ring.
 
 # 4. walle-actions@ cannot delete audit data.
 #    The audit writer role was granted at DATASET level, so read the dataset's
@@ -938,7 +1058,7 @@ done
 gcloud iam roles delete walleAuditWriter --project="$PROJECT"
 ```
 
-KMS keys cannot be deleted, only their versions destroyed after a scheduled delay. If you are abandoning the build, destroy the key version and leave the ring.
+There is no key here. If you are abandoning the build, remove `contracts/eve-public-keys/` from the repository, and ask Eve's owner to remove the `publicKeyViewer` fallback binding in `EVE_PROJECT` if it was made.
 
 ---
 
@@ -1014,7 +1134,7 @@ python bootstrap/verify_token.py --project="$PROJECT" --region="$REGION" \
   --expect-account="$ROBOT"
 ```
 
-That is the script's one interface, and Phase 15 uses the same four flags against Eve's secret. It exits non-zero on any mismatch.
+That is the script's one interface, and Eve's runbook uses the same four flags against Eve's secret with `--project="$EVE_PROJECT"`. It exits non-zero on any mismatch.
 
 It must print all four:
 
@@ -1084,12 +1204,18 @@ gcloud run deploy walle-actions \
   --ingress=all \
   --timeout=60s \
   --min-instances=0 --max-instances=4 --concurrency=8 \
-  --set-env-vars="^;^WORKSPACE_DOMAIN=${DOMAIN};ROBOT_ACCOUNT=${ROBOT};OPERATOR_GROUP=${OPERATORS};READER_GROUP=${READERS};PROTECTED_GROUP=${PROTECTED};SECRET_LOCATION=${REGION};REFRESH_TOKEN_SECRET=walle-refresh-token;REFRESH_TOKEN_VERSION=${REFRESH_TOKEN_VERSION};OAUTH_CLIENT_SECRET=walle-oauth-client;CONFIRM_HMAC_SECRET=walle-confirm-hmac;EVE_KMS_KEY=projects/${PROJECT}/locations/${REGION}/keyRings/walle/cryptoKeys/eve-approval;AUDIT_DATASET=walle_audit;TASKS_QUEUE=projects/${PROJECT}/locations/${REGION}/queues/walle-plan-items;EXEC_CALLER_ALLOWLIST=${SA_AGENT};CONTROL_CALLER_ALLOWLIST=${SA_EVE},${OPERATORS};INTERNAL_CALLER_ALLOWLIST=${SA_DISPATCH};AUDIENCE=${ACTIONS_URL}"
+  --set-env-vars="^;^WORKSPACE_DOMAIN=${DOMAIN};ROBOT_ACCOUNT=${ROBOT};OPERATOR_GROUP=${OPERATORS};READER_GROUP=${READERS};PROTECTED_GROUP=${PROTECTED};SECRET_LOCATION=${REGION};REFRESH_TOKEN_SECRET=walle-refresh-token;REFRESH_TOKEN_VERSION=${REFRESH_TOKEN_VERSION};OAUTH_CLIENT_SECRET=walle-oauth-client;CONFIRM_HMAC_SECRET=walle-confirm-hmac;EVE_PUBLIC_KEY_PEM=/app/contracts/eve-public-keys;EVE_KMS_KEY=projects/${EVE_PROJECT}/locations/${REGION}/keyRings/eve/cryptoKeys/eve-approval;AUDIT_DATASET=walle_audit;TASKS_QUEUE=projects/${PROJECT}/locations/${REGION}/queues/walle-plan-items;EXEC_CALLER_ALLOWLIST=${SA_AGENT};CONTROL_CALLER_ALLOWLIST=${SA_EVE},${SA_EVE_VERIFIER},${OPERATORS};READ_CALLER_ALLOWLIST=${SA_EVE},${SA_EVE_VERIFIER},${SA_EVE_CONSOLE},${SA_MO_ANALYST},${SA_OPS_CALLER},${OPERATORS};INTERNAL_CALLER_ALLOWLIST=${SA_DISPATCH};AUDIENCE=${ACTIONS_URL}"
 ```
 
-> **One `--set-env-vars` flag, not sixteen.** gcloud treats it as a dictionary flag: repeating it does **not** merge, the last occurrence wins, and every earlier one is discarded silently. A deploy written as sixteen repeated flags produces a service with `AUDIENCE` set and nothing else, which shows up later as a crash loop or, worse, as a service quietly falling back to defaults.
+> **One `--set-env-vars` flag, not nineteen.** gcloud treats it as a dictionary flag: repeating it does **not** merge, the last occurrence wins, and every earlier one is discarded silently. A deploy written as nineteen repeated flags produces a service with `AUDIENCE` set and nothing else, which shows up later as a crash loop or, worse, as a service quietly falling back to defaults.
 >
-> **The delimiter is `;`, and it may not be `@`.** The `^;^` prefix sets `;` as the delimiter, which is needed because several values contain commas. An earlier revision of this runbook used `^@^`, and that cannot work: `gcloud topic escaping` requires the delimiter to appear in **no value in the list**, and eight of these seventeen values are email addresses. gcloud splits `ROBOT_ACCOUNT=walle-bot@example.com` into `ROBOT_ACCOUNT=walle-bot` and `example.com`; the second has no `=` and the command aborts with `argument --set-env-vars: Bad syntax for dict arg: [example.com]`. No name and no value here contains a `;`. `walle_setup.py` uses the same delimiter and refuses to build the flag if any name or value ever acquires one.
+> **The nineteen names, once, because the script asserts the name set and not a count:** `WORKSPACE_DOMAIN`, `ROBOT_ACCOUNT`, `OPERATOR_GROUP`, `READER_GROUP`, `PROTECTED_GROUP`, `SECRET_LOCATION`, `REFRESH_TOKEN_SECRET`, `REFRESH_TOKEN_VERSION`, `OAUTH_CLIENT_SECRET`, `CONFIRM_HMAC_SECRET`, `EVE_PUBLIC_KEY_PEM`, `EVE_KMS_KEY`, `AUDIT_DATASET`, `TASKS_QUEUE`, `EXEC_CALLER_ALLOWLIST`, `CONTROL_CALLER_ALLOWLIST`, `READ_CALLER_ALLOWLIST`, `INTERNAL_CALLER_ALLOWLIST`, `AUDIENCE`.
+>
+> **Three of them are the four-project change.** `EVE_PUBLIC_KEY_PEM` is the directory of pinned Eve public keys baked into the image (Phase 8.1; the name says what the files are, and there is one per key version), the **primary** verification input. `EVE_KMS_KEY` now points at Eve's key **in `EVE_PROJECT`** and is used only on the optional `publicKeyViewer` fallback path; the ring name `eve` is Eve's runbook's to fix and stays *tbd* here until Eve's Phase 11 has run. `READ_CALLER_ALLOWLIST` is new: the read endpoints are **allowlisted**, not open to any `run.invoker` holder, so that `mo-analyst@` is admitted to `GET /v1/plans/{id}` and `GET /v1/runs/{id}` and to nothing else, and so that no other Mo identity is implied. Principals already on another list (the agent on `EXEC`, the dispatcher on `INTERNAL`, `walle-actions@` calling itself back) reach the read endpoints through that list.
+>
+> **`SA_EVE`, `SA_EVE_VERIFIER`, `SA_EVE_CONSOLE` and `SA_MO_ANALYST` expand to cross-project addresses** (`…@${EVE_PROJECT}.iam.gserviceaccount.com`, `…@${MO_PROJECT}.iam.gserviceaccount.com`). The allowlists are keyed on the verified `email` claim of the caller's ID token, which carries the home project, so a same-named account created in `WALLE_PROJECT` would not match. The script must refuse any allowlist entry whose domain is `${PROJECT}.iam.gserviceaccount.com` and starts with `eve-` or `mo-`.
+>
+> **The delimiter is `;`, and it may not be `@`.** The `^;^` prefix sets `;` as the delimiter, which is needed because several values contain commas. An earlier revision of this runbook used `^@^`, and that cannot work: `gcloud topic escaping` requires the delimiter to appear in **no value in the list**, and nine of these nineteen values are email addresses. gcloud splits `ROBOT_ACCOUNT=walle-bot@example.com` into `ROBOT_ACCOUNT=walle-bot` and `example.com`; the second has no `=` and the command aborts with `argument --set-env-vars: Bad syntax for dict arg: [example.com]`. No name and no value here contains a `;`. `walle_setup.py` uses the same delimiter and refuses to build the flag if any name or value ever acquires one.
 
 `AUDIENCE` expands to an empty string on the first deploy, because the URL does not exist until the service does. The `gcloud run services update` immediately after the URL capture below sets it for real. Do not skip it: the smoke test presents a token whose audience is the URL, and a service expecting an empty audience answers `401 bad_audience`.
 
@@ -1106,33 +1232,40 @@ Three flags carry real weight.
 ### IAM, and the thing IAM cannot do
 
 ```bash
-for SA in "$SA_AGENT" "$SA_DISPATCH" "$SA_EVE" "$SA_ACTIONS" "$SA_OPS_CALLER"; do
+for SA in "$SA_AGENT" "$SA_DISPATCH" "$SA_ACTIONS" "$SA_OPS_CALLER" \
+          "$SA_EVE" "$SA_EVE_VERIFIER" "$SA_EVE_CONSOLE" "$SA_MO_ANALYST"; do
   gcloud run services add-iam-policy-binding walle-actions --region="$REGION" \
     --member="serviceAccount:${SA}" --role=roles/run.invoker
 done
+# SA_EVE, SA_EVE_VERIFIER, SA_EVE_CONSOLE are principals from EVE_PROJECT and SA_MO_ANALYST
+# from MO_PROJECT: roles/run.invoker on this ONE service is the only thing they hold in
+# WALLE_PROJECT (topology rows 3 and 8). If Eve's set defines a further identity that calls
+# walle-actions, it joins this loop and nothing else. mo-metrics@ and mo-narrator@ never join it.
+# The member string is global across the organisation, so no cross-project attach is involved
+# and iam.disableCrossProjectServiceAccountUsage stays enforced.
 
 # Operators need a binding, or the andon cord has no handle.
 gcloud run services add-iam-policy-binding walle-actions --region="$REGION" \
   --member="group:${OPERATORS}" --role=roles/run.invoker
 ```
 
-`walle-actions@` is in that loop because the Cloud Tasks worker calls the service **back**, with an OIDC token minted for its own service account. `walle-operators-caller@` is in it because that is the identity a human impersonates to produce an audience-scoped token, and it is how the control endpoints are reachable from a terminal at all.
+`walle-actions@` is in that loop because the Cloud Tasks worker calls the service **back**, with an OIDC token minted for its own service account. `walle-operators-caller@` is in it because that is the identity a human impersonates to produce an audience-scoped token, and it is how the control endpoints are reachable from a terminal at all. The four foreign identities are in it because Cloud Run IAM is the only gate a caller from another project meets before the in-app allowlist; the binding is made **here**, on Wall-E's resource, by Wall-E's owner, never from the other project.
 
-> **`run.invoker` is granted per SERVICE, not per path.** Every one of those four principals can now reach `/v1/execute`, `/v1/control/demote` and `/v1/plans/{id}/approve`. An earlier draft of this design claimed the agent "has no IAM on the control endpoints", and that claim was **false as built**.
+> **`run.invoker` is granted per SERVICE, not per path.** Every one of those principals can now reach `/v1/execute`, `/v1/control/demote` and `/v1/plans/{id}/approve`. An earlier draft of this design claimed the agent "has no IAM on the control endpoints", and that claim was **false as built**.
 >
 > The separation is therefore enforced **inside the service**, by a per-endpoint caller allowlist keyed on the verified `email` claim of the caller's ID token:
 >
 > | Endpoint group | Allowed callers | Explicitly refused |
 > |---|---|---|
 > | `/v1/execute`, `/v1/plans`, `/v1/operations` | `walle-agent@` | everyone else |
-> | `/v1/plans/{id}/approve`, `/veto` | `eve-controller@`, and the out-of-band human approval surface | **`walle-agent@`, with denial reason `approver_is_agent`, which is a hard invariant and trips the breaker** |
-> | `/v1/control/halt`, `/v1/control/demote` | `eve-controller@`, members of `$OPERATORS` | `walle-agent@` |
+> | `/v1/plans/{id}/approve`, `/veto` | `eve-controller@<eve-project>`, and the out-of-band human approval surface | **`walle-agent@`, with denial reason `approver_is_agent`, which is a hard invariant and trips the breaker** |
+> | `/v1/control/halt`, `/v1/control/demote` | `eve-controller@<eve-project>`, `eve-verifier@<eve-project>`, members of `$OPERATORS` | `walle-agent@`, `mo-analyst@<mo-project>` (denial test MD-3) |
 > | `/v1/internal/*`, including `/v1/internal/gmail-watch-renew` | `walle-dispatcher@` only, called by Cloud Scheduler | `walle-agent@`, every human |
-> | `/v1/ladder`, `/v1/plans/{id}` (GET), `/healthz` | any authorised caller | |
+> | `/v1/ladder`, `/v1/plans/{id}` (GET), `/v1/runs/{id}` (GET), `/healthz` | the `READ_CALLER_ALLOWLIST`: `eve-controller@<eve-project>`, `eve-verifier@<eve-project>`, `eve-console@<eve-project>`, `mo-analyst@<mo-project>` (plans and runs only, never `/v1/ladder`: denial test MD-4), `walle-operators-caller@`, `$OPERATORS`; plus `walle-agent@` and `walle-dispatcher@` through their own lists | any other Mo identity, any principal from `GEMINI_PROJECT` |
 >
 > If the agent can reach the approval endpoint at all, every other control in this design is decoration. Test 13 and test 14 in §4 exist to prove it cannot.
 >
-> **`CONTROL_CALLER_ALLOWLIST` is the literal source of that table's third row.** It must contain `${SA_EVE},${OPERATORS}`, not Eve alone: if the service treats the variable as the exhaustive list, which is the fail-closed reading and the only safe one, then Eve alone means **no human can halt or demote** and every kill-switch timing in §5 is unmeasurable. `OPERATOR_GROUP` is the group the service re-checks live through the Directory API, on every write. Both are required and they do different jobs. `INTERNAL_CALLER_ALLOWLIST` is the source of the fourth row, and without it the daily Gmail watch renewal in Phase 16 is refused as `foreign_actor` and the watch dies after seven days.
+> **`CONTROL_CALLER_ALLOWLIST` is the literal source of that table's third row.** It must contain `${SA_EVE},${SA_EVE_VERIFIER},${OPERATORS}`, not Eve alone: if the service treats the variable as the exhaustive list, which is the fail-closed reading and the only safe one, then Eve alone means **no human can halt or demote** and every kill-switch timing in §5 is unmeasurable. `OPERATOR_GROUP` is the group the service re-checks live through the Directory API, on every write. Both are required and they do different jobs. `INTERNAL_CALLER_ALLOWLIST` is the source of the fourth row, and without it the daily Gmail watch renewal in Phase 16 is refused as `foreign_actor` and the watch dies after seven days.
 
 Splitting the control plane onto a second Cloud Run service with its own IAM is the stronger version of this and is [09](09-open-decisions.md) decision 18. Do it before Stage 4. The in-app allowlist plus Eve's asymmetric key is the Stage 0 minimum.
 
@@ -1151,11 +1284,14 @@ echo "$ACTIONS_URL"   # note it down; Phases 11, 12, 14 and 16 need it in a fres
 Run the full denial suite in §4. That is the real verification of this phase and it is the gate that must keep passing at every future promotion. As a smoke test first:
 
 ```bash
-# every environment variable actually landed. Sixteen, not one.
+# every environment variable actually landed. Nineteen, not one.
 gcloud run services describe walle-actions --region="$REGION" \
   --format='value(spec.template.spec.containers[0].env)'
-# expect all sixteen names present, AUDIENCE equal to $ACTIONS_URL, and
-# CONTROL_CALLER_ALLOWLIST containing both eve-controller@ and $OPERATORS
+# expect all nineteen names present, AUDIENCE equal to $ACTIONS_URL,
+# CONTROL_CALLER_ALLOWLIST containing eve-controller@${EVE_PROJECT}.iam.gserviceaccount.com
+# (the full cross-project address, never eve-controller@${PROJECT}...) and $OPERATORS,
+# READ_CALLER_ALLOWLIST containing mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com,
+# EVE_KMS_KEY starting with projects/${EVE_PROJECT}/
 
 # unauthenticated: must be refused by Cloud Run, not by the app
 curl -s -o /dev/null -w '%{http_code}\n' "$ACTIONS_URL/v1/ladder"     # expect 403
@@ -1444,15 +1580,18 @@ Four properties this deployment must have.
 
 **This is what makes the asserted end-user email trustworthy.** Gemini Enterprise passes the signed-in user's email as `user_id`, which surfaces in ADK as the session user id. That email is **asserted by the calling service, not cryptographically bound to the user**. It is trustworthy exactly to the extent that only trusted callers can invoke the agent.
 
-Grant `aiplatform.reasoningEngines.query` on this engine to **three principals and no others, ever**:
+Grant `aiplatform.reasoningEngines.query` on this engine to **two principals and no others, ever**:
 
 | Principal | Address |
 |---|---|
-| Gemini Enterprise Discovery Engine service agent | `service-<project-number>@gcp-sa-discoveryengine.iam.gserviceaccount.com` |
-| The dispatcher | `walle-dispatcher@` |
-| Eve | `eve-controller@` |
+| Gemini Enterprise Discovery Engine service agent, **from the app project** | `service-<gemini-project-number>@gcp-sa-discoveryengine.iam.gserviceaccount.com` |
+| The dispatcher | `walle-dispatcher@` (same project) |
 
-**There is no predefined role `roles/aiplatform.reasoningEngineUser`.** Google's "Share an agent" guidance for the Gemini Enterprise Agent Platform tells you to create a custom role holding only `aiplatform.reasoningEngines.query`, precisely for this least-privilege case. `set-iam-policy` with a non-existent role fails with `INVALID_ARGUMENT`, and the engine then silently keeps whatever policy it inherits from the project, which means the three-principal lock that makes the asserted end-user email trustworthy is simply absent. So create the role first:
+> **Not Wall-E's project number.** With four projects the app's service agent is the Gemini project's; binding `service-<PROJECT_NUMBER>@gcp-sa-discoveryengine…` here grants a principal that will never call, and the app's real caller is then refused. Google's cross-project page names the principal as the **app** project's service agent ([Configure cross-project ADK agent access](https://docs.cloud.google.com/gemini/enterprise/docs/configure-cross-project-adk-agents)).
+>
+> **No Eve identity is on the engine.** An earlier revision listed `eve-controller@` as a third principal. [14-hld-challenge.md](14-hld-challenge.md#c10--eves-streamquery-channel-can-assert-any-operators-identity-stands) C10 removed Eve from the `streamQuery` channel — a query principal asserts `user_id`, and Eve verifying through the agent is Eve verifying through the thing it verifies — and [../project-topology.md](../project-topology.md) row 13 records the absence as an anti-grant. Eve reaches Wall-E only through `walle-actions` (Phase 10). A binding for `eve-controller@<eve-project>` on the engine is a defect.
+
+**There is no predefined role `roles/aiplatform.reasoningEngineUser`.** Google's "Share an agent" guidance for the Gemini Enterprise Agent Platform tells you to create a custom role holding only `aiplatform.reasoningEngines.query`, precisely for this least-privilege case. `set-iam-policy` with a non-existent role fails with `INVALID_ARGUMENT`, and the engine then silently keeps whatever policy it inherits from the project, which means the two-principal lock that makes the asserted end-user email trustworthy is simply absent. So create the role first:
 
 ```bash
 gcloud iam roles create walleEngineQuery --project="$PROJECT" \
@@ -1469,9 +1608,8 @@ cat > /tmp/engine-policy.json <<EOF
     {
       "role": "projects/${PROJECT}/roles/walleEngineQuery",
       "members": [
-        "serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com",
-        "serviceAccount:${SA_DISPATCH}",
-        "serviceAccount:${SA_EVE}"
+        "serviceAccount:service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com",
+        "serviceAccount:${SA_DISPATCH}"
       ]
     }
   ]
@@ -1482,10 +1620,19 @@ gcloud beta ai reasoning-engines set-iam-policy "$ENGINE_ID" \
   --region="$REGION" /tmp/engine-policy.json
 
 gcloud beta ai reasoning-engines get-iam-policy "$ENGINE_ID" --region="$REGION"
-# expect exactly three members, and no other role
+# expect exactly two members, and no other role
 ```
 
-If that subcommand is not present in your gcloud version, use the REST `setIamPolicy` on the `reasoningEngines` resource directly. Confirm the Discovery Engine service agent's exact address on the IAM page with "Include Google-provided role grants" enabled, because it is created lazily when the Gemini Enterprise app first runs.
+If that subcommand is not present in your gcloud version, use the REST `setIamPolicy` on the `reasoningEngines` resource directly. Confirm the Discovery Engine service agent's exact address on **`GEMINI_PROJECT`'s** IAM page with "Include Google-provided role grants" enabled, because it is created lazily when the Gemini Enterprise app first runs. It will not appear on `WALLE_PROJECT`'s IAM page until you bind it, because it is another project's principal.
+
+**The spike, and its fallback (decision 42).** This engine-level `walleEngineQuery` grant is narrower than Google's documented cross-project grant, which is `roles/discoveryengine.serviceAgent` on the **agent** project (`WALLE_PROJECT`), project-level, to that same principal — a role that also carries `reasoningEngines.create/delete/update`. Whether the narrow grant suffices cross-project is **unverified**: [../project-topology.md](../project-topology.md) §8 decision 42. Try the Phase 13 registration and one query with the engine-level grant only. If either is refused, apply the documented fallback, record it as the topology's single named project-level exception with the failing error, and re-test at each engine redeploy so it is removed the day Google's behaviour changes:
+
+```bash
+# FALLBACK ONLY, on a recorded decision-42 failure. Project-level, in WALLE_PROJECT, to the APP project's agent.
+gcloud projects add-iam-policy-binding "$PROJECT" \
+  --member="serviceAccount:service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com" \
+  --role=roles/discoveryengine.serviceAgent
+```
 
 **The action service still re-checks group membership on every write**, through the Directory API, failing closed if it cannot check. IAM narrows who can assert an email. It does not prove the assertion.
 
@@ -1528,6 +1675,14 @@ gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' \
 # expect: no project-level aiplatform.user / aiplatform.admin held by anyone who
 # should not be able to invoke the engine. aiplatform.reasoningEngines.query is
 # also conferred by those roles, and a resource-level policy does not override them.
+
+# 6b. the Gemini project's agent holds nothing at project level, unless decision 42 fell back
+gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' \
+  --filter='bindings.role:discoveryengine' --format='table(bindings.role,bindings.members)'
+# expect: nothing while the engine-level grant holds. If the documented fallback was taken,
+# expect exactly service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine with
+# roles/discoveryengine.serviceAgent and nothing else; a service-${PROJECT_NUMBER}@... member
+# is a defect either way.
 ```
 
 Check 4 is the one that matters. It asks Google, not Wall-E, whether a write happened.
@@ -1621,7 +1776,7 @@ gcloud iam policies create walle-deny-agents --kind=denypolicies \
   --attachment-point="cloudresourcemanager.googleapis.com/projects/${PROJECT}" --policy-file=deny-agents.json
 ```
 
-**Verify.** `EFFECTIVE` starts with `agents.global.org-`. Policy Analyzer for `AGENT_PRINCIPAL` shows no Secret Manager, Firestore write, BigQuery or KMS access. After Phase 13, the SPIFFE id on the Gemini Enterprise Agent details page equals `AGENT_PRINCIPAL`; add that equality to the daily drift job. The in-app caller allowlist row for the agent is keyed on whatever claim step 3c showed, not on an email, because an agent identity has none.
+**Verify.** `EFFECTIVE` starts with `agents.global.org-`. Policy Analyzer for `AGENT_PRINCIPAL` shows no Secret Manager, Firestore write, BigQuery or KMS access. After Phase 13, the SPIFFE id on the Gemini Enterprise Agent details page in `GEMINI_PROJECT` equals `AGENT_PRINCIPAL` (which carries Wall-E's own `PROJECT_NUMBER`, correctly: the engine is Wall-E's); add that equality to the daily drift job. The in-app caller allowlist row for the agent is keyed on whatever claim step 3c showed, not on an email, because an agent identity has none.
 
 **Rollback.** Delete the throwaway spike engine. A production engine cannot change identity in place: recreating it produces a new principal, and every resource-level binding on the old one dies with it, so treat a recreate as an identity change under the IAM change checklist.
 
@@ -1724,7 +1879,7 @@ gcloud projects add-iam-policy-binding "$PROJECT" \
 gcloud model-armor floorsettings update --full-uri="projects/${PROJECT}/locations/global/floorSetting" --enable-vertex-ai-cloud-logging
 ```
 
-The folder floor pins only "prompt-injection enabled at HIGH or stricter, malicious URL enabled", so it cannot prejudge the confidence level Stage 0 measures. `Assumption:` a folder holds the Wall-E project or can be created.
+The folder floor pins only "prompt-injection enabled at HIGH or stricter, malicious URL enabled", so it cannot prejudge the confidence level Stage 0 measures. `FOLDER_ID` holds all four projects (Phase 6 creates this one under it; Eve's and Mo's runbooks do the same), so this floor also binds Eve's, Mo's and the Gemini app project's model calls. That is intended, and Eve's and Mo's runbooks must not lower it; folder-level floor settings apply to every project inside the folder, and a stricter project floor wins ([Configure floor settings](https://docs.cloud.google.com/model-armor/configure-floor-settings)). Whether the Gemini app's project sits under the folder is decision 52.
 
 **Verify.** Send a known injection through `streamQuery` with a `traceparent`; expect a normal stream while inspect-only, and a `SanitizeOperationLogEntry` with `filterMatchState=MATCH_FOUND` and `client_name=AGENT_GATEWAY` in `walle-content-logs`. Point the extension at a wrong template name and confirm the caller gets an error, then restore: that is fail-closed observed rather than believed. Plant a hostile display name on a sandbox account, run a shadow playbook, and look for a `VERTEX_AI` sanitize entry containing it: presence means the floor inspects function responses, absence means it does not, and the answer is recorded here.
 
@@ -1738,10 +1893,11 @@ Gemini Enterprise is the human front door. It authenticates the user through Wor
 
 ### Steps
 
-1. Gemini Enterprise console → your app → **Agents → Add agent → Custom agent via Agent Runtime**.
+0. **The app is in `GEMINI_PROJECT` and the engine in `WALLE_PROJECT`.** Before registering, the Phase 12 engine binding for `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com` must exist. Google's [Configure cross-project ADK agent access](https://docs.cloud.google.com/gemini/enterprise/docs/configure-cross-project-adk-agents) documents `roles/discoveryengine.serviceAgent` on the agent project for this case; the narrower engine-level `walleEngineQuery` is the design's first attempt, decision 42. The person doing this step needs the app's administrator rights in `GEMINI_PROJECT` (§1.4); nothing of Wall-E's is created in that project.
+1. Gemini Enterprise console → your app, **in `GEMINI_PROJECT`** → **Agents → Add agent → Custom agent via Agent Runtime**.
 2. Fields:
    - Display name: `Wall-E`
-   - Resource path: `projects/${PROJECT}/locations/${REGION}/reasoningEngines/${ENGINE_ID}`
+   - Resource path: `projects/${PROJECT}/locations/${REGION}/reasoningEngines/${ENGINE_ID}` (`WALLE_PROJECT`; this is the cross-project reference)
    - **Description.** Write this carefully. It is a **routing prompt**, not documentation. It decides when Gemini Enterprise hands a conversation to Wall-E. Write it defensively and include what Wall-E does **not** do:
 
      > Answers questions about the Google Workspace directory: users, groups, organisational units, licences, admin-role holders, sign-in activity and audit reports. Does not send mail on your behalf, does not change any user or group, and cannot suspend accounts. For anything outside Workspace administration, do not route here.
@@ -1751,7 +1907,7 @@ Gemini Enterprise is the human front door. It authenticates the user through Wor
 
    Do not share with `$READERS` yet. That group exists so reporting can be widened later to people who may ask "what changed last week" without being able to cause any write. Widening it is a separate, deliberate act, and it needs both the group membership and this share.
 
-5. **Re-confirm the app's location matches what D8 recorded.** This was closed as a blocking decision in §1.1, before Phase 6, because everything from Phase 6 onward is regional and a `us` app cannot front a `europe-west1` agent. If the answer has changed since, stop here: the fix is a new `eu` app, not a change in this phase.
+5. **Re-confirm the app's location matches what D8 recorded, and that the app's project is `GEMINI_PROJECT` with the number you bound in Phase 12.** This was closed as a blocking decision in §1.1, before Phase 6, because everything from Phase 6 onward is regional and a `us` app cannot front a `europe-west1` agent. If the answer has changed since, stop here: the fix is a new `eu` app, not a change in this phase. If registration (or the first query in the verify below) is refused with the engine-level grant alone, apply the documented project-level fallback from Phase 12 and record the outcome against decision 42 before retrying.
 
 ### Verify
 
@@ -1773,7 +1929,7 @@ If `principal_id` is empty or is a service account rather than your email, the i
 
 ### Rollback
 
-Unregister the agent from the Gemini Enterprise app. The engine still exists but has no human front door.
+Unregister the agent from the Gemini Enterprise app. The engine still exists but has no human front door. If abandoning, also remove the Gemini project's service agent from the engine policy (Phase 12), and the `roles/discoveryengine.serviceAgent` project binding if the decision-42 fallback was taken.
 
 ---
 
@@ -1783,13 +1939,14 @@ Unregister the agent from the Gemini Enterprise app. The engine still exists but
 
 ### Steps
 
-1. **APIs and roles.** Registry admin to the CI deployer only; viewer to the readers. Nobody else, because an editor can redirect every consumer that resolves Wall-E through the registry and can flip the tool annotations gateway rules read.
+1. **APIs and roles.** Registry admin to the CI deployer only. Nobody else, because an editor can redirect every consumer that resolves Wall-E through the registry and can flip the tool annotations gateway rules read. `CI_DEPLOYER` lives in `WALLE_PROJECT`; it is Wall-E's own deployer, not a foreign principal.
 
 ```bash
 gcloud services enable agentregistry.googleapis.com apphub.googleapis.com iap.googleapis.com dns.googleapis.com compute.googleapis.com --project="$PROJECT"
 gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:${CI_DEPLOYER}" --role=roles/agentregistry.admin
-gcloud projects add-iam-policy-binding "$PROJECT" --member="serviceAccount:${SA_EVE}" --role=roles/agentregistry.viewer
 ```
+
+   **No `roles/agentregistry.viewer` for Eve or Mo.** An earlier revision granted it to `eve-controller@` and `MO_PRINCIPAL`. Agent Registry's four roles are project-level only — the v1 API has no `getIamPolicy`/`setIamPolicy` on the registry resource ([Agent Registry roles and permissions](https://docs.cloud.google.com/agent-registry/roles-permissions)) — so the grant would be a project-level role in `WALLE_PROJECT` for principals from `EVE_PROJECT` and `MO_PROJECT`, which the topology forbids; and no duty of Eve's or Mo's needs it. **Dropped, decision 43**: Eve holds Wall-E's committed `ACTIONS_URL` in `eve/config` and asserts the card against it from `GET /healthz` or not at all; Mo never converses with Wall-E. If a duty ever needs registry search, it is a named exception with its reason in the decision record, never a default.
 
 2. **The automatic entry.** Deploying to Agent Runtime registered Wall-E already. Confirm it carries the runtime identity.
 
@@ -2005,62 +2162,75 @@ python config/deploy_ladder.py --revert-to="<previous version>"
 
 ---
 
-## Phase 15 — Eve's own read-only credential
+## Phase 15 — Retired on 2026-09-13; the collected cross-project verify
 
-**Why now, when Eve does not exist.** Eve is the controller: it approves at L4, verifies independently at L5, and can halt or demote instantly. If Eve verifies through **Wall-E's** credential, a compromised Wall-E path can make the world look however it wants to the verifier, and the second opinion is worthless.
+**What this phase used to be, and where it went.** Until 2026-09-13 this phase built Eve's own read-only Workspace credential here: `$EVE_ROBOT`, the `Eve — Verifier` role, its hardening and login rule, a separate OAuth client, the read-only scope list, and the two regional secrets `eve-refresh-token` and `eve-oauth-client` readable by `eve-controller@` only. The reason stands: Eve is the controller, and if Eve verifies through **Wall-E's** credential a compromised Wall-E path can make the world look however it wants to the verifier. What changed is placement. Eve's account, role, consent, client and secrets are built **in `EVE_PROJECT`** by [../eve/07-build-runbook.md](../eve/07-build-runbook.md) Phases 8 (the Workspace half) and 9 (the GCP half), and their placement is [../project-topology.md](../project-topology.md) §2 and §7.1 ("Phase 15 moves entirely to Eve's runbook"). Nothing of Eve's is created in this project any more, and `walle consent --eve` is refused by the script.
 
-The consent for a second robot account is a fifteen minute job that requires signing into an account interactively. Doing it now, while the clean browser profile and the process are fresh, is much cheaper than doing it in six months. The credential simply sits unused until Eve is built.
+**For one day (2026-09-13) this phase was then re-used as "cross-project grants to Eve and Mo".** That placed the dataset grants in a phase the script does not have — `walle_setup.py` makes them in `gcp`, Phase 7 — and left Eve's CC-22 and Mo's runbook pointing at "SETUP Phase 7" while this file said Phase 15. The grants now live where the script makes them, and **this phase makes nothing**:
 
-### Steps
+| Grant | Where it is made | Row in [../project-topology.md](../project-topology.md) |
+|---|---|---|
+| `run.invoker` on `walle-actions` for `SA_EVE`, `SA_EVE_VERIFIER`, `SA_EVE_CONSOLE`, `SA_MO_ANALYST`, and the `CONTROL_CALLER_ALLOWLIST` / `READ_CALLER_ALLOWLIST` entries | Phase 10 (`walle deploy`). A binding to a not-yet-created service account is recorded as PENDING, not deferred silently; re-run `deploy` once Eve's Phase 8 or Mo-6 has run | 3, 8 |
+| Dataset-level `READER` on `walle_audit` for `eve-v0@` (S0), `eve-controller@` and `eve-verifier@` (S3 entry), on `walle_audit` and `walle_workspace_logs` for `mo-metrics@`, and on `walle_audit` for the validator custodian; `walle_workspace_logs` for `eve-verifier@` only if decision 47 lands | Phase 7 (`walle gcp`, `grant_cross_project_dataset_readers`) | 4, 5, 6, 21 |
+| `walle-events` subscriptions | Nowhere at Stage 0 (C30, decision 45). The form when a consumer names a duty — subscription in the consumer's project, `roles/pubsub.subscriber` on the topic — is recorded in Phase 7 | 10 |
+| Authorised views over a Wall-E dataset | Nowhere, ever — an anti-grant asserted by `./walle verify` and by Phase 7's verify | 9 |
+| Any project-level role for a foreign principal | Nowhere. `roles/bigquery.jobUser`, `datastore.viewer` (decision 44), `agentregistry.viewer` (decision 43) and any project-level `dataViewer` are lateral paths into every dataset and document here (Phase 6). The one admissible project-level line is `roles/discoveryengine.serviceAgent` for the Gemini project's service agent, on decision 42's recorded fallback only (Phase 12) | 2, 26 |
 
-Repeat Phases 1, 2, 3 and 9 for a second account, with these differences:
+**The standing invariant, now enforced by placement.** `walle-actions@` must not be able to read Eve's credential, and `eve-controller@` must not be able to read Wall-E's. Eve's secrets are in `EVE_PROJECT` and Wall-E's in `WALLE_PROJECT`; neither identity holds any Secret Manager role in the other's project, and neither holds any KMS role in the other's project. If they did, "Eve approved this" and "Eve verified this" would both mean nothing. The verify below proves it in both directions.
 
-| Item | Value |
-|---|---|
-| Account | `$EVE_ROBOT` in `$SVC_OU` |
-| Custom admin role | `Eve — Verifier`, **read privileges only**, customer-scoped. Users read, Groups read, Organisational units read, Reports audit and usage read, Admin roles read. **No write privilege at any stage, ever.** Eve never acts on Workspace. |
-| Hardening | Identical to Phase 3. Its own hardware key, in the same safe, separately labelled. |
-| Login reporting rule | A second rule, same shape as Phase 4, actor `$EVE_ROBOT` |
-| OAuth client | **A new, separate Desktop client.** Never reuse Wall-E's. One client, one token. |
-| Scopes | Read-only subset only: `admin.directory.user.readonly`, `admin.directory.group.readonly`, `admin.directory.orgunit.readonly`, `admin.directory.rolemanagement.readonly`, `admin.reports.audit.readonly`, `admin.reports.usage.readonly`, `apps.licensing` (indivisible, and Eve needs to read assignments), `openid`, `userinfo.email` |
-| Secret | A new regional secret `eve-refresh-token`, readable by **`eve-controller@` only** |
-| Trusted client | Mark the new client ID Trusted in API controls, same sitting |
-
-```bash
-gcloud secrets create eve-refresh-token --location="$REGION"
-gcloud secrets create eve-oauth-client  --location="$REGION"
-
-for S in eve-refresh-token eve-oauth-client; do
-  gcloud secrets add-iam-policy-binding "$S" --location="$REGION" \
-    --member="serviceAccount:${SA_EVE}" --role=roles/secretmanager.secretAccessor
-done
-```
-
-`walle-actions@` must **not** appear in that loop, and `eve-controller@` must not appear in Phase 8's loop. The two never share a key or a credential. If they did, "Eve approved this" and "Eve verified this" would both mean nothing.
+**What stays here is the verify**: one place that reads every crossing Wall-E's runbook owns, to re-run after any change to Phases 7, 10 or 12 and after Eve's Phase 8/9 or Mo-2/Mo-6 have created a principal that was PENDING.
 
 ### Verify
 
 ```bash
-export EVE_TOKEN_VERSION="<the number Eve's bootstrap printed>"
+# 1. the audit dataset's access array carries exactly the foreign READERs of Phase 7, and no view
+bq show --format=prettyjson "${PROJECT}:walle_audit" \
+  | python3 -c "import json,sys;print('\n'.join(str(x) for x in json.load(sys.stdin)['access']))"
+# expect: READER for eve-v0@${EVE_PROJECT}, mo-metrics@${MO_PROJECT} (and, from S3, eve-controller@
+#         and eve-verifier@); the Phase 8.4 walleAuditWriter entry for walle-actions@; NO entry
+#         with a "view" key; NO WRITER/OWNER for any foreign email; nothing else foreign.
+bq show --format=prettyjson "${PROJECT}:walle_workspace_logs" \
+  | python3 -c "import json,sys;print('\n'.join(str(x) for x in json.load(sys.stdin)['access']))"
+# expect: READER for mo-metrics@${MO_PROJECT} (eve-verifier@ only if decision 47 landed); the
+#         sink writer's dataEditor from Phase 11; no "view" entry.
 
-python bootstrap/verify_token.py --project="$PROJECT" --region="$REGION" \
-  --secret=eve-refresh-token --secret-version="$EVE_TOKEN_VERSION" \
-  --expect-account="$EVE_ROBOT"
-# account = eve@domain, a users.list succeeds, a users.update fails 403
-# same four flags as Phase 9. The script exits non-zero on any mismatch.
+# 2. the read grant works from the foreign project, and the job is billed there
+#    (run by Eve's or Mo's owner, in their project; recorded in their build log)
+#    bq --project_id="$MO_PROJECT" query --use_legacy_sql=false \
+#      "SELECT COUNT(*) FROM \`${PROJECT}.walle_audit.actions\` WHERE FALSE"
 
-# cross-check the separation, both must print nothing
-gcloud secrets get-iam-policy eve-refresh-token --location="$REGION" \
-  --flatten="bindings[].members" --filter="bindings.members:${SA_ACTIONS}" \
-  --format='value(bindings.members)'
-gcloud secrets get-iam-policy walle-refresh-token --location="$REGION" \
+# 3. run.invoker on walle-actions lists exactly the four foreign identities, no other foreign member
+gcloud run services get-iam-policy walle-actions --region="$REGION" \
+  --flatten='bindings[].members' --filter='bindings.role:run.invoker' \
+  --format='value(bindings.members)' | grep -E "@(${EVE_PROJECT}|${MO_PROJECT})\."
+# expect: eve-controller@, eve-verifier@, eve-console@ (EVE_PROJECT) and mo-analyst@ (MO_PROJECT); never mo-metrics@
+
+# 4. walle-events carries no subscriber at Stage 0
+gcloud pubsub topics get-iam-policy walle-events --format='value(bindings)'
+# expect: no roles/pubsub.subscriber binding (decision 45 target state only)
+
+# 5. no foreign principal holds a project-level role here
+gcloud projects get-iam-policy "$PROJECT" --flatten='bindings[].members' \
+  --filter="bindings.members:${EVE_PROJECT} OR bindings.members:${MO_PROJECT} OR bindings.members:${GEMINI_PROJECT}" \
+  --format='value(bindings.role,bindings.members)'
+# expect: nothing, or exactly the decision-42 fallback line and nothing else
+
+# 6. the separation, both directions, both must print nothing
+gcloud secrets get-iam-policy walle-refresh-token --location="$REGION" --project="$PROJECT" \
   --flatten="bindings[].members" --filter="bindings.members:${SA_EVE}" \
+  --format='value(bindings.members)'
+# Eve's half needs read on Eve's secret policy in EVE_PROJECT; if you lack it, Eve's owner runs it
+# and records the result (decision 46: Wall-E's drift job asserts only what it can read at home).
+gcloud secrets get-iam-policy eve-refresh-token --location="$REGION" --project="$EVE_PROJECT" \
+  --flatten="bindings[].members" --filter="bindings.members:${SA_ACTIONS}" \
   --format='value(bindings.members)'
 ```
 
+`verify_token.py` against `eve-refresh-token` is Eve's runbook's, with `--project="$EVE_PROJECT"`; it no longer runs here.
+
 ### Rollback
 
-Revoke the grant as `$EVE_ROBOT`, destroy the secret version, delete the client, suspend the account.
+Nothing of this phase's own to undo. The `READER` entries are removed under Phase 7 (the same `bq show` / edit `access` / `bq update` pattern, with the entry deleted) and the four foreign `run.invoker` bindings under Phase 10 (`gcloud run services remove-iam-policy-binding walle-actions --region="$REGION" --member="serviceAccount:<email>" --role=roles/run.invoker`). Nothing in `EVE_PROJECT` or `MO_PROJECT` is touched by this runbook, so nothing there needs undoing.
 
 ---
 
@@ -2408,19 +2578,22 @@ Every box must be ticked before you write the decision record. Half of them are 
 - [ ] `REFRESH_TOKEN_VERSION` on the deployed revision equals the version `verify_token.py` last validated.
 - [ ] `walle-agent@` can read **no secret**. Verified with the Phase 8 command, after the most recent IAM change.
 - [ ] `walle-actions@` has the insert-only audit role, and no `bigquery.dataEditor` anywhere.
-- [ ] Eve's KMS key is `ASYMMETRIC_SIGN` / `EC_SIGN_P256_SHA256`. `walle-actions@` holds only `publicKeyViewer` on it.
-- [ ] `eve-controller@` and `walle-actions@` share no secret and no key.
-- [ ] `walle-actions@` holds `datastore.user`, `pubsub.publisher`, `cloudtasks.enqueuer`, `monitoring.metricWriter` and `logging.logWriter` at project level; `walle-dispatcher@` holds `datastore.user` and `logging.logWriter`; `walle-agent@` holds nothing.
+- [ ] Eve's public-key pin directory `contracts/eve-public-keys/` is committed (empty until S4; from S4 each PEM's fingerprint matches Eve's runbook record), and `walle-actions@` holds **no** `cloudkms` role in `WALLE_PROJECT` (the optional `publicKeyViewer` is on Eve's key in `EVE_PROJECT` only, carve-out 1 of decision 48).
+- [ ] Eve's key shape (`ASYMMETRIC_SIGN` / `EC_SIGN_P256_SHA256`) is asserted by Eve's runbook in `EVE_PROJECT`; this project has no key ring.
+- [ ] `eve-controller@<eve-project>` and `walle-actions@` share no secret and no key, across projects: neither holds any Secret Manager or KMS role in the other's project (Phase 15 verify 6).
+- [ ] `walle-actions@` holds `datastore.user`, `pubsub.publisher`, `cloudtasks.enqueuer`, `monitoring.metricWriter` and `logging.logWriter` at project level; `walle-dispatcher@` holds `datastore.user` and `logging.logWriter`; `walle-agent@` holds nothing; and **no principal from `EVE_PROJECT`, `MO_PROJECT` or `GEMINI_PROJECT` holds any project-level role in `WALLE_PROJECT`**, except `roles/discoveryengine.serviceAgent` for the Gemini project's service agent if decision 42 chose the documented fallback. No `datastore.viewer` (decision 44) and no `agentregistry.viewer` (decision 43) for any foreign principal.
+- [ ] No `eve-*` or `mo-*` service account exists in `WALLE_PROJECT`.
 - [ ] Exactly **one** reasoning engine exists in the region. Any orphan from a repeated `create` has been deleted.
-- [ ] `aiplatform.reasoningEngines.query` on the engine is **reachable by exactly three principals, counting inherited project and organisation bindings**, and the grant uses the custom role `walleEngineQuery`, because `roles/aiplatform.reasoningEngineUser` does not exist.
+- [ ] `aiplatform.reasoningEngines.query` on the engine is **reachable by exactly two principals, counting inherited project and organisation bindings** — `service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine.iam.gserviceaccount.com` and `walle-dispatcher@` — and the grant uses the custom role `walleEngineQuery`, because `roles/aiplatform.reasoningEngineUser` does not exist. A binding for `service-<PROJECT_NUMBER>@gcp-sa-discoveryengine…` is a defect; so is any Eve identity on the engine (C10).
 - [ ] The Agent Runtime staging bucket exists and is in `europe-west1`.
 - [ ] `run.invoker` on `walle-actions` includes `$OPERATORS` and `walle-operators-caller@`, so the andon cord has a handle.
 - [ ] `run.invoker` on `walle-dispatcher` includes `walle-dispatcher@`, or every trigger 403s.
-- [ ] The action service is deployed with `--timeout=60s` and `--ingress=all`, and with **all sixteen** environment variables present on the revision.
-- [ ] `CONTROL_CALLER_ALLOWLIST` on the deployed revision contains `eve-controller@` **and** `$OPERATORS`.
+- [ ] The action service is deployed with `--timeout=60s` and `--ingress=all`, and with **all nineteen** environment variables present on the revision (the name list is in Phase 10).
+- [ ] `CONTROL_CALLER_ALLOWLIST` on the deployed revision contains `eve-controller@<eve-project>.iam.gserviceaccount.com` (the full cross-project address) **and** `$OPERATORS`; `READ_CALLER_ALLOWLIST` contains `mo-analyst@<mo-project>.iam.gserviceaccount.com` and no other Mo identity; `EVE_KMS_KEY` names `EVE_PROJECT`.
+- [ ] `run.invoker` on `walle-actions` names exactly four foreign identities (three Eve, `mo-analyst@`), each on that one service and nowhere else in this project; `walle_audit` carries dataset-level `READER` for `eve-v0@` and `mo-metrics@` (and the two S3 Eve identities once granted) and **no** `view` entry.
 - [ ] Both log sinks exist at **organisation** level, and the trigger sink excludes `$ROBOT`.
 - [ ] The BigQuery log sink points at `walle_workspace_logs`, not at `walle_audit`.
-- [ ] A budget alert exists.
+- [ ] A budget alert exists for this project. Eve's and Mo's projects carry their own budgets in their runbooks.
 
 **The system**
 
@@ -2618,9 +2791,9 @@ Related: if you ever consider the Admin SDK **Reports API push channel** as an a
 
 **Cause.** Gemini Enterprise passes the user's email as `user_id`, which surfaces as the ADK session user id. If the agent is not forwarding it as `principal.id`, or the front door is not the one you think, the operator check has nothing to verify.
 
-**Why it matters.** That email is **asserted, not proven**. It is trustworthy exactly to the extent that only three principals can invoke the engine, and the action service re-checks the asserted email against `$OPERATORS` live on every write, failing closed. If the email never arrives, the re-check cannot happen and every write should be failing closed. If writes are succeeding anyway, that is a serious defect.
+**Why it matters.** That email is **asserted, not proven**. It is trustworthy exactly to the extent that only two principals can invoke the engine (one of them the Gemini **app** project's service agent, not this project's), and the action service re-checks the asserted email against `$OPERATORS` live on every write, failing closed. If the email never arrives, the re-check cannot happen and every write should be failing closed. If writes are succeeding anyway, that is a serious defect.
 
-**Fix.** Re-check the engine's IAM policy against Phase 12. Confirm the agent forwards the session user id. Confirm the action service denies with `actor_not_authorised` when the principal is missing, rather than defaulting to anything.
+**Fix.** Re-check the engine's IAM policy against Phase 12, and that the bound Discovery Engine agent carries `GEMINI_PROJECT_NUMBER`, not `PROJECT_NUMBER`. Confirm the agent forwards the session user id. Confirm the action service denies with `actor_not_authorised` when the principal is missing, rather than defaulting to anything.
 
 ### 7.9 Every write Wall-E makes triggers another run
 
@@ -2674,5 +2847,8 @@ Until one of the first two exists, no family may go above L2, because L3 has no 
 | [06-security-guardrails.md](06-security-guardrails.md) | The nine "must never happen" rows, the threat model, the never-list, what to alert on |
 | [07-build-runbook.md](07-build-runbook.md) | The design set's own build phases. This document supersedes it for execution |
 | [08-team-eve-mo.md](08-team-eve-mo.md) | The interfaces Wall-E owes Eve and Mo, built from day one even though neither exists |
+| [../project-topology.md](../project-topology.md) | The four projects, where every resource lives, and every cross-project grant with its level and source. The authority for Phases 6, 8, 10, 12, 13, 13b and 15 |
+| [../eve/07-build-runbook.md](../eve/07-build-runbook.md) | Where Eve's project, key, secrets, identity and datasets are built (`EVE_PROJECT`); the destination of the old Phase 15 and of Phase 8's key |
+| [../mo/07-build-runbook.md](../mo/07-build-runbook.md) | Where Mo's project, identities, datasets, views and drop-box are built (`MO_PROJECT`) |
 | [09-open-decisions.md](09-open-decisions.md) | The twenty decisions, five of them blocking, and what is still to verify in the console |
 | [10-adversarial-review.md](10-adversarial-review.md) | Seventeen attacks, what each changed, and the claims earlier drafts made that were not true. **Read this before changing anything in this runbook** |

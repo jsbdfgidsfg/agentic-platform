@@ -2,7 +2,11 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
+- Placement updated on 2026-09-13 to the four-project topology (`GEMINI_PROJECT`,
+  `WALLE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT`, all under `FOLDER_ID`).
+  [../project-topology.md](../project-topology.md) is the authority for where each resource lives
+  and how every grant crosses; nothing else in this page changed.
 - Challenged on 2026-09-11 by eleven independent reviewer lenses. Verdict: the architecture
   is the correct path; three blocking gaps and a set of document corrections stand, and the
   edits they call for are **not yet applied to this page**. See
@@ -26,32 +30,44 @@
 
 ## Component map
 
+Four projects under one folder. Solid cross-project edges are resource-level grants that
+exist at Stage 0 or at the stage marked; dashed ones are target state or a fallback. The
+complete list, with the level of every binding, is
+[../project-topology.md](../project-topology.md) §3.
+
 ```mermaid
 flowchart TB
     subgraph Humans["Human surface"]
         OP["walle-operators@<br/>(the ladder owner + tbd)"]
-        GE["Gemini Enterprise app<br/>chat, agent shared to the group"]
+    end
+
+    subgraph GEM["GEMINI_PROJECT — the Gemini Enterprise app (eu or global)"]
+        GE["Gemini Enterprise app<br/>chat, agent shared to the group<br/>holds nothing of Wall-E's"]
+        DSA["service-GEMINI_PROJECT_NUMBER@<br/>gcp-sa-discoveryengine<br/>the app project's number, never Wall-E's"]
     end
 
     subgraph Triggers["Autonomous triggers"]
         SCH["Cloud Scheduler"]
-        LOG["Workspace audit logs<br/>→ Cloud Logging sink → Pub/Sub"]
+        LOG["Workspace audit logs<br/>→ org sink walle-workspace-audit → Pub/Sub"]
         INB["Robot mailbox<br/>(untrusted input)"]
     end
 
-    subgraph GCP["GCP project — walle (europe-west1)"]
+    subgraph WALLE["WALLE_PROJECT — the doer (europe-west1, BigQuery EU)"]
         DIS["Cloud Run: walle-dispatcher<br/>owns run_id · checks halt<br/>enforces job budgets"]
-        AR["Agent Runtime: agent 'wall-e'<br/>ADK 2.8 · <b>holds no credentials</b>"]
-        CR["Cloud Run: walle-actions<br/><b>the only credential holder</b><br/>catalogue · ladder · policy · audit"]
+        AR["Agent Runtime: agent 'wall-e'<br/>ADK 2.8 · <b>holds no credentials</b><br/>the only engine in this project"]
+        CR["Cloud Run: walle-actions<br/><b>the only credential holder</b><br/>catalogue · ladder · policy · audit<br/>verifies Eve against a pinned PEM"]
         FS["Firestore<br/>ladder config · halt flags<br/>counters · approvals"]
-        SM["Secret Manager<br/>refresh token · HMAC keys"]
-        BQ["BigQuery walle_audit<br/>actions · runs · plans<br/>approvals · verifications"]
+        SM["Secret Manager (regional)<br/>walle-oauth-client · walle-refresh-token<br/>walle-confirm-hmac — nothing of Eve's"]
+        BQ["BigQuery walle_audit · walle_workspace_logs<br/>actions · runs · plans<br/>approvals · verifications"]
         PS["Pub/Sub walle-events"]
     end
 
-    subgraph Team["The other two agents"]
-        EVE["Eve — controller<br/>approves · verifies · halts"]
-        MO["Mo — improvement<br/>measures · proposes"]
+    subgraph EVEP["EVE_PROJECT — the controller"]
+        EVE["Eve — controller<br/>eve-controller@ · KMS key eve-approval<br/>eve secrets · walle_audit mirror · own org sink"]
+    end
+
+    subgraph MOP["MO_PROJECT — continuous improvement"]
+        MO["Mo — improvement<br/>mo-metrics@ · mo-analyst@ · mo-narrator@<br/>walle_metrics* datasets · drop box"]
     end
 
     subgraph WS["Google Workspace"]
@@ -60,7 +76,8 @@ flowchart TB
     end
 
     OP --> GE
-    GE -->|"registered agent<br/>user_id = end-user email"| AR
+    GE --> DSA
+    DSA -->|"registered agent, user_id = end-user email<br/>walleEngineQuery bound on the engine (spike, decision 42)<br/>fallback: roles/discoveryengine.serviceAgent on WALLE_PROJECT"| AR
     SCH --> DIS
     LOG --> DIS
     INB --> DIS
@@ -72,11 +89,11 @@ flowchart TB
     CR --> PS
     CR -->|"OAuth user creds<br/>of the robot account"| API
     API --- RB
-    PS --> EVE
-    PS --> MO
-    EVE -->|"approve · veto · halt · demote<br/>(REST, Eve's own key)"| CR
-    BQ --> EVE
-    BQ --> MO
+    PS -.->|"subscription created in EVE_PROJECT<br/>roles/pubsub.subscriber on the topic<br/>(target state, C30)"| EVE
+    PS -.->|"subscription created in MO_PROJECT<br/>roles/pubsub.subscriber on the topic<br/>(target state, C30)"| MO
+    EVE -->|"approve · veto · halt · demote (REST)<br/>eve-controller@EVE_PROJECT holds roles/run.invoker<br/>on walle-actions; signs with the key in EVE_PROJECT"| CR
+    BQ -->|"dataset-level roles/bigquery.dataViewer on walle_audit<br/>to eve-controller@EVE_PROJECT, jobs run in EVE_PROJECT"| EVE
+    BQ -->|"dataset-level roles/bigquery.dataViewer on walle_audit<br/>and walle_workspace_logs to mo-metrics@MO_PROJECT<br/>jobs run in MO_PROJECT"| MO
     MO -.->|"pull request<br/>a human merges"| FS
     DIS -->|"halt check<br/>before any LLM call"| FS
 ```
@@ -88,8 +105,8 @@ set exists to make real.
 
 | # | Boundary | Enforced by | What it stops |
 |---|---|---|---|
-| 1 | Human → Gemini Enterprise | Workspace SSO; the agent is shared only with `walle-operators@` on its User permissions tab | Non-allowlisted staff reaching Wall-E at all |
-| 2 | Agent → action service | Cloud Run IAM (`run.invoker`), ID-token verification **with audience**, caller service-account allowlist | Anything but Wall-E's own identity calling the action service |
+| 1 | Human → Gemini Enterprise | Workspace SSO; the agent is shared only with `walle-operators@` on its User permissions tab. The app lives in `GEMINI_PROJECT`, holds nothing of Wall-E's, and the share is made on the app in that project | Non-allowlisted staff reaching Wall-E at all |
+| 2 | Agent → action service | Cloud Run IAM (`run.invoker`), ID-token verification **with audience**, caller service-account allowlist. `run.invoker` on `walle-actions` is a service-level binding in `WALLE_PROJECT`, and two of its holders are identities homed in other projects — `eve-controller@EVE_PROJECT` and `mo-analyst@MO_PROJECT` — so the per-endpoint allowlist now lists cross-project service-account emails, compared byte for byte | Anything but Wall-E's own identity calling the action service |
 | 3 | LLM → credential | Architecture: the refresh token exists only inside the action service, never in the model's process or context | Prompt injection exfiltrating an admin credential |
 | 4 | Requested action → executed action | Policy engine: catalogue allowlist, typed parameters, protected principals, scope, budgets | The model inventing a destructive call and it simply running |
 | 5 | **Permitted action → autonomously executed action** | **Autonomy ladder: per-(family, trigger) level, approval tokens the service mints and a human or Eve releases, hold windows, breakers** | **An operation that is legitimate on request being taken unattended before it has earned the right** |
@@ -102,8 +119,9 @@ invoked.
 
 ## The request path, end to end
 
-**On request (trigger class T0).** Operator types in Gemini Enterprise → Gemini Enterprise
-invokes the registered agent, passing the operator's email as `user_id` → the ADK agent
+**On request (trigger class T0).** Operator types in Gemini Enterprise → the app, in
+`GEMINI_PROJECT`, invokes the registered agent in `WALLE_PROJECT` as its own service agent,
+passing the operator's email as `user_id` → the ADK agent
 picks operations from the catalogue and calls the action service with an ID token → the
 action service validates, checks the operator is in the group, looks up the level for
 (family, T0), executes or returns a confirmation requirement → audit row → answer.
@@ -158,12 +176,12 @@ tenant, that is not a trade worth reconsidering.
 
 | Layer | Owns | Explicitly does not own |
 |---|---|---|
-| Gemini Enterprise | Presentation, end-user authentication, conversation history | Any credential, any policy decision |
+| Gemini Enterprise (in `GEMINI_PROJECT`) | Presentation, end-user authentication, conversation history | Any credential, any policy decision, anything of Wall-E's |
 | Dispatcher | Trigger handling, run creation, halt check, per-job budgets | Workspace access, authorisation of individual operations |
 | ADK agent (Agent Runtime) | Intent → operation selection, parameter extraction, clarification, narrating results | Credentials, authorisation, the autonomy level, direct API access |
 | Action service | The credential, the catalogue, the ladder, authorisation, execution, verification, audit | Natural language |
-| Eve | Approving, verifying independently, halting, demoting | Executing anything, raising a level |
-| Mo | Measuring, proposing | Any write path to config or Workspace |
+| Eve (in `EVE_PROJECT`) | Approving, verifying independently, halting, demoting | Executing anything, raising a level |
+| Mo (in `MO_PROJECT`) | Measuring, proposing | Any write path to config or Workspace |
 | Workspace | The actual effect | — |
 
 ## Corrections carried in from research (2026-09-07/08)
@@ -176,7 +194,7 @@ listed in [09-open-decisions.md](09-open-decisions.md).
 | Region | europe-west1 "subject to Agent Engine availability" | **Confirmed available.** Agent Runtime, Sessions and Memory Bank are GA in europe-west1 with EU at-rest residency. Decision closed. |
 | Product name | "Vertex AI Agent Engine" | Now **Agent Runtime**, part of Gemini Enterprise Agent Platform. API resource is still `reasoningEngines`. |
 | Deployment SDK | `vertexai.agent_engines.create()` | Deprecated since Vertex AI SDK v1.112.0. Use `vertexai.Client(project, location).agent_engines.create(...)`. |
-| End-user identity | "unverified, treat `actor` as untrusted" | Gemini Enterprise passes the **user's email as `user_id`**. It is asserted by the Discovery Engine service agent, not cryptographically bound to the user, so the action service still re-checks group membership. Lock `aiplatform.reasoningEngines.query` down to three principals. |
+| End-user identity | "unverified, treat `actor` as untrusted" | Gemini Enterprise passes the **user's email as `user_id`**. It is asserted by the Discovery Engine service agent, not cryptographically bound to the user, so the action service still re-checks group membership. Lock `aiplatform.reasoningEngines.query` down to the smallest set of principals: first `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine.iam.gserviceaccount.com` — the **app** project's number, never Wall-E's — bound on the engine from `GEMINI_PROJECT`, then `walle-dispatcher@WALLE_PROJECT`. An earlier draft counted `eve-controller@` as a third; [C10](14-hld-challenge.md) removed it and [../project-topology.md](../project-topology.md) §3 row 13 records the absence. |
 | Chat API | "may need an app identity" | The robot's **user token is sufficient** to post messages and manage spaces it belongs to. A branded Chat app is optional UX, not a requirement. |
 | Alert Center as an event source | not considered | **Requires domain-wide delegation.** Out of scope. Use Workspace audit-log sharing into Cloud Logging instead, which needs no credential at all and gives Eve an independent view. |
 | Cloud Run ingress | "internal only" | Agent Runtime egresses from a Google-managed tenant project, which Cloud Run treats as **external** — internal-only ingress blocks it. The fixes are a shared VPC Service Controls perimeter, an internal load balancer in front of Cloud Run, or a Private Service Connect endpoint. A PSC **interface** alone does not help, because `run.app` traffic still bypasses the VPC without private DNS peering, and it also disables the agent's internet egress. **IAM is the enforced boundary** — [decision 9](09-open-decisions.md). |
@@ -190,5 +208,7 @@ listed in [09-open-decisions.md](09-open-decisions.md).
 - A fully unattended agent for high-risk writes. `WRITE_HIGH` never reaches the top level
   on any trigger, at any stage. That is a permanent ceiling, not a stage we have not
   reached yet.
-- Wall-E administering its own platform. GCP IAM, the ladder config, the catalogue and
-  Gemini Enterprise settings are outside its reach by construction.
+- Wall-E administering its own platform. The IAM and settings of any of the four projects
+  and of the folder, the ladder config, the catalogue and Gemini Enterprise settings are
+  outside its reach by construction. No Wall-E principal exists in `EVE_PROJECT` beyond the
+  three carve-outs of decision 48, and none at all in `MO_PROJECT` or `GEMINI_PROJECT`.

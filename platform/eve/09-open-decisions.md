@@ -2,16 +2,18 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 
 This page lists the twenty decisions Eve's design does **not** settle. Each one is stated
 with what it is, why it matters, the recommendation this design makes, and the gate — the
 point at which the decision comes due and past which building without an answer means
 building something that will have to be unbuilt.
 
-None of them blocks *writing* the design; several block *building* it, and two of them
-(**E-1** and **E-16**) are cheap now and expensive
-after Eve onboarding, which is a one-sitting step containing an irreversible OAuth consent.
+None of them blocks *writing* the design; several block *building* it, and one of them
+(**E-16**) is cheap now and expensive after Eve onboarding, which is a one-sitting step
+containing an irreversible OAuth consent. **E-1** was in that category until 2026-09-13,
+when the four-project topology answered it (see "Settled" below); its row is kept as
+history.
 
 **Numbering.** Decisions in this set are numbered `E-1` to `E-20`. The `E-` prefix exists so
 they never collide with Wall-E's decisions 1–41 in
@@ -45,9 +47,9 @@ credential decisions are due before the consent that cannot be undone.
 |---|---|
 | First commit, inert | **E-5** |
 | Before the approve endpoint is built | **E-3**, and the schema half of **E-4** |
-| Before Stage 1 | **E-14**; the dataset half of **E-1** |
+| Before Stage 1 | **E-14** (the dataset half of **E-1** was answered with it, 2026-09-13) |
 | S2, on measured data | **E-18** |
-| Before Eve onboarding | **E-1**, **E-16** |
+| Before Eve onboarding | **E-16** |
 | S3 entry | **E-6**, **E-9** |
 | Before S3 exit | **E-13**, **E-15** |
 | S4 entry | **E-17** |
@@ -60,18 +62,18 @@ credential decisions are due before the consent that cannot be undone.
 
 | # | Decision | Why | Recommendation | Gate | Recorded in |
 |---|---|---|---|---|---|
-| **E-1** | **Does Eve get its own GCP project?** All three designs said yes; the runbook fixes `SA_EVE = eve-controller@${PROJECT}`. | While Eve's key lives in Wall-E's project, a project owner can grant themselves `cloudkms.signer` and mint an Eve approval, and the only control is a daily drift row — a detective control on the artefact the whole controller role rests on. The set already requires the evidence copy to move at S3 (C11 residual). | **Yes**, extending [decision 18](../wall-e/09-open-decisions.md) and [decision 31](../wall-e/09-open-decisions.md). If the answer is no, the single-project variant still works and pinned-PEM verification still prevents key substitution, but "`walle-actions@` must never mint an Eve approval" reverts to IAM hygiene. | **Before Eve onboarding**; the dataset half before Stage 1 | [01-hld.md](01-hld.md), [02-identity-and-auth.md](02-identity-and-auth.md) |
-| **E-2** | **Who owns Eve's project?** | The project boundary is only as real as the org chart. With one administrator it is notional. | Target an `eve-owners@` group containing IT security and not Wall-E's deployers. Build the boundary now, record in writing that it is notional until decision 11's second human exists, and pre-refuse the temptation to fold Eve back into Wall-E's project. | Before S4 | [02-identity-and-auth.md](02-identity-and-auth.md), [06-failure-modes.md](06-failure-modes.md) |
+| **E-1** | **Does Eve get its own GCP project?** *Answered yes 2026-09-13* by the four-project topology — `GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT` under `FOLDER_ID` ([../project-topology.md](../project-topology.md)); decision file in [`../../decisions/`](../../decisions/) *tbd*. History: all three designs said yes; Wall-E's runbook fixed `SA_EVE = eve-controller@${PROJECT}` until then. | While Eve's key lives in Wall-E's project, a project owner can grant themselves `cloudkms.signer` and mint an Eve approval, and the only control is a daily drift row — a detective control on the artefact the whole controller role rests on. The set already requires the evidence copy to move at S3 (C11 residual). | **Yes**, extending [decision 18](../wall-e/09-open-decisions.md) and [decision 31](../wall-e/09-open-decisions.md). If the answer is no, the single-project variant still works and pinned-PEM verification still prevents key substitution, but "`walle-actions@` must never mint an Eve approval" reverts to IAM hygiene. | **Before Eve onboarding**; the dataset half before Stage 1 | [01-hld.md](01-hld.md), [02-identity-and-auth.md](02-identity-and-auth.md) |
+| **E-2** | **Who owns Eve's project?** | The project boundary is only as real as the org chart. With one administrator it is notional. | Target an `eve-owners@` group containing IT security and not Wall-E's deployers, bound at `EVE_PROJECT` level; with all four projects under `FOLDER_ID`, no Wall-E deployer group may hold a folder-level role, or the boundary is inherited away (topology decision 52 generalises this to four owner groups). Build the boundary now, record in writing that it is notional until decision 11's second human exists, and pre-refuse the temptation to fold Eve back into Wall-E's project. | Before S4 | [02-identity-and-auth.md](02-identity-and-auth.md), [06-failure-modes.md](06-failure-modes.md) |
 | **E-3** | **`items_hash` in the signed field list.** | C39's list (`plan_id`, `plan_hash`, `config_version`, expiry, nonce, key version) and C16's per-item vector are incompatible: a signature over `plan_hash` alone cannot authorise a subset, so a tamperer could flip an accept bit outside the signature. | Add exactly one field, `items_hash = SHA-256(RFC8785(vector))`, to the signed payload, under `ladder.yaml`'s reviewers. | **Before the approve endpoint is built** | [03-lld.md](03-lld.md), [08-contract-changes.md](08-contract-changes.md) |
 | **E-4** | **`eve_authority` as a ladder-cell and override field, and the denial reason `eve_authority_advisory`.** | E58's demotion of Eve's authority has no storage and no enforcement anywhere in the set, and [03](../wall-e/03-lld.md)'s denial vocabulary is declared closed and defined in one place. | One field, `advisory \| binding`, absent reading as advisory; the override may only lower it; the CI validator refuses any config placing a cell at L4 while its authority is advisory. One new non-invariant denial reason. | **Before S4**; the schema before the approve endpoint | [05-stages.md](05-stages.md), [08-contract-changes.md](08-contract-changes.md) |
 | **E-5** | **Who owns the "Eve down → `no_autonomous`" timer, and the L5 post-hoc demotion?** | Four documents state the outcome; none assigns it. | Two deterministic sweepers inside `walle-actions`, keying on the **absence** of work (a plan aged at `pending_eve`; a missing verdict receipt), plus a passively stamped `eve_last_seen` metric with an absence alert. No new endpoint, and no code path that raises on Eve's return. Reject a heartbeat endpoint: a liveness signal Eve publishes cannot prove Eve is alive. | **First commit** (inert), wired at S4 | [06-failure-modes.md](06-failure-modes.md), [08-contract-changes.md](08-contract-changes.md) |
 | **E-6** | **Eve's observe mode, split.** | E63 says Eve is observe-mode through Stage 3; E53 says Eve must fail closed in every direction. Both cannot hold literally: the only component watching Google's log would be forbidden to act on what it sees. | Split: **signing** is observe-only through S3; **halt and demote on the invariant class** are live from Eve onboarding, with rate-based triggers observe-only until calibrated. Halting is the direction a human can undo in seconds. Record as a reading, with the cost named — a buggy Eve can halt the programme during the stage the programme is trying to prove itself. | **S3 entry** | [05-stages.md](05-stages.md), [06-failure-modes.md](06-failure-modes.md) |
 | **E-7** | **Eve's halting bias, restated.** | 08 item 5's "own judgement" is void under C12; "bias toward halting when uncertain" would make a degraded Eve the outage. | At the approval point the conservative act is **refuse** (the plan waits, costing minutes); **halt** is reserved for the closed invariant-trigger list and is never discretionary. Record as an amendment to 08 item 5. | With the design record | [06-failure-modes.md](06-failure-modes.md), [08-contract-changes.md](08-contract-changes.md) |
 | **E-8** | **Eve's demotion granularity.** | 05 §6 says Eve may lower "to any level, including halt"; the `demote` contract takes one `(family, trigger)`. | One call per cell, each with its own reason and audit row. A genuinely tenant-wide condition uses `halt`, which is atomic. Name the millisecond-wide seam rather than claiming atomicity that does not exist. | With the design record | [04-flows.md](04-flows.md), [08-contract-changes.md](08-contract-changes.md) |
-| **E-9** | **Eve's BigQuery grant, which does not exist anywhere in the runbook.** | The entire shared data plane of [08](../wall-e/08-team-eve-mo.md) is unbuilt for both Eve and Mo. | Dataset-level `bigquery.dataViewer` on `walle_audit` for Eve's identities; `bigquery.jobUser` in **Eve's own** project so job creation and query cost never touch Wall-E's. Never project-level `dataViewer`, which would be a lateral path into Wall-E's project. | S3 entry | [02-identity-and-auth.md](02-identity-and-auth.md), [07-build-runbook.md](07-build-runbook.md) |
+| **E-9** | **Eve's BigQuery grant, which does not exist anywhere in the runbook.** | The entire shared data plane of [08](../wall-e/08-team-eve-mo.md) is unbuilt for both Eve and Mo. | Dataset-level `bigquery.dataViewer` on `walle_audit` in `WALLE_PROJECT` for Eve's identities of `EVE_PROJECT`, made by Wall-E's runbook (CC-22, topology §3 row 4); `bigquery.jobUser` in **Eve's own** project so job creation and query cost never touch Wall-E's. Never project-level `dataViewer`, which would be a lateral path into Wall-E's project. | S3 entry | [02-identity-and-auth.md](02-identity-and-auth.md), [07-build-runbook.md](07-build-runbook.md) |
 | **E-10** | **How is "Eve availability ≥ 99 % in business hours" measured?** | The S4 exit asserts it; nothing in the set defines it, and Cloud Run's SLA is not a proof of it. | The fraction of scheduled business-hour passes that completed, computed by `walle-actions` from the passively stamped `eve_last_seen`, never self-reported by Eve. | Before S4 exit | [05-stages.md](05-stages.md) |
 | **E-11** | **The outcome code for an Eve-rejected item.** | The contract says rejected items become `skipped_by_operator`; 03's vocabulary is closed; metrics may need to separate Eve rejections from human ones. | `skipped_by_operator` with `approver_type: eve`, rather than a new state. A one-line edit to 03, made deliberately. | Before S4 | [03-lld.md](03-lld.md), [08-contract-changes.md](08-contract-changes.md) |
-| **E-12** | **E18's wording versus E19.** | E18 says Eve's only project-level role in Wall-E's project is `datastore.viewer`; E19 grants `agentregistry.viewer`. Both are read-only and both are in the runbook; the wordings cannot both be literally satisfied. | Reword E18 as "no project-level role beyond the two named read-only roles, and no write role". | With the design record | [02-identity-and-auth.md](02-identity-and-auth.md), [08-contract-changes.md](08-contract-changes.md) |
+| **E-12** | **E18's wording versus E19.** | E18 says Eve's only project-level role in Wall-E's project is `datastore.viewer`; E19 grants `agentregistry.viewer`. Both are read-only and both are in the runbook; the wordings cannot both be literally satisfied. | **Settled by removal on 2026-09-13.** Reword E18 as "**no project-level role in `WALLE_PROJECT` at all**, and no write role": Wall-E's runbook, script (`EVE_PROJECT_ROLES = ()`) and self-test now grant neither — `agentregistry.viewer` is dropped (topology decision 43) and `datastore.viewer` is not granted. The exception list is empty; the only possible future entry is decision 44's resource-scoped form for Eve's Firestore discovery read (an IAM Condition on Wall-E's `(default)` database, or the CC-33 list endpoint), named there before it is granted. Until then `eve-gate` has no discovery read and Phase 9 is blocked at that step. | With the design record; decision 44 before S3 entry | [02-identity-and-auth.md](02-identity-and-auth.md), [08-contract-changes.md](08-contract-changes.md) |
 | **E-13** | **The second grader.** | Without a grader who is not the ladder owner, the blind sample is blind in form only, and the compromised-Eve bound is weaker than stated. Blindness for *refusals* is structural (Eve's verdicts never enter Wall-E's project); for *accepts* it rests on an allowlisted column set and a CI test. | Name one under [decision 11](../wall-e/09-open-decisions.md) by S3, not S4. No `WRITE_HIGH` cell reaches `eve_authority: binding` without them. | Before S3 exit | [04-flows.md](04-flows.md), [06-failure-modes.md](06-failure-modes.md) |
 | **E-14** | **Retention floor and ceiling** ([decision 17](../wall-e/09-open-decisions.md), [31](../wall-e/09-open-decisions.md)). | An attestation cites a window; if that window predates the retention floor the citation is unverifiable. The Workspace-side copy ages out at six months regardless. | Answer before Stage 1, as a minimum **and** a maximum. Eve's mirror and bucket are set to 400 days pending it. | Before Stage 1 | [03-lld.md](03-lld.md), [07-build-runbook.md](07-build-runbook.md) |
 | **E-15** | **Where the seeded-fault exercise and the K6 rollback drills run** ([decision 29](../wall-e/09-open-decisions.md)). | A synthetic fixture set tests Eve against plans someone constructed; it cannot surprise it the way a tenant can. | A sandbox deployment against a sandbox dataset as the fallback; if decision 29 yields an identity-only tenant, the exercise moves there and the S3 gate becomes meaningfully stronger. | Before S3 exit | [05-stages.md](05-stages.md), [07-build-runbook.md](07-build-runbook.md) |
@@ -84,8 +86,9 @@ credential decisions are due before the consent that cannot be undone.
 Two rows deserve a plain restatement, because they are the ones most likely to be read as
 bookkeeping and are not.
 
-- **E-1 and E-2 are one decision split in two.** E-1 buys a structural property: Eve's key
-  cannot be reached by a Wall-E project owner, because there is no principal to grant. E-2
+- **E-1 and E-2 are one decision split in two.** E-1 (answered) buys a structural property:
+  Eve's key cannot be reached by a Wall-E project owner, because there is no principal to
+  grant. E-2
   is the observation that the property is only as strong as the group that owns the project,
   and that with one administrator that group is notional. The right response is to build the
   boundary anyway and write down that it is notional, not to skip it: the boundary is cheap
@@ -110,6 +113,9 @@ re-litigates them from a blank page; the reasoning is in
 | No model anywhere in Eve v1 or v2 | Required by [C12](../wall-e/14-hld-challenge.md) and [decision 34](../wall-e/09-open-decisions.md), and enforced by dependency absence and permission absence rather than by policy. |
 | One field, `eve_authority`, not two | A separate `eve_gate` and `eve_authority` would drift. One field is the observe/enforce switch, the fail-closed default and the demotion target (**E-4**). |
 | `eve-advisor` is not built | The slot is named and left empty so it cannot be smuggled in. If it is ever built, adding it is a decision record, not an implementation detail. |
+| **E-1**: Eve lives in `EVE_PROJECT`, one of four projects under `FOLDER_ID` (settled 2026-09-13) | [../project-topology.md](../project-topology.md) is the authority for placement and for every cross-project grant; the reasoning stays in [01-hld.md](01-hld.md) and [02-identity-and-auth.md](02-identity-and-auth.md), and the single-project variant is kept there as history. Decision file *tbd*. |
+| Who asserts the Eve-side IAM properties (settled 2026-09-13, topology decision 46) | Eve's own daily drift job and the Eve owner assert the key, secret and dataset policies of `EVE_PROJECT` and the `FOLDER_ID` policy; Wall-E's drift job asserts only what it can read in `WALLE_PROJECT`. No Wall-E identity receives a read grant in `EVE_PROJECT` for this — `iam.securityReviewer` there was considered and refused. |
+| Where `eve-approval` key versions are destroyed (settled 2026-09-13 with the topology; decision file *tbd*) | Destruction is a human act in `EVE_PROJECT` by someone holding `cloudkms.admin` on Eve's key ring — never a Wall-E service identity. `walle_setup.py teardown --destroy-key-versions` keeps the two-copy PEM guard unchanged and targets `EVE_PROJECT`; see [07-build-runbook.md](07-build-runbook.md) Phase 12. |
 
 ## Re-open on this record
 
@@ -122,7 +128,7 @@ fires it.
 | Challenge item | What it was | What this design does to it |
 |---|---|---|
 | **C10** — Eve's `streamQuery` channel can assert any operator's identity | Eve held `aiplatform.reasoningEngines.query` on Wall-E's engine | **Confirms and removes the premise.** Eve holds no `aiplatform.*` permission at all, so there is no Eve `streamQuery` caller. The CI grep stays as a regression guard and finds nothing, which is the correct steady state. The grant's removal from `ARCHITECTURE.md` §4.2 is an edit in [08-contract-changes.md](08-contract-changes.md). |
-| **C11** — Eve's trust root is administered from inside Wall-E's project | Refuted at the time on the ground that it belonged to Eve's design and to [decision 18](../wall-e/09-open-decisions.md) | **Changed.** That design now exists and answers it: Eve's project, dataset, secrets, key, evidence bucket and config repository all sit outside Wall-E's project, and Wall-E's deployers hold no IAM in Eve's (**E-1**, **E-2**). The C11 residual — moving Eve's evidence copy out of Wall-E's reach by S3 — is met by the daily `walle_audit` mirror and the locked evidence bucket. |
+| **C11** — Eve's trust root is administered from inside Wall-E's project | Refuted at the time on the ground that it belonged to Eve's design and to [decision 18](../wall-e/09-open-decisions.md) | **Changed.** That design now exists and answers it: Eve's project, dataset, secrets, key, evidence bucket and config repository all sit in `EVE_PROJECT`, outside `WALLE_PROJECT`, and no Wall-E deployer holds a project-level role there or on `FOLDER_ID` — the only Wall-E principals in Eve's project are the three resource-level carve-outs of topology decision 48 (**E-1** answered 2026-09-13, **E-2**). The C11 residual — moving Eve's evidence copy out of Wall-E's reach by S3 — is met by the daily `walle_audit` mirror and the locked evidence bucket. |
 | **C12** — Eve is drawn as an LLM controller and everything it must do is deterministic | Partially stood | **Confirms.** Every Eve decision is code, enforced five mechanical ways; 08 item 5's "own judgement" is void and replaced by **E-7**'s two rules. |
 | **C13** — Eve's "read-only" credential is either blind to licences or can write them | Stood | **Confirms, and accepts the blindness.** `apps.licensing` is dropped; F7 is verified from Google-written licence events and recorded `verified_partial` with reason `licence_event_only`. A declared permanent limit, carried in every F7 attestation. |
 | **C14** — Stage 0 provisions Stage 2–5 machinery, including a dormant Eve credential | Stood | **Changed.** The whole Eve credential set moves to a single Eve-onboarding step at S3 entry. The reason is the six-month unused-token expiry and the scope freeze, not the cost of repeating consent. Stage 0 keeps contracts, audit columns and a CI-only stub caller, and nothing else. |
@@ -155,8 +161,8 @@ each one changes something concrete here if it goes the other way.
 
 ## Open questions that are not decisions
 
-Four facts are unverified as of 2026-09-12 and must stay marked so. None of them blocks
-Eve; all four change something if answered.
+Six facts are unverified as of 2026-09-13 and must stay marked so. None of them blocks
+Eve; all six change something if answered.
 
 | Unverified | What it changes |
 |---|---|
@@ -164,6 +170,8 @@ Eve; all four change something if answered.
 | Whether group-management privileges honour OU scoping | Whether Workspace itself contains a group write, or only Wall-E's code does — which sets how much the OU allowlist is worth as containment for seeded fault 7. |
 | Whether licence privileges are `isOuScopable` | F7's ceiling. If the check comes back negative, the honest recommendation is that F7 stays at L3 and never reaches an Eve-gated level at all. |
 | Agent Runtime and Sessions unit prices | Nothing in Eve's own cost line — Eve runs no engine — but the L3→L4 benefit test of C34 that decides whether Eve is built. |
+| Whether the engine-scoped custom role `walleEngineQuery` suffices for the Gemini project's Discovery Engine service agent (`GEMINI_PROJECT_NUMBER`) across projects | Wall-E's spike, topology decision 42. If not, `roles/discoveryengine.serviceAgent` on `WALLE_PROJECT` is the documented fallback; either way the two query principals on the engine stay the service agent and `walle-dispatcher@`, and CI asserts the policy. |
+| Whether `roles/datastore.viewer` can be narrowed to Wall-E's `(default)` database by an IAM Condition | Topology decision 44. If it can, Eve's one remaining project-level role in `WALLE_PROJECT` becomes resource-level in substance; if not, a list endpoint on `walle-actions` is the alternative, as a contract-change row. |
 
 ## Related pages
 

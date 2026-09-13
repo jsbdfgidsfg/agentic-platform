@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
+- Placement updated on 2026-09-13 to the four-project topology; levels, stages, ceilings
+  and numbers are unchanged. [../project-topology.md](../project-topology.md) is the
+  authority for where Eve's key and the metric queries live.
 
 This is the step-by-step enablement plan and the control that goes with it. Every number
 here is an opinionated default meant to be tuned in the decision record that opens each
@@ -30,7 +33,7 @@ stage — but the *shape* is the design, and the shape is not negotiable without
 | **L1** | **SHADOW** | Forces `dry_run`. Runs allowlist, parameters, protected principals, scope, budgets — so denials are observed for real. Captures pre-state and the would-be verdict. **Never executes**, even if handed a valid approval. | nobody | run report, graded by an operator |
 | **L2** | **PROPOSE** | As L1, plus writes a proposal to the operator queue with pre-state and rationale. **There is no execution path at L2**: a well-formed approval is refused with `level_no_execute`. A human who wants it done does it themselves, or in chat. | operator, for a verdict | operators |
 | **L3** | **HUMAN** | Policy passes → `pending_human`. A named operator approves on the approval endpoint; the service verifies their group membership live, consumes the nonce, executes, verifies, records the approver. TTL 4 business hours, then `skipped`. | operator, for execution | operators, Eve |
-| **L4** | **EVE** | Policy passes → `pending_eve`. Eve approves with **its own signing key** from its own service account. A **hold window** then opens during which any operator can veto with one click. Then execute and verify. | Eve, blocking; humans may veto | operators |
+| **L4** | **EVE** | Policy passes → `pending_eve`. Eve approves with **its own signing key** (Cloud KMS `eve-approval`, in `EVE_PROJECT`) from its own service account (`eve-controller@EVE_PROJECT`); the action service verifies against a pinned PEM. A **hold window** then opens during which any operator can veto with one click. Then execute and verify. | Eve, blocking; humans may veto | operators |
 | **L5** | **AUTO** | Executes immediately within scope. The service verifies; **Eve verifies independently within 60 minutes**. Humans read a digest. | nobody | digest |
 
 There is deliberately no L6. "Execute and tell nobody" is not a level, it is a defect.
@@ -182,9 +185,7 @@ lags by two and stops at proposals.
 | **Purpose** | The first autonomous `WRITE_HIGH` — with a human approving the batch. This is where the toil genuinely goes away, and it is the stage to sit in longest. |
 | **Levels** | Scheduled write families at **L3 batch**: the run plans, freezes, and waits; one operator approves the whole plan; each item is re-read before it executes. Event: F1 L5, F2 L2. Inbox opens at L1 for reads. |
 | **Scope** | Max 10 objects per run rising to 25 after 20 clean runs · OU allowlist · group class `low` only · business hours, last write at 16:00 · daily write budget 25 · canary: a new family applies to 20 % of targets for its first 10 runs. |
-| **Controls first** | Batch approval bound to the plan hash · per-item re-read and skip-on-change · rollback plan generated at plan time, but executed only on a **fresh** human approval
-against **fresh** pre-state — a week-old approval is bound to a pre-state hash that is
-stale by definition · **Eve running in observe mode**, producing verdicts that are logged and graded but not enforced. This is Eve's own shadow stage. |
+| **Controls first** | Batch approval bound to the plan hash · per-item re-read and skip-on-change · rollback plan generated at plan time, but executed only on a **fresh** human approval against **fresh** pre-state — a week-old approval is bound to a pre-state hash that is stale by definition · **Eve running in observe mode**, producing verdicts that are logged and graded but not enforced. This is Eve's own shadow stage. |
 | **Exit criteria** | ≥ 50 approved `WRITE_HIGH` items, ≤ 2 % rejected for Wall-E error, verification ≥ 99.5 % with **zero drift** · **Eve acceptance test passed**: Eve observed ≥ 30 days, agreed with human verdicts ≥ 95 %, and caught ≥ 95 % of deliberately seeded faults in a chaos exercise · approval SLA met ≥ 80 % of the time, otherwise the rota is not ready and S4 would just build a queue · kill-switch drill within 30 days · decision record signed by **two humans**. |
 
 ### S4 — Eve gates
@@ -193,7 +194,7 @@ stale by definition · **Eve running in observe mode**, producing verdicts that 
 |---|---|
 | **Purpose** | Replace the per-item human with Eve for the families that have earned it. The operator's job becomes reading a notification and, rarely, vetoing. |
 | **Levels** | Scheduled: F3, F4, F7 at **L4** with a 30-minute hold; F5 suspend at L3. Event: F2 L4, F3 L3. Inbox: F1 L5, writes L2 — its permanent ceiling. |
-| **Controls first** | Eve's approval key, readable only by `eve-controller@` · signature verification · hold window and veto surface · **Eve-unreachable degrades to waiting, never to executing**, tested · Eve's independent read credential · post-hoc verification SLA measured. |
+| **Controls first** | Eve's approval key in `EVE_PROJECT`, signable only by `eve-controller@EVE_PROJECT`, with Wall-E holding only the pinned public PEM · signature verification · hold window and veto surface · **Eve-unreachable degrades to waiting, never to executing**, tested · Eve's independent read credential · post-hoc verification SLA measured. |
 | **Exit criteria** | ≥ 100 Eve-gated executions, human vetoes ≤ 1 %, zero drift · Eve availability ≥ 99 % in business hours · Eve verdicts still agreeing with a sampled human review ≥ 98 % · zero severity-1 or severity-2 events · a rollback drill passed at this level · decision record, two humans plus Eve's attestation. |
 
 ### S5 — Steady state
@@ -207,7 +208,12 @@ stale by definition · **Eve running in observe mode**, producing verdicts that 
 ## 8. Metrics the ladder is argued from
 
 Thirty-day rolling window, evaluated hourly. Until Eve exists these are BigQuery scheduled
-queries — call that Eve v0 and do not skip it.
+queries — call that Eve v0 and do not skip it. Where they run: as scheduled queries in
+`EVE_PROJECT` (Eve v0's transfer configs, run as `eve-v0@`) and, for Mo's scorecard, in
+`MO_PROJECT` over the `walle_metrics` datasets — each reading `walle_audit` in `WALLE_PROJECT`
+through a **dataset-level** `roles/bigquery.dataViewer`, with the jobs run and billed in the
+reader's project. Never as jobs in Wall-E's project ([../project-topology.md](../project-topology.md)
+§3 rows 4 and 6).
 
 | Metric | Definition | Target | Breach → |
 |---|---|---|---|
@@ -272,8 +278,9 @@ references it. A stage transition is one decision file bundling every cell it pr
 with the previous stage's exit evidence attached.
 
 A generated page, `platform/wall-e/ladder-state.md`, shows the current matrix, active
-overrides, config version and last drill date. Mo owns regenerating it once Mo exists;
-until then it is a scheduled query pasted in weekly.
+overrides, config version and last drill date. Mo owns regenerating it once Mo exists, as a
+job in `MO_PROJECT`; until then it is a scheduled query in `EVE_PROJECT` (Eve v0) pasted in
+weekly.
 
 ## 11. Assumptions in this document
 

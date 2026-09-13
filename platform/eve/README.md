@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-12
+- Last reviewed: 2026-09-13
 - Maturity: **design — nothing built, nothing enabled.** Not one Eve resource exists today,
   in either Workspace or GCP.
 - Codename: `eve`. Resource prefix `eve-`. It is the second of the three agents designed in
@@ -40,7 +40,7 @@ L3→L4 promotion can state in numbers how much approval burden it actually avoi
 |---|---|
 | **Not an agent.** No HTTP decision endpoint, no Pub/Sub push subscription, no A2A surface, no agent card, no agent protocol of any kind. Eve is a client everywhere. | It removes an attack class, it makes "Eve is down" an absence rather than a silence nobody notices, and it makes it structurally impossible for a safety interlock to run through a conversation. |
 | **Not a model.** No model client in the image, no `aiplatform.*` permission on either identity, `reasoningEngines.query` removed per [C10](../wall-e/14-hld-challenge.md). | The boundary is enforced by dependency absence and permission absence, not by policy. A signature cannot be produced by a model the process cannot reach. |
-| **Not a component of Wall-E.** Its project, dataset, secrets, key, evidence bucket and config repository are all outside Wall-E's project and outside its teardown blast radius. Wall-E's deployers hold no IAM in Eve's project. | While Eve's key sits in Wall-E's project, a project owner can grant themselves `cloudkms.signer` and mint an Eve approval, and the only control is a detective one. See [E-1](09-open-decisions.md). |
+| **Not a component of Wall-E.** Its project (`EVE_PROJECT`, one of the four under `FOLDER_ID` in [../project-topology.md](../project-topology.md)), dataset, secrets, key, evidence bucket and config repository are all outside Wall-E's project (`WALLE_PROJECT`) and outside its teardown blast radius. No Wall-E deployer holds a project-level role in Eve's project or on the folder; the only Wall-E principals in it are the three resource-level carve-outs of topology decision 48. | While Eve's key sits in Wall-E's project, a project owner can grant themselves `cloudkms.signer` and mint an Eve approval, and the only control is a detective one. [E-1](09-open-decisions.md), answered yes on 2026-09-13. |
 | **Not sufficient.** An Eve signature is necessary, never sufficient: `walle-actions` re-runs its full policy chain, per item, after verifying the signature offline against a pinned PEM. | It bounds the compromised-Eve case to the blast radius of cells already marked `eve_authority: binding`. |
 | **Not its own grader.** Eve's verdicts never feed the precision metric; a blind human sample, drawn from S1 and rendered without Eve's verdict columns, is the only input to precision at L4 and L5. | Otherwise the controller both decides and grades, and the metric that unlocks autonomy measures itself. |
 | **Not a Workspace writer, at any stage, ever.** The custom role `Eve — Verifier` carries read privileges only; there is no domain-wide delegation anywhere. | Wall-E's action service is the only holder of a Workspace write credential. |
@@ -107,7 +107,7 @@ whole argument, and the staging is where the disagreements will be.
 | Item | State |
 |---|---|
 | Eve v0 — the scheduled query set | Designed, not built. Twelve transfer configs: the ten [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §8 metrics plus reconciliation and drift. It is the whole of Eve through S2. |
-| Eve's GCP project, dataset, mirror | Designed, not created. [E-1](09-open-decisions.md) and [E-2](09-open-decisions.md) are open: the boundary is right, the ownership group behind it does not exist yet with one administrator. |
+| Eve's GCP project, dataset, mirror | Designed, not created. [E-1](09-open-decisions.md) answered yes 2026-09-13 (four projects — `GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT` — under `FOLDER_ID`, [../project-topology.md](../project-topology.md); decision file *tbd*); [E-2](09-open-decisions.md) is open: the boundary is right, the ownership group behind it does not exist yet with one administrator. |
 | `eve@<domain>`, its role, key, client and token | Not created, and deliberately not created at Stage 0 — a refresh token unused for six months expires, and consent freezes the scope list. S3 entry, in one sitting. |
 | Halting and demoting | S3 entry, live immediately for the invariant class. Rate-based triggers stay observe-only until their thresholds are calibrated on S2 data. |
 | Signing | S4 entry at the earliest, and only for cells whose ladder entry explicitly sets `eve_authority: binding`. Absent reads as advisory. |

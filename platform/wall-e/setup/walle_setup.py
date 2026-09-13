@@ -27,11 +27,20 @@ Safety properties this file is written to hold:
   - no secret value is ever printed or logged, and the ROBOT's refresh token is
     never written to disk: it goes from the token exchange straight into Secret
     Manager. The one secret this script does persist is the OPERATOR's own
-    OAuth token, cached 0600 at OPERATOR_TOKEN_CACHE so phases 1, 2 and 15 do
+    OAuth token, cached 0600 at OPERATOR_TOKEN_CACHE so phases 1 and 2 do
     not re-consent on every run. It is the operator's own super-admin
     credential, it is re-consentable at zero cost, and setting
     OPERATOR_TOKEN_CACHE="" disables the cache entirely.
   - placeholders in the config are a refusal, not a warning
+  - four projects, one rule (platform/project-topology.md, 2026-09-13): PROJECT
+    is Wall-E's own project (WALLE_PROJECT elsewhere in the wiki); the Gemini
+    Enterprise app lives in GEMINI_PROJECT, Eve in EVE_PROJECT, Mo in
+    MO_PROJECT. This script creates NOTHING of Eve's or Mo's, and every grant
+    it makes to a principal from another project is a grant ON a Wall-E
+    resource (a Cloud Run service, a BigQuery dataset, the engine), never a
+    project-level role in Wall-E's project. gcloud() and gcloud_probe_json()
+    append --project PROJECT by default, so every read of another project's
+    resource goes through gcloud_probe_json_in() with that project named.
   - --dry-run prints every command and every API call and changes nothing. It
     issues read-only probes only: no subprocess with mutating=True runs, no
     Admin SDK write is attempted, and the checks whose *probe* is itself a
@@ -88,6 +97,11 @@ ROBOT_SCOPES: Tuple[str, ...] = (
 )
 
 # SETUP.md Phase 15. Eve never writes to Workspace, at any stage, ever.
+# Eve's consent is NOT run by this script any more: Eve's OAuth client and
+# consent screen are per-project objects and live in EVE_PROJECT, so the
+# consent is a step of Eve's runbook (eve/07-build-runbook.md Phase 9,
+# project-topology.md §7.1 Phase 15). The list stays here as the frozen
+# reference that runbook must request verbatim; nothing below reads it.
 EVE_SCOPES: Tuple[str, ...] = (
     "https://www.googleapis.com/auth/admin.directory.user.readonly",
     "https://www.googleapis.com/auth/admin.directory.group.readonly",
@@ -100,7 +114,7 @@ EVE_SCOPES: Tuple[str, ...] = (
     "openid",
 )
 
-# The operator's own consent, used by this script for phases 1, 2 and 15 and by
+# The operator's own consent, used by this script for phases 1 and 2 and by
 # the Workspace half of verify. This is NOT the robot's grant and is not frozen:
 # it is the operator's own super-admin session, and it may be re-consented freely.
 OPERATOR_SCOPES: Tuple[str, ...] = (
@@ -115,7 +129,16 @@ OPERATOR_SCOPES: Tuple[str, ...] = (
 
 APIS_TO_ENABLE: Tuple[str, ...] = (
     "aiplatform.googleapis.com",
-    "discoveryengine.googleapis.com",
+    # Two APIs an earlier revision enabled here are deliberately absent
+    # (SETUP.md Phase 6, 2026-09-13). discoveryengine.googleapis.com: the
+    # Gemini Enterprise app and its service agent live in GEMINI_PROJECT, where
+    # that project's owner enables it; Google's cross-project page names no API
+    # to enable in the agent project. Assumption: not required here; enable it
+    # by hand only if Phase 13's registration fails without it, and record the
+    # error in the build log. cloudkms.googleapis.com: Eve's key is in
+    # EVE_PROJECT and the pinned-PEM verification path needs no KMS API; enable
+    # it by hand only on the optional publicKeyViewer fallback (topology row
+    # 14), and say so in the build log.
     "run.googleapis.com",
     "cloudbuild.googleapis.com",
     "artifactregistry.googleapis.com",
@@ -125,7 +148,6 @@ APIS_TO_ENABLE: Tuple[str, ...] = (
     "cloudtasks.googleapis.com",
     "pubsub.googleapis.com",
     "bigquery.googleapis.com",
-    "cloudkms.googleapis.com",
     "logging.googleapis.com",
     "monitoring.googleapis.com",
     "iamcredentials.googleapis.com",
@@ -141,12 +163,22 @@ APIS_TO_ENABLE: Tuple[str, ...] = (
     "groupssettings.googleapis.com",
 )
 
+# Wall-E's own four. eve-controller@ is NOT here any more: every Eve identity
+# is created in EVE_PROJECT by Eve's runbook and every Mo identity in
+# MO_PROJECT by Mo's (project-topology.md §2). Phase 6 creates nothing of theirs.
 SERVICE_ACCOUNT_IDS: Tuple[str, ...] = (
     "walle-actions",
     "walle-agent",
     "walle-dispatcher",
-    "eve-controller",
     "walle-operators-caller",
+)
+
+# Foreign identities this script names (never creates), derived in
+# derive_config from EVE_PROJECT and MO_PROJECT. Any of them holding a
+# PROJECT-level role in Wall-E's project is a verify failure (topology row 26).
+FOREIGN_IDENTITY_KEYS: Tuple[str, ...] = (
+    "SA_EVE_V0", "SA_EVE", "SA_EVE_VERIFIER", "SA_EVE_CONSOLE",
+    "SA_MO_METRICS", "SA_MO_ANALYST", "SA_MO_NARRATOR",
 )
 
 ACTIONS_PROJECT_ROLES: Tuple[str, ...] = (
@@ -160,14 +192,47 @@ DISPATCH_PROJECT_ROLES: Tuple[str, ...] = (
     "roles/datastore.user",
     "roles/logging.logWriter",
 )
-EVE_PROJECT_ROLES: Tuple[str, ...] = ("roles/datastore.viewer",)
+# Empty on purpose. roles/datastore.viewer for eve-controller@ was a
+# project-level role in Wall-E's project granted to an identity from
+# EVE_PROJECT, which project-topology.md forbids (row 12). Its replacement — a
+# database-scoped IAM Condition, or a list endpoint on walle-actions — is
+# decision 44 and is *tbd*; until it lands nothing is granted here and
+# check_project_roles asserts that no foreign identity holds anything at
+# project level.
+EVE_PROJECT_ROLES: Tuple[str, ...] = ()
 
 WALLE_SECRETS: Tuple[str, ...] = (
     "walle-oauth-client",
     "walle-refresh-token",
     "walle-confirm-hmac",
 )
+# Eve's two secrets live in EVE_PROJECT and are created by Eve's runbook. Named
+# here ONLY so the verify half that reads Eve's project can assert that no
+# Wall-E principal can read them; nothing in this script creates or deletes them.
 EVE_SECRETS: Tuple[str, ...] = ("eve-oauth-client", "eve-refresh-token")
+
+# project-topology.md §3 rows 4 and 6: dataset-level READER entries on Wall-E's
+# datasets for principals from EVE_PROJECT and MO_PROJECT, made by THIS runbook
+# because the datasets are Wall-E's. (config key of the principal, config key of
+# the dataset, stage the principal exists from, topology row). Row 5
+# (eve-verifier@ on walle_workspace_logs) is proposed under decision 47 and is
+# *tbd*; row 21 (the validator custodian) has no identity yet, *tbd*.
+CROSS_PROJECT_DATASET_READERS: Tuple[Tuple[str, str, str, str], ...] = (
+    ("SA_EVE_V0", "AUDIT_DATASET", "S0", "4"),
+    ("SA_EVE", "AUDIT_DATASET", "S3", "4"),
+    ("SA_EVE_VERIFIER", "AUDIT_DATASET", "S3", "4"),
+    ("SA_MO_METRICS", "AUDIT_DATASET", "S0", "6"),
+    ("SA_MO_METRICS", "LOGS_DATASET", "S0", "6"),
+)
+
+# Where Wall-E's repository pins Eve's public key per key version (topology row
+# 14): verification of an Eve approval needs no cross-project KMS grant at all.
+EVE_PUBLIC_KEYS_SUBDIR: Tuple[str, ...] = ("contracts", "eve-public-keys")
+# Google's documented cross-project grant, the FALLBACK of decision 42: applied
+# in Wall-E's project only when the spike on file says the engine-scoped custom
+# role was not enough. It carries reasoningEngines.create/delete/update as well
+# as query, which is why it is never the default.
+GEMINI_FALLBACK_ROLE = "roles/discoveryengine.serviceAgent"
 
 PUBSUB_TOPICS: Tuple[str, ...] = (
     "walle-events",
@@ -188,9 +253,12 @@ AUDIT_TABLES: Tuple[str, ...] = (
 # 400 days, SETUP.md Phase 7. Seconds for bq, milliseconds when read back.
 PARTITION_EXPIRATION_SECONDS = 34560000
 
-# SETUP.md Phase 10 says "all sixteen environment variables". It lists
-# seventeen. The set is what matters, so this script asserts names, not a count,
-# and README.md records the discrepancy.
+# SETUP.md Phase 10's nineteen names (2026-09-13). The set is what matters, so
+# this script asserts names, not a count. EVE_PUBLIC_KEY_PEM and
+# READ_CALLER_ALLOWLIST are the four-project additions: the pinned-PEM
+# directory is the PRIMARY verification input (EVE_KMS_KEY is the optional
+# fallback), and the read endpoints are allowlisted rather than open to any
+# run.invoker holder (project-topology.md §3.1).
 ACTIONS_ENV_NAMES: Tuple[str, ...] = (
     "WORKSPACE_DOMAIN",
     "ROBOT_ACCOUNT",
@@ -202,14 +270,19 @@ ACTIONS_ENV_NAMES: Tuple[str, ...] = (
     "REFRESH_TOKEN_VERSION",
     "OAUTH_CLIENT_SECRET",
     "CONFIRM_HMAC_SECRET",
+    "EVE_PUBLIC_KEY_PEM",
     "EVE_KMS_KEY",
     "AUDIT_DATASET",
     "TASKS_QUEUE",
     "EXEC_CALLER_ALLOWLIST",
     "CONTROL_CALLER_ALLOWLIST",
+    "READ_CALLER_ALLOWLIST",
     "INTERNAL_CALLER_ALLOWLIST",
     "AUDIENCE",
 )
+# Where the action image carries the pinned PEMs (SETUP.md Phase 8.1 / 10):
+# EVE_PUBLIC_KEYS_SUBDIR of the repository, copied into the image at build.
+EVE_PUBLIC_KEY_PEM_PATH = "/app/contracts/eve-public-keys"
 
 DEFAULT_PLAYBOOK_JOBS: Tuple[str, ...] = (
     "licence-reclaim-suspended",
@@ -386,6 +459,9 @@ def is_write_privilege(name: str) -> bool:
 
 ROLE_READER_NAME = "Wall-E — Reader"
 ROLE_OPERATOR_NAME = "Wall-E — Operator (Stage 1)"
+# A Workspace admin role is a tenant object with no GCP project. What moved to
+# EVE_PROJECT is the role's OAuth consent (client and token), which Eve's
+# runbook now performs; the role itself is still created here in Phase 2.
 ROLE_EVE_NAME = "Eve — Verifier"
 
 GEMINI_ROUTING_DESCRIPTION = (
@@ -398,7 +474,14 @@ GEMINI_ROUTING_DESCRIPTION = (
 
 REQUIRED_CONFIG_KEYS: Tuple[str, ...] = (
     "DOMAIN",
+    # PROJECT is Wall-E's project (WALLE_PROJECT elsewhere in the wiki);
+    # PROJECT_NUMBER is its number. Documented once, here, and once in SETUP.md
+    # §1.6; not renamed (project-topology.md §6). The three others are the
+    # projects this script must name when it grants across a boundary.
     "PROJECT",
+    "GEMINI_PROJECT",
+    "EVE_PROJECT",
+    "MO_PROJECT",
     "REGION",
     "BQ_LOCATION",
     "ORG_ID",
@@ -437,6 +520,12 @@ _WORKSPACE_KEYS: Tuple[str, ...] = (
 _GCP_KEYS: Tuple[str, ...] = (
     "PROJECT", "REGION", "BQ_LOCATION", "ORG_ID", "BILLING", "BUDGET_AMOUNT",
     "WALLE_REPO", "OPERATORS",
+    # Phase 6 creates the project under the folder that holds all four
+    # (project-topology.md §5) and reads GEMINI_PROJECT's number for the
+    # build log (gemini_project_number); Phase 7 makes the dataset-level
+    # READER grants to Eve's and Mo's identities, which are named from their
+    # projects. Every key a subcommand uses is validated for that subcommand.
+    "FOLDER_ID", "GEMINI_PROJECT", "EVE_PROJECT", "MO_PROJECT",
 )
 _DEPLOY_KEYS: Tuple[str, ...] = (
     "DOMAIN", "PROJECT", "REGION", "BQ_LOCATION", "ORG_ID", "ROBOT",
@@ -446,15 +535,22 @@ _DEPLOY_KEYS: Tuple[str, ...] = (
     # here and are checked at runtime: the first binds the gateway only when
     # set, the second is required only on the SERVICE_ACCOUNT fallback.
     "AGENT_IDENTITY_MODE",
+    # Phase 10: run.invoker and the caller allowlists carry Eve's and Mo's
+    # cross-project emails, and EVE_KMS_KEY points at Eve's project. Phase 12:
+    # the engine policy names the Gemini project's service agent by NUMBER
+    # (GEMINI_PROJECT_NUMBER is looked up from GEMINI_PROJECT when unset).
+    "EVE_PROJECT", "MO_PROJECT", "GEMINI_PROJECT",
 )
 # Phase 12c. MODEL_ARMOR_ENFORCE_DECISION is checked only under --enforce.
 _ARMOR_KEYS: Tuple[str, ...] = (
     "PROJECT", "REGION", "ORG_ID", "FOLDER_ID", "OPERATORS", "WALLE_REPO",
     "CONTENT_LOG_RETENTION_DAYS",
 )
-# Phase 13b.
+# Phase 13b. MO_PRINCIPAL is no longer here: the agentregistry.viewer grants to
+# Eve and Mo were project-level roles in Wall-E's project for foreign
+# identities and are dropped (project-topology.md decision 43).
 _REGISTRY_KEYS: Tuple[str, ...] = (
-    "PROJECT", "REGION", "ORG_ID", "CI_DEPLOYER", "MO_PRINCIPAL", "EGRESS_GATEWAY",
+    "PROJECT", "REGION", "ORG_ID", "CI_DEPLOYER", "EGRESS_GATEWAY",
     "WALLE_REPO",
 )
 # Phase 12b step 3, on a throwaway engine.
@@ -467,18 +563,24 @@ CONFIG_KEYS_FOR_SUBCOMMAND: Dict[str, Tuple[str, ...]] = {
     "preflight": REQUIRED_CONFIG_KEYS,
     "workspace": _WORKSPACE_KEYS,
     "gcp": _GCP_KEYS,
-    "consent": ("DOMAIN", "PROJECT", "REGION", "ROBOT", "EVE_ROBOT"),
+    # Phase 9 only. Phase 15 (Eve's consent) is Eve's runbook: EVE_ROBOT is no
+    # longer needed here.
+    "consent": ("DOMAIN", "PROJECT", "REGION", "ROBOT"),
     "deploy": _DEPLOY_KEYS,
     "spike": _SPIKE_KEYS,
     "armor": _ARMOR_KEYS,
     "registry": _REGISTRY_KEYS,
-    "register": ("PROJECT", "REGION", "DOMAIN", "READERS", "OPERATORS", "BQ_LOCATION"),
+    # The app is read from GEMINI_PROJECT; the engine it fronts stays in PROJECT.
+    "register": ("PROJECT", "GEMINI_PROJECT", "GEMINI_APP_ID", "GEMINI_APP_LOCATION",
+                 "REGION", "DOMAIN", "READERS", "OPERATORS", "BQ_LOCATION"),
     "triggers": ("PROJECT", "REGION", "ROBOT", "OPERATORS"),
     "verify": REQUIRED_CONFIG_KEYS,
     "denials": ("PROJECT", "REGION", "ORG_ID", "ROBOT", "OPERATORS", "SANDBOX_ACCOUNTS"),
     "stage0": REQUIRED_CONFIG_KEYS,
     "rollback": ("PROJECT", "REGION", "CUSTOMER_ID", "OPERATOR_OAUTH_CLIENT_FILE"),
-    "status": ("PROJECT", "REGION"),
+    # status reports on the cross-project grants this script owns, so it must
+    # be able to name the foreign principals and the Gemini service agent.
+    "status": ("PROJECT", "REGION", "EVE_PROJECT", "MO_PROJECT", "GEMINI_PROJECT"),
     "teardown": ("PROJECT", "REGION"),
     "dump-privileges": ("CUSTOMER_ID", "OPERATOR_EMAIL", "OPERATOR_OAUTH_CLIENT_FILE"),
 }
@@ -499,8 +601,12 @@ ENV_DELIMITER = ";"
 ENV_DELIMITED_CONFIG_KEYS: Tuple[str, ...] = (
     "DOMAIN", "ROBOT", "EVE_ROBOT", "OPERATORS", "READERS", "PROTECTED",
     "SVC_OU", "PILOT_OU", "SANDBOX_OU", "SA_ACTIONS", "SA_AGENT", "SA_DISPATCH",
-    "SA_EVE", "SA_OPS_CALLER", "AUDIT_DATASET", "LOGS_DATASET", "TASKS_QUEUE",
+    "SA_EVE", "SA_EVE_VERIFIER", "SA_EVE_CONSOLE", "SA_MO_ANALYST", "MO_PRINCIPAL",
+    "SA_OPS_CALLER", "AUDIT_DATASET", "LOGS_DATASET", "TASKS_QUEUE",
     "KMS_KEYRING", "KMS_KEY", "PROJECT", "REGION",
+    # EVE_PROJECT is embedded in SA_EVE and in EVE_KMS_KEY; MO_PROJECT in
+    # SA_MO_ANALYST.
+    "EVE_PROJECT", "MO_PROJECT",
 )
 
 PLACEHOLDER_RE = re.compile(r"<[^>]*>")
@@ -625,13 +731,37 @@ def derive_config(cfg: Dict[str, str]) -> Dict[str, str]:
     cfg.setdefault("SA_ACTIONS", "walle-actions@%s.iam.gserviceaccount.com" % project)
     cfg.setdefault("SA_AGENT", "walle-agent@%s.iam.gserviceaccount.com" % project)
     cfg.setdefault("SA_DISPATCH", "walle-dispatcher@%s.iam.gserviceaccount.com" % project)
-    cfg.setdefault("SA_EVE", "eve-controller@%s.iam.gserviceaccount.com" % project)
     cfg.setdefault(
         "SA_OPS_CALLER", "walle-operators-caller@%s.iam.gserviceaccount.com" % project
     )
+    # Eve's and Mo's identities live in THEIR projects (project-topology.md
+    # §6, "forms to retire"): never derived from PROJECT. Left unset when the
+    # project is unset, so ctx.need() names the missing key instead of
+    # building an address in no project at all.
+    eve_project = cfg.get("EVE_PROJECT", "")
+    if eve_project:
+        for key, account in (
+            ("SA_EVE_V0", "eve-v0"), ("SA_EVE", "eve-controller"),
+            ("SA_EVE_VERIFIER", "eve-verifier"), ("SA_EVE_CONSOLE", "eve-console"),
+        ):
+            cfg.setdefault(key, "%s@%s.iam.gserviceaccount.com" % (account, eve_project))
+    mo_project = cfg.get("MO_PROJECT", "")
+    if mo_project:
+        for key, account in (
+            ("SA_MO_METRICS", "mo-metrics"), ("SA_MO_ANALYST", "mo-analyst"),
+            ("SA_MO_NARRATOR", "mo-narrator"),
+        ):
+            cfg.setdefault(key, "%s@%s.iam.gserviceaccount.com" % (account, mo_project))
+        # The registry and the run.invoker grant must agree on who Mo is.
+        cfg.setdefault("MO_PRINCIPAL", "serviceAccount:" + cfg["SA_MO_ANALYST"])
     cfg.setdefault("AR_REPO", "%s-docker.pkg.dev/%s/walle" % (region, project))
     cfg.setdefault("STAGING_BUCKET", "gs://%s-agent-staging" % project)
-    cfg.setdefault("KMS_KEYRING", "walle")
+    # Eve's key ring and key, in EVE_PROJECT, owned and created by Eve's
+    # runbook (Phase 11). Wall-E only NAMES them: in EVE_KMS_KEY, the optional
+    # KMS fallback for verifying an approval, and in the cross-project half of
+    # verify. Ring name per project-topology.md §2 (Eve's row); *tbd* until
+    # Eve's pages confirm it.
+    cfg.setdefault("KMS_KEYRING", "eve")
     cfg.setdefault("KMS_KEY", "eve-approval")
     cfg.setdefault("AUDIT_DATASET", "walle_audit")
     cfg.setdefault("LOGS_DATASET", "walle_workspace_logs")
@@ -754,6 +884,68 @@ def validate_config(
     ci = cfg.get("CI_DEPLOYER", "")
     if ci and "CI_DEPLOYER" in required and "@" not in ci:
         problems.append("CI_DEPLOYER must be a service account email, not %r" % ci)
+    # Four projects, four distinct ids (project-topology.md §2). Two keys
+    # naming the same project would silently put an Eve or Mo grant back
+    # inside Wall-E's project, which is the placement this topology removes.
+    named = [(k, cfg.get(k, "")) for k in ("PROJECT", "GEMINI_PROJECT", "EVE_PROJECT",
+                                            "MO_PROJECT")]
+    seen: Dict[str, str] = {}
+    for key, value in named:
+        if not value or PLACEHOLDER_RE.search(value):
+            continue
+        if value in seen:
+            problems.append(
+                "%s and %s are both %r. The Gemini app, Wall-E, Eve and Mo each "
+                "live in their own project (project-topology.md)." % (seen[value], key, value)
+            )
+        seen.setdefault(value, key)
+    gemini_number = cfg.get("GEMINI_PROJECT_NUMBER", "")
+    if gemini_number and not gemini_number.isdigit():
+        problems.append("GEMINI_PROJECT_NUMBER must be the numeric project number, not %r"
+                        % gemini_number)
+    # A copy-paste of Wall-E's own number reproduces exactly the pre-change
+    # failure: an engine policy naming service-<WALLE number>@gcp-sa-
+    # discoveryengine, a principal that never calls (project-topology.md §6).
+    if gemini_number and cfg.get("PROJECT_NUMBER") and gemini_number == cfg["PROJECT_NUMBER"]:
+        problems.append(
+            "GEMINI_PROJECT_NUMBER equals PROJECT_NUMBER; the app's number is the Gemini "
+            "project's, never Wall-E's"
+        )
+    # Every foreign identity lives in its own project. The example config
+    # exports SA_EVE, SA_EVE_VERIFIER, SA_EVE_CONSOLE and SA_EVE_V0 explicitly
+    # and derive_config's setdefault does not override them, so an operator
+    # who edits one to eve-*@${PROJECT} (the old placement) would otherwise
+    # pass validation and Phase 7 / Phase 10 would write that address into a
+    # dataset access array and a run.invoker binding. Refuse it up front, the
+    # way MO_PRINCIPAL is refused; verify's project_roles / control_caller
+    # checks stay as the second line.
+    project = cfg.get("PROJECT", "")
+    eve_project = cfg.get("EVE_PROJECT", "")
+    mo_project = cfg.get("MO_PROJECT", "")
+    homes = {
+        "SA_EVE_V0": ("EVE_PROJECT", eve_project), "SA_EVE": ("EVE_PROJECT", eve_project),
+        "SA_EVE_VERIFIER": ("EVE_PROJECT", eve_project),
+        "SA_EVE_CONSOLE": ("EVE_PROJECT", eve_project),
+        "SA_MO_METRICS": ("MO_PROJECT", mo_project), "SA_MO_ANALYST": ("MO_PROJECT", mo_project),
+        "SA_MO_NARRATOR": ("MO_PROJECT", mo_project),
+        "MO_PRINCIPAL": ("MO_PROJECT", mo_project),
+    }
+    for key, (home_key, home) in homes.items():
+        value = cfg.get(key, "")
+        if not value or PLACEHOLDER_RE.search(value):
+            continue
+        email = value.split(":", 1)[-1]
+        if project and email.endswith("@%s.iam.gserviceaccount.com" % project):
+            problems.append(
+                "%s (%s) is spelled in Wall-E's own project %s; Eve's and Mo's identities "
+                "live in EVE_PROJECT / MO_PROJECT and appear here as grantees only "
+                "(project-topology.md §6)" % (key, email, project)
+            )
+        elif home and not email.endswith("@%s.iam.gserviceaccount.com" % home):
+            problems.append(
+                "%s (%s) is not a service account in %s %s; it must be "
+                "<account>@%s.iam.gserviceaccount.com" % (key, email, home_key, home, home)
+            )
     return problems
 
 
@@ -954,6 +1146,23 @@ def gcloud_probe_json(ctx: Ctx, *argv: str) -> Optional[Any]:
             "permission denied reading %s\n%s" % (" ".join(argv), result.err.strip())
         )
     raise WalleError("unexpected error reading %s\n%s" % (" ".join(argv), result.err.strip()))
+
+
+def gcloud_probe_json_in(ctx: Ctx, project_id: str, *argv: str) -> Optional[Any]:
+    """gcloud_probe_json against ANOTHER project, named explicitly.
+
+    gcloud() and gcloud_probe_json() append --project PROJECT (Wall-E's) to
+    every call that carries no scope flag. A read of Eve's key policy, Eve's
+    secrets or the Gemini project's number issued through them would silently
+    land in Wall-E's project and answer "does not exist". Every cross-project
+    read goes through here, and the self-test asserts that no command naming
+    a resource of another project carries Wall-E's project id.
+    """
+    if not project_id:
+        die("a cross-project read was attempted with no project id (%s)" % " ".join(argv))
+    if project_id == ctx.get("PROJECT"):
+        die("gcloud_probe_json_in was called with Wall-E's own project for %s" % " ".join(argv))
+    return gcloud_probe_json(ctx, *(list(argv) + ["--project", project_id]))
 
 
 def confirm(ctx: Ctx, question: str) -> None:
@@ -1191,9 +1400,10 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
                 "Download the JSON to a path you will pass to 'walle consent "
                 "--store-client PATH'. That command stores it in Secret Manager and "
                 "then shreds the local copy.",
-                "For Eve (Phase 15) create a SEPARATE desktop client. Never reuse the "
-                "robot's: more than 100 live tokens for one client makes Google "
-                "invalidate the oldest silently.",
+                "Eve's client is created in EVE_PROJECT (%s) by Eve's runbook, on that "
+                "project's own consent screen; never reuse this one. More than 100 "
+                "live tokens for one client makes Google invalidate the oldest silently."
+                % c("EVE_PROJECT", "<EVE_PROJECT>"),
             ],
             verifier=None,
             subcommand="consent",
@@ -1247,10 +1457,19 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
             "Gemini Enterprise is the human front door: it authenticates the user "
             "through Workspace SSO and passes their email to the agent.",
             [
+                "The app is in GEMINI_PROJECT (%s): open THAT project's Gemini "
+                "Enterprise console, not Wall-E's." % c("GEMINI_PROJECT", "<GEMINI_PROJECT>"),
+                "Before registering, the app's service agent service-%s@gcp-sa-"
+                "discoveryengine.iam.gserviceaccount.com must already hold "
+                "walleEngineQuery on the engine ('walle deploy', Phase 12 lock-down), "
+                "or the documented project-level fallback if the spike failed "
+                "(project-topology.md decision 42)."
+                % c("GEMINI_PROJECT_NUMBER", "<GEMINI_PROJECT_NUMBER>"),
                 "Gemini Enterprise console -> your app -> Agents -> Add agent",
                 "-> Custom agent via Agent Runtime.",
                 "Display name: Wall-E",
-                "Resource path: projects/%s/locations/%s/reasoningEngines/%s"
+                "Resource path (Wall-E's project, not the app's): "
+                "projects/%s/locations/%s/reasoningEngines/%s"
                 % (c("PROJECT", ""), c("REGION", ""), c("ENGINE_ID", "<engine-id>")),
                 "Description (this is a ROUTING PROMPT, not documentation; paste it "
                 "exactly): " + GEMINI_ROUTING_DESCRIPTION,
@@ -1259,7 +1478,8 @@ def manual_steps(ctx: Ctx) -> List[ManualStep]:
                 "User permissions tab -> share with %s ONLY." % c("OPERATORS", ""),
                 "Do not share with %s yet: that is a separate deliberate act."
                 % c("READERS", ""),
-                "Re-confirm the app's location matches what D8 recorded. A 'us' app "
+                "Re-confirm the app's location matches what D8 recorded: an 'eu' app "
+                "fronts europe-* agents, a 'global' app any region, a 'us' app "
                 "cannot front a europe-west1 agent.",
             ],
             verifier="verify_gemini_registration",
@@ -2121,10 +2341,16 @@ def ensure_project(ctx: Ctx) -> None:
     if project_exists(ctx):
         step("project exists: %s" % project)
     else:
+        # --folder, not --organization: all four projects are children of
+        # FOLDER_ID, and a project parented straight to the organisation
+        # inherits nothing from the folder's Model Armor floor
+        # (project-topology.md §5). gcloud takes one or the other, never both.
         run(
             ctx,
-            ["gcloud", "projects", "create", project, "--organization", ctx.need("ORG_ID")],
+            ["gcloud", "projects", "create", project, "--folder", ctx.need("FOLDER_ID")],
         )
+    # Wall-E's project is the gcloud default from here on. Every read of
+    # another project's resource must therefore name it: gcloud_probe_json_in.
     run(ctx, ["gcloud", "config", "set", "project", project])
     billing = gcloud_probe_json(ctx, "billing", "projects", "describe", project)
     if billing and billing.get("billingEnabled"):
@@ -2143,6 +2369,16 @@ def ensure_project(ctx: Ctx) -> None:
             % number)
         ctx.cfg["PROJECT_NUMBER"] = number
         ctx.note("PROJECT_NUMBER=%s" % number)
+    gemini_number = gemini_project_number(ctx)
+    if gemini_number:
+        say("  GEMINI_PROJECT_NUMBER=%s   <- put this in the config; phase 12 (engine "
+            "IAM) needs it" % gemini_number)
+        ctx.note("GEMINI_PROJECT_NUMBER=%s" % gemini_number)
+    else:
+        warn("could not read the number of GEMINI_PROJECT %s. Phase 12 names the "
+             "Gemini Enterprise service agent by that number; fill in "
+             "GEMINI_PROJECT_NUMBER before 'walle deploy' (project-topology.md §7.4)."
+             % ctx.need("GEMINI_PROJECT"))
 
 
 def project_number(ctx: Ctx) -> str:
@@ -2154,6 +2390,29 @@ def project_number(ctx: Ctx) -> str:
         return ""
     number = str(described.get("projectNumber", ""))
     ctx.cfg["PROJECT_NUMBER"] = number
+    return number
+
+
+def gemini_project_number(ctx: Ctx) -> str:
+    """The Gemini Enterprise APP project's number, never Wall-E's.
+
+    The app calls Wall-E's engine as
+    service-<APP_PROJECT_NUMBER>@gcp-sa-discoveryengine.iam.gserviceaccount.com
+    (project-topology.md row 1). Built from PROJECT_NUMBER this would be a
+    principal that never calls anything, and the engine lock would be a lock
+    with the wrong key. `projects describe` takes the id positionally and is
+    issued without --project, so the gcloud default cannot redirect it.
+    """
+    cached = ctx.get("GEMINI_PROJECT_NUMBER")
+    if cached:
+        return cached
+    result = probe(ctx, ["gcloud", "projects", "describe", ctx.need("GEMINI_PROJECT"),
+                         "--format=json"])
+    if not result.ok or not result.out.strip():
+        return ""
+    number = str((json.loads(result.out) or {}).get("projectNumber", ""))
+    if number:
+        ctx.cfg["GEMINI_PROJECT_NUMBER"] = number
     return number
 
 
@@ -2277,9 +2536,20 @@ def phase_6_project(ctx: Ctx) -> None:
         ensure_project_binding(ctx, "serviceAccount:" + ctx.need("SA_ACTIONS"), role)
     for role in DISPATCH_PROJECT_ROLES:
         ensure_project_binding(ctx, "serviceAccount:" + ctx.need("SA_DISPATCH"), role)
+    # EVE_PROJECT_ROLES is empty (decision 44): a project-level role in Wall-E's
+    # project for an identity from EVE_PROJECT is exactly what the topology
+    # forbids. The loop stays so the day decision 44 names a resource-scoped
+    # form it lands here and nowhere else.
     for role in EVE_PROJECT_ROLES:
         ensure_project_binding(ctx, "serviceAccount:" + ctx.need("SA_EVE"), role)
     say("  walle-agent@ gets nothing here, and that is the point.")
+    say("  Nothing of Eve's or Mo's is created or granted at project level here:")
+    say("  eve-controller@ and the other Eve identities are created in EVE_PROJECT")
+    say("  (%s) by eve/07-build-runbook.md, Mo's in MO_PROJECT (%s) by"
+        % (ctx.need("EVE_PROJECT"), ctx.need("MO_PROJECT")))
+    say("  mo/07-build-runbook.md. Their reads of Wall-E's datasets are Phase 7's")
+    say("  dataset-level grants; their calls to walle-actions are Phase 10's")
+    say("  run.invoker (project-topology.md §3).")
 
     # The Cloud Tasks worker calls the action service back with an OIDC token
     # minted for its own service account.
@@ -2363,12 +2633,38 @@ def ensure_budget(ctx: Ctx) -> None:
 
 
 def phase_7_data(ctx: Ctx) -> None:
-    section("Phase 7 — Firestore, BigQuery, Pub/Sub, Cloud Tasks")
+    section("Phase 7 — Firestore, BigQuery, Pub/Sub, Cloud Tasks, cross-project readers")
     ensure_firestore(ctx)
     ensure_datasets(ctx)
     ensure_audit_tables(ctx)
+    grant_cross_project_dataset_readers(ctx)
     ensure_topics(ctx)
     ensure_tasks_queue(ctx)
+
+
+def grant_cross_project_dataset_readers(ctx: Ctx) -> None:
+    """project-topology.md rows 4 and 6, made here because the datasets are Wall-E's.
+
+    A dataset-level READER entry (roles/bigquery.dataViewer, stored by BigQuery
+    as READER) for each Eve and Mo identity that reads Wall-E's audit tables,
+    keyed on EVE_PROJECT and MO_PROJECT. Never a project-level dataViewer, and
+    never roles/bigquery.jobUser: the query jobs run, and are billed, in the
+    reader's own project (Eve's and Mo's runbooks grant jobUser there).
+
+    An identity that does not exist yet (eve-controller@ and eve-verifier@ are
+    S3, created by Eve's runbook Phase 8) cannot be granted: that is recorded
+    as a note and re-running `walle gcp` after Eve's phase adds the entry.
+    """
+    say("")
+    say("  Cross-project dataset readers (project-topology.md §3 rows 4 and 6).")
+    say("  No authorised-view entry is ever added for a Mo view on a Wall-E dataset:")
+    say("  row 9 makes that absence a control, and verify asserts it.")
+    for principal_key, dataset_key, stage, row in CROSS_PROJECT_DATASET_READERS:
+        principal = ctx.need(principal_key)
+        add_dataset_access(
+            ctx, ctx.get(dataset_key), "roles/bigquery.dataViewer", principal,
+            foreign="topology row %s, %s from %s" % (row, principal_key, stage),
+        )
 
 
 def ensure_firestore(ctx: Ctx) -> None:
@@ -2518,68 +2814,50 @@ def ensure_tasks_queue(ctx: Ctx) -> None:
 
 
 def phase_8_keys_and_secrets(ctx: Ctx) -> None:
-    section("Phase 8 — KMS asymmetric key, regional secrets, insert-only audit role")
-    ensure_kms(ctx)
+    section("Phase 8 — regional secrets, confirmation HMAC, insert-only audit role")
+    explain_eve_key_is_not_here(ctx)
     ensure_secrets(ctx)
     ensure_confirm_hmac(ctx)
     ensure_audit_writer_role(ctx)
 
 
-def ensure_kms(ctx: Ctx) -> None:
-    """Asymmetric, and this is not a preference.
+def explain_eve_key_is_not_here(ctx: Ctx) -> None:
+    """Eve's signing key is created in EVE_PROJECT by Eve's runbook, never here.
 
-    For "Eve approved this" to mean anything the action service must be able to
-    verify a signature and unable to produce one. A shared symmetric secret
-    cannot express that (attack A2).
+    The asymmetric requirement is unchanged and not a preference: for "Eve
+    approved this" to mean anything the action service must be able to verify
+    a signature and unable to produce one (attack A2). What changed is WHERE
+    the key lives. With the key in Eve's project, walle-actions@ has no
+    principal in the project that holds it and nothing to escalate from; the
+    "key's purpose cannot be changed" and "eve-controller@ holds signer"
+    assertions belong to Eve's verify (project-topology.md rows 14 and 17,
+    decision 46). This script refuses to create a ring, a key or a signer
+    binding in Wall-E's project.
     """
-    region, ring, key = ctx.need("REGION"), ctx.get("KMS_KEYRING"), ctx.get("KMS_KEY")
-    if gcloud_probe_json(ctx, "kms", "keyrings", "describe", ring, "--location", region) is None:
-        run(ctx, ["gcloud", "kms", "keyrings", "create", ring, "--location", region,
-                  "--project", ctx.need("PROJECT")])
-    else:
-        step("key ring exists: %s" % ring)
-    described = gcloud_probe_json(
-        ctx, "kms", "keys", "describe", key, "--keyring", ring, "--location", region
-    )
-    if described is None:
-        run(
-            ctx,
-            [
-                "gcloud", "kms", "keys", "create", key,
-                "--keyring", ring, "--location", region,
-                "--purpose", "asymmetric-signing",
-                "--default-algorithm", "ec-sign-p256-sha256",
-                "--project", ctx.need("PROJECT"),
-            ],
-        )
-    else:
-        purpose = described.get("purpose")
-        algorithm = described.get("versionTemplate", {}).get("algorithm")
-        step("key exists: %s (%s / %s)" % (key, purpose, algorithm))
-        if purpose != "ASYMMETRIC_SIGN" or algorithm != "EC_SIGN_P256_SHA256":
-            die(
-                "key %s is %s/%s, not ASYMMETRIC_SIGN/EC_SIGN_P256_SHA256. A key's "
-                "purpose cannot be changed: create a new key." % (key, purpose, algorithm)
-            )
-    for member, role in (
-        ("serviceAccount:" + ctx.need("SA_EVE"), "roles/cloudkms.signer"),
-        ("serviceAccount:" + ctx.need("SA_ACTIONS"), "roles/cloudkms.publicKeyViewer"),
-    ):
-        run(
-            ctx,
-            [
-                "gcloud", "kms", "keys", "add-iam-policy-binding", key,
-                "--keyring", ring, "--location", region,
-                "--member", member, "--role", role,
-                "--project", ctx.need("PROJECT"),
-            ],
-        )
+    say("")
+    say("  Eve's KMS key: NOT created here. Ring %s, key %s live in EVE_PROJECT (%s),"
+        % (ctx.get("KMS_KEYRING"), ctx.get("KMS_KEY"), ctx.need("EVE_PROJECT")))
+    say("  created by eve/07-build-runbook.md Phase 11 with eve-controller@ as signer.")
+    say("  walle-actions verifies approvals against the PEM pinned per key version in")
+    say("  Wall-E's repository (%s/), so no cross-project KMS grant exists by default."
+        % "/".join(EVE_PUBLIC_KEYS_SUBDIR))
+    say("  The optional fallback, roles/cloudkms.publicKeyViewer for walle-actions@ on")
+    say("  that ONE key (key-level, in EVE_PROJECT), is Eve's owner's act in Eve's")
+    say("  runbook — never ring- or project-level, never signer (topology row 14).")
+    say("  A refusal is the right outcome if anyone asks this script for a KMS key.")
 
 
-def secret_exists(ctx: Ctx, name: str) -> bool:
-    return gcloud_probe_json(
-        ctx, "secrets", "describe", name, "--location", ctx.need("REGION")
-    ) is not None
+def secret_exists(ctx: Ctx, name: str, project: str = "") -> bool:
+    """In Wall-E's project by default; `project` names another project's secret.
+
+    Without the explicit project a read of eve-refresh-token would land in
+    Wall-E's project and answer "does not exist" for a secret that exists in
+    Eve's, which is how a separation check silently narrows to nothing.
+    """
+    argv = ("secrets", "describe", name, "--location", ctx.need("REGION"))
+    if project:
+        return gcloud_probe_json_in(ctx, project, *argv) is not None
+    return gcloud_probe_json(ctx, *argv) is not None
 
 
 def ensure_secrets(ctx: Ctx) -> None:
@@ -2686,11 +2964,18 @@ def _same_dataset_role(left: str, right: str) -> bool:
     return _LEGACY_DATASET_ROLES.get(left, left) == _LEGACY_DATASET_ROLES.get(right, right)
 
 
-def add_dataset_access(ctx: Ctx, dataset: str, role: str, member_email: str) -> None:
+def add_dataset_access(
+    ctx: Ctx, dataset: str, role: str, member_email: str, foreign: str = "",
+) -> None:
     """bq add-iam-policy-binding works on tables, views and connections only.
 
     Dataset access lives in the dataset's own access array: read it, append, and
-    write it back. Idempotent because the entry is compared first.
+    write it back. Idempotent because the entry is compared first. The dataset
+    is always Wall-E's (the update is issued against PROJECT:dataset, the
+    source dataset owns its access array); `foreign` names the topology row
+    when the principal lives in EVE_PROJECT or MO_PROJECT, and then a principal
+    BigQuery reports as non-existent is a note, not a stop: it is created by
+    the other runbook at a later stage, and this grant is re-run then.
     """
     target = "%s:%s" % (ctx.need("PROJECT"), dataset)
     result = probe(ctx, ["bq", "show", "--format=prettyjson", target])
@@ -2710,7 +2995,8 @@ def add_dataset_access(ctx: Ctx, dataset: str, role: str, member_email: str) -> 
         step("dataset access already present: %s -> %s" % (member_email, role))
         return
     entries.append(wanted)
-    say("  DATASET ACCESS: %s gains %s on %s" % (member_email, role, dataset))
+    say("  DATASET ACCESS: %s gains %s on %s%s"
+        % (member_email, role, dataset, " (cross-project: %s)" % foreign if foreign else ""))
     if ctx.dry_run:
         return
     confirm(ctx, "Apply this dataset access change?")
@@ -2718,9 +3004,19 @@ def add_dataset_access(ctx: Ctx, dataset: str, role: str, member_email: str) -> 
     try:
         json.dump(payload, handle)
         handle.close()
-        run(ctx, ["bq", "update", "--source=%s" % handle.name, target])
+        result = run(ctx, ["bq", "update", "--source=%s" % handle.name, target],
+                     check=not foreign)
     finally:
         os.unlink(handle.name)
+    if foreign and not result.ok:
+        lowered = (result.err or "").lower()
+        if not any(marker in lowered for marker in ABSENT_MARKERS):
+            die("bq update on %s failed:\n%s" % (target, result.err.strip()))
+        warn("%s does not exist yet (%s); the READER entry on %s is NOT applied. "
+             "Re-run 'walle gcp' once the other runbook has created it."
+             % (member_email, foreign, dataset))
+        ctx.note("PENDING cross-project grant: %s READER on %s (%s)"
+                 % (member_email, dataset, foreign))
 
 
 def cmd_gcp(ctx: Ctx) -> int:
@@ -2734,7 +3030,7 @@ def cmd_gcp(ctx: Ctx) -> int:
 
 
 # --------------------------------------------------------------------------- #
-# Phase 9 and 15 — the one interactive consent
+# Phase 9 — the one interactive consent. Phase 15 (Eve's) is Eve's runbook.
 # --------------------------------------------------------------------------- #
 
 
@@ -2944,13 +3240,10 @@ def run_consent(
     say("  Stored as %s version %s" % (target_secret, version))
     say("")
     say("  PUT THIS IN THE CONFIG NOW:")
-    if target_secret == "walle-refresh-token":
-        say("    REFRESH_TOKEN_VERSION=%s" % version)
-        say("  and redeploy walle-actions. It is 1 only on a first clean bootstrap;")
-        say("  every rollback and every K4 or K5 drill produces a higher number, and")
-        say("  a stale pin points the service at a destroyed version.")
-    else:
-        say("    EVE_TOKEN_VERSION=%s" % version)
+    say("    REFRESH_TOKEN_VERSION=%s" % version)
+    say("  and redeploy walle-actions. It is 1 only on a first clean bootstrap;")
+    say("  every rollback and every K4 or K5 drill produces a higher number, and")
+    say("  a stale pin points the service at a destroyed version.")
     say("  " + "=" * 72)
     ctx.note("%s is at version %s" % (target_secret, version))
 
@@ -2972,15 +3265,27 @@ def fetch_consented_email(ctx: Ctx, creds: Any, build: Any) -> str:
 
 
 def cmd_consent(ctx: Ctx) -> int:
-    section("Phases 9 and 15 — the one interactive consent")
-    eve = bool(getattr(ctx.args, "eve", False))
-    client_secret = "eve-oauth-client" if eve else "walle-oauth-client"
-    target_secret = "eve-refresh-token" if eve else "walle-refresh-token"
-    account = ctx.need("EVE_ROBOT") if eve else ctx.need("ROBOT")
-    scopes = EVE_SCOPES if eve else ROBOT_SCOPES
+    section("Phase 9 — the one interactive consent")
+    # Wall-E's robot only. Eve's consent (SETUP.md Phase 15) is not a branch of
+    # this command any more: an OAuth consent screen and a desktop client are
+    # per-GCP-project objects, Eve's client is created on EVE_PROJECT's consent
+    # screen and its two secrets live in EVE_PROJECT, readable by
+    # eve-controller@ there only. That is eve/07-build-runbook.md Phase 9, and
+    # project-topology.md §7.1 (Phase 15) records the move. Refuse loudly
+    # rather than store an Eve credential in Wall-E's project.
+    if getattr(ctx.args, "eve", False):
+        die(
+            "'walle consent --eve' no longer exists. Eve's OAuth client, consent and "
+            "secrets live in EVE_PROJECT (%s) and are created by Eve's runbook, "
+            "eve/07-build-runbook.md Phase 9 (project-topology.md §7.1, Phase 15). "
+            "Nothing of Eve's is stored in Wall-E's project."
+            % ctx.get("EVE_PROJECT", "<EVE_PROJECT>")
+        )
+    client_secret = "walle-oauth-client"
+    target_secret = "walle-refresh-token"
+    account = ctx.need("ROBOT")
+    scopes = ROBOT_SCOPES
 
-    if eve:
-        ensure_eve_secrets(ctx)
     do_manual_step(ctx, "M5")
     store = getattr(ctx.args, "store_client", None)
     if store:
@@ -3020,7 +3325,7 @@ def cmd_consent(ctx: Ctx) -> int:
     say("")
     say("  Now sign out of the account and close the clean profile. Put the hardware")
     say("  key back in the safe. From here a login alert is an incident.")
-    if not eve and not ctx.dry_run:
+    if not ctx.dry_run:
         say("")
         say("  While the credential is in hand, close the two Phase 9 items that are")
         say("  cheap only right now and expensive later:")
@@ -3043,29 +3348,12 @@ def cmd_consent(ctx: Ctx) -> int:
     return 0
 
 
-def ensure_eve_secrets(ctx: Ctx) -> None:
-    """Eve's secrets are readable by eve-controller@ only.
-
-    walle-actions@ must not appear here and eve-controller@ must not appear in
-    Phase 8's loop. If they shared a credential, "Eve approved this" and "Eve
-    verified this" would both mean nothing.
-    """
-    for name in EVE_SECRETS:
-        if secret_exists(ctx, name):
-            step("secret exists: %s" % name)
-        else:
-            run(ctx, ["gcloud", "secrets", "create", name,
-                      "--location", ctx.need("REGION"), "--project", ctx.need("PROJECT")])
-        run(
-            ctx,
-            [
-                "gcloud", "secrets", "add-iam-policy-binding", name,
-                "--location", ctx.need("REGION"),
-                "--member", "serviceAccount:" + ctx.need("SA_EVE"),
-                "--role", "roles/secretmanager.secretAccessor",
-                "--project", ctx.need("PROJECT"),
-            ],
-        )
+# ensure_eve_secrets is gone on purpose. Eve's secrets are readable by
+# eve-controller@ only and walle-actions@ must never appear on them — if they
+# shared a credential, "Eve approved this" and "Eve verified this" would both
+# mean nothing. That invariant is now STRUCTURAL: the secrets are created in
+# EVE_PROJECT by Eve's runbook, where no Wall-E principal exists, and
+# check_eve_separation reads them there.
 
 
 # --------------------------------------------------------------------------- #
@@ -3141,20 +3429,45 @@ def actions_env_pairs(ctx: Ctx, audience: str) -> List[Tuple[str, str]]:
         ("REFRESH_TOKEN_VERSION", version),
         ("OAUTH_CLIENT_SECRET", "walle-oauth-client"),
         ("CONFIRM_HMAC_SECRET", "walle-confirm-hmac"),
+        # The PRIMARY Eve-approval verification input: the directory of PEMs
+        # pinned per key version in Wall-E's repository and baked into the
+        # image (SETUP.md Phase 8.1). No cross-project KMS grant is needed.
+        ("EVE_PUBLIC_KEY_PEM", EVE_PUBLIC_KEY_PEM_PATH),
         (
+            # Eve's key, in EVE_PROJECT (never `project`, which is Wall-E's).
+            # Under the design's primary mechanism walle-actions verifies an
+            # approval with the PEM pinned in Wall-E's repository; this value
+            # is the OPTIONAL KMS fallback path, usable only if Eve's owner has
+            # granted publicKeyViewer on this one key (topology row 14).
             "EVE_KMS_KEY",
             "projects/%s/locations/%s/keyRings/%s/cryptoKeys/%s"
-            % (project, region, ctx.get("KMS_KEYRING"), ctx.get("KMS_KEY")),
+            % (ctx.need("EVE_PROJECT"), region, ctx.get("KMS_KEYRING"), ctx.get("KMS_KEY")),
         ),
         ("AUDIT_DATASET", ctx.get("AUDIT_DATASET")),
         (
             "TASKS_QUEUE",
             "projects/%s/locations/%s/queues/%s" % (project, region, ctx.get("TASKS_QUEUE")),
         ),
+        # The allowlists are not IAM: IAM run.invoker on walle-actions (per
+        # service) is the outer gate, these lists are the per-path gate, and
+        # from 2026-09-13 they carry CROSS-PROJECT service-account emails.
+        # EXEC stays Wall-E-only.
         ("EXEC_CALLER_ALLOWLIST", ctx.need("SA_AGENT")),
-        # Eve alone would mean no human can halt or demote, and every kill-switch
-        # timing in section 5 becomes unmeasurable.
-        ("CONTROL_CALLER_ALLOWLIST", "%s,%s" % (ctx.need("SA_EVE"), ctx.need("OPERATORS"))),
+        # eve-controller@ and eve-verifier@ from EVE_PROJECT (project-topology.md
+        # §3.1), plus the operators: Eve alone would mean no human can halt or
+        # demote, and every kill-switch timing in section 5 becomes unmeasurable.
+        ("CONTROL_CALLER_ALLOWLIST", "%s,%s,%s" % (
+            ctx.need("SA_EVE"), ctx.need("SA_EVE_VERIFIER"), ctx.need("OPERATORS"))),
+        # The read endpoints (GET /v1/plans, /v1/runs, /v1/ladder, /healthz)
+        # are allowlisted too, never open to any run.invoker holder:
+        # eve-console@ (plans, ladder) and mo-analyst@ (plans, runs) sit here
+        # and NEVER on the control list (project-topology.md §3.1, rows 3
+        # and 8; SETUP.md Phase 10).
+        ("READ_CALLER_ALLOWLIST", ",".join([
+            ctx.need("SA_EVE"), ctx.need("SA_EVE_VERIFIER"), ctx.need("SA_EVE_CONSOLE"),
+            iam_member(ctx.need("MO_PRINCIPAL")).split(":", 1)[-1],
+            ctx.need("SA_OPS_CALLER"), ctx.need("OPERATORS"),
+        ])),
         ("INTERNAL_CALLER_ALLOWLIST", ctx.need("SA_DISPATCH")),
         ("AUDIENCE", audience),
     ]
@@ -3235,16 +3548,35 @@ def phase_10_actions(ctx: Ctx) -> None:
             "--project", ctx.need("PROJECT"),
         ],
     )
+    # Wall-E's own principals: same project, crosses nothing.
     for member in (
         "serviceAccount:" + ctx.need("SA_AGENT"),
         "serviceAccount:" + ctx.need("SA_DISPATCH"),
-        "serviceAccount:" + ctx.need("SA_EVE"),
         "serviceAccount:" + ctx.need("SA_ACTIONS"),
         "serviceAccount:" + ctx.need("SA_OPS_CALLER"),
         # Without this the andon cord has no handle a human can pull.
         "group:" + ctx.need("OPERATORS"),
     ):
         ensure_run_invoker(ctx, "walle-actions", member)
+    # Cross-project principals (project-topology.md rows 3 and 8). The grant
+    # is roles/run.invoker ON THE SERVICE walle-actions, in Wall-E's project,
+    # to a foreign member — the resource-level form the topology wants; never
+    # a project-level role. Cloud Run cannot narrow to paths, so the in-app
+    # lists do: controller and verifier on the control list, console and
+    # mo-analyst on the read-endpoint list (plans/ladder; plans/runs).
+    for label, member in (
+        ("eve-controller@ (EVE_PROJECT, control list)", "serviceAccount:" + ctx.need("SA_EVE")),
+        ("eve-verifier@ (EVE_PROJECT, control list)",
+         "serviceAccount:" + ctx.need("SA_EVE_VERIFIER")),
+        ("eve-console@ (EVE_PROJECT, read list: plans, ladder)",
+         "serviceAccount:" + ctx.need("SA_EVE_CONSOLE")),
+        ("mo-analyst@ (MO_PROJECT, read list: plans, runs)", iam_member(ctx.need("MO_PRINCIPAL"))),
+    ):
+        ensure_run_invoker(ctx, "walle-actions", member, foreign=label)
+    say("")
+    say("  READ_CALLER_ALLOWLIST carries eve-console@ (plans, ladder) and mo-analyst@")
+    say("  (plans, runs) at their cross-project addresses; neither is on the control")
+    say("  list. verify's read_caller_allowlist check asserts both halves.")
     url = current_service_url(ctx, "walle-actions")
     if url:
         ctx.cfg["ACTIONS_URL"] = url
@@ -3268,7 +3600,12 @@ def phase_10_actions(ctx: Ctx) -> None:
     )
 
 
-def ensure_run_invoker(ctx: Ctx, service: str, member: str) -> None:
+def ensure_run_invoker(ctx: Ctx, service: str, member: str, foreign: str = "") -> None:
+    """run.invoker on one of Wall-E's services. `foreign` names a principal
+    from EVE_PROJECT or MO_PROJECT: the binding is still made in Wall-E's
+    project (the service is Wall-E's), but a principal IAM reports as
+    non-existent — Eve's S3 identities before Eve's runbook Phase 8, Mo's
+    before Mo-6 — is a note to re-run `walle deploy`, not a stop."""
     policy = gcloud_probe_json(
         ctx, "run", "services", "get-iam-policy", service, "--region", ctx.need("REGION")
     ) or {}
@@ -3276,7 +3613,7 @@ def ensure_run_invoker(ctx: Ctx, service: str, member: str) -> None:
         if binding.get("role") == "roles/run.invoker" and member in binding.get("members", []):
             step("run.invoker present on %s: %s" % (service, member))
             return
-    run(
+    result = run(
         ctx,
         [
             "gcloud", "run", "services", "add-iam-policy-binding", service,
@@ -3284,7 +3621,16 @@ def ensure_run_invoker(ctx: Ctx, service: str, member: str) -> None:
             "--member", member, "--role", "roles/run.invoker",
             "--project", ctx.need("PROJECT"),
         ],
+        check=not foreign,
     )
+    if foreign and not result.ok:
+        lowered = (result.err or "").lower()
+        if not any(marker in lowered for marker in ABSENT_MARKERS):
+            die("cannot bind %s as run.invoker on %s:\n%s" % (member, service, result.err.strip()))
+        warn("%s does not exist yet (%s); run.invoker on %s is NOT bound. Re-run "
+             "'walle deploy' once the other runbook has created it." % (member, foreign, service))
+        ctx.note("PENDING cross-project grant: %s run.invoker on %s (%s)"
+                 % (member, service, foreign))
 
 
 def current_service_url(ctx: Ctx, service: str) -> str:
@@ -3686,14 +4032,46 @@ def phase_12_agent(ctx: Ctx) -> None:
     lock_engine_iam(ctx)
 
 
+def gemini_access_fallback_on_file(ctx: Ctx) -> bool:
+    """Decision 42's gate, patterned on AGENT_IDENTITY_SPIKE_RESULT.
+
+    The config key GEMINI_ACCESS_SPIKE_RESULT (walle.env.example) points at
+    the recorded result — a JSON file {"verdict": "pass"|"fail"} — of
+    attempting Phase 13's registration and one query with ONLY the
+    engine-scoped custom role in place. Google documents only the
+    project-level roles/discoveryengine.serviceAgent for the cross-project
+    case; the narrower grant is the design's, and it is unverified. The
+    fallback is applied only when the file on disk says the spike FAILED.
+    """
+    path = os.path.expanduser(ctx.get("GEMINI_ACCESS_SPIKE_RESULT") or "")
+    if not path or not os.path.isfile(path):
+        return False
+    return spike_verdict(path) == "fail"
+
+
 def lock_engine_iam(ctx: Ctx) -> None:
-    """Three principals and no others, ever.
+    """Two principals and no others, ever.
 
     Gemini Enterprise passes the signed-in user's email as user_id. That email is
     asserted by the calling service, not cryptographically bound to the user, and
     is trustworthy exactly to the extent that only trusted callers can invoke.
+
+    The two: the Gemini Enterprise APP project's Discovery Engine service
+    agent, named by GEMINI_PROJECT_NUMBER and never by Wall-E's PROJECT_NUMBER
+    (project-topology.md row 1), and walle-dispatcher@ (same project).
+    eve-controller@ is NOT a member any more: a query principal asserts
+    user_id, and Eve verifying through the agent would be Eve verifying
+    through the thing it verifies (C10, topology row 13).
     """
-    project, number = ctx.need("PROJECT"), project_number(ctx)
+    project = ctx.need("PROJECT")
+    number = gemini_project_number(ctx)
+    if not number:
+        if not ctx.dry_run:
+            die("GEMINI_PROJECT_NUMBER is unknown and could not be read from "
+                "GEMINI_PROJECT %s. The engine policy names the app's service agent by "
+                "that number; fill it in (project-topology.md §7.4 step 1)."
+                % ctx.need("GEMINI_PROJECT"))
+        number = "<gemini-project-number>"
     # There is no predefined roles/aiplatform.reasoningEngineUser. set-iam-policy
     # with a non-existent role fails INVALID_ARGUMENT and the engine silently
     # keeps whatever it inherits from the project.
@@ -3720,42 +4098,63 @@ def lock_engine_iam(ctx: Ctx) -> None:
         if not ctx.dry_run:
             die("ENGINE_ID is unknown; cannot lock the engine's IAM policy")
         engine_id = "<engine-id>"
+    gemini_agent = (
+        "serviceAccount:service-%s@gcp-sa-discoveryengine.iam.gserviceaccount.com" % number
+    )
     policy = {
         "bindings": [
             {
                 "role": "projects/%s/roles/walleEngineQuery" % project,
                 "members": [
-                    "serviceAccount:service-%s@gcp-sa-discoveryengine.iam.gserviceaccount.com"
-                    % number,
+                    gemini_agent,
                     "serviceAccount:" + ctx.need("SA_DISPATCH"),
-                    "serviceAccount:" + ctx.need("SA_EVE"),
                 ],
             }
         ]
     }
-    say("  engine IAM policy -> exactly three members:")
+    say("  engine IAM policy -> exactly two members:")
     for member in policy["bindings"][0]["members"]:
         say("    " + member)
+    say("  (the service agent is GEMINI_PROJECT %s's, number %s — not Wall-E's; "
+        "eve-controller@ is deliberately absent, C10)" % (ctx.need("GEMINI_PROJECT"), number))
     url = aiplatform_url(
         ctx, "%s/%s:setIamPolicy" % (engine_collection_path(ctx), engine_id)
     )
     if ctx.dry_run:
         say("  WOULD POST %s" % url)
         say("    body: %s" % json.dumps({"policy": policy}))
-        return
-    confirm(ctx, "Apply this engine IAM policy?")
-    status, body = http_json(ctx, "POST", url, access_token(ctx), {"policy": policy})
-    if status != 200:
-        die(
-            "setIamPolicy on engine %s returned HTTP %s: %s\n"
-            "Without this the engine keeps whatever the project policy grants, and "
-            "the asserted end-user email from Gemini Enterprise means nothing."
-            % (engine_id, status, str(body)[:300])
-        )
+    else:
+        confirm(ctx, "Apply this engine IAM policy?")
+        status, body = http_json(ctx, "POST", url, access_token(ctx), {"policy": policy})
+        if status != 200:
+            die(
+                "setIamPolicy on engine %s returned HTTP %s: %s\n"
+                "Without this the engine keeps whatever the project policy grants, and "
+                "the asserted end-user email from Gemini Enterprise means nothing."
+                % (engine_id, status, str(body)[:300])
+            )
+    # Decision 42: the engine-scoped custom role is the grant (row 1). Google's
+    # documented project-level role (row 2) is applied ONLY when the recorded
+    # spike says row 1 was not enough, and then it is the topology's single
+    # named project-level exception, written down with the failing error.
+    if gemini_access_fallback_on_file(ctx):
+        warn("GEMINI_ACCESS_SPIKE_RESULT says the engine-scoped role was NOT enough "
+             "cross-project: applying Google's documented fallback %s at PROJECT level "
+             "in %s to %s. This is decision 42's one named project-level exception; "
+             "record it, and re-test at each engine redeploy so it can be removed."
+             % (GEMINI_FALLBACK_ROLE, project, gemini_agent))
+        ensure_project_binding(ctx, gemini_agent, GEMINI_FALLBACK_ROLE)
+        ctx.note("decision 42 fallback applied: %s project-level to %s"
+                 % (GEMINI_FALLBACK_ROLE, gemini_agent))
+    else:
+        say("  No project-level role for the service agent: the engine-scoped grant is")
+        say("  the spike of decision 42. If Phase 13's registration or the first query")
+        say("  fails, record the result in GEMINI_ACCESS_SPIKE_RESULT and re-run deploy.")
     say(
         "  Confirm the Discovery Engine service agent's exact address on the IAM "
-        "page with 'Include Google-provided role grants' on: it is created lazily "
-        "when the Gemini Enterprise app first runs."
+        "page of GEMINI_PROJECT %s with 'Include Google-provided role grants' on: it "
+        "is created lazily, in the APP's project, when the Gemini Enterprise app "
+        "first runs." % ctx.need("GEMINI_PROJECT")
     )
 
 
@@ -4599,20 +4998,24 @@ def cmd_register(ctx: Ctx) -> int:
     location = ctx.get("GEMINI_APP_LOCATION", "eu")
     if not app_id:
         die(
-            "GEMINI_APP_ID is not set. D8 closes this before Phase 6: Gemini "
-            "Enterprise console -> app -> settings. A 'us' app cannot front a "
+            "GEMINI_APP_ID is not set. D8 closes this before Phase 6, in GEMINI_PROJECT: "
+            "Gemini Enterprise console -> app -> settings. A 'us' app cannot front a "
             "europe-west1 agent."
         )
     host = "discoveryengine.googleapis.com"
     if location != "global":
         host = "%s-discoveryengine.googleapis.com" % location
+    # The app is read from GEMINI_PROJECT, its own project; the engine it
+    # fronts stays in PROJECT. Reading needs roles/discoveryengine.viewer on
+    # GEMINI_PROJECT for the operator (project-topology.md §7.4 step 3).
     engine_url = (
         "https://%s/v1/projects/%s/locations/%s/collections/default_collection/engines/%s"
-        % (host, ctx.need("PROJECT"), location, app_id)
+        % (host, ctx.need("GEMINI_PROJECT"), location, app_id)
     )
     status, payload = http_json(ctx, "GET", engine_url, access_token(ctx))
     if status == 200 and isinstance(payload, dict):
-        say("  Gemini Enterprise app found: %s" % payload.get("displayName", app_id))
+        say("  Gemini Enterprise app found: %s (in GEMINI_PROJECT %s)"
+            % (payload.get("displayName", app_id), ctx.need("GEMINI_PROJECT")))
         say("  app location: %s" % location)
         if location not in ("eu", "global"):
             die(
@@ -4683,17 +5086,20 @@ def verify_gemini_registration(ctx: Ctx) -> Tuple[str, str]:
     host = "discoveryengine.googleapis.com"
     if location != "global":
         host = "%s-discoveryengine.googleapis.com" % location
+    # The v1alpha agents listing lives under the APP's project. The match on
+    # engine_id still works: the registered resource path names Wall-E's.
     url = (
         "https://%s/v1alpha/projects/%s/locations/%s/collections/default_collection/"
         "engines/%s/assistants/default_assistant/agents"
-        % (host, ctx.need("PROJECT"), location, app_id)
+        % (host, ctx.need("GEMINI_PROJECT"), location, app_id)
     )
     status, payload = http_json(ctx, "GET", url, access_token(ctx))
     if status != 200 or not isinstance(payload, dict):
         return "SKIP", "v1alpha agents listing not available (HTTP %s); confirm by eye" % status
     blob = json.dumps(payload)
     if engine_id in blob:
-        return "PASS", "engine %s is registered on app %s" % (engine_id, app_id)
+        return "PASS", "engine %s is registered on app %s in %s" % (
+            engine_id, app_id, ctx.need("GEMINI_PROJECT"))
     return "FAIL", "app %s lists no agent pointing at engine %s" % (app_id, engine_id)
 
 
@@ -5062,8 +5468,11 @@ def cmd_armor(ctx: Ctx) -> int:
     ensure_authz_policy(ctx, ARMOR_POLICY_NAME, policy_path)
 
     say("")
-    say("  step 7: floor settings, conformance at the folder %s, inline on the project"
+    say("  step 7: floor settings, conformance at the folder %s, inline on the project."
         % ctx.need("FOLDER_ID"))
+    say("  FOLDER_ID holds all four projects (project-topology.md §5), so the folder")
+    say("  floor also binds the templates of EVE_PROJECT, MO_PROJECT and GEMINI_PROJECT;")
+    say("  the project floor below is Wall-E's own and stricter.")
     apply_floor_settings(ctx)
 
     say("")
@@ -5300,15 +5709,11 @@ def cmd_registry(ctx: Ctx) -> int:
     section("Phase 13b — Agent Registry, and the egress gateway in dry-run")
     project, region = ctx.need("PROJECT"), ctx.need("REGION")
     ci_member = iam_member(ctx.need("CI_DEPLOYER"))
-    mo_member = iam_member(ctx.need("MO_PRINCIPAL"))
-    eve_member = "serviceAccount:" + ctx.need("SA_EVE")
     gateway = ctx.get("EGRESS_GATEWAY") or EGRESS_GATEWAY_NAME
-    say("  Registry admin to the CI deployer only, viewer to Eve and Mo. The egress")
-    say("  gateway is a default-deny hostname allowlist for the reasoning layer, and it")
-    say("  starts in DRY_RUN: two undocumented questions gate it to enforced.")
+    say("  Registry admin to the CI deployer only, and NO viewer to Eve or Mo. The")
+    say("  egress gateway is a default-deny hostname allowlist for the reasoning layer,")
+    say("  and it starts in DRY_RUN: two undocumented questions gate it to enforced.")
     say("    admin   %s" % ci_member)
-    say("    viewer  %s" % eve_member)
-    say("    viewer  %s" % mo_member)
     say("    gateway %s" % gateway)
     confirm(ctx, "Proceed with the registry and egress gateway setup?")
     ensure_apis_listed(ctx, REGISTRY_APIS, "Agent Registry")
@@ -5318,8 +5723,15 @@ def cmd_registry(ctx: Ctx) -> int:
     say("  resolves Wall-E through the registry and flip the tool annotations gateway")
     say("  rules read.")
     ensure_project_binding(ctx, ci_member, "roles/agentregistry.admin")
-    ensure_project_binding(ctx, eve_member, "roles/agentregistry.viewer")
-    ensure_project_binding(ctx, mo_member, "roles/agentregistry.viewer")
+    # roles/agentregistry.viewer for eve-controller@ and MO_PRINCIPAL is gone:
+    # Agent Registry roles are grantable at project level only (no per-agent
+    # IAM), so the grant was a project-level role in Wall-E's project for
+    # identities from EVE_PROJECT and MO_PROJECT — the one grant with no
+    # resource-level form — and no duty of Eve's or Mo's needs it. Dropped per
+    # project-topology.md decision 43; Eve asserts the card against the
+    # endpoint URL committed in eve/config, Mo never converses with Wall-E.
+    say("  No agentregistry.viewer to Eve or Mo: a project-level role in Wall-E's")
+    say("  project for a foreign identity is refused (decision 43).")
 
     say("")
     say("  step 2: the automatic entry. Deploying to Agent Runtime registered Wall-E.")
@@ -5642,7 +6054,10 @@ def check_agent_reads_no_secret(ctx: Ctx) -> CheckResult:
     """Trust boundary 3, in one check. Re-run it after EVERY IAM change."""
     agent = "serviceAccount:" + ctx.need("SA_AGENT")
     offenders = []
-    for secret in list(WALLE_SECRETS) + list(EVE_SECRETS):
+    # Wall-E's three secrets, in Wall-E's project. Eve's two are in EVE_PROJECT
+    # and are read there below; iterating them here would hit nothing and the
+    # check would silently narrow.
+    for secret in WALLE_SECRETS:
         if not secret_exists(ctx, secret):
             continue
         policy = gcloud_probe_json(
@@ -5650,20 +6065,6 @@ def check_agent_reads_no_secret(ctx: Ctx) -> CheckResult:
         ) or {}
         if _roles_of_member(policy, agent):
             offenders.append(secret)
-    key_policy = gcloud_probe_json(
-        ctx, "kms", "keys", "get-iam-policy", ctx.get("KMS_KEY"),
-        "--keyring", ctx.get("KMS_KEYRING"), "--location", ctx.need("REGION"),
-    ) or {}
-    if _roles_of_member(key_policy, agent):
-        offenders.append("kms:" + ctx.get("KMS_KEY"))
-    # A key-level policy does not subtract an inherited one: a binding on the
-    # KEY RING is inherited by the key and is invisible to the read above.
-    ring_policy = gcloud_probe_json(
-        ctx, "kms", "keyrings", "get-iam-policy", ctx.get("KMS_KEYRING"),
-        "--location", ctx.need("REGION"),
-    ) or {}
-    if _roles_of_member(ring_policy, agent):
-        offenders.append("kms keyring:" + ctx.get("KMS_KEYRING"))
     project_policy = gcloud_probe_json(ctx, "projects", "get-iam-policy", ctx.need("PROJECT")) or {}
     broad = [
         role for role in _roles_of_member(project_policy, agent)
@@ -5671,9 +6072,55 @@ def check_agent_reads_no_secret(ctx: Ctx) -> CheckResult:
     ]
     if broad:
         offenders.append("project roles %s" % broad)
+    # The cross-project half: Eve's key and secrets live in EVE_PROJECT. Read
+    # them THERE, explicitly; if the operator cannot, say so rather than pass.
+    eve_side, eve_detail = _eve_side_policies(ctx)
+    for label, policy in eve_side.items():
+        if _roles_of_member(policy, agent):
+            offenders.append("%s in EVE_PROJECT" % label)
     if offenders:
         return FAIL, "walle-agent@ can reach: %s" % ", ".join(offenders)
-    return PASS, "walle-agent@ holds nothing on any secret or on the KMS key"
+    return PASS, "walle-agent@ holds nothing on any Wall-E secret or project-wide; %s" % eve_detail
+
+
+def _eve_side_policies(ctx: Ctx) -> Tuple[Dict[str, Dict[str, Any]], str]:
+    """IAM policies of Eve's key, ring and secrets, read in EVE_PROJECT.
+
+    Returns what could be read, and a sentence saying what could not. A
+    permission refusal is not a failure of the invariant: the assertion then
+    belongs to Eve's own verify (project-topology.md row 17, decision 46), and
+    the sentence names it so a green row never hides an unread policy.
+    """
+    eve_project = ctx.need("EVE_PROJECT")
+    region = ctx.need("REGION")
+    policies: Dict[str, Dict[str, Any]] = {}
+    absent: List[str] = []
+    try:
+        reads: List[Tuple[str, Tuple[str, ...]]] = [
+            ("kms key %s" % ctx.get("KMS_KEY"),
+             ("kms", "keys", "get-iam-policy", ctx.get("KMS_KEY"),
+              "--keyring", ctx.get("KMS_KEYRING"), "--location", region)),
+            ("kms keyring %s" % ctx.get("KMS_KEYRING"),
+             ("kms", "keyrings", "get-iam-policy", ctx.get("KMS_KEYRING"),
+              "--location", region)),
+        ]
+        for secret in EVE_SECRETS:
+            reads.append(("secret %s" % secret,
+                          ("secrets", "get-iam-policy", secret, "--location", region)))
+        for label, argv in reads:
+            policy = gcloud_probe_json_in(ctx, eve_project, *argv)
+            if policy is None:
+                absent.append(label)
+            else:
+                policies[label] = policy
+    except WalleError as exc:
+        return policies, (
+            "Eve's key and secrets in EVE_PROJECT %s could not be read (%s); their "
+            "policies are asserted by Eve's verify, not here" % (
+                eve_project, str(exc).splitlines()[0][:60]))
+    if absent:
+        return policies, "in EVE_PROJECT %s, not created yet: %s" % (eve_project, ", ".join(absent))
+    return policies, "and nothing on Eve's key, ring or secrets in EVE_PROJECT %s" % eve_project
 
 
 def check_stage0_role_has_no_write(ctx: Ctx) -> CheckResult:
@@ -5797,54 +6244,84 @@ def check_secrets_regional_and_pinned(ctx: Ctx) -> CheckResult:
     return PASS, "3 regional secrets; service pins version %s, no 'latest' anywhere" % version
 
 
-def check_kms_split(ctx: Ctx) -> CheckResult:
-    described = gcloud_probe_json(
-        ctx, "kms", "keys", "describe", ctx.get("KMS_KEY"),
-        "--keyring", ctx.get("KMS_KEYRING"), "--location", ctx.need("REGION"),
-    )
-    if described is None:
-        return FAIL, "key %s does not exist" % ctx.get("KMS_KEY")
-    purpose = described.get("purpose")
-    algorithm = described.get("versionTemplate", {}).get("algorithm")
-    if purpose != "ASYMMETRIC_SIGN" or algorithm != "EC_SIGN_P256_SHA256":
-        return FAIL, "key is %s / %s" % (purpose, algorithm)
-    policy = gcloud_probe_json(
-        ctx, "kms", "keys", "get-iam-policy", ctx.get("KMS_KEY"),
-        "--keyring", ctx.get("KMS_KEYRING"), "--location", ctx.need("REGION"),
-    ) or {}
-    actions_roles = _roles_of_member(policy, "serviceAccount:" + ctx.need("SA_ACTIONS"))
-    eve_roles = _roles_of_member(policy, "serviceAccount:" + ctx.need("SA_EVE"))
-    if actions_roles != ["roles/cloudkms.publicKeyViewer"]:
-        return FAIL, (
-            "walle-actions@ holds %s on Eve's key. It must hold publicKeyViewer and "
-            "nothing else, or it can mint an Eve approval (attack A2)." % actions_roles
-        )
-    if "roles/cloudkms.signer" not in eve_roles:
-        return FAIL, "eve-controller@ does not hold cloudkms.signer (%s)" % eve_roles
-    # A key-level policy does not subtract an inherited one. roles/cloudkms.signer
-    # or cryptoOperator granted on the KEY RING or at PROJECT level is invisible
-    # to the read above and puts walle-actions@ straight back in a position to
-    # mint an Eve approval — attack A2, alive again, with this check green.
-    actions_member = "serviceAccount:" + ctx.need("SA_ACTIONS")
-    for label, argv in (
-        ("key ring", ("kms", "keyrings", "get-iam-policy", ctx.get("KMS_KEYRING"),
-                      "--location", ctx.need("REGION"))),
-        ("project", ("projects", "get-iam-policy", ctx.need("PROJECT"))),
-    ):
-        wider = gcloud_probe_json(ctx, *argv) or {}
+def check_kms_separation(ctx: Ctx) -> CheckResult:
+    """Attack A2, with the key in EVE_PROJECT (project-topology.md row 14).
+
+    What this script can assert at HOME, and does on every run: no Wall-E
+    principal holds any Cloud KMS role in Wall-E's own project policy, and the
+    pinned PEM set exists in the repository when Eve's key does. What it can
+    assert only by reading EVE_PROJECT: walle-actions@ holds either nothing on
+    Eve's key (the PEM pin is primary) or exactly roles/cloudkms.publicKeyViewer
+    on that one key, never signer, never anything on the ring or the project.
+    The "purpose is ASYMMETRIC_SIGN" and "eve-controller@ holds signer"
+    assertions are Eve's verify (decision 46); they are read here only when
+    the operator can, and reported as such.
+    """
+    problems: List[str] = []
+    project_policy = gcloud_probe_json(ctx, "projects", "get-iam-policy", ctx.need("PROJECT")) or {}
+    for key in ("SA_ACTIONS", "SA_AGENT", "SA_DISPATCH", "SA_OPS_CALLER"):
+        member = "serviceAccount:" + ctx.need(key)
         held = [
-            r for r in _roles_of_member(wider, actions_member)
+            r for r in _roles_of_member(project_policy, member)
             if "cloudkms" in r or r in ("roles/owner", "roles/editor")
         ]
         if held:
-            return FAIL, (
-                "walle-actions@ holds %s at %s level, which the key inherits. It "
-                "could mint an Eve approval and \"Eve approved this\" would mean "
-                "nothing (attack A2)." % (held, label)
+            problems.append("%s holds %s in Wall-E's project" % (ctx.need(key), held))
+    pem_dir = os.path.join(os.path.expanduser(ctx.need("WALLE_REPO")), *EVE_PUBLIC_KEYS_SUBDIR)
+    pems = sorted(f for f in os.listdir(pem_dir)) if os.path.isdir(pem_dir) else []
+    for name in pems:
+        path = os.path.join(pem_dir, name)
+        if not os.path.isfile(path):
+            continue
+        with open(path, "r", encoding="utf-8", errors="replace") as handle:
+            head = handle.read(64)
+        if "BEGIN PUBLIC KEY" not in head:
+            problems.append("%s is not a PEM public key" % os.path.relpath(path, pem_dir))
+    eve_side, eve_detail = _eve_side_policies(ctx)
+    key_label = "kms key %s" % ctx.get("KMS_KEY")
+    ring_label = "kms keyring %s" % ctx.get("KMS_KEYRING")
+    actions_member = "serviceAccount:" + ctx.need("SA_ACTIONS")
+    if key_label in eve_side:
+        actions_roles = _roles_of_member(eve_side[key_label], actions_member)
+        if actions_roles not in ([], ["roles/cloudkms.publicKeyViewer"]):
+            problems.append(
+                "walle-actions@ holds %s on Eve's key in EVE_PROJECT. It may hold "
+                "publicKeyViewer and nothing else, or it can mint an Eve approval "
+                "(attack A2)." % actions_roles
             )
+        # Whether eve-controller@ holds signer is Eve's verify's assertion
+        # (decision 46), not a failure of Wall-E's invariant; it is reported.
+        eve_roles = _roles_of_member(eve_side[key_label], "serviceAccount:" + ctx.need("SA_EVE"))
+        signer_note = ("eve-controller@ holds signer" if "roles/cloudkms.signer" in eve_roles
+                       else "eve-controller@ does NOT hold signer yet (Eve's verify asserts it)")
+        eve_detail = "%s; %s" % (eve_detail, signer_note)
+        described = gcloud_probe_json_in(
+            ctx, ctx.need("EVE_PROJECT"), "kms", "keys", "describe", ctx.get("KMS_KEY"),
+            "--keyring", ctx.get("KMS_KEYRING"), "--location", ctx.need("REGION"),
+        ) or {}
+        if described:
+            purpose = described.get("purpose")
+            algorithm = (described.get("versionTemplate", {}) or {}).get("algorithm")
+            if purpose != "ASYMMETRIC_SIGN" or algorithm != "EC_SIGN_P256_SHA256":
+                problems.append("Eve's key is %s / %s, not ASYMMETRIC_SIGN / "
+                                "EC_SIGN_P256_SHA256; a purpose cannot be changed"
+                                % (purpose, algorithm))
+            if not pems:
+                problems.append(
+                    "Eve's key exists but %s/ holds no pinned PEM; the pin is the primary "
+                    "verification path and past approvals stay verifiable only against it"
+                    % "/".join(EVE_PUBLIC_KEYS_SUBDIR)
+                )
+    # A key-level policy does not subtract an inherited one: a Wall-E
+    # principal on Eve's RING would put walle-actions@ back in a position to
+    # mint an approval with the key-level read green.
+    if ring_label in eve_side and _roles_of_member(eve_side[ring_label], actions_member):
+        problems.append("walle-actions@ holds a role on Eve's key RING, which the key inherits")
+    if problems:
+        return FAIL, "; ".join(problems)
     return PASS, (
-        "ASYMMETRIC_SIGN/EC_SIGN_P256_SHA256; Eve signs, actions verifies only, and "
-        "nothing is inherited from the ring or the project"
+        "no Wall-E principal holds a KMS role in Wall-E's project; %d pinned PEM(s); %s"
+        % (len(pems), eve_detail)
     )
 
 
@@ -5951,10 +6428,19 @@ def check_sink_filters(ctx: Ctx) -> CheckResult:
     return PASS, "trigger sink excludes the robot; BigQuery sink does not; separate dataset"
 
 
-def check_engine_three_principals(ctx: Ctx) -> CheckResult:
+def check_engine_principals(ctx: Ctx) -> CheckResult:
+    """Exactly the two of project-topology.md rows 1 and 13, by exact set.
+
+    Counting was the old check, and a policy that still carries Wall-E's OWN
+    service-<PROJECT_NUMBER>@gcp-sa-discoveryengine (the pre-2026-09-13 state)
+    or eve-controller@ (C10) would pass a count. The set is asserted.
+    """
     engine_id = resolve_engine_id(ctx)
     if not engine_id:
         return SKIP, "no single reasoning engine to check"
+    number = gemini_project_number(ctx)
+    if not number:
+        return SKIP, "GEMINI_PROJECT_NUMBER is unknown; cannot name the app's service agent"
     # :getIamPolicy on the Agent Runtime REST API is a POST with an empty body.
     status, policy = http_json(
         ctx, "POST",
@@ -5970,9 +6456,21 @@ def check_engine_three_principals(ctx: Ctx) -> CheckResult:
     expected_role = "projects/%s/roles/walleEngineQuery" % ctx.need("PROJECT")
     if roles != {expected_role}:
         return FAIL, "engine policy carries roles %s, expected only %s" % (roles, expected_role)
-    if len(members) != 3:
-        return FAIL, "%d principals can query the engine, expected exactly 3: %s" % (
-            len(members), members)
+    gemini_agent = (
+        "serviceAccount:service-%s@gcp-sa-discoveryengine.iam.gserviceaccount.com" % number
+    )
+    expected_members = sorted({gemini_agent, "serviceAccount:" + ctx.need("SA_DISPATCH")})
+    if members != expected_members:
+        walle_agent = ("serviceAccount:service-%s@gcp-sa-discoveryengine.iam.gserviceaccount.com"
+                       % (project_number(ctx) or "<PROJECT_NUMBER>"))
+        hints = []
+        if walle_agent in members:
+            hints.append("it carries WALL-E's own project number's service agent, which "
+                         "never calls the engine: the app's is GEMINI_PROJECT_NUMBER's")
+        if "serviceAccount:" + ctx.need("SA_EVE") in members:
+            hints.append("eve-controller@ is a member; C10 removed it (topology row 13)")
+        return FAIL, "engine principals are %s, expected exactly %s%s" % (
+            members, expected_members, "; " + "; ".join(hints) if hints else "")
     # SETUP.md 6.1 says "counting inherited project and organisation bindings".
     # A resource-level policy does not override an inherited one, and all four
     # roles below confer aiplatform.reasoningEngines.query — roles/editor and
@@ -5980,10 +6478,22 @@ def check_engine_three_principals(ctx: Ctx) -> CheckResult:
     # group at project level and an arbitrary number of principals can invoke
     # the agent, which is exactly the property that makes Gemini Enterprise's
     # asserted end-user email trustworthy.
-    conferring = (
+    conferring = [
         "roles/aiplatform.user", "roles/aiplatform.admin",
         "roles/editor", "roles/owner",
-    )
+    ]
+    # Decision 42's fallback role is project-level and Google's; whether it
+    # carries reasoningEngines.query is read back, not assumed. No --project:
+    # it is a predefined role, not one of the project's custom roles.
+    fallback_confers = False
+    described = probe(ctx, ["gcloud", "iam", "roles", "describe", GEMINI_FALLBACK_ROLE,
+                            "--format=json"])
+    if described.ok and described.out.strip():
+        permissions = (json.loads(described.out) or {}).get("includedPermissions", []) or []
+        fallback_confers = "aiplatform.reasoningEngines.query" in permissions
+        if fallback_confers:
+            conferring.append(GEMINI_FALLBACK_ROLE)
+    fallback_on_file = gemini_access_fallback_on_file(ctx)
     inherited: List[str] = []
     for label, argv in (
         ("project", ("projects", "get-iam-policy", ctx.need("PROJECT"))),
@@ -5992,16 +6502,22 @@ def check_engine_three_principals(ctx: Ctx) -> CheckResult:
         scope_policy = gcloud_probe_json(ctx, *argv) or {}
         for binding in scope_policy.get("bindings", []):
             if binding.get("role") in conferring:
-                inherited += [
-                    "%s (%s at %s)" % (m, binding["role"], label)
-                    for m in binding.get("members", [])
-                ]
+                for m in binding.get("members", []):
+                    # The one recorded exception: the app's service agent holding
+                    # the documented fallback at project level, with the spike
+                    # on file saying row 1 was not enough.
+                    if (binding["role"] == GEMINI_FALLBACK_ROLE and m == gemini_agent
+                            and fallback_on_file and label == "project"):
+                        continue
+                    inherited.append("%s (%s at %s)" % (m, binding["role"], label))
     if inherited:
         return FAIL, (
-            "the three-principal lock does not hold: these can also query the engine "
+            "the two-principal lock does not hold: these can also query the engine "
             "through an inherited binding: %s" % sorted(set(inherited))
         )
-    return PASS, "exactly 3 principals, and no inherited binding confers query"
+    return PASS, "exactly the app's service agent (%s) and walle-dispatcher@; no inherited " \
+                 "binding confers query%s" % (
+                     number, "; decision 42 fallback on file" if fallback_on_file else "")
 
 
 def check_scheduler_states(ctx: Ctx) -> CheckResult:
@@ -6083,7 +6599,24 @@ def check_control_caller_allowlist(ctx: Ctx) -> CheckResult:
     value = env.get("CONTROL_CALLER_ALLOWLIST", "")
     entries = [e.strip() for e in value.split(",") if e.strip()]
     if ctx.need("SA_EVE") not in entries:
-        return FAIL, "eve-controller@ is not in CONTROL_CALLER_ALLOWLIST"
+        return FAIL, "eve-controller@%s is not in CONTROL_CALLER_ALLOWLIST" % ctx.need("EVE_PROJECT")
+    if ctx.need("SA_EVE_VERIFIER") not in entries:
+        return FAIL, "eve-verifier@%s is not in CONTROL_CALLER_ALLOWLIST" % ctx.need("EVE_PROJECT")
+    # The pre-2026-09-13 placement: an Eve or Mo identity spelled in Wall-E's
+    # project. Such an entry is not a typo, it is the old topology deployed.
+    old_placement = [
+        e for e in entries
+        if (e.startswith("eve-") or e.startswith("mo-"))
+        and e.endswith("@%s.iam.gserviceaccount.com" % ctx.need("PROJECT"))
+    ]
+    if old_placement:
+        return FAIL, (
+            "CONTROL_CALLER_ALLOWLIST names an Eve or Mo identity in Wall-E's own "
+            "project: %s. Eve's live in EVE_PROJECT, Mo's in MO_PROJECT." % old_placement
+        )
+    for key, who in (("SA_EVE_CONSOLE", "eve-console@"), ("SA_MO_ANALYST", "mo-analyst@")):
+        if ctx.get(key) and ctx.get(key) in entries:
+            return FAIL, "%s is on the CONTROL list; it belongs on the read-endpoint list only" % who
     if ctx.need("OPERATORS") not in entries:
         return FAIL, (
             "the operators group is not in CONTROL_CALLER_ALLOWLIST. Eve alone means "
@@ -6091,7 +6624,48 @@ def check_control_caller_allowlist(ctx: Ctx) -> CheckResult:
         )
     if ctx.need("SA_AGENT") in entries:
         return FAIL, "walle-agent@ is in the control allowlist; that is the whole design gone"
-    return PASS, "contains eve-controller@ and %s" % ctx.need("OPERATORS")
+    return PASS, "contains eve-controller@ and eve-verifier@ (EVE_PROJECT) and %s" % ctx.need("OPERATORS")
+
+
+def check_read_caller_allowlist(ctx: Ctx) -> CheckResult:
+    """project-topology.md §3.1, rows 3 and 8: the read endpoints are
+    allowlisted, and the two read-only foreign callers are on THIS list at
+    their cross-project addresses and never on the control list (the negative
+    half lives in check_control_caller_allowlist)."""
+    env = deployed_actions_env(ctx)
+    if env is None:
+        return SKIP, "walle-actions is not deployed yet"
+    value = env.get("READ_CALLER_ALLOWLIST", "")
+    entries = [e.strip() for e in value.split(",") if e.strip()]
+    if not entries:
+        return FAIL, ("READ_CALLER_ALLOWLIST is absent or empty: the read endpoints would "
+                      "be open to every run.invoker holder, or closed to Eve's console "
+                      "and Mo's analyst")
+    problems = []
+    mo_analyst = iam_member(ctx.need("MO_PRINCIPAL")).split(":", 1)[-1]
+    for who, email in (("eve-console@%s" % ctx.need("EVE_PROJECT"), ctx.need("SA_EVE_CONSOLE")),
+                       ("mo-analyst@%s" % ctx.need("MO_PROJECT"), mo_analyst)):
+        if email not in entries:
+            problems.append("%s is not in READ_CALLER_ALLOWLIST" % who)
+    old_placement = [
+        e for e in entries
+        if (e.startswith("eve-") or e.startswith("mo-"))
+        and e.endswith("@%s.iam.gserviceaccount.com" % ctx.need("PROJECT"))
+    ]
+    if old_placement:
+        problems.append("READ_CALLER_ALLOWLIST names an Eve or Mo identity in Wall-E's own "
+                        "project: %s" % old_placement)
+    if ctx.need("SA_AGENT") in entries:
+        problems.append("walle-agent@ is on the read list; the agent reaches the service "
+                        "through EXEC_CALLER_ALLOWLIST only")
+    control = [e.strip() for e in env.get("CONTROL_CALLER_ALLOWLIST", "").split(",") if e.strip()]
+    for who, email in (("eve-console@", ctx.need("SA_EVE_CONSOLE")), ("mo-analyst@", mo_analyst)):
+        if email in control:
+            problems.append("%s is on the CONTROL list as well as the read list" % who)
+    if problems:
+        return FAIL, "; ".join(problems)
+    return PASS, ("eve-console@ (EVE_PROJECT) and mo-analyst@ (MO_PROJECT) are on the read "
+                  "list at their cross-project addresses and on no other")
 
 
 def check_cloud_run_requires_auth(ctx: Ctx) -> CheckResult:
@@ -6202,17 +6776,47 @@ def check_project_roles(ctx: Ctx) -> CheckResult:
     dispatch = set(_roles_of_member(policy, "serviceAccount:" + ctx.need("SA_DISPATCH")))
     if not set(DISPATCH_PROJECT_ROLES) <= dispatch:
         problems.append("walle-dispatcher@ is missing %s" % sorted(set(DISPATCH_PROJECT_ROLES) - dispatch))
-    eve = set(_roles_of_member(policy, "serviceAccount:" + ctx.need("SA_EVE")))
-    if not set(EVE_PROJECT_ROLES) <= eve:
-        problems.append("eve-controller@ is missing %s" % sorted(set(EVE_PROJECT_ROLES) - eve))
     agent = _roles_of_member(policy, "serviceAccount:" + ctx.need("SA_AGENT"))
     if agent:
         problems.append("walle-agent@ holds project roles and must hold none: %s" % agent)
-    # SETUP.md Phase 6's verify asks for both halves: the roles, and that all
-    # five accounts exist and are enabled. A disabled service account produces
-    # a failure that looks nothing like a missing role.
+    # project-topology.md row 26, the rule of the page, inverted from the old
+    # "eve-controller@ has datastore.viewer": NO identity from EVE_PROJECT or
+    # MO_PROJECT holds ANY project-level role in Wall-E's project. Every
+    # legitimate cross-project reach is a grant on a resource (a dataset, a
+    # service, the engine), checked elsewhere. EVE_PROJECT_ROLES stays empty
+    # until decision 44 names a resource-scoped form.
+    for key in FOREIGN_IDENTITY_KEYS:
+        email = ctx.get(key)
+        if not email:
+            continue
+        held = _roles_of_member(policy, "serviceAccount:" + email)
+        if held:
+            problems.append(
+                "%s (a foreign identity) holds project-level %s in Wall-E's project; "
+                "the topology allows resource-level grants only (row 26)" % (email, held)
+            )
+    # Any principal from the two agent projects, whatever its name.
+    for member in {m for b in policy.get("bindings", []) for m in b.get("members", [])}:
+        for foreign_project in (ctx.get("EVE_PROJECT"), ctx.get("MO_PROJECT")):
+            if foreign_project and member.endswith("@%s.iam.gserviceaccount.com" % foreign_project):
+                if member.split(":", 1)[-1] not in {ctx.get(k) for k in FOREIGN_IDENTITY_KEYS}:
+                    problems.append("%s from %s holds a project-level role in Wall-E's "
+                                    "project" % (member, foreign_project))
+    # The old placement, by name: an eve-* or mo-* account created IN Wall-E's
+    # project is the pre-2026-09-13 state and must not exist.
     listed = gcloud_probe_json(ctx, "iam", "service-accounts", "list") or []
     present = {a.get("email"): bool(a.get("disabled", False)) for a in listed}
+    misplaced = sorted(
+        e for e in present
+        if e and (e.startswith("eve-") or e.startswith("mo-"))
+        and e.endswith("@%s.iam.gserviceaccount.com" % ctx.need("PROJECT"))
+    )
+    if misplaced:
+        problems.append("Eve or Mo identities exist IN Wall-E's project: %s; they belong in "
+                        "EVE_PROJECT / MO_PROJECT" % misplaced)
+    # SETUP.md Phase 6's verify asks for both halves: the roles, and that all
+    # four accounts exist and are enabled. A disabled service account produces
+    # a failure that looks nothing like a missing role.
     for name in SERVICE_ACCOUNT_IDS:
         email = "%s@%s.iam.gserviceaccount.com" % (name, ctx.need("PROJECT"))
         if email not in present:
@@ -6222,8 +6826,9 @@ def check_project_roles(ctx: Ctx) -> CheckResult:
     if problems:
         return FAIL, "; ".join(problems)
     return PASS, (
-        "all %d service accounts exist and are enabled; actions, dispatcher and eve "
-        "have their roles; agent holds nothing" % len(SERVICE_ACCOUNT_IDS)
+        "all %d service accounts exist and are enabled; actions and dispatcher have "
+        "their roles; agent holds nothing; no Eve or Mo identity holds a project-level "
+        "role here" % len(SERVICE_ACCOUNT_IDS)
     )
 
 
@@ -6243,6 +6848,29 @@ def check_run_invoker_handles(ctx: Ctx) -> CheckResult:
     ):
         if required not in invokers:
             problems.append("walle-actions is missing run.invoker for %s" % required)
+    # The old placement: an Eve or Mo account spelled in Wall-E's project
+    # holding the invoker. Not a typo — the pre-2026-09-13 topology, deployed.
+    misplaced = sorted(
+        m for m in invokers
+        if m.split(":", 1)[-1].startswith(("eve-", "mo-"))
+        and m.endswith("@%s.iam.gserviceaccount.com" % ctx.need("PROJECT"))
+    )
+    if misplaced:
+        problems.append("run.invoker on walle-actions names Eve or Mo identities IN Wall-E's "
+                        "project: %s (they live in EVE_PROJECT / MO_PROJECT)" % misplaced)
+    # The cross-project invokers the design requires (project-topology.md rows
+    # 3 and 8). Their principals exist only once Eve's runbook Phase 8 and
+    # Mo-6 have run, so a missing one is "not yet bound", reported as SKIP,
+    # never silently passed; --strict turns it into a failure.
+    pending = []
+    for label, member in (
+        ("eve-controller@EVE_PROJECT", "serviceAccount:" + ctx.need("SA_EVE")),
+        ("eve-verifier@EVE_PROJECT", "serviceAccount:" + ctx.need("SA_EVE_VERIFIER")),
+        ("eve-console@EVE_PROJECT", "serviceAccount:" + ctx.need("SA_EVE_CONSOLE")),
+        ("mo-analyst@MO_PROJECT", iam_member(ctx.need("MO_PRINCIPAL"))),
+    ):
+        if member not in invokers:
+            pending.append(label)
     dispatcher_policy = gcloud_probe_json(
         ctx, "run", "services", "get-iam-policy", "walle-dispatcher",
         "--region", ctx.need("REGION"),
@@ -6255,7 +6883,14 @@ def check_run_invoker_handles(ctx: Ctx) -> CheckResult:
             )
     if problems:
         return FAIL, "; ".join(problems)
-    return PASS, "the andon cord has a handle; triggers can reach the dispatcher"
+    if pending:
+        return SKIP, (
+            "Wall-E's own invokers hold; cross-project invokers not yet bound on "
+            "walle-actions: %s. Re-run 'walle deploy' once Eve's runbook Phase 8 / Mo-6 "
+            "has created them." % ", ".join(pending)
+        )
+    return PASS, ("the andon cord has a handle; Eve's three and mo-analyst@ hold run.invoker "
+                  "cross-project; triggers can reach the dispatcher")
 
 
 def check_residency(ctx: Ctx) -> CheckResult:
@@ -6343,30 +6978,46 @@ def check_eve_separation(ctx: Ctx) -> CheckResult:
     problems = []
     # The Wall-E half is testable from the moment Phase 8 has run, long before
     # Eve exists, and it is the half that matters most while Eve is still
-    # hypothetical: if eve-controller@ could read walle-refresh-token, Eve's
-    # independence is gone before she is built. Returning SKIP on the first
-    # missing Eve secret abandoned it.
+    # hypothetical: if an Eve identity could read walle-refresh-token, Eve's
+    # independence is gone before she is built. Every Eve identity, not only
+    # the controller: the secrets are Wall-E's, the principals are foreign.
+    eve_members = {
+        "serviceAccount:" + ctx.get(k) for k in ("SA_EVE_V0", "SA_EVE", "SA_EVE_VERIFIER",
+                                                 "SA_EVE_CONSOLE") if ctx.get(k)
+    }
     for secret in WALLE_SECRETS:
         if not secret_exists(ctx, secret):
             continue
         policy = gcloud_probe_json(
             ctx, "secrets", "get-iam-policy", secret, "--location", ctx.need("REGION")) or {}
-        if _roles_of_member(policy, "serviceAccount:" + ctx.need("SA_EVE")):
-            problems.append("eve-controller@ can read %s" % secret)
-    eve_present = [s for s in EVE_SECRETS if secret_exists(ctx, s)]
-    for secret in eve_present:
-        policy = gcloud_probe_json(
-            ctx, "secrets", "get-iam-policy", secret, "--location", ctx.need("REGION")) or {}
-        if _roles_of_member(policy, "serviceAccount:" + ctx.need("SA_ACTIONS")):
-            problems.append("walle-actions@ can read %s" % secret)
+        for member in sorted(eve_members):
+            if _roles_of_member(policy, member):
+                problems.append("%s can read %s" % (member, secret))
+        for binding in policy.get("bindings", []):
+            for member in binding.get("members", []):
+                if member.endswith("@%s.iam.gserviceaccount.com" % ctx.need("EVE_PROJECT")) \
+                        and member not in eve_members:
+                    problems.append("%s (EVE_PROJECT) can read %s" % (member, secret))
+    # The Eve half lives in EVE_PROJECT and is read THERE. Reading Eve's
+    # project through the default project would answer "does not exist" for
+    # secrets that exist in Eve's, and the check would silently narrow to half.
+    eve_side, eve_detail = _eve_side_policies(ctx)
+    eve_secret_labels = [l for l in eve_side if l.startswith("secret ")]
+    for label in eve_secret_labels:
+        if _roles_of_member(eve_side[label], "serviceAccount:" + ctx.need("SA_ACTIONS")):
+            problems.append("walle-actions@ can read Eve's %s in EVE_PROJECT" % label)
+        for binding in eve_side[label].get("bindings", []):
+            for member in binding.get("members", []):
+                if member.endswith("@%s.iam.gserviceaccount.com" % ctx.need("PROJECT")):
+                    problems.append("%s (a Wall-E principal) can read Eve's %s" % (member, label))
     if problems:
         return FAIL, "; ".join(problems)
-    if not eve_present:
+    if not eve_secret_labels:
         return SKIP, (
-            "the Wall-E half passes: eve-controller@ can read none of Wall-E's "
-            "secrets. Eve's own secrets do not exist yet (Phase 15)."
+            "the Wall-E half passes: no Eve identity can read any of Wall-E's secrets. "
+            "Eve's secrets %s" % eve_detail
         )
-    return PASS, "eve-controller@ and walle-actions@ share no secret"
+    return PASS, "no Eve identity reads a Wall-E secret; no Wall-E principal reads an Eve secret"
 
 
 def check_protected_covers_floor(ctx: Ctx) -> CheckResult:
@@ -6909,25 +7560,88 @@ def check_egress_registry_no_forbidden_hosts(ctx: Ctx) -> CheckResult:
     return PASS, "%d registered endpoints, none of them a forbidden host" % len(services)
 
 
+def check_cross_project_dataset_access(ctx: Ctx) -> CheckResult:
+    """project-topology.md rows 4, 6 and 9 on Wall-E's two datasets.
+
+    Positive: the dataset-level READER entries for Eve's and Mo's identities
+    (a missing one is "not yet granted", SKIP, since the principal may not
+    exist before Eve's Phase 8 / Mo-2). Negative, and the part that is a
+    control: NO authorised-view entry naming a dataset in another project —
+    a view runs with its own authorisation, mo-metrics@ can redefine it, and
+    a view authorised on walle_audit would hand raw free text to any reader of
+    the view's dataset (row 9) — and no READER entry for an Eve or Mo account
+    spelled in Wall-E's own project (the old placement).
+    """
+    problems: List[str] = []
+    pending: List[str] = []
+    checked = 0
+    foreign_projects = {ctx.need("EVE_PROJECT"), ctx.need("MO_PROJECT")}
+    for dataset in (ctx.get("AUDIT_DATASET"), ctx.get("LOGS_DATASET")):
+        target = "%s:%s" % (ctx.need("PROJECT"), dataset)
+        shown = probe(ctx, ["bq", "show", "--format=prettyjson", target])
+        if not shown.ok:
+            continue
+        checked += 1
+        access = json.loads(shown.out).get("access", []) or []
+        for entry in access:
+            view = entry.get("view") or {}
+            if view and view.get("projectId") and view.get("projectId") != ctx.need("PROJECT"):
+                problems.append(
+                    "%s authorises a view from another project (%s.%s.%s); topology row 9 "
+                    "forbids any foreign authorised view on a Wall-E dataset"
+                    % (dataset, view.get("projectId"), view.get("datasetId"), view.get("tableId"))
+                )
+            email = str(entry.get("userByEmail", "") or "")
+            if email.startswith(("eve-", "mo-")) and email.endswith(
+                    "@%s.iam.gserviceaccount.com" % ctx.need("PROJECT")):
+                problems.append("%s grants %s, an Eve/Mo account IN Wall-E's project"
+                                % (dataset, email))
+            if any(email.endswith("@%s.iam.gserviceaccount.com" % p) for p in foreign_projects) \
+                    and not _same_dataset_role(str(entry.get("role", "")), "roles/bigquery.dataViewer"):
+                problems.append("%s grants %s %s; a foreign identity may hold READER only"
+                                % (dataset, email, entry.get("role")))
+        for principal_key, dataset_key, stage, row in CROSS_PROJECT_DATASET_READERS:
+            if ctx.get(dataset_key) != dataset:
+                continue
+            wanted = ctx.need(principal_key)
+            if not any(
+                e.get("userByEmail") == wanted
+                and _same_dataset_role(str(e.get("role", "")), "roles/bigquery.dataViewer")
+                for e in access
+            ):
+                pending.append("%s on %s (row %s, %s)" % (wanted, dataset, row, stage))
+    if not checked:
+        return SKIP, "neither dataset exists yet"
+    if problems:
+        return FAIL, "; ".join(problems)
+    if pending:
+        return SKIP, ("no foreign view and no misplaced reader; READER entries not yet present: "
+                      "%s — re-run 'walle gcp' once the principal exists" % ", ".join(pending))
+    return PASS, ("Eve's and Mo's identities hold dataset-level READER only, no foreign "
+                  "authorised view, nothing spelled in Wall-E's project")
+
+
 CHECKS: Tuple[Tuple[str, str, Callable[[Ctx], CheckResult]], ...] = (
     ("agent_reads_no_secret", "8", check_agent_reads_no_secret),
     ("stage0_role_has_no_write", "2", check_stage0_role_has_no_write),
     ("role_assignments", "2", check_role_assignments),
     ("secrets_regional_and_version_pinned", "8/10", check_secrets_regional_and_pinned),
-    ("kms_asymmetric_and_split", "8", check_kms_split),
+    ("kms_separation", "8", check_kms_separation),
     ("actions_cannot_delete_bigquery", "8", check_actions_cannot_delete_bigquery),
+    ("cross_project_dataset_access", "7", check_cross_project_dataset_access),
     ("sink_actor_exclusion", "11", check_sink_filters),
-    ("engine_three_principals", "12", check_engine_three_principals),
+    ("engine_two_principals", "12", check_engine_principals),
     ("schedulers_paused_watch_running", "14/16", check_scheduler_states),
     ("ladder_config", "14", check_ladder_config),
     ("actions_env_complete", "10", check_actions_env_complete),
     ("control_caller_allowlist", "10", check_control_caller_allowlist),
+    ("read_caller_allowlist", "10", check_read_caller_allowlist),
     ("cloud_run_requires_auth", "10/11", check_cloud_run_requires_auth),
     ("project_roles", "6", check_project_roles),
     ("run_invoker_handles", "10/11", check_run_invoker_handles),
     ("residency_and_ingress", "6/7/10", check_residency),
     ("audit_tables_partitioned", "7", check_audit_tables),
-    ("eve_credential_separation", "8/15", check_eve_separation),
+    ("eve_credential_separation", "8", check_eve_separation),
     ("protected_group_covers_floor", "1", check_protected_covers_floor),
     ("robot_hardening", "3", check_robot_hardening),
     ("robot_credential_is_read_only", "9", check_robot_credential_is_read_only),
@@ -7244,7 +7958,9 @@ def cmd_status(ctx: Ctx) -> int:
         gcloud_probe_json(ctx, "projects", "describe", ctx.need("PROJECT")) is not None,
         "number %s" % project_number(ctx))
     accounts = gcloud_probe_json(ctx, "iam", "service-accounts", "list") or []
-    add("6", "service accounts", len(accounts) >= 5, "%d present" % len(accounts))
+    add("6", "service accounts", len(accounts) >= len(SERVICE_ACCOUNT_IDS),
+        "%d present (Wall-E's %d; Eve's and Mo's live in their own projects)"
+        % (len(accounts), len(SERVICE_ACCOUNT_IDS)))
     add("6", "staging bucket",
         gcloud_probe_json(ctx, "storage", "buckets", "describe", ctx.need("STAGING_BUCKET"))
         is not None)
@@ -7258,16 +7974,43 @@ def cmd_status(ctx: Ctx) -> int:
     add("7", "tasks queue",
         gcloud_probe_json(ctx, "tasks", "queues", "describe", ctx.get("TASKS_QUEUE"),
                           "--location", ctx.need("REGION")) is not None)
-    add("8", "kms key %s" % ctx.get("KMS_KEY"),
-        gcloud_probe_json(ctx, "kms", "keys", "describe", ctx.get("KMS_KEY"),
-                          "--keyring", ctx.get("KMS_KEYRING"),
-                          "--location", ctx.need("REGION")) is not None)
-    for secret in list(WALLE_SECRETS) + list(EVE_SECRETS):
+    # Eve's key and secrets are NOT in this project: no row pretends to look
+    # for them here. The cross-project grants this script OWNS are reported
+    # below, under their own heading.
+    for secret in WALLE_SECRETS:
         versions = gcloud_probe_json(
             ctx, "secrets", "versions", "list", secret, "--location", ctx.need("REGION"),
             "--filter", "state=ENABLED") if secret_exists(ctx, secret) else None
-        add("8/15", "secret %s" % secret, versions is not None,
+        add("8", "secret %s" % secret, versions is not None,
             "%d enabled version(s)" % len(versions or []))
+    # Cross-project grants made by this runbook on Wall-E's resources
+    # (project-topology.md §7.1). Read-only probes, never an abort.
+    try:
+        for principal_key, dataset_key, _stage, row in CROSS_PROJECT_DATASET_READERS:
+            dataset = ctx.get(dataset_key)
+            shown = probe(ctx, ["bq", "show", "--format=prettyjson",
+                                "%s:%s" % (ctx.need("PROJECT"), dataset)])
+            access = json.loads(shown.out).get("access", []) if shown.ok else []
+            wanted = ctx.get(principal_key, "")
+            add("7 x-proj", "READER %s on %s" % (wanted, dataset),
+                any(e.get("userByEmail") == wanted for e in access or []),
+                "topology row %s" % row)
+    except (WalleError, ValueError) as exc:
+        rows.append(["7 x-proj", "dataset readers", "?", str(exc).splitlines()[0][:60]])
+    try:
+        actions_policy = gcloud_probe_json(
+            ctx, "run", "services", "get-iam-policy", "walle-actions",
+            "--region", ctx.need("REGION")) or {}
+        invokers = set(_members_with_role(actions_policy, "roles/run.invoker"))
+        for label, member in (
+            ("eve-controller@ (EVE_PROJECT)", "serviceAccount:" + ctx.get("SA_EVE", "")),
+            ("eve-verifier@ (EVE_PROJECT)", "serviceAccount:" + ctx.get("SA_EVE_VERIFIER", "")),
+            ("eve-console@ (EVE_PROJECT)", "serviceAccount:" + ctx.get("SA_EVE_CONSOLE", "")),
+            ("mo-analyst@ (MO_PROJECT)", iam_member(ctx.get("MO_PRINCIPAL", "") or "-")),
+        ):
+            add("10 x-proj", "run.invoker %s" % label, member in invokers, "topology rows 3, 8")
+    except WalleError as exc:
+        rows.append(["10 x-proj", "run.invoker", "?", str(exc).splitlines()[0][:60]])
     for service in ("walle-actions", "walle-dispatcher"):
         url = current_service_url(ctx, service)
         add("10/11", "cloud run %s" % service, bool(url), url)
@@ -7281,6 +8024,20 @@ def cmd_status(ctx: Ctx) -> int:
         engines = list_engines(ctx)
         add("12", "reasoning engine", len(engines) == 1,
             "%d found" % len(engines) if engines else "none")
+        if len(engines) == 1:
+            engine_id = str(engines[0].get("name", "")).rsplit("/", 1)[-1]
+            gemini_number = gemini_project_number(ctx) or "<GEMINI_PROJECT_NUMBER>"
+            gemini_agent = ("serviceAccount:service-%s@gcp-sa-discoveryengine.iam."
+                            "gserviceaccount.com" % gemini_number)
+            status_code, policy = http_json(
+                ctx, "POST",
+                aiplatform_url(ctx, "%s/%s:getIamPolicy" % (engine_collection_path(ctx), engine_id)),
+                access_token(ctx), {}, mutating=False,
+            )
+            members = {m for b in (policy or {}).get("bindings", []) for m in b.get("members", [])} \
+                if status_code == 200 and isinstance(policy, dict) else set()
+            add("12 x-proj", "engine member service-%s@ (GEMINI_PROJECT)" % gemini_number,
+                gemini_agent in members, "topology row 1")
     except WalleError as exc:
         add("12", "reasoning engine", False,
             "unreadable: %s" % str(exc).splitlines()[0][:60])
@@ -7327,9 +8084,10 @@ def cmd_status(ctx: Ctx) -> int:
     say(render_table(rows, ["PHASE", "RESOURCE", "PRESENT", "DETAIL"]))
     say("")
     say("Config values still to fill in as phases produce them:")
-    for key in ("PROJECT_NUMBER", "REFRESH_TOKEN_VERSION", "ACTIONS_URL",
-                "DISPATCHER_URL", "ENGINE_ID", "EVE_TOKEN_VERSION"):
+    for key in ("PROJECT_NUMBER", "GEMINI_PROJECT_NUMBER", "REFRESH_TOKEN_VERSION",
+                "ACTIONS_URL", "DISPATCHER_URL", "ENGINE_ID"):
         say("  %-22s %s" % (key, ctx.get(key) or "<empty>"))
+    say("(EVE_TOKEN_VERSION is Eve's runbook's, in EVE_PROJECT; not tracked here.)")
     return 0
 
 
@@ -7346,11 +8104,15 @@ def cmd_teardown(ctx: Ctx) -> int:
     say("  and it does NOT touch Workspace unless --include-workspace is given.")
     say("")
     say("  Note what cannot be undone:")
-    say("   - a deleted project id can never be reused, and the KMS key ring goes")
-    say("     with it")
+    say("   - a deleted project id can never be reused")
     say("   - the OAuth grant survives project deletion: revoke it as the robot at")
     say("     https://myaccount.google.com/permissions")
-    say("   - KMS keys cannot be deleted, only their versions destroyed")
+    say("  And what this teardown never reaches (project-topology.md §1.3): nothing")
+    say("  in EVE_PROJECT (%s) or MO_PROJECT (%s) — Eve's key, secrets and mirror,"
+        % (ctx.get("EVE_PROJECT", "<EVE_PROJECT>"), ctx.get("MO_PROJECT", "<MO_PROJECT>")))
+    say("  Mo's datasets and drop box are their owners' to remove. The dataset-level")
+    say("  READER entries and the run.invoker and engine bindings this script made for")
+    say("  Eve's and Mo's identities die with the datasets, the services and the engine.")
     say("")
     if not ctx.dry_run:
         if not _is_tty():
@@ -7412,7 +8174,8 @@ def cmd_teardown(ctx: Ctx) -> int:
                          "--location", ctx.need("REGION")) is not None:
         run(ctx, ["gcloud", "tasks", "queues", "delete", ctx.get("TASKS_QUEUE"),
                   "--location", ctx.need("REGION"), "--quiet", "--project", project])
-    for secret in list(WALLE_SECRETS) + list(EVE_SECRETS):
+    # Wall-E's three secrets only. Eve's two are in EVE_PROJECT and are Eve's.
+    for secret in WALLE_SECRETS:
         if secret_exists(ctx, secret):
             run(ctx, ["gcloud", "secrets", "delete", secret,
                       "--location", ctx.need("REGION"), "--quiet", "--project", project])
@@ -7424,15 +8187,10 @@ def cmd_teardown(ctx: Ctx) -> int:
                              "--project", project) is not None:
             run(ctx, ["gcloud", "iam", "roles", "delete", role, "--project", project,
                       "--quiet"])
-    if getattr(ctx.args, "destroy_key_versions", False):
-        versions = gcloud_probe_json(
-            ctx, "kms", "keys", "versions", "list", "--key", ctx.get("KMS_KEY"),
-            "--keyring", ctx.get("KMS_KEYRING"), "--location", ctx.need("REGION")) or []
-        for version in versions:
-            number = str(version.get("name", "")).rsplit("/", 1)[-1]
-            run(ctx, ["gcloud", "kms", "keys", "versions", "destroy", number,
-                      "--key", ctx.get("KMS_KEY"), "--keyring", ctx.get("KMS_KEYRING"),
-                      "--location", ctx.need("REGION"), "--project", project, "--quiet"])
+    # No --destroy-key-versions any more: Eve's key lives in EVE_PROJECT and
+    # destroying its versions is Eve's owner's act (eve/07-build-runbook.md
+    # Phase 12). A Wall-E teardown that reached into Eve's project would be
+    # the escalation the four-project topology exists to make impossible.
     # Named, not silently left behind: an operator who tears down and re-runs
     # `walle gcp` otherwise gets a partially populated project whose state does
     # not match a clean build.
@@ -7469,10 +8227,10 @@ def cmd_teardown(ctx: Ctx) -> int:
     say("")
     say("  Remaining by design, and NOT cleaned up:")
     say("   - the Firestore database (delete the project to remove it)")
-    say("   - the KMS key ring and key: keys can only have versions destroyed")
     say("   - the OAuth grant at Google: revoke it as the robot at")
     say("     https://myaccount.google.com/permissions")
-    say("   - the five service accounts and every project-level IAM binding")
+    say("   - the four service accounts and every project-level IAM binding")
+    say("   - everything in EVE_PROJECT and MO_PROJECT, which this script never touches")
     say("   - the budget walle-stage-0, which keeps alerting on a rebuilt project")
     say("   - Workspace, unless --include-workspace was given")
     return 0
@@ -7805,8 +8563,10 @@ def cmd_rollback(ctx: Ctx) -> int:
 COMMANDS: Dict[str, Tuple[str, Callable[[Ctx], int]]] = {
     "preflight": ("tools, permissions, config, and the manual step list", cmd_preflight),
     "workspace": ("phases 1 and 2: OUs, robots, groups, sandbox, floor list, roles", cmd_workspace),
-    "gcp": ("phases 6, 7 and 8: project, data, keys and secrets", cmd_gcp),
-    "consent": ("phases 9 and 15: the one interactive OAuth bootstrap", cmd_consent),
+    "gcp": ("phases 6, 7 and 8: project, data, secrets, and the cross-project reader "
+            "grants for Eve and Mo", cmd_gcp),
+    "consent": ("phase 9: the one interactive OAuth bootstrap (Eve's is Eve's runbook)",
+                cmd_consent),
     "deploy": ("phases 10, 11, 12, 12b and 14: services, sinks, agent + identity, ladder, schedulers", cmd_deploy),
     "spike": ("phase 12b step 3: the Agent Identity spike on a throwaway engine", cmd_spike),
     "armor": ("phase 12c: Model Armor templates, ingress gateway, floor (inspect-only)", cmd_armor),
@@ -7881,7 +8641,8 @@ def build_parser() -> argparse.ArgumentParser:
                              help="re-bootstrap: allow a SECOND refresh-token "
                                   "version after the old grant has been revoked")
             sub.add_argument("--eve", action="store_true",
-                             help="phase 15: Eve's robot instead of Wall-E's")
+                             help="REFUSED: Eve's consent lives in EVE_PROJECT and is "
+                                  "Eve's runbook (eve/07-build-runbook.md Phase 9)")
             sub.add_argument("--store-client", metavar="PATH",
                              help="store this downloaded client JSON, then shred it")
             sub.add_argument("--paste", action="store_true",
@@ -7901,8 +8662,8 @@ def build_parser() -> argparse.ArgumentParser:
                              help="also delete the Workspace objects this script created")
             sub.add_argument("--delete-project", action="store_true",
                              help="delete the GCP project: the id can never be reused")
-            sub.add_argument("--destroy-key-versions", action="store_true",
-                             help="destroy Eve's KMS key versions (the key itself remains)")
+            # --destroy-key-versions is gone: Eve's key is in EVE_PROJECT and
+            # is Eve's owner's to destroy, never Wall-E's teardown's.
     return parser
 
 

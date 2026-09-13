@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
+- Placement updated on 2026-09-13 to the four-project topology; no control was added,
+  softened or dropped. [../project-topology.md](../project-topology.md) is the authority
+  for where each sink, key and secret lives.
 
 ## The honest risk statement
 
@@ -17,8 +20,9 @@ Three properties carry most of the weight:
 1. **The model never holds the credential.** It lives in the action service, behind IAM.
    No tool returns it and no prompt reveals it.
 2. **The model cannot self-authorise.** Approvals are minted by the service, released by a
-   human or by Eve from a separate identity with a separate key, bound to canonical
-   parameters and pre-state, single-use.
+   human or by Eve from a separate identity with a separate key — homed in `EVE_PROJECT`,
+   where no Wall-E principal exists — bound to canonical parameters and pre-state,
+   single-use.
 3. **The model cannot change its own leash.** The ladder config, the overrides and the
    halt flags are unreachable from any catalogue operation, and `walle-agent@` has no IAM
    on them.
@@ -38,7 +42,7 @@ mechanism in [03-lld.md](03-lld.md).
 | **N5** | **Acting on instructions found in content** — mail, Chat, documents, audit rows, **display names, group names, error text** | The one attack that will actually be attempted | The **taint bit**: any attacker-writable field reaching the model forces the inbox ceiling for that run, whatever the trigger. Plus the playbook `uses` allowlist, the pinned selection query, a closed error enum that never echoes upstream text, and canonicalisation of every attacker-writable string | Taint evaluation in the policy chain, ceilings in code, playbook validator ([03](03-lld.md)) |
 | **N6** | **Outbound communication chosen by the model, unattended** | An admin account is trusted by every employee; a phishing mail from it is not recoverable | Templated notification (`notify.operators`, family F2) and free text (`gmail.send`, `chat.message.send`, family **F2b**) are different families with different ceilings. An earlier draft put them in one family, which would have made free-text mail autonomous at L4 on a schedule — the exact thing this row forbids | Family split in the catalogue; recipient domain check as an explicit policy step |
 | **N7** | **Touching a protected principal** — super admins, delegated admins, itself, its own OU | Self-modification and lateral movement | Protected-principal check, fails closed | `_check_target`, background-refreshed admin cache |
-| **N8** | **An action nobody can see** | Undetected drift is worse than a visible failure | Write-ahead audit; writes refused when the audit sink is down; reconciliation against Workspace audit logs. That reconciliation needs an **organisation-level aggregated log sink into BigQuery** — an earlier draft routed those logs only to Pub/Sub, so the completeness metric had nothing to query. It also needs org-level permission to create the sink | Audit module, aggregated sink, Eve's completeness metric |
+| **N8** | **An action nobody can see** | Undetected drift is worse than a visible failure | Write-ahead audit; writes refused when the audit sink is down; reconciliation against Workspace audit logs. That reconciliation needs an **organisation-level aggregated log sink into BigQuery** — an earlier draft routed those logs only to Pub/Sub, so the completeness metric had nothing to query. It also needs org-level permission to create the sink. Two sinks land in two projects: Wall-E's copy is `walle-audit-bq` → `walle_workspace_logs` in `WALLE_PROJECT`; Eve's own organisation-level sink `eve-workspace-audit` → `eve_workspace_logs` in `EVE_PROJECT` (already designed), so Eve's evidence is outside Wall-E's teardown reach | Audit module, aggregated sinks, Eve's completeness metric |
 | **N9** | **Acting as a person** | Impossible by construction, and must stay impossible | No DWD, no user write tokens ever accepted by the action service | Architecture |
 
 If you disagree with any row, say so before build — every one of them has cost the design
@@ -60,10 +64,10 @@ Rows marked **new** exist only because there is an autonomous path; a design wit
 | **new** Poisoned upstream signal — a bad HR feed or forged event | Events only from Workspace audit logs signed by Google's own pipeline; suspend at L4 only when the trigger is a system of record; caps still apply | A valid-but-wrong upstream record produces up to one run's worth of changes, all reversible |
 | **new** Stale state — a human admin acts between plan and execution | Pre-state hash bound into the approval; **every item re-read immediately before execution**; mismatch skips the item | Skipped item, reported. Not an incident. |
 | **new** Eve unavailable | L4 items **wait**; over four hours sets `no_autonomous`; L5 without post-hoc verification within SLA demotes to L4 | Work stalls. Correct outcome. |
-| **new** Eve compromised or rubber-stamping | Eve can only lower and approve, never raise; sampled human review of Eve verdicts; an overturned Eve approval demotes both the family and Eve's authority; Eve's key is separate and rotates independently | Eve could approve within the current level's blast radius until the next sample. Mitigated by hold windows and vetoes. |
+| **new** Eve compromised or rubber-stamping | Eve can only lower and approve, never raise; sampled human review of Eve verdicts; an overturned Eve approval demotes both the family and Eve's authority; Eve's key is separate, lives in `EVE_PROJECT` and rotates independently — a rotation reaches Wall-E as a PEM update in its repository, never as a grant | Eve could approve within the current level's blast radius until the next sample. Mitigated by hold windows and vetoes. |
 | **new** Mo proposes a harmful change | Mo has no write path; its output is a pull request needing a human approver, CI validation and a decision record | A rubber-stamped pull request. Mitigated by the two-person rule on L4/L5. |
 | **new** Ladder config tampering | Config in git with code ownership; **the ceiling module, policy chain and validator are owned separately and the check runs outside the repository**, so one pull request cannot move the ladder and the gate together; `config_version` and `ceilings_sha` on every row | Detected within one verification cycle |
-| **new** The action service itself is compromised or buggy | Eve's asymmetric key means the service cannot mint an Eve approval; plans are create-only so a signed plan cannot be rewritten; the Workspace audit log is written by Google, not by us | **Real and only partly mitigated.** Every control still runs in one process. See [10](10-adversarial-review.md) and [decision 18](09-open-decisions.md) |
+| **new** The action service itself is compromised or buggy | Eve's asymmetric key, in `EVE_PROJECT` where no Wall-E principal can be granted `useToSign`, means the service cannot mint an Eve approval; plans are create-only so a signed plan cannot be rewritten; the Workspace audit log is written by Google, not by us | **Real and only partly mitigated.** Every control still runs in one process. See [10](10-adversarial-review.md) and [decision 18](09-open-decisions.md) |
 | **new** Operators cannot reach the control plane | `run.invoker` bound to the operator group, plus an out-of-band approval surface | If neither exists, every kill switch is theoretical. This was true of the first draft |
 | **new** Quota exhaustion locking out human admins | Per-operation ceilings well below Google's limits; backoff; quota errors as a distinct outcome class | Wall-E throttles itself before the tenant does |
 | **new** Credential revoked mid-run | `invalid_grant` treated as a paging incident, not a retry; run aborts at the current item | Partial run, reported |
@@ -84,7 +88,7 @@ needing a decision record and a security sign-off, and the default answer is no.
 | Self-modification | Anything targeting the robot account, its OU, the `walle-*` control groups, the ladder config, the catalogue, the overrides or the halt flags |
 | Structure | OU create, delete, rename or move. Moving a *user* into an allowlisted OU is F4; changing the tree is not. |
 | Money | Subscriptions, billing, edition changes, licence pool purchases |
-| Outside Workspace | GCP IAM, Gemini Enterprise configuration, project settings |
+| Outside Workspace | IAM and settings of any of the four projects (`GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT`), the folder `FOLDER_ID`, Gemini Enterprise configuration |
 | Other people's Drive | File mutations, ownership changes, sharing changes. Unreachable without DWD — and do not add DWD to reach them. |
 
 ## What prompt-based defence cannot do
@@ -130,7 +134,7 @@ Alert on, at minimum (the content-screen, taint-rate, filter-version and span-ca
 | Approval from an identity not in the operators group | approvals | Spoofed approval |
 | Eve signature invalid | action service | Eve impersonation |
 | Audit insert failure | action service | Writes are already refused; someone must know why |
-| Secret access by a non-service identity | Cloud Audit Logs | Credential access outside the action service |
+| Secret access by a non-service identity, on `WALLE_PROJECT`'s three secrets | Cloud Audit Logs | Credential access outside the action service. Access to `eve-refresh-token` and `eve-oauth-client` is monitored by Eve's own drift job in `EVE_PROJECT`, which Wall-E's cannot read (decision 46) |
 | Scheduled run missing two consecutive windows | dispatcher | A dead trigger looks exactly like a quiet week |
 | `invalid_grant` from Google | action service | The credential is gone; Wall-E is down until re-bootstrap |
 
@@ -142,13 +146,15 @@ Alert on, at minimum (the content-screen, taint-rate, filter-version and span-ca
   the stage where writes stop having a human in the path — realistically before Stage 3,
   and the question should be asked in week one because it has the longest lead time of
   anything in this plan.
-- **Data residency.** Project, Agent Runtime, Cloud Run, Firestore, Pub/Sub and BigQuery
-  all in `europe-west1` or EU. Secret Manager **regional secrets**, not global secrets
+- **Data residency.** All four projects sit under `FOLDER_ID` in `europe-west1` with
+  BigQuery in `EU`; in `WALLE_PROJECT`, Agent Runtime, Cloud Run, Firestore, Pub/Sub and
+  BigQuery all in `europe-west1` or EU. Secret Manager **regional secrets**, not global secrets
   with user-managed replication. Two limits to record rather than discover: Agent Runtime
   **Code Execution has no EU at-rest residency** (do not enable it — Wall-E must not run
   arbitrary code anyway), and **CMEK is unavailable** when the runtime uses a
-  multi-regional endpoint or sessions use the global one. Confirm the Gemini Enterprise app is in the `eu`
-  multi-region and pin a model that has EU residency — not every current model does. One
+  multi-regional endpoint or sessions use the global one. Confirm the Gemini Enterprise app in
+  `GEMINI_PROJECT` is `eu` or `global` — an `eu` app fronts `europe-*` agents, a `global` app
+  any region — and pin a model that has EU residency — not every current model does. One
   exception to accept knowingly: **Workspace audit logs land in Cloud Logging at
   organisation level and their storage region is not selectable.**
 - **Retention.** Set a table expiry on every audit table. 400 days is a reasonable default

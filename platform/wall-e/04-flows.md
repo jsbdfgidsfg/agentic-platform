@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-09
+- Last reviewed: 2026-09-13
+- Placement updated on 2026-09-13 to the four-project topology; the callers that cross a
+  project are named with their home project. [../project-topology.md](../project-topology.md)
+  is the authority for every such grant.
 
 Seven journeys, each with its failure branch. Levels and stages are defined in
 [05-autonomy-ladder.md](05-autonomy-ladder.md).
@@ -21,6 +24,7 @@ sequenceDiagram
     participant BQ as audit
 
     U->>GE: "suspend <user>"
+    Note over GE,AG: GE is in GEMINI_PROJECT — it calls the engine in WALLE_PROJECT as service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine, walleEngineQuery bound on the engine
     GE->>AG: prompt, user_id = <operator>
     AG->>CR: execute{directory.user.get, jdoe}
     CR->>AD: users.get
@@ -136,10 +140,13 @@ Trigger class T1 or T2. Level L4. Stage 4, and only for families that have earne
 
 ```
 plan frozen → level L4 → status pending_eve
-  → Eve reads GET /v1/plans/{id}: items, pre-state, expects, rollback plan
-  → Eve verifies independently (its own read-only Workspace credential,
-    plus the Workspace audit log, not Wall-E's word for anything)
-  → Eve POSTs /v1/plans/{id}/approve, signed with Eve's own key
+  → Eve (eve-controller@EVE_PROJECT, run.invoker on walle-actions in WALLE_PROJECT)
+    reads GET /v1/plans/{id}: items, pre-state, expects, rollback plan
+  → Eve verifies independently (its own read-only Workspace credential, held in
+    EVE_PROJECT's Secret Manager, plus its own copy of the Workspace audit log in
+    EVE_PROJECT — not Wall-E's word for anything)
+  → Eve POSTs /v1/plans/{id}/approve, signed with the Cloud KMS key eve-approval
+    in EVE_PROJECT; walle-actions verifies against the pinned PEM in its repository
   → hold window opens (30 min, business hours only)
       → operators are notified: "executing in 30 min unless vetoed"
       → any operator may POST /v1/plans/{id}/veto, one click
@@ -162,7 +169,10 @@ Level L5. Reversible operations only, and never `WRITE_HIGH`.
 
 ```
 trigger → plan → policy → execute → verify (service, by re-reading)
-        → Pub/Sub walle-events → Eve verifies independently within 60 min
+        → Pub/Sub walle-events (WALLE_PROJECT), consumed through a subscription in
+          EVE_PROJECT once one exists (target state, C30) — until then Eve reads
+          walle_audit through its dataset-level dataViewer
+        → Eve verifies independently within 60 min
         → daily digest to operators
 ```
 
@@ -170,7 +180,9 @@ The interesting path is the unhappy one:
 
 ```
 Eve's independent read disagrees with Wall-E's verification
-  → Eve POSTs /v1/control/demote {family, L3, reason}
+  → Eve POSTs /v1/control/demote {family, L3, reason}, as eve-controller@EVE_PROJECT
+    crossing into WALLE_PROJECT over run.invoker on walle-actions plus the
+    control-endpoint allowlist, which carries that full email
   → takes effect within seconds, for every in-flight and future run
   → Eve opens a rollback proposal (it may propose; only a human executes a rollback)
   → incident note; promotions frozen; re-promotion needs a fresh decision record
@@ -212,6 +224,8 @@ Operator notices something wrong, or Eve does, or a breaker fires.
   K0  POST /v1/control/halt {mode: no_writes}      ≤ 5 s   reads keep working
   K1  POST /v1/control/demote {family, L0}         ≤ 5 s   surgical
   K2  pause Scheduler jobs, detach subscriptions   seconds no new runs start
+      (the Scheduler jobs are in WALLE_PROJECT; Eve's and Mo's subscriptions,
+       when they exist, are in EVE_PROJECT and MO_PROJECT and are theirs to detach)
   K3  remove run.invoker from walle-agent@         ~1 min  no path from any front door
   K4  service revokes its own refresh token        seconds it holds the token, so it can revoke it
   K5  revoke the grant / suspend the robot account seconds total, needs re-bootstrap
