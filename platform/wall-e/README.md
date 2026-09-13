@@ -3,6 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-09-13
+- **Premise changed 2026-09-13: Wall-E holds Super Admin on a dedicated user account, not a narrow custom role; see the platform HLD at [../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) and the revised [01-hld.md](01-hld.md). The one-line summary and the team table below predate that change.**
 - Maturity: **design — nothing built, nothing enabled**
 - Projects: **four**, under one folder — `GEMINI_PROJECT` (the app), `WALLE_PROJECT`
   (everything of Wall-E's), `EVE_PROJECT`, `MO_PROJECT`. Decided 2026-09-13;
