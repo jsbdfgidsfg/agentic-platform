@@ -164,7 +164,7 @@ policy, the log view instead of an organisation sink).
 
 | Thing | State |
 |---|---|
-| The design | complete for pages 00–12; decisions P1–P141 recorded; the reconcile pass (page-to-page claims in each page's "claims other pages must match" section, and §7 of the register) not yet run |
+| The design | complete for pages 00–12; decisions P1–P141 recorded; the reconcile pass over the platform pages (page-to-page claims in each page's "claims other pages must match" section, and §7 of the register) run on 2026-09-13 — every HLD correction carries a dated line; the agent-set changes it names are the propagation stage of HLD §18, not yet run |
 | The organisation | one administrator, no SOC, no second super admin outside his own line, no security reviewer, no Eve owner, no DPO engaged, no ISMS names supplied (HLD §0.3) |
 | Google Cloud | no `fld-agentic-platform`, no factory, no project of the four; `GEMINI_PROJECT` exists as the tenant app's project and is to be imported |
 | Google Workspace | the tenant exists with Gemini Enterprise licences; no robot account, no robot OU, no multi-party approval, no sandbox tenant |

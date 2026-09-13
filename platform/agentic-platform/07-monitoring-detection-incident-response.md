@@ -70,7 +70,7 @@ account inside the tenant.
 | # | Feed | Mechanism (verified 2026-09-13, §18) | Carries | Owner | Lag budget | Absence detection |
 |---|---|---|---|---|---|---|
 | F1 | Workspace events → SIEM | Admin console, Menu → Reporting → Data integrations → **Google Security Operations export**; configured with the SecOps customer id, token and instance id; needs the **Reports** administrator privilege; editions Enterprise Standard/Plus, Frontline Plus, Education Standard/Plus (tenant edition *tbd*, [../google-workspace.md](../google-workspace.md)); exports **all** supported event types (Admins, Users, Groups, OAuth, SAML, Login, Rules, Gmail, Drive, Chat, Calendar, Meet, Devices, Chrome, Takeout, Data Studio, Vault… — no selective export); only events after connection; up to 24 h before the first data | the desk's copy of everything, including the Gmail/Drive/Calendar/Chat/Meet/Chrome streams Cloud Logging never receives | a **human** Workspace administrator holding the Reports privilege configures it (never `walle@` — the export setting is on the hard-denied list, HLD §13.1 item 2); IT security owns | `Assumption:` 15 min steady-state (verify at build) | SIEM heartbeat rule H-2 (§7) |
-| F2 | Cloud Audit Logs and Workspace-in-Cloud-Logging → `LOGGING_PROJECT` → SIEM | the HLD's one organisation-level aggregated sink with `includeChildren` over `fld-agentic-platform` plus the organisation's Workspace audit streams (admin, groups, login, OAuth token, SAML, Access Transparency) into the locked `europe-west1` log bucket and BigQuery dataset (HLD §7.1); SecOps ingests Cloud Logging directly (the ingest page rendered as an index only on 2026-09-13; the mechanism — direct ingestion configured from SecOps, or a Pub/Sub sink — is **unverified this pass** and fixed at build) | every Admin Activity and Data Access entry the folder produces; the Workspace entries Google shares with Cloud Logging | platform owner | sink: seconds; SIEM: `Assumption:` 5 min | H-1 (Eve's independent copy) and H-2 |
+| F2 | Cloud Audit Logs and Workspace-in-Cloud-Logging → `LOGGING_PROJECT` → SIEM | the two aggregated sinks of [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §3.2 (aligned 2026-09-13) — `S-org` at the organisation for the Workspace audit streams (admin, groups, login, OAuth token, SAML, Access Transparency) and `S-folder` over `fld-agentic-platform` with `includeChildren`, intercepting, for the five audit families — into `LOGGING_PROJECT`, then the locked `europe-west1` evidence bucket, the identity bucket and the BigQuery dataset (HLD §7.1); the SIEM reads the `siem` log view of `platform-evidence-logs` (the `identity` view only on IT security's request); SecOps ingests Cloud Logging directly (the ingest page rendered as an index only on 2026-09-13; the mechanism — direct ingestion configured from SecOps, or a Pub/Sub sink — is **unverified this pass** and fixed at build) | every Admin Activity and Data Access entry the folder produces; the Workspace entries Google shares with Cloud Logging | platform owner | sink: seconds; SIEM: `Assumption:` 5 min | H-1 (Eve's independent copy) and H-2 |
 | F3 | SCC findings → SIEM and → pager | SecOps ingests SCC findings by default (lens, §18); independently, one **notification config** at the organisation (`gcloud scc notifications create … --pubsub-topic … --filter …`, filters as in `findings.list`) to a Pub/Sub topic in `CORE_PROJECT` whose subscriber posts to the Terraform-managed channel — **SCC does not page on its own** | ETD (incl. the eight Workspace findings), SHA + custom modules, AI Protection, Sensitive Actions, Agent Platform Threat Detection (nonprod) | organisation IT security (P11) | near-real time (Google) | H-3: a synthetic SHA custom-module finding raised weekly by the drift job and expected at the desk |
 | F4 | Agent-layer events → SIEM, **metadata only** | each action service publishes `halt.set`, `content.flagged`, `override.applied`, `run.verified`, `reconciliation_gap`, denial rows and the heartbeat row to the project's Pub/Sub topic (factory-made, HLD §3.2); ids, reason codes and hashes only — never prompt or payload; the platform's SIEM feed subscribes to every topic labelled `tier ∈ {W,P,P-SA}` | the correlation keys of §5 and the closed denial vocabulary | agent owner emits; platform owner owns the subscription | seconds | the per-agent heartbeat (§4, §7) |
 | F5 | Eve's independent copies (not a SIEM feed; the verifier's own evidence) | Eve's organisation-level sink over all six Workspace streams → `eve_workspace_logs`; Eve's Reports API poll by actor → `eve_workspace_reports`; the daily push to the witness by `eve-export@` (HLD §13.2) | what Eve reconciles against `walle_audit` | Eve owner | sink: seconds; Reports API: per-application lag budgets in `thresholds.yaml` | H-1 (in `EVE_PROJECT` and in the witness) |
@@ -280,8 +280,11 @@ budgets as [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contr
 the two pages fire on one number. A card without one
 is a `shadow_or_silent_agent` finding: severity 3 at R, 2 at W, **1 at P** — and at P the
 finding is also the H-4 heartbeat rule of §7. The response is not "fix the monitoring": the
-agent's share is removed by the reconciliation job (it holds the `revoke`-lite grant for the
-`gemini-egress` policy entry, through PAM, drift-checked) until the heartbeat returns. An agent
+agent's share is removed until the heartbeat returns — the reconciliation job sets the row
+`suspended` by an automated pull request and triggers the CI pipeline run whose `terraform
+apply` removes the `gemini-egress` policy entry; the job itself holds no write on the gateway
+policy or any registry, so CI stays the only writer ([05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md)
+§5–§6, P73; aligned 2026-09-13 — an earlier draft gave the job a PAM-elevated right). An agent
 that cannot be seen is not published — that is what "registered ⇒ feeding" enforces.
 
 **Decision P95.** The baseline variants, heartbeat cadences, absence windows and
@@ -373,10 +376,10 @@ verifier's — and the page compares their firing in the metrics (§14).
 
 | Id | Rule | Source | Runbook | Test |
 |---|---|---|---|---|
-| SG-01 | `SetIamPolicy` at the organisation, any folder, `EVE_PROJECT`, `EVE_ADVISOR_PROJECT`, `LOGGING_PROJECT`, `CORE_PROJECT`, `CICD_PROJECT` or `VALIDATOR_PROJECT` by `walle@`, by any agent principal, or by any identity outside `platform-approvers@` and the CI deployer; any organisation-level role granted to `walle@` at all (drift row, HLD §13.1 item 5); Sensitive Actions "Add Sensitive Role" at the organisation | F2 Admin Activity; F3 | RB-01, RB-04 | nonprod: grant a viewer role on a nonprod project as a test identity |
+| SG-01 | `SetIamPolicy` at the organisation, any folder, `EVE_PROJECT`, `EVE_ADVISOR_PROJECT`, `LOGGING_PROJECT`, `CORE_PROJECT`, `CICD_PROJECT`, `VALIDATOR_PROJECT` or `KMS_PROJECT` by `walle@`, by any agent principal, or by any identity outside `platform-approvers@` and the CI deployer; any organisation-level role granted to `walle@` at all (drift row, HLD §13.1 item 5); a fourth super admin; a `brk-gcp-*@` sign-in (severity 1, [04-identity-and-privileged-access.md](04-identity-and-privileged-access.md) §7); Sensitive Actions "Add Sensitive Role" at the organisation | F2 Admin Activity; F2 login; F3 | RB-01, RB-04 | nonprod: grant a viewer role on a nonprod project as a test identity |
 | SG-02 | Any `logging.sinks.*`, `logging.buckets.*` or `logging.views.*` change on the aggregated sink, Eve's sink, the locked buckets; any `auditConfigs` change at folder or organisation | F2 | RB-04 | edit a nonprod sink |
-| SG-03 | Any `orgpolicy` change on `fld-agentic-platform` or its children outside a PAM-granted window; any deny-policy, PAB, Model Armor floor (`modelarmor.floorsettings.update` — the write is Admin Activity; exact method name committed after observation) or Binary Authorization policy change; Sensitive Actions "Organization Policy Changed" | F2; F3 | RB-04 | nonprod floor edit under PAM |
-| SG-04 | Project deletion or `restrictServiceUsage` change touching `EVE_PROJECT`, `EVE_ADVISOR_PROJECT`, `LOGGING_PROJECT`, `CORE_PROJECT` | F2 | RB-03 Eve silent / RB-04 | nonprod project delete |
+| SG-03 | Any `orgpolicy` change on `fld-agentic-platform` or its children outside a PAM-granted window; any deny-policy, PAB, Model Armor floor (`modelarmor.floorsettings.update` — the write is Admin Activity; exact method name committed after observation) or Binary Authorization policy change; any K7 lever present outside an incident; the Workspace multi-party approval setting changed or an MPA approval whose actor is `walle@` ([04-identity-and-privileged-access.md](04-identity-and-privileged-access.md) §8.4); Sensitive Actions "Organization Policy Changed" | F2; F3; F1 admin | RB-04 | nonprod floor edit under PAM |
+| SG-04 | Project deletion or `restrictServiceUsage` change touching `EVE_PROJECT`, `EVE_ADVISOR_PROJECT`, `LOGGING_PROJECT`, `CORE_PROJECT`, `KMS_PROJECT` | F2 | RB-03 Eve silent / RB-04 | nonprod project delete |
 | SG-05 | Any PAM grant outside a change window, or any PAM activation whose justification lacks a ticket reference; any `serviceAccountTokenCreator`/`serviceAccountUser` binding change | F2 PAM logs | RB-06 | nonprod PAM activation |
 | SG-06 | Any Access Approval request on `fld-agents-p`, `fld-controllers`, `EVE_WITNESS_PROJECT` (informational, severity 2: Google personnel access) | Access Approval / Access Transparency logs (`_Required`) | RB-08 provider incident | — (Google-initiated) |
 | SG-07 | Any `run.services.setIamPolicy` or deploy on `walle-actions`, `walle-actions-super`, `eve-gate`, `eve-reconciler` outside the CI identity; any image digest change without a Binary Authorization attestation | F2; F3 SHA custom module | RB-07 CI/deployer compromise | nonprod deploy by a human under PAM |
@@ -388,12 +391,18 @@ verifier's — and the page compares their firing in the metrics (§14).
 | PL-01 | Heartbeat absence per tier windows (§4, §7) | F4, witness | 3/2/1 by tier | RB-03, RB-05 |
 | PL-02 | Any agent principal appearing in another agent's project IAM; any `mo-*` principal in `EVE_PROJECT`; any foreign principal in `EVE_PROJECT` beyond the named exceptions (HLD §4.7) | F2; drift job | 1 | RB-04 |
 | PL-03 | `secretmanager` `AccessSecretVersion` by a non-service identity or by any agent principal | F2 Data Access | 1 | RB-01 |
-| PL-04 | Model Armor `MATCH_FOUND` rate per agent above its baseline; any floor or template write outside CI | F2 sanitize logs / F3 AI Protection | 2 / 1 | RB-09 injection reaching a write (if paired with a write) |
+| PL-04 | Model Armor `MATCH_FOUND` rate per agent above its baseline; any floor or template write outside CI — a floor write outside a PAM grant with a matching ticket is severity 2, any write by a principal other than the platform Terraform identity is severity 1 at Tier P ([06-gateways-model-armor-perimeter.md](06-gateways-model-armor-perimeter.md) §3.4, P86; aligned 2026-09-13) | F2 sanitize logs / F3 AI Protection | 2 / 1 | RB-09 injection reaching a write (if paired with a write) |
 | PL-05 | Gateway access-policy change on `gemini-egress` or any egress gateway outside CI; an engine deployed without a gateway binding (custom constraint deny is enforcement; this is the check that the constraint is still there) | F2 | 1 | RB-04 |
 | PL-06 | Binary Authorization policy violation or `breakglass` use | F2 | 1 | RB-07 |
 | PL-07 | Budget alert at 90 % on any P-SA or controllers project (a burst of activity is a signal, not only a cost) | Billing budgets | 3 | ticket |
 | PL-08 | Registry card write outside CI (`agentregistry` Admin Activity) | F2 | 2 | RB-06 |
 | PL-09 | SCC CRITICAL/HIGH finding on any platform project | F3 | 2 | per finding |
+| PL-10 | Tenant-app posture ([03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) §13, added 2026-09-13): `UpdateEngine` unbinding `gemini-egress` or `UpdateAssistant` changing the console Model Armor setting or failure mode outside a change window; `StreamAssist` by `walle@` or `eve@`; an engine mutated (`UpdateReasoningEngine`, `DeleteReasoningEngine`) by the Discovery Engine service agent in any agent project — severity 1; a `discoveryengine` Admin Activity entry by a principal without an active PAM grant, a share to "All users in the organization" or of a Tier R+ agent to a group not in its row, a `gemini-registry` or gateway-policy write outside CI, an org-policy write on `fld-gemini-enterprise` — severity 2; no `StreamAssist` for 4 business hours or no drift-job report for 26 h — severity 3 | F2 Admin Activity and Data Access; PAM logs; register | 1 / 2 / 3 as listed | RB-04; RB-06 |
+| PL-11 | Evidence-store state ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §5.1, §9, added 2026-09-13): any `UpdateBucket`, `DeleteBucket`, retention-policy or lock change, or any KMS key state change (disable, destroy, IAM) on the evidence keys, in `LOGGING_PROJECT`, `CORE_PROJECT`, `EVE_PROJECT` or `KMS_PROJECT` | F2 | 1 | RB-04 |
+| PL-12 | Access Approval disabled on any enrolled folder or project — severity 1; an auto-approved Access Approval request — severity 2 ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §7.2 DL-7.5) | F2; Access Approval Pub/Sub | 1 / 2 | RB-08 |
+| PL-13 | Declared-versus-discovered classification finding from Sensitive Data Protection discovery: severity 3, severity 2 when the store is class `evidence` and the infoType is a credential pattern ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §6.1) | `platform_logs.classification_findings` | 3 / 2 | ticket; the register row corrected |
+| PL-14 | The Data Access canary DL-4.3 ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §4.3) missing its daily heartbeat — a second canary beside H-2, proving the Data Access families reach the locked bucket; severity 1 for Tier P (halt reason `log_pipeline_silent`) | `platform_logs.canary` | 1 (P) / 2 | RB-04, RB-05 |
+| PL-15 | Any Agent Runtime sandbox creation or `container.googleapis.com/Cluster` outside `fld-agents-x`; a running Cloud Run or engine digest without its attestations (SC-7, SC-8); a missed daily evidence export (RC-3: one miss severity 2, two misses severity 1) ([09-supply-chain-secrets-recovery.md](09-supply-chain-secrets-recovery.md) §4.2, §1.9, §3.8) | F2; drift job; export heartbeat | 1 / 2 | RB-07; RB-04 |
 | AG-* | The agent set's own rules ([../wall-e/06-security-guardrails.md](../wall-e/06-security-guardrails.md) "Monitoring", [../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md) §6 "What to alert on", [../wall-e/13-agent-interconnection.md](../wall-e/13-agent-interconnection.md) §11) stay in the agent's project as the builder-owned liveness and behaviour layer, and are **listed** in the catalogue with `owner: agent` so coverage is complete; those graded severity 1 by the agent set are duplicated into the SIEM as `scope: agent` rules | per rule | per rule | per rule |
 
 ### 6.5 Which rules may pull K7 automatically
@@ -405,9 +414,9 @@ control plane itself is being altered by a principal that should not be able to:
 
 | Auto-K7 | Rule ids | Lever | Reason |
 |---|---|---|---|
-| yes | SG-01 (org/folder/core-project IAM by `walle@` or an agent principal), SG-02, SG-03 (deny/PAB/floor/org-policy outside PAM), SG-04, PL-02 | **KF-1** (`restrictServiceUsage` denylist on `fld-agents-p` and `fld-agents-w`) + **KF-3**; KF-2/KF-4 when P8/P9 prove them | a tampered control plane may already be lying about everything else; stopping the fleet costs availability only, and every agent's evidence has already left |
-| no — K0 `halt_all` for the named agent by Eve or the breaker, page in parallel | SA-01…SA-09, SA-07, PL-01 at P, PL-03, PL-04+write, PL-05, PL-06, SG-05, SG-07 | K0 via `/v1/control/halt`; K5/K6 by the on-duty human | agent-scoped; the human decides whether it is wider |
-| no — page only | SG-06, PL-07, PL-08, PL-09 | — | informational or posture |
+| yes | SG-01 (org/folder/core-project IAM by `walle@` or an agent principal), SG-02, SG-03 (deny/PAB/floor/org-policy outside PAM), SG-04, PL-02 | **KF-1** (the pre-written `restrictServiceUsage` replacement policy — the tier allow-list minus `aiplatform` and `run` — on `fld-agents-p` and `fld-agents-w`; [04-identity-and-privileged-access.md](04-identity-and-privileged-access.md) §9.3) + **KF-3**; KF-4 counted for engine queries (P60); KF-2 when P8 proves the principal-set spelling | a tampered control plane may already be lying about everything else; stopping the fleet costs availability only, and every agent's evidence has already left |
+| no — K0 `halt_all` for the named agent by Eve or the breaker, page in parallel | SA-01…SA-09, PL-01 at P, PL-03, PL-04+write, PL-05, PL-06, PL-10 (severity-1 rows), PL-11, PL-14, PL-15, SG-05, SG-07 | K0 via `/v1/control/halt`; K5/K6 by the on-duty human | agent-scoped; the human decides whether it is wider |
+| no — page only | SG-06, PL-07, PL-08, PL-09, PL-10 (severity-2/3 rows), PL-12, PL-13 | — | informational or posture |
 
 Until the SIEM's outbound identity (§2.2) holds `roles/run.invoker` on the K7 job, the subset is
 **dry-run**: the rule writes a `k7_would_fire` case and pages; the monthly K7 drill (HLD §11.4)
@@ -416,7 +425,8 @@ with the PAM entitlement can remove it.
 
 **Decision P96.** Catalogue ownership with IT security as code owner, YARA-L
 detection-as-code through `google_chronicle_rule` deployed by CI, a fixture per rule as a merge
-condition, the rule ids SA/SG/PL/AG above, and the auto-K7 subset. Owner: security reviewer;
+condition, the rule ids SA-01…SA-09, SG-01…SG-07, PL-01…PL-15, AG-* above (PL-10…PL-15 added
+on the reconcile pass of 2026-09-13 from pages 03, 08 and 09), and the auto-K7 subset. Owner: security reviewer;
 platform owner for the pipeline. Gate: Tier W for PL-*, the super-admin grant for SA-*/SG-*.
 
 ---
@@ -433,6 +443,13 @@ channel the stream's owner does not control**. Four heartbeats, three failure do
 | H-2 | The SIEM sees F1 (a Workspace event) and F2 (a Cloud Audit Logs entry from `LOGGING_PROJECT`) — the platform emits a synthetic pair every 15 min: a harmless Admin-console-free event (`Assumption:` a `groups` membership no-op on a canary group by the reconciliation job's own identity, observed in F1 Groups and F2 `cloudidentity.googleapis.com`) | no canary in the SIEM for **45 min** | a SIEM absence rule **and** a Cloud Monitoring absence policy in `CORE_PROJECT` on the canary's acknowledgement (the SIEM posts back a receipt to a Pub/Sub topic; missing receipts fire the policy) — so the SIEM's own outage is seen from outside the SIEM | the platform channel; at Tier P also the MDR desk's own monitoring | severity 1 for P (the primary control is blind), 2 otherwise; RB-05 |
 | H-3 | A weekly synthetic SHA custom-module finding reaches the desk | 8 days | Cloud Monitoring in `CORE_PROJECT` | platform channel | severity 2: SCC notification path broken |
 | H-4 | Every P-tier action service's 5-min heartbeat (F4) and, specifically, Eve's `eve_last_seen` stamp in `walle-actions` (Eve's condition 1, [../eve/06-failure-modes.md](../eve/06-failure-modes.md)) and `eve-export@`'s daily push to the witness | 15 min (heartbeat); 26 h (witness push) | the agent project (liveness); the **witness** for the push | agent channel; witness channels | agent silent → `shadow_or_silent_agent` (§4.2); Eve silent → RB-03 (Wall-E's `eve_last_seen` absence already drops Eve-gated cells to advisory-or-halt per the Eve set); witness push missing → severity 1, RB-03 |
+
+Two heartbeats that are often read as one, stated apart (reconcile pass, 2026-09-13): H-1 is
+the **Workspace stream** into `eve_workspace_logs`, 60 minutes in business hours; the Data
+Access canary DL-4.3 of [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md)
+§4.3 (PL-14) is a **15-minute** proof that the Data Access families reach the locked bucket.
+Both end in the halt reason `log_pipeline_silent`; they are two rules on two objects, not one
+number.
 
 Two design points the reader should test:
 
@@ -500,7 +517,7 @@ until they are not. R = does the work, A = accountable (one per row), C = consul
 | Preserve evidence, freeze the system (Art. 73(6)) | **A** | R | R (witness export) | R | I | R | C | C | — | C |
 | Investigate, write the timeline | R | C | R (Eve's evidence) | R | C | **R/A** | C | — | — | — |
 | Decide GDPR notification | C | — | — | C | C | — | C | **A/R** | I | C |
-| Decide Art. 73 serious-incident classification and report | C | — | C | C | C | — | C | C | I | **A/R** (with the AI compliance owner named in `ai-act.md`, P23) |
+| Decide Art. 73 serious-incident classification and report | C | — | C | C | C | — | C | C | I | **A/R** (with the AI compliance owner of [10-eu-ai-act.md](10-eu-ai-act.md) §4.1, P23) |
 | Notify employees / works council / customers | C | — | — | C | C | — | — | C | **R/A** | C |
 | Escalate to Google support | R | — | — | **A** | — | R | — | — | — | — |
 | Post-incident review and decision record to resume | **A** | C | R | R | R | R | R (signs) | C | I | I |
@@ -699,8 +716,12 @@ folded in as RB-06…RB-10.
   failing (fail-closed: every screened agent stops — an availability incident, severity 2), or a
   model behaviour change (fingerprint tuple drift, D9).
 - **Response.** For an outage: nothing to contain; the fail-closed state **is** the safe state
-  — record it, do not bypass the gateway or lower the floor to restore service (PL-04/PL-05 fire
-  if anyone does); communications to operators. For a provider-side security incident: the
+  — confirm it with the synthetic probe of [06-gateways-model-armor-perimeter.md](06-gateways-model-armor-perimeter.md)
+  §2.5 (one nonprod engine per region every 5 minutes; the probe alert is a severity-3 page to
+  the platform owner; quota alerts at 70 % of the 1,200 sanitize QPM and 600 ExternalProcessor
+  QPM), open a Google case, record the window in the evidence bucket, do not bypass the gateway
+  or lower the floor to restore service (PL-04/PL-05 fire if anyone does; `failOpen` is never
+  flipped); communications to operators. For a provider-side security incident: the
   DPO's processor-breach path (Art. 33(2): the processor notifies the controller without undue
   delay — the DPA's clause is cited in the supplier file), the Art. 25 written position with the
   provider (HLD §14.1) says who documents what, and a model pin change triggers the D9
@@ -762,7 +783,7 @@ internal, and one owner reports.
 
 | Platform event class | Art. 3(49) limb | Examples on this platform | Assessor | Report owner | Deadline |
 |---|---|---|---|---|---|
-| Mass wrongful suspension or deletion of accounts (F5 family or band B) locking employees out of their work tools; wrongful licence reclaim at scale (F7) | (c) fundamental rights (right to work, non-discrimination if the selection heuristic disadvantaged a group); possibly (d) | ≥ 10 accounts, or any account where the effect cannot be reversed within one business day (`Assumption:` thresholds; legal sets them) | incident commander + legal within 24 h of the case | the AI compliance owner named in `ai-act.md` (P23), with legal | 15 days from the causal link |
+| Mass wrongful suspension or deletion of accounts (F5 family or band B) locking employees out of their work tools; wrongful licence reclaim at scale (F7) | (c) fundamental rights (right to work, non-discrimination if the selection heuristic disadvantaged a group); possibly (d) | ≥ 10 accounts, or any account where the effect cannot be reversed within one business day (`Assumption:` thresholds; legal sets them) | incident commander + legal within 24 h of the case | the AI compliance owner of [10-eu-ai-act.md](10-eu-ai-act.md) §4.1 (P23), with legal | 15 days from the causal link |
 | Effect on a person's health traced to the system (e.g. loss of access to a safety-relevant tool) | (a) | none foreseen; the class exists so that the question is asked | same | same | 10 days if death; 15 otherwise |
 | An out-of-catalogue super-admin action affecting employees in at least three Member States concurrently (Art. 3(61)) | widespread infringement | a band-B action applied tenant-wide by error | same | same | **2 days** |
 | Disruption of critical infrastructure | (b) | `Assumption:` not applicable — the platform administers an office tenant; recorded as a negative determination reviewed annually | — | — | 2 days if ever applicable |
@@ -868,7 +889,7 @@ Wall-E and Eve packs). Owner: security reviewer. Gate: Tier W (first pack), Tier
 | Control | Owner (role) | Resource | Verified by | When it fails |
 |---|---|---|---|---|
 | F1 SecOps export | a human Workspace administrator with the Reports privilege configures; IT security owns | Admin console Data integrations | a Workspace event visible in the SIEM daily (H-2 canary) | H-2 fires; RB-05 or RB-04 |
-| F2 aggregated sink + direct SIEM ingestion | platform owner | organisation sink, `LOGGING_PROJECT` bucket, SIEM feed | H-2 canary; drift job zero-diff | H-2; SG-02 if changed |
+| F2 aggregated sinks + direct SIEM ingestion | platform owner | the `S-org` and `S-folder` sinks, `LOGGING_PROJECT` buckets and the `siem` view, SIEM feed | H-2 canary; PL-14 canary; drift job zero-diff | H-2; SG-02 if changed |
 | F3 SCC notification config | platform owner | organisation notification config, `CORE_PROJECT` topic and notifier job | H-3 weekly synthetic finding | severity 2, notifier rebuilt from Terraform |
 | F4 agent metadata topics | agent owner (emit), platform owner (subscription) | per-project Pub/Sub topic | admission A2; H-4 | `shadow_or_silent_agent`; share removed |
 | F5 Eve's copies and the witness push | Eve owner | Eve's sink, Reports poll, `eve-export@` job, witness dataset/bucket | H-1, H-4 (push) | `log_pipeline_silent`; RB-03 |
@@ -903,7 +924,7 @@ Final ids P92–P103, recorded in [12-open-decisions.md](12-open-decisions.md). 
 | P93 | SecOps location and retention | Europe multi-region; retention ordered ≥ 400 days (term granularity *tbd*); `europe-west3` fallback if the ISMS needs a single site | IT security | Tier P |
 | P94 | SCC Premium at organisation level with the service set of §3; Enterprise not chosen; SCC data-residency location | Premium; `eu` location recommended, Model Armor restriction verified before activation | organisation IT security | Tier C |
 | P95 | Monitoring baseline variants, heartbeat cadences, absence windows, unpublish-on-silence | §4 | platform owner (with the Eve owner for P windows) | Tier R (module), Tier P (SIEM invariant) |
-| P96 | Detection catalogue ownership, detection-as-code toolchain, fixture-per-rule merge rule, rule ids, the auto-K7 subset | §6 | security reviewer; platform owner | Tier W (PL-*), the grant (SA-*/SG-*) |
+| P96 | Detection catalogue ownership, detection-as-code toolchain, fixture-per-rule merge rule, rule ids SA-01…SA-09, SG-01…SG-07, PL-01…PL-15, AG-*, the auto-K7 subset | §6 | security reviewer; platform owner | Tier W (PL-*), the grant (SA-*/SG-*) |
 | P97 | The four heartbeats, windows and `log_pipeline_silent` semantics | §7 | Eve owner; platform owner | the super-admin grant |
 | P98 | The platform reporting path RP-1…RP-6 (every verifier reports to a human outside the owner's line; Eve's contract is the first instance) | §8 | Eve owner; security reviewer | Tier W; the grant |
 | P99 | On-call tool rule, escalation ladder, acknowledgement and containment targets | §9.2 | incident commander role; platform owner | Tier P (24x7), Tier W (channel) |
@@ -935,7 +956,7 @@ stays *tbd* at S2), E-14 (retention → HLD §7.5, unchanged here); Mo M-5, M-8 
 - Containment targets: K0 < 60 s, **K5 ≤ 30 min of acknowledgement** (`Assumption:`, new), K6 ≤ 60
   min (new), K7 KF-1 < 60 s and < 5 min end to end (HLD §11.4).
 - The auto-K7 subset is **SG-01, SG-02, SG-03, SG-04, PL-02** only; SA-* rules never fleet-kill.
-- Rule ids **SA-01…SA-09, SG-01…SG-07, PL-01…PL-09, AG-\***, heartbeat ids **H-1…H-4**, runbook
+- Rule ids **SA-01…SA-09, SG-01…SG-07, PL-01…PL-15, AG-\***, heartbeat ids **H-1…H-4**, runbook
   ids **RB-01…RB-11**, reporting rules **RP-1…RP-6**, SIEM clauses **S1–S9** — other pages cite
   these ids, not prose.
 - Eve's paging conditions 5 and 6 are filled from SA-03 (posture change by any actor) and SA-04
@@ -950,8 +971,13 @@ stays *tbd* at S2), E-14 (retention → HLD §7.5, unchanged here); Mo M-5, M-8 
 - SCC **Premium** at organisation level; Enterprise deprecated 2026-05-21, shutdown 2027-05-21;
   AI Protection GA in Premium since 2026-03-05; Agent Platform Threat Detection Preview, nonprod
   only.
-- The reconciliation job in `CORE_PROJECT` holds a PAM-elevated right to remove a `gemini-egress`
-  policy entry (unpublish-on-silence) — a new grant row for the topology page.
+- The reconciliation job in `CORE_PROJECT` holds **no** write on the `gemini-egress` policy or
+  any registry: unpublish-on-silence is an automated pull request setting the row `suspended`
+  plus a CI pipeline run whose `terraform apply` removes the entry ([05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md)
+  §5–§6, P73; aligned 2026-09-13). Its grant rows for the topology page are the ones §6.3 of
+  page 05 lists (the platform-drift@ exception of HLD §18 item 25, extended).
+- Heartbeat H-1 (60 min, the Workspace stream) and the Data Access canary DL-4.3 / PL-14 (15 min,
+  the audit families into the locked bucket) are two rules on two objects (§7).
 - The K5 mechanics named here: `tokens.delete` (scope `admin.directory.user.security`) and
   `users.update` `suspended: true` (scope `admin.directory.user`); K6: `users.makeAdmin`
   `status: false`.

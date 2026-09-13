@@ -115,7 +115,7 @@ entry has no labels field (§2.1), so the rule is restated:
 |---|---|---|---|
 | The register row | everything (§3.2) | owner via pull request | CI, the factory, the reconciliation job, the exports of §8 |
 | Project labels (`agent`, `owner`, `tier`, `env`, `risk_class`, `data_class`, `ai_act_class`, `autonomy_ceiling`, `model_pin`, `verifier`, `recovery_class`, `cost_centre`; `tisax_scope` at the folder) | the projection the HLD already requires; label values are ≤ 63 characters, lower-case, so `model_pin` is the pin's slug and `autonomy_ceiling` the highest cell as `family-trigger-level` | the factory | Cloud Asset Inventory search, billing export, SCC |
-| The registry entry's `description`, **first line**, fixed format: `meta: agent_id=<id> tier=<C|R|W|P|P-SA|X> owner=<group> risk_class=<…> ai_act_class=<…> tisax_class=<…> status=<…> register_sha=<12 hex>` — then a blank line, then the human description | the CI identity from the row; `register_sha` is the SHA-256 of the merged row, so "card ≠ row" is one string comparison | the reconciliation job; humans searching the console |
+| The registry entry's `description`, **first line** | fixed format: `meta: agent_id=<id> tier=<tier> owner=<group> risk_class=<…> ai_act_class=<…> tisax_class=<…> status=<…> register_sha=<12 hex>` (tier one of `C R W P P-SA X`) — then a blank line, then the human description | the CI identity from the row; `register_sha` is the SHA-256 of the merged row, so "card ≠ row" is one string comparison | the reconciliation job; humans searching the console |
 | The A2A card (`agent_spec`, ≤ 10 KB) for agents that serve A2A | what the agent *does* and, in prose, what it does not do (`wall-e/13` §3.2); the exclusions paragraph repeats `ai_act_class` and the Art. 50 disclosure line where the class is `limited_art50` or above | the CI identity from `agent-card.json` in the agent's repository, reviewed like a ceiling | peers, the Gemini Enterprise app |
 
 The registry stays the governed *view*: if the description line and the row disagree, the
@@ -139,11 +139,14 @@ table; this page adds the per-tier column, the `suspended` status (P74), `peers`
 | `risk_class` | M | M | M | M | M | the highest `risk_tier` of any family: `READ`, `WRITE_LOW`, `WRITE_HIGH`, `SUPER`; Tier C and R rows are `READ` by construction |
 | `autonomy_ceiling` | — | — | M | M | `code: L0` | the highest (family, trigger) ceiling in the manifest, as `family-trigger-level`; must equal what the manifest's `ceilings` block yields |
 | `data_classes[]`, `tisax_class` | M | M | M | M | M | organisation scheme (*tbd*, ISMS); `Assumption:` `confidential` default; a `strictly_confidential` row reopens HLD §8.2 and the CMEK stance |
-| `ai_act_class`, `ai_act_role` | M | M | M | M | M | `not_ai_system`, `minimal`, `limited_art50`, `annex_iii_adjacent`, `high_risk`; role `provider`, `deployer`, `both`; the legal entity per P23 |
-| `art_6_4_assessment` | — | — | O | M if `annex_iii_adjacent` | M | path to the dated Art. 6(4) assessment in `ai-act.md`; required whenever the row claims the Art. 6(3) derogation |
+| `ai_act_class`, `ai_act_role` | M | M | M | M | M | `not_ai_system`, `minimal`, `limited_art50`, `annex_iii_adjacent`, `high_risk` (the project label `ai_act_class` carries the same value slugged with hyphens, `annex-iii-adjacent` — [02](02-landing-zone-and-tiers.md) §3.6; one vocabulary, two spellings, both generated); role `provider`, `deployer`, `both`; the legal entity per P23 |
+| `art_6_4_assessment` | — | — | O | M if `annex_iii_adjacent` | M | path to the dated Art. 6(4) assessment in [10-eu-ai-act.md](10-eu-ai-act.md) (the anchor per system: `#wall-e`, `#eve`, `#eve-advisor`, `#mo`, `#gemini`, `#platform`); required whenever the row claims the Art. 6(3) derogation |
 | `art_49_registration` | — | — | O | M if `annex_iii_adjacent` or `high_risk` | M | the EU database identifier, or `pending` — a row with `pending` cannot carry `status: prod` (P75, §8.2) |
 | `model_pin`, `framework_version`, `armor_template`, `gateway_id`, `principal` | `model_pin` only | M | M | M | M | `principal` is the `principal://agents.global.org-ORG_ID.system.id.goog/...` string (HLD §4.2); Tier C has no engine and no gateway |
 | `verifier` | `none` | `none` | `platform-verifier` | `eve` | M | Tier W may not name `eve`; Tier P may not name `platform-verifier` (P79) |
+| `verifier_owner` | — | — | M | M | M | a group (`eve-owners@` for Eve) whose owner is **outside the administration line of every agent the verifier verifies**; the admission gate refuses a row whose `verifier_owner` equals its `owner_group` or that group's owner (RP-1 of [07](07-monitoring-detection-incident-response.md) §8, P98; added 2026-09-13 on the reconcile pass) |
+| `capability_eval_ref` | — | O | O | O | M | a pointer to the model provider's capability-evaluation artefact for the pinned `model_pin` (FSF-derived report or model card); optional below Tier X, required for Tier X ([09](09-supply-chain-secrets-recovery.md) §5.3, P124; added 2026-09-13) |
+| `tisax_dp_scope` | O | O | O | O | O | boolean, default `false`; `true` when the row's `purpose` names a customer's or an OEM's data processed on that customer's behalf — the row then cannot reach `status: prod` without a dated DPO entry, and the Data Protection module becomes an assessment objective for that agent's scope ([11](11-tisax.md) §3, P134; added 2026-09-13) |
 | `metric_pack` | `light` | `light` | `full` | `full` + `eve-quality` | M | Mo's pack (HLD §13.3) |
 | `privilege` | `none` | `none` | `none` | M | `none` | `workspace_role:<name>` or `super_admin`; the `agents.md` `privilege` column; CI fails a second `super_admin` (WSA-12) |
 | `supplier_rows[]` | M | M | M | M | M | ids in the supplier file (HLD §14.3); the model is always one row |
@@ -245,6 +248,9 @@ Cloud Run job.
 | Row `review_date` < today | overdue | 3 | share removed | owner reviews |
 | Row `verifier: platform-verifier` with no seeded-fault run younger than 30 days | verifier unproven | 3 | every L4 cell of that agent demoted to L3 by the ladder API (machines lower) | Mo owner schedules the run |
 | Live `iap.egressor` bindings ≠ ∪ `peers[]` | peer-rule drift | 2 / 1 | binding removed by CI | incident |
+| A prod engine whose `agentGatewayConfig` names no gateway (the custom constraint should have refused it; this is the check that the constraint is still there) | unbound engine | 2 | `gemini-egress` entry removed; row `suspended` | unpublished within one business day ([06](06-gateways-model-armor-perimeter.md) §2.1) |
+| More than one gateway-unbound engine in a nonprod tier folder, or one unbound for more than 30 days (the Agent Platform Threat Detection rotation of [06](06-gateways-model-armor-perimeter.md) §2.4, P82) | rotation rule breached | 2 | page the platform owner | the factory input that opened the window is closed or re-dated |
+| A `query` or `asyncQuery` call to an engine by a machine caller in the Agent Runtime request log (the `streamQuery`-only rule of [06](06-gateways-model-armor-perimeter.md) §2.3) | the only enforcement-grade prompt screen bypassed | 3 | — | the caller's CI rule fixed |
 
 Result rows land in `platform_registry.reconciliation` (insert-only, 400-day expiry like the
 audit datasets), in the SIEM (all severities), and on the ladder-state page (a per-agent
@@ -415,15 +421,18 @@ The rule, enforced at step 8 of admission and by the reconciliation job afterwar
 
 | `ai_act_class` | Before `status: prod` the row must carry | Who supplies it | CI refuses when |
 |---|---|---|---|
-| `not_ai_system` | the dated determination in `ai-act.md` (rules solely defined by humans; e.g. Eve's control path) | legal, DPO | no entry |
+| `not_ai_system` | the dated determination in [10-eu-ai-act.md](10-eu-ai-act.md) (rules solely defined by humans; e.g. Eve's control path, `#eve`) | legal, DPO | no entry |
 | `minimal` | the entry | legal | no entry |
 | `limited_art50` | the entry, and the manifest's Art. 50 disclosure block (fixed line injected by the action service, never by the model — HLD §14.1) | legal; the agent owner for the block | no block |
 | `annex_iii_adjacent` (derogation claimed) | `art_6_4_assessment` (dated, signed, the four-condition reasoning, the profiling negative), **`art_49_registration` = the EU database id** | legal writes; the provider entity of P23 registers | `pending` |
 | `high_risk` | the Annex VI internal-control record, the EU declaration, `art_49_registration`; mandatory from 2027-12-02, adopted voluntarily before | legal, ISMS, the provider entity | `pending`, or missing records after 2027-12-02 |
 
 Export `register/export/ai-act-register.md`: one row per agent with class, role, entity,
-purpose, registration id, the log store designated as the Art. 12 log (`<agent_id>_audit`),
-the oversight owner (`owner_group`'s operator role), the Art. 50 position, the review date.
+purpose and `purpose_sha256`, the Art. 6(3) condition relied on (`art_6_3_condition`),
+registration id, the log store designated as the Art. 12 log (`<agent_id>_audit`),
+the oversight owner (`owner_group`'s operator role) and the oversight level cap
+(`oversight_cap`), the Art. 50 position, the review date (columns aligned with
+[10-eu-ai-act.md](10-eu-ai-act.md) §8 item 10 on 2026-09-13).
 This is the "registry export listing every agent with its classification id" the eu-ai-act
 lens asked for (its evidence item 7). For Wall-E on 2026-09-13 the row reads
 `annex_iii_adjacent`, derogation claimed, `art_49_registration: pending`, which is why Wall-E
@@ -507,22 +516,30 @@ protected_principals:              # ids the agent may never target ; the platfo
 hard_denied:                       # operations refused in every lane, before the ladder is consulted
   - users.makeAdmin
   - any operation whose target is a super admin
-egress:                            # the only hostnames the egress gateway may allow
-  - admin.googleapis.com
+egress:                            # the only hostnames the egress gateway may allow ; Tier R read tools go over MCP through
+  - admin.googleapis.com           # the egress gateway by default (P88) — a REST read API here needs a supplier row and a reason
   - gmail.googleapis.com
+capabilities:
+  code_execution: false            # the only value the validator accepts outside Tier X (P121) ; true fails the admission gate
 peers: []                          # registry entry ids this agent may be bound to as an egressor (iap.egressor) ; empty = none
 invokers:                          # principals allowed on /v1/control/* ; plain REST ; never an agent principal
   halt: [eve-controller@EVE_PROJECT, platform-drift@CORE_PROJECT]
   approve: [platform-verifier@VERIFIER_PROJECT]
-stores:
-  audit_dataset: mailbox_steward_audit     # on audit.schema ; insert-only ; READER to Mo T0 and the validator, recorded by the factory
-  content_bucket: mailbox-steward-content
-  data_classes: [internal, personal]
-  recovery_class: R-B
+stores:                            # one entry per store ; class from the five platform data classes of 08 §2.1
+  - {name: mailbox_steward_audit, kind: bigquery, class: evidence, retention_row: R1}   # on audit.schema ; insert-only ; READER to Mo T0 and the validator, recorded by the factory
+  - {name: mailbox-steward-content-logs, kind: log_bucket, class: content, retention_row: R6}
+  - {name: mailbox-steward-firestore, kind: firestore, class: control, retention_row: R10}
+data_classes: [evidence, content, control]   # the classes the stores above use (08 §2.1) ; the project label data_class carries the highest
+recovery_class: R-B                # HLD §10 ; the factory refuses a stores[] entry without a class
 compliance:
-  ai_act_entry: ai-act.md#mailbox-steward
+  ai_act_entry: 10-eu-ai-act.md#mailbox-steward
   ai_act_class: minimal
-  tisax_class: confidential
+  purpose_sha256: "…"              # SHA-256 of the intended-purpose paragraph ; CI compares it to the register row, the card and the description (P125)
+  art_50:                          # required for limited_art50 and above (P128)
+    template_ids: [notify-v3]
+    header_value: "…"              # the fixed custom mail header value, committed beside the templates
+    text_sha256: "…"               # hash of the committed disclosure text
+  tisax_class: confidential        # the organisation-scheme mapping (08 §2.1) ; not one of the five platform classes
   register_row: register/mailbox-steward.yaml
   input_data_relevance:            # Art. 10 / 26(4) statement per trigger feed
     T1: "directory reads of the agent's own scope; no HR feed"
@@ -598,7 +615,7 @@ and never redefines a `p_` one):
 | `family`, `operation`, `risk_tier` | string, enum | from the manifest |
 | `request_hash` | string | RFC 8785 canonical JSON, SHA-256 |
 | `decision` | enum `ok shadow proposal approval_required pending_eve denied drift skipped heartbeat` | `heartbeat` rows carry no operation and feed §5 |
-| `denial_reason` | string | platform vocabulary `p:<reason>` (`level_off`, `level_no_execute`, `actor_not_authorised`, `protected_principal`, `hard_denied`, `tainted_ceiling`, `halted`, `fingerprint_requalify`, …) or agent extension `a:<reason>` |
+| `denial_reason` | string | platform vocabulary `p:<reason>` (`level_off`, `level_no_execute`, `actor_not_authorised`, `protected_principal`, `hard_denied`, `tainted_ceiling`, `halted`, `fingerprint_requalify`, `profiling_boundary_denied` (P126), `disclosure_missing` (P128), …) or agent extension `a:<reason>` |
 | `level`, `config_version`, `ceilings_sha` | string, int, string | what governed the decision |
 | `fp_prompt_sha256`, `fp_model_pin`, `fp_framework_version`, `fp_armor_template_version` | string | the fingerprint tuple |
 | `pre_state_hash`, `post_state_hash`, `verification` | string, enum `verified verified_partial drift not_verified` | rule R6 of the ladder |
@@ -651,7 +668,7 @@ and refuses by default:
 | Input | Checks | Refuses when |
 |---|---|---|
 | a manifest | §9.2's rules; `contract_version`; the fingerprint diff | any rule fails; a `code: true` row differs; a ceiling widened without a platform decision id in the commit trailer |
-| a `ladder.yaml` change | every cell ≤ ceiling; dwell and ratchet against `ladder_events`; the decision record exists and names the cell; two distinct authenticated reviewers; the evidence block re-executed at its pinned commit against `<agent_id>_audit` (never against anything Mo wrote); the blind sample re-drawn from the published seed; the ≤ 24 h metrics watermark; no Eve loosening within 30 days of a promote on the same cell (HLD §13.3) | any number differs; any gate unmet |
+| a `ladder.yaml` change | every cell ≤ ceiling; dwell and ratchet against `ladder_events`; the decision record exists and names the cell; two distinct authenticated reviewers; the evidence block re-executed at its pinned commit against `<agent_id>_audit` (never against anything Mo wrote); the blind sample re-drawn from the published seed; the ≤ 24 h metrics watermark; no Eve loosening within 30 days of a promote on the same cell (HLD §13.3); for any raise above L3, a restore-drill record younger than one quarter with no open reconcile discrepancy (RC-4 of [09](09-supply-chain-secrets-recovery.md) §3.8, P120) | any number differs; any gate unmet |
 | a Mo proposal bundle | path allow-list (`config/ladder.yaml`, playbooks, prompts, catalogue rows, the ladder-state page); the narrative stripped before validation; the recompute | a diff outside the allow-list — rejected at ingestion, before CI |
 | a `peers[]` or `invokers` change | §9.7 | — |
 | a register row | `manifest_sha` matches; `autonomy_ceiling` matches; per-tier fields | mismatch |
@@ -850,5 +867,5 @@ no skill; `wall-e/09` decision 33's Wilson gate becomes P77.
 - [../project-topology.md](../project-topology.md) — decisions 42, 43, 46, 48, 52 and the grant shapes the factory generalises.
 - [../gemini-enterprise.md](../gemini-enterprise.md) — the tenant app whose `gemini-egress` policy is generated from the register.
 - [../agents.md](../agents.md) — the human-readable table generated from the register (gains `tier`, `privilege`, `ai_act_class`, `tisax_class`).
-- `platform/agentic-platform/ai-act.md`, the compliance mapping page and the supplier file (HLD §14.3) — the entries the register rows point at; *to write*.
+- [10-eu-ai-act.md](10-eu-ai-act.md) (the page the HLD called `ai-act.md`), [11-tisax.md](11-tisax.md) §5 (the compliance mapping) and §4 (the supplier file, until a separate page exists) — the entries the register rows point at.
 - [12-open-decisions.md](12-open-decisions.md) — the register: P71–P80 are this page's rows.
