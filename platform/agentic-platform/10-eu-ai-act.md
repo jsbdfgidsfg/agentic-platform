@@ -2,21 +2,20 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md). Nothing is built;
+- Last reviewed: 2026-09-14
+- Maturity: detailed design under [01-hld.md](01-hld.md). Nothing is built;
   nothing is registered; no legal entity has signed anything. This page details the HLD's §14.1
   "EU AI Act" (the per-system classification table, the article-by-article table and the
   "what cannot be promised" list), the `ai_act_*` fields of §5.1, the `compliance` block of
-  §12.2, item 13 of §13.1 and the compliance sentences of §13.2 and §13.3. It answers the HLD
-  brief items I66–I73 of [00-objective-review.md](00-objective-review.md) §5 and the register
-  gaps AIA-01 and AIA-02 (blocking), and it carries the platform's answer to AIA-03 to AIA-13
-  where the mechanism lives on another page (pointed at, not repeated).
+  §12.2, item 13 of §13.1 and the compliance sentences of §13.2 and §13.3. It answers the EU AI
+  Act brief items and gaps of [00-objective-review.md](00-objective-review.md) §5, pointing at
+  the page where a mechanism lives rather than repeating it.
 - What this page is: the single authority the HLD calls `ai-act.md` — the file
   `register/export/ai-act-register.md` of [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md)
   §8.2, the "AI compliance owner named in `ai-act.md`" of
   [07-monitoring-detection-incident-response.md](07-monitoring-detection-incident-response.md)
   §12.1 and the `ai_act_entry: ai-act.md#<agent>` anchors of the manifest all resolve to this
-  page (the reconcile pass renames the links; the anchors are §3.1–§3.6 below). It records,
+  page (the anchors are §3.1–§3.6 below). It records,
   per AI system: the legal roles, the declared intended purpose, the Art. 5 check, the Art. 6
   analysis with the Art. 6(3) condition relied on and the profiling question answered, the
   Art. 50 position, the registration status; then the obligation crosswalk to platform
@@ -28,18 +27,15 @@
   the pages named in each row; this page adds only what no other page owns (the disclosure
   text, the level caps per family, the overseer roster, the reclassification triggers, the
   evidence register).
-- Standing constraints, unchanged and relied on: no domain-wide delegation; the language model
-  holds no credential and cannot approve; humans raise autonomy and machines lower it; no model
-  produces an Eve approval; Mo reaches production only through a merged pull request; safety
-  interlocks are plain authenticated REST; Wall-E holds Super Admin by the owner's decision
-  (P33) and this page designs around it — the privilege is a *credential fact*, the catalogue
-  is the *intended purpose* (§3.1).
+- Standing constraints: as stated in the [HLD Status](01-hld.md#status), relied on unchanged.
+  Wall-E holds Super Admin by the owner's decision (P33) and this page designs around it — the
+  privilege is a *credential fact*, the catalogue is the *intended purpose* (§3.1).
 - Conventions: `Assumption:` marks inferred facts; *tbd* marks values nobody has decided; every
   article, annex, date and product named here was re-verified on 2026-09-13 against the URL in
   §10 unless the row says "unverified". Regulation (EU) 2024/1689 is "the Act"; Regulation (EU)
   2026/1744 is "the Omnibus". Article numbers are the Act's as amended by the Omnibus. Decisions
   this page records are numbered **P125–P132**, final ids in
-  [12-open-decisions.md](12-open-decisions.md). The two diagrams are in §3.7 and §4.4.
+  [12-open-decisions.md](12-open-decisions.md). The diagram is in §3.7.
 - No company names, no secrets, no person named for a role.
 
 ---
@@ -68,9 +64,9 @@ evidence, and the seven things the regulator or the guidelines still decide.
 
 ## 1. The regulatory state on 2026-09-13
 
-Re-verified this pass against the Official Journal texts and Commission pages (§10). Where the
-Omnibus changed something the row says so; where a date depends on a text this pass did not
-read, the row says "unverified".
+Verified on 2026-09-13 against the Official Journal texts and Commission pages (§10). Where the
+Omnibus changed something the row says so; where a date depends on a text not read, the row
+says "unverified".
 
 | Item | State on 2026-09-13 | Source |
 |---|---|---|
@@ -142,9 +138,9 @@ whose entity differs from P23's answer is a merge failure once P23 is decided.
 
 The class vocabulary is the register's (HLD §5.1): `not_ai_system`, `minimal`, `limited_art50`,
 `annex_iii_adjacent`, `high_risk`. Project labels carry the same values with hyphens
-(`annex-iii-adjacent`, [02-landing-zone-and-tiers.md](02-landing-zone-and-tiers.md) §labels) —
-one vocabulary, two spellings, both generated from the register row; §8 asks the reconcile pass
-to say so on both pages.
+(`annex-iii-adjacent`, [02-landing-zone-and-tiers.md](02-landing-zone-and-tiers.md) §3.6) —
+one vocabulary, two spellings, both generated from the register row, as 02 and
+[05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) §3.2 both state.
 
 ### 3.1 Wall-E {#wall-e}
 
@@ -203,7 +199,10 @@ Annex III 4(b): systems "intended to be used to make decisions affecting terms o
 relationships, the promotion or termination of work-related contractual relationships, to
 allocate tasks based on individual behaviour or personal traits or characteristics or to
 monitor and evaluate the performance and behaviour of persons in such relationships"
-(https://artificialintelligenceact.eu/annex/3/). Families are [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §5.
+(https://artificialintelligenceact.eu/annex/3/). The families are defined in
+[../wall-e/05-autonomy-ladder.md §5](../wall-e/05-autonomy-ladder.md#5-operation-families) and
+their ceilings of record in [§4](../wall-e/05-autonomy-ladder.md#4-ceilings-that-are-code-not-config);
+this table keeps only the classification and the caps this page sets.
 
 | Family | Touches 4(b)? | Art. 6(3) condition relied on | Why it holds on this design | Level cap this page sets (§4.6) |
 |---|---|---|---|---|
@@ -217,8 +216,8 @@ monitor and evaluate the performance and behaviour of persons in such relationsh
 | **F7 Licences** | **potentially — if the target set is chosen by inactivity, the system "evaluates behaviour"** | split (§3.1.4): F7-suspended follows F5's reasoning; F7-inactive is (a) only because the *human* chooses the targets | see §3.1.4 | F7-suspended L4; **F7-inactive L3 until P18 is answered, and the selection never automated at any level** |
 | F9 Own mailbox, F10 Rollback | no | (a) | robot's own resources | unchanged |
 | F8 Later (data transfer, archive, group create) | per operation | per operation, assessed on entry (§3.1.6) | enters at L0 with its own mini-ladder | L0 until assessed |
-| Band B (`/v1/execute-generic`) | any Admin SDK method reachable at `WRITE`/`SUPER`, so 4(b) territory is reachable in principle | (a): execution of a fully specified request, two humans, no decision influence | permanently L3, `chat` trigger only, two-person rule at `SUPER`; **for any method whose target is a natural-person account and whose committed tier is `WRITE` or `SUPER`, the change-ticket reference must cite the decision record (`decision_ref`) or the lane refuses** (P125) — the audit row then shows, per action, that the decision was human | L3 permanently (HLD) |
-| Band C (`/v1/handoff`) | no — output is console steps for a human super admin who then acts | not an output acting on a person | the hard-denied check runs first (HLD §13.1) | none |
+| Band B (`/v1/execute-generic`) | any Admin SDK method reachable at `WRITE`/`SUPER`, so 4(b) territory is reachable in principle | (a): execution of a fully specified request, two humans, no decision influence | permanently L3 with two humans at `SUPER` (lane mechanics: [../wall-e/03-lld.md](../wall-e/03-lld.md#the-three-bands)); **for any method whose target is a natural-person account and whose committed tier is `WRITE` or `SUPER`, the change-ticket reference must cite the decision record (`decision_ref`) or the lane refuses** (P125) — the audit row then shows, per action, that the decision was human | L3 permanently (HLD) |
+| Band C (`/v1/handoff`) | no — output is console steps for a human super admin who then acts | not an output acting on a person | the hard-denied check runs first (HLD §13.1; [../wall-e/03-lld.md](../wall-e/03-lld.md#the-three-bands)) | none |
 
 **Result.** Annex III 4(b)-adjacent; the derogation is claimed under Art. 6(3)(a) for the
 catalogue and band B and under Art. 6(3)(b) for F5, with the profiling exclusion answered by
@@ -268,9 +267,9 @@ The decision, recorded as **P126**:
    F1 usage or sign-in report as the target source of any write family (the same validator that
    asserts `SUPER` never appears in `playbook.uses`, HLD §12.1). The action service refuses an
    `F7-inactive` plan whose targets were not explicitly enumerated by a human principal
-   (`principal.type == human`) with `profiling_boundary_denied` — a new value of the denial
-   vocabulary, and a cross-page claim for [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md)
-   §audit.schema.
+   (`principal.type == human`) with `profiling_boundary_denied`, a value of the platform denial
+   vocabulary (HLD §12.3; [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md)
+   `audit.schema`).
 3. **Level cap**: `F7-inactive` is L3 at every trigger until the DPO and legal answer P18 in
    writing; `F7-suspended` follows F5 (L4 on the HR event only). If P18's answer is
    "profiling", `F7-inactive` is removed from the catalogue (L0, and the report stays F1) or
@@ -317,15 +316,15 @@ signal.
 
 ### 3.2 Eve control path — not an AI system, as an invariant {#eve}
 
-`eve-gate`, `eve-reconciler` and `eve-console` are deterministic SQL and predicates, no model
-client, no `aiplatform` (a project-level `restrictServiceUsage` denylist on `EVE_PROJECT`, HLD
-§13.2). Under the Commission's definition guidelines a system "based on the rules defined
-solely by natural persons to automatically execute operations" is outside Art. 3(1). Eve's
-control path is therefore **not an AI system** and needs no classification, no registration and
-no Art. 50 position; it *is* an Art. 14(3)(a) oversight measure "built into the high-risk AI
-system by the provider" — the design's cheapest compliance property, recorded here as an
-invariant rather than left to safety discipline ([../eve/01-hld.md](../eve/01-hld.md)
-"Deterministic by absence, not by discipline").
+`eve-gate`, `eve-reconciler` and `eve-console` are deterministic SQL and predicates with no
+model client and no `aiplatform`; how that absence is built and enforced is canonical in
+[../eve/01-hld.md §3](../eve/01-hld.md#3-deterministic-by-absence-not-by-discipline). Under the
+Commission's definition guidelines a system "based on the rules defined solely by natural
+persons to automatically execute operations" is outside Art. 3(1). Eve's control path is
+therefore **not an AI system** and needs no classification, no registration and no Art. 50
+position; it *is* an Art. 14(3)(a) oversight measure "built into the high-risk AI system by the
+provider" — the design's cheapest compliance property, recorded here as an invariant rather
+than left to safety discipline.
 
 Register row: `ai_act_class: not_ai_system`, dated determination = this section. Owner: Eve
 owner (the property), legal (the determination). Resource: Eve's image and project. Verified:
@@ -365,8 +364,8 @@ that would touch a person (none exists in the closed proposal set) is a design c
 
 - **Models.** Google is the GPAI model provider (Art. 3(63)); Google signed the GPAI Code of
   Practice (2025-07-10) and, per its 2025-08-01 statement, publishes EU AI Act documentation
-  for its models through its compliance centre (the specific page did not render this pass;
-  §9). The platform's duty is to hold, per `model_pin`, the Art. 53(1)(b)/Annex XII
+  for its models through its compliance centre (the specific page did not render on
+  2026-09-13; §9). The platform's duty is to hold, per `model_pin`, the Art. 53(1)(b)/Annex XII
   documentation Google supplies (a supplier row, E-11), and to keep the **GPAI one-liner**: *the
   platform hosts third-party models and never trains, fine-tunes or substantially modifies
   them; any change reopens Chapter V and Art. 25* (HLD §14.1, §16; P131(c)).
@@ -497,9 +496,10 @@ promotion template refuses a record without the residual-risk statement. Fails: 
 
 Annex IV headings (https://artificialintelligenceact.eu/annex/4/) mapped to the pages that
 satisfy them for Wall-E. "Frozen at" is the stage whose snapshot must contain the page in its
-reconciled form; on 2026-09-13 the three agent sets carry unapplied edits (HLD §18), so the
-column is a promise the reconcile pass fulfils, and Art. 11 is **not met until it does** — a
-documentation set that diverges from the system is a finding in itself.
+reconciled form; on 2026-09-14 the three agent sets still carry unapplied propagation edits
+(HLD §18, P143; [12-open-decisions.md](12-open-decisions.md) §7), so the column is a promise the
+propagation stage fulfils, and Art. 11 is **not met until it does** — a documentation set that
+diverges from the system is a finding in itself.
 
 | Annex IV heading and content required | Page(s) | Frozen at |
 |---|---|---|
@@ -534,37 +534,21 @@ year. Fails: no tag ⇒ the stage does not open.
 
 ### 4.4 Art. 72 — Mo's artefacts as the post-market monitoring plan
 
-The plan, in the words Art. 72(1)–(2) uses: the provider *actively and systematically collects,
-documents and analyses* data on performance throughout the lifetime and evaluates continuous
-compliance with Chapter III Section 2. On this platform that is Mo, by construction: the
-scorecard (accuracy, precision per cell, audit completeness), `ladder-state.md`, the weekly
-digest, the regression explanation on every change point, the monthly cost report — plus, for
-Eve, the detection-quality pack (HLD §13.3). The plan's text per system is one paragraph in the
-agent's entry naming the artefacts, the cadence, the reader, and the two feeds the artefacts
-receive from outside Mo: every Art. 73 assessment outcome (07 §12.1) and every Art. 86
-explanation request (§4.10), so the plan sees the incidents and the complaints. When the
-Commission's Art. 72(3) template is adopted (implementing act; date unverified), the paragraph
-is re-cut into it. Owner: Mo owner. Verified: the digest lands weekly; `metric_divergence`
-between Mo and Eve is watched. Fails: a silent Mo is severity 2.
-
-```mermaid
-flowchart LR
-  subgraph "Art. 72 loop (Mo)"
-    A["the agent's audit dataset (Art. 12 log)"] --> B["Mo T0 metrics + blind grading"]
-    B --> C["scorecard / ladder-state / digest / regression explanation / cost"]
-    C --> D["promotion record with Art. 9 residual-risk statement"]
-    D --> E["human merges the level change (pre-determined change, Annex IV 2(f))"]
-  end
-  F["Art. 73 assessment outcomes (07 §12.1)"] --> B
-  G["Art. 86 explanation requests (HR)"] --> B
-  H["Eve findings / verdicts (eve_quality)"] --> B
-  E --> A
-```
+Art. 72(1)–(2) asks the provider to collect, document and analyse performance data actively and
+systematically throughout the lifetime and to evaluate continuous compliance with Chapter III
+Section 2; on this platform Mo's artefacts are that plan by construction, with the scorecard,
+`ladder-state.md`, the digest, the regression explanation and the cost report (and, for Eve,
+the detection-quality pack of HLD §13.3) fed from outside Mo by every Art. 73 assessment outcome
+(07 §12.1), every Art. 86 explanation request (§4.10) and Eve's findings. The plan's text per
+system, its cadence, reader, loop, verification and the re-cut into the Commission's Art. 72(3)
+template are canonical in
+[../mo/04-artefacts-and-proposals.md §1.8](../mo/04-artefacts-and-proposals.md#18-the-art-72-post-market-monitoring-plan-per-high-risk-system).
+Owner: Mo owner; a silent Mo is severity 2.
 
 ### 4.5 Art. 13 — instructions for use, per agent
 
 One operator-facing page per agent (location: the agent's own set, `instructions-for-use.md`;
-filename fixed at reconcile), derived from pages that exist, structured by Art. 13(3):
+final filename *tbd*), derived from pages that exist, structured by Art. 13(3):
 
 | Art. 13(3) | Content | Source |
 |---|---|---|
@@ -627,8 +611,8 @@ system are informed unless it is obvious; Art. 50(2), generated text is marked i
 machine-readable format and detectable as artificially generated, "to the extent technically
 feasible". The Commission's final guidelines (2026-07-20) read AI *agents* as owing both
 disclosures — the artificial nature and **whom the agent acts for** — at first interaction
-(secondary sources: Reed Smith, Mayer Brown; the guideline text itself was not read this pass,
-§9). Art. 50(4) (public-interest text) does not apply: nothing here is published to the public.
+(secondary sources: Reed Smith, Mayer Brown; the guideline text itself was not read on
+2026-09-13, §9). Art. 50(4) (public-interest text) does not apply: nothing here is published to the public.
 
 | Surface | Position | Mechanism | Owner |
 |---|---|---|---|
@@ -643,8 +627,8 @@ Register rule (05 §8.2): a `limited_art50` or higher row cannot reach `prod` wi
 manifest's Art. 50 block naming template ids, the header value and the disclosure text hash.
 Verified: a CI content test sends one F2b message to a test recipient and asserts the line and
 the header; the content-log copy shows the model's body without them. Fails: the action
-service refuses to send an F2b body it could not wrap (`disclosure_missing`, a denial reason to
-add to the platform vocabulary — cross-page claim, §8).
+service refuses to send an F2b body it could not wrap (`disclosure_missing`, a denial reason of
+the platform vocabulary, HLD §12.3).
 
 ### 4.8 Art. 4 — the literacy measure
 
@@ -699,7 +683,7 @@ severity-3 finding.
 
 ## 5. Evidence register
 
-Answers gap MON-11 (with [08](08-data-logging-retention-sovereignty.md) §5.5 for the exports).
+The exports behind these artefacts are in [08](08-data-logging-retention-sovereignty.md) §5.5.
 
 What an authority, an assessor or the works council is shown, where it lives, who produces it,
 how often, and how long it is kept (retention classes from [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md)).
@@ -749,7 +733,7 @@ meet its legal ones as they stand on 2026-09-13.
 | R3 | How an authority reads **licence reclaim by inactivity** before enforcement practice exists | no Annex III enforcement before 2027-12-02 | P18 answered in writing by the DPO and legal; §3.1.4's mechanism keeps the selection human either way | DPO, legal |
 | R4 | The **Super Admin grant** is the fact most likely to be held against the narrow-task reading | draft guidelines paragraph 12 | the purpose paragraph identical in five places (P125); the hard-denied list in code; the reconciled count of robot admin events outside the catalogue and band B, target 0, attached to the Art. 6(4) file annually | platform owner, Eve owner |
 | R5 | Oversight above L3 rests on **Eve, not a natural person** | Art. 14 wants natural persons able to intervene | K0 drill records, veto-window statistics, the per-family caps (§4.6) | agent owner, ISMS |
-| R6 | Art. 11 documentation **does not yet match** the system: the sets carry unapplied edits | reconcile pass pending | the S1 snapshot tag (P130) | platform owner |
+| R6 | Art. 11 documentation **does not yet match** the system: the sets carry unapplied edits | propagation stage pending (HLD §18, P143) | the S1 snapshot tag (P130) | platform owner |
 | R7 | **Hundreds of agents** multiply every row | — | the register export listing every agent with its class, produced by CI, and the reconciliation job's shadow-agent line (05 §8.2) | platform owner |
 | R8 | The **Art. 25(4) written position** and Google's Annex XII documentation are not yet on file | P32 pending | the supplier file (E-11) | platform owner, legal |
 | R9 | Art. 50(2) marking of model text is **provider-side and documentation-unverified** | Google's statement is a forum answer, not a document | Google's written confirmation per model pin in the supplier file; until then the platform's disclosure line and header are its feasible contribution | platform owner |
@@ -763,77 +747,33 @@ evidence, and lists what the regulator or the guidelines still decide* (HLD §16
 
 ## 7. Decisions recorded on this page (P125–P132 in [12-open-decisions.md](12-open-decisions.md))
 
-| Id | Decision | Options considered | Owner | Gate it blocks |
-|---|---|---|---|---|
-| P125 | **Wall-E's Art. 6 path.** The catalogue is the declared intended purpose (the §3.1.1 paragraph, one hash, identical in the register row, the manifest, the A2A card, the Gemini Enterprise description and the instructions for use — CI compares); Super Admin is a credential fact recorded in the technical documentation and the risk register, never in the purpose; the hard-denied list and the band structure are the Art. 6(3) boundary enforced in code with CI ownership outside the agent repository; the derogation is claimed under Art. 6(3)(a) for the catalogue and band B and 6(3)(b) for F5; Art. 6(4) assessment and Art. 49(2) registration before the first write; Art. 9–15 adopted voluntarily; band-B writes targeting a natural-person account carry a mandatory `decision_ref`; the fallback if legal reads band B as widening the purpose is `high_risk` with Annex VI internal control by 2027-12-02, held ready by §4.9 | "any admin action" as purpose with full Chapter III (rejected, §3.1.1); high-risk from the start (rejected: no standard to conform to, and the design's facts support the derogation) | owner and legal sign (this is P28's content, decided by design here; P28 remains the signature) | first write |
-| P126 | **F7 split and the profiling boundary.** `F7-suspended` and `F7-inactive`; no AI output selects a person by behaviour: the inactivity report is F1 to a human, `F7-inactive` targets are explicit human-supplied ids, CI forbids a usage or sign-in report as a write family's target source, the action service refuses report-derived targets with `profiling_boundary_denied`; `F7-inactive` L3 until P18 is answered; if the answer is "profiling", removal from the catalogue (recommended) or reclassification `high_risk` | rely on the "single timestamp is not profiling" argument (rejected: untested, and the discriminatory effect is an Art. 9 risk regardless) | DPO and legal (P18); platform owner (mechanism) | F7 above L3; the Art. 6(4) signature |
-| P127 | **Art. 14 caps and overseers.** F5 at most L4 and only on the T2 HR-system event with holds that do not expire outside business hours; F5 on T0/T1 at most L3; F7-suspended as F5; F7-inactive L3; overseer roles with competence and training records as §4.6; the operator self-grading sample as the automation-bias control, review-only, never an automatic consequence for a person; the K0 drill as the Art. 14(4)(e) evidence | F5 L4 on any trigger (rejected: a scheduled suspension has no human decision fresh enough) | agent owner, ISMS, Mo owner | Stage 4 of Wall-E (first L4 on F5) |
-| P128 | **Art. 50 mechanics.** The disclosure line and signature block injected by the action service on every F2b body, a fixed custom header on Gmail sends, template-level disclosure on F2, the first-line statement in the agent description and card and the first reply, the "agent-authored" label for Mo; `disclosure_missing` as a denial reason; Art. 50(2) recorded as provider-side (Google SynthID) and documentation-unverified; signing the Transparency Code as a deployer is legal's *tbd* | disclosure by system instruction only (rejected: not enforcement) | platform owner (injection), agent owner (block), legal (text) | Stage 1 of any `limited_art50`+ agent; **already due since 2026-08-02 for anything that sends** |
-| P129 | **Worker information and consultation before Stage 1**, under GDPR Art. 88 and national law now and Art. 26(7) voluntarily now; the employee notice; the Art. 86 explanation path through HR with the redacted frozen plan and a logged request; decision 8 and D7 of the Wall-E set re-dated accordingly | keep "before Stage 3" (rejected: Art. 26(7) says before putting into service; lead time) | HR/communications, DPO, legal | Stage 1 of any Tier W agent acting on employee accounts |
-| P130 | **Documentation freeze and the Annex IV index.** A git tag and evidence-bucket bundle per stage as the "documentation as put into service", 10 years, locked; §4.3 as the Annex IV index with "frozen at" tags; the reconcile pass is a precondition of the S1 tag; the ladder declared as the Annex IV 2(f) pre-determined-changes record so that promotions are not substantial modifications | no freeze, live wiki as documentation (rejected: Art. 11 needs the version put into service) | platform owner, AI compliance owner | Stage 1 |
-| P131 | **The AI compliance owner role**, legal's designate, separate from the platform and agent owners, added to the RACI; (b) the Art. 4 measure per role with records; (c) the GPAI one-liner and the Art. 27/26(8) negative determination recorded with the entity and date at P23; (d) the Art. 5 negative determination dated and re-run per family | fold into the platform owner (rejected: the builder does not classify) | ISMS (names), legal | the super-admin grant (engaged); any `annex_iii_adjacent` `prod` row |
-| P132 | **The reclassification trigger list** (§3.1.6) with its machine signals in CI and its calendar items owned by the AI compliance owner; a triggered row is `suspended` until re-signed | annual review only (rejected: the guidelines and the deferral date are dated events) | AI compliance owner, platform owner | — (continuous) |
-
-Decisions elsewhere this page depends on and does not re-argue: P18 (profiling), P19
-(`eve-advisor`), P23 (entity), P28 (purpose signature), P32 (Art. 25(4)), P33 (Super Admin),
-P34 (`eve-advisor` may reason), P13 (retention ceiling), 05's P75 (the registration gate), 07's
-P101 (Art. 73 taxonomy), 08's P107 (the Art. 12 designation).
+The text, options considered, owner and gate of each decision this page records are rows of the
+register ([how it works](12-open-decisions.md#1-how-this-register-works)): P125 Wall-E's Art. 6
+path (§3.1.1), P126 the F7 split and the profiling boundary (§3.1.4), P127 the Art. 14 caps and
+overseers (§4.6), P128 the Art. 50 mechanics (§4.7) and P132 the reclassification triggers
+(§3.1.6) under [§5](12-open-decisions.md#5-before-wall-es-stage-1-and-its-later-stages); P129
+worker information before Stage 1 (§4.10) and P130 the documentation freeze (§4.3) under
+[§3](12-open-decisions.md#3-before-any-tier-w-agent-writes); P131 the AI compliance owner (§4.1)
+under [§4](12-open-decisions.md#4-before-the-super-admin-grant). Decisions elsewhere this page
+depends on and does not re-argue: P18 (profiling), P19 (`eve-advisor`), P23 (entity), P28
+(purpose signature), P32 (Art. 25(4)), P33 (Super Admin), P34 (`eve-advisor` may reason), P13
+(retention ceiling), 05's P75 (the registration gate), 07's P101 (Art. 73 taxonomy), 08's P107
+(the Art. 12 designation).
 
 ---
 
-## 8. Claims other pages must match (for the reconcile pass)
+## 8. Cross-page claims
 
-Reconcile pass run on 2026-09-13: items 1–4, 8–12 below were applied to the platform pages
-(HLD, 02, 05, 07, 08, 11, 12); items 5–7, 13–15 are agent-set changes left to the propagation
-stage (HLD §18).
-
-1. **Links.** Every `ai-act.md` reference (HLD §14.1, §17 P23; 05 §8.2 and the manifest's
-   `ai_act_entry`; 07 §12.1 and its RACI) resolves to `10-eu-ai-act.md`; anchors `#wall-e`,
-   `#eve`, `#eve-advisor`, `#mo`, `#gemini`, `#platform` are the entries.
-2. **Class vocabulary.** Register values use underscores (`annex_iii_adjacent`); project labels
-   use hyphens (`annex-iii-adjacent`); 02 and 05 should each say the other spelling is the same
-   value, generated.
-3. **Denial vocabulary** (HLD §12.3, 05 `audit.schema`): add `profiling_boundary_denied` (P126)
-   and `disclosure_missing` (P128).
-4. **Manifest** (05 §12.2 `families[]`, `compliance`): F7 becomes `F7-suspended` and
-   `F7-inactive`; the `compliance` block gains an `art_50` sub-block (template ids, header
-   value, text hash) and `purpose_sha256`; `input_data_relevance` stays.
-5. **Wall-E ladder** ([../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §5):
-   F5's "L4, and not before Stage 5" gains "T2 HR event only; T0/T1 at most L3"; F7's row splits;
-   holds for F5/F7 do not expire outside business hours; the playbook validator gains the
-   report-as-target assertion.
-6. **Wall-E guardrails and decisions** ([../wall-e/06-security-guardrails.md](../wall-e/06-security-guardrails.md)
-   §Compliance, [../wall-e/09-open-decisions.md](../wall-e/09-open-decisions.md) decision 8,
-   [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) D7): the AI Act named beside data
-   protection; the works-council timing "before Stage 1"; a `decision_ref` on F5 plans and on
-   band-B writes targeting a person.
-7. **Wall-E action service** ([../wall-e/03-lld.md](../wall-e/03-lld.md)): the F2b wrapper
-   (line, block, header), stored separately from the model's body in the content log; the
-   `disclosure_missing` refusal; `explanation_requests` export for HR.
-8. **HLD §0.3 RACI**: an "AI compliance owner" row (P131). **HLD §0.4**: "works-council
-   information given" moves from the P line to the Stage 1 gate of any Tier W agent acting on
-   employee accounts (it stays a precondition of the grant as well).
-9. **HLD §14.1 table**: the Art. 14 row's "F5/F7 at L4" reads "F5 and F7-suspended at most L4
-   on the HR event; F7-inactive L3"; the Art. 50 row names the header and the first-line rule;
-   the Art. 10 row cites Art. 10(6) (testing data only).
-10. **05 §8.2 export** `ai-act-register.md`: gains columns `purpose_sha256`,
-    `art_6_3_condition`, `oversight_cap`, `review_date` from this page's entries.
-11. **07 §12.1**: the report owner is the AI compliance owner of §4.1; every Art. 73 outcome and
-    every Art. 86 request feeds Mo's Art. 72 loop (§4.4).
-12. **08 R11 / retention**: the evidence classes of §5 map onto R11 (10 years) and R1/R3 (400
-    days) exactly as listed; `explanation_requests` is a new 400-day store with personal data.
-13. **Mo** ([../mo/04-artefacts-and-proposals.md](../mo/04-artefacts-and-proposals.md)): the
-    five artefacts are the Art. 72 plan; the operator self-grading sample is drawn by the
-    approval surface, not by Mo; the self-grading agreement metric joins the scorecard.
-14. **Eve** ([../eve/01-hld.md](../eve/01-hld.md), [../eve/07-build-runbook.md](../eve/07-build-runbook.md)):
-    the "no model client" CI check is named as the Art. 3(1) invariant; `eve-advisor` carries
-    the §3.3 interim rules.
-15. **03** (Gemini Enterprise): the agent description's fixed first line; image and video
-    generation off is cited by the Art. 5 determination.
-16. **Dates every page must agree on**: Annex III obligations 2027-12-02; Art. 50 since
-    2026-08-02 with the marking transition to 2026-12-02 for legacy systems; Omnibus in force
-    2026-07-27; final Art. 50 guidelines 2026-07-20; Art. 6 guidelines draft (2026-05-19); the
-    new Art. 5 prohibition from 2026-12-02.
+The claims this page makes about other pages are tracked, with owners, in
+[12-open-decisions.md §7](12-open-decisions.md#7-values-that-differ-between-pages);
+the platform pages already carry the denial values, the class-vocabulary spellings, the
+manifest's `purpose_sha256` and `art_50` block, the register export's columns and the AI
+compliance owner, and row 14 there lists the agent-set changes still open. Also still open on
+2026-09-14 and not in that row: [../wall-e/PREREQUISITES.md](../wall-e/PREREQUISITES.md) D7
+still reads "blocks Stage 3" (P129 moves it to before Stage 1), Mo's scorecard does not yet carry
+the operator self-grading agreement metric (§4.6), and [03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md)
+does not yet carry the agent description's fixed first line (§4.7) or cite its image and video
+generation toggles as a basis of the Art. 5 determination (§3.1).
 
 ---
 
@@ -843,11 +783,11 @@ stage (HLD §18).
 |---|---|---|
 | The Commission's final Art. 50 guidelines' exact wording on AI agents (disclosure of the principal) | the library page (2026-07-20) rendered without the PDF; two law-firm summaries agree | legal reads the guideline PDF; §4.7's disclosure text adjusted if needed |
 | Whether Gemini text output through the Gemini API / Vertex AI / Gemini Enterprise is SynthID-watermarked, per model pin | a Google staff forum answer (2026-08-19) says yes for the API; Google's SynthID documentation (2025-04-09) is silent; Gemini Enterprise not addressed | Google's written statement per model pin in the supplier file (E-11); until then "provider-side, unverified" |
-| Google Cloud's EU AI Act compliance page content (what documentation it publishes, where) | the page did not render this pass; the 2025-08-01 blog post is the source used | fetch the compliance page; file the Annex XII documentation per pin |
+| Google Cloud's EU AI Act compliance page content (what documentation it publishes, where) | the page did not render on 2026-09-13; the 2025-08-01 blog post is the source used | fetch the compliance page; file the Annex XII documentation per pin |
 | Whether the Omnibus changed the Art. 71 database timeline or the Art. 49(2) registration timing | the Art. 71 page shows no amendment; the Omnibus text was read only in summary | legal reads Regulation (EU) 2026/1744 Art. 1 amendments to Art. 49 and 71 |
 | The Commission's Art. 72(3) post-market-monitoring template (implementing act) | date and adoption status not verified | AI compliance owner tracks; §4.4 re-cut when adopted |
 | The adoption date of the final Art. 6 classification guidelines | "end 2026" from secondary sources | calendar trigger in §3.1.6 |
-| The draft Art. 6 guidelines' treatment of systems that execute a decision already taken | the lens's reading; DLA Piper confirms "must not materially influence the outcome"; the draft text itself not read | legal reads the draft; the F5 condition in §3.1.2 confirmed (b) or moved to (a) only |
+| The draft Art. 6 guidelines' treatment of systems that execute a decision already taken | the design's reading; DLA Piper confirms "must not materially influence the outcome"; the draft text itself not read | legal reads the draft; the F5 condition in §3.1.2 confirmed (b) or moved to (a) only |
 | The market surveillance authority competent for P23's entity | depends on the entity and national designation | legal, after P23 |
 | National information-and-consultation rules applicable to the entity (information vs consultation; timing) | `Assumption:` information before putting into service; consultation where required | HR and legal, before Stage 1 |
 | Whether the organisation is an SME or small mid-cap for the Art. 11 simplified documentation form and Art. 99 reduced penalties | not assessed | legal (likely not, for the organisation as a whole) |
@@ -896,7 +836,6 @@ Read on 2026-09-13 unless noted.
 - https://ai.google.dev/responsible/docs/safeguards/synthid — SynthID modalities and detection; page updated 2025-04-09; no statement on default API watermarking
 - https://artificialintelligenceact.eu/standard-setting/ , https://jtc21.eu/ , https://www.cencenelec.eu/areas-of-work/cen-cenelec-topics/artificial-intelligence/ — harmonised-standards status; EN 18286; M/613 expiry 2027-02-28
 - https://gdpr-info.eu/art-4-gdpr/ , /art-22-gdpr/ , /art-88-gdpr/ — profiling; automated decisions; employment context
-- Lens report `.agent-work/review/eu-ai-act.md` (2026-09-13) — the base of §1–§4; its §4 list is §6 here
 - Wiki pages relied on: [01-hld.md](01-hld.md) §0.3, §0.4, §5.1, §5.3, §7.5, §7.6, §12, §13, §14.1, §16, §17; [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) §8.2 and the manifest; [07-monitoring-detection-incident-response.md](07-monitoring-detection-incident-response.md) §12; [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) R1, R11, §7.3; [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §2, §5; [../wall-e/06-security-guardrails.md](../wall-e/06-security-guardrails.md); [../wall-e/03-lld.md](../wall-e/03-lld.md) §Storage; [../eve/01-hld.md](../eve/01-hld.md); [../mo/04-artefacts-and-proposals.md](../mo/04-artefacts-and-proposals.md) §1
 
 ---
@@ -904,7 +843,7 @@ Read on 2026-09-13 unless noted.
 ## Related
 
 - [01-hld.md](01-hld.md) — the parent: §14.1 (this page details it), §5.1 `ai_act_*` fields, §12.2 `compliance` block, §13.1 item 13, §13.2 (Eve outside the Act), §13.3 (Mo's Art. 72 artefact), §16, P18, P19, P23, P28, P32, P33, P34
-- [00-objective-review.md](00-objective-review.md) — I66–I73; AIA-01 to AIA-13; §6.1
+- [00-objective-review.md](00-objective-review.md) — the EU AI Act brief items and gaps this page answers; §6.1
 - [12-open-decisions.md](12-open-decisions.md) — the register: P125–P132 are this page's rows
 - [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) — the register, the admission gate step 8, the Art. 49 rule, the manifest, the A2A card and registry description
 - [07-monitoring-detection-incident-response.md](07-monitoring-detection-incident-response.md) — Art. 73 taxonomy and clocks, GDPR 72-hour path, the works-council rows of the RACI

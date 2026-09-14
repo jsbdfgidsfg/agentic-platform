@@ -2,12 +2,11 @@
 
 ## Status
 - Owner: the platform owner (super admin)
-- Last reviewed: 2026-09-13
-- Maturity: skeleton
-- Objective restated 2026-09-13; see the platform HLD
-  ([agentic-platform/01-hld.md](agentic-platform/01-hld.md) §18 item 26). This tenant now carries a
-  super-admin robot account for Wall-E (register row P33), so two tenant facts gate platform
-  controls and are asked below: the **Workspace edition** and the **identity provider**.
+- Last reviewed: 2026-09-14
+- Maturity: skeleton. The tenant carries a super-admin robot account for Wall-E (register row
+  P33), so two tenant facts gate platform controls and are asked below: the **Workspace edition**
+  and the **identity provider** (platform HLD
+  [agentic-platform/01-hld.md](agentic-platform/01-hld.md) §18 item 26).
 
 ## Tenant
 
@@ -21,7 +20,7 @@
 
 ## Questions the platform asks of this tenant
 
-Added 2026-09-13 (platform HLD §18 item 26). Each is answered by the platform owner reading the
+Asked by the platform HLD §18 item 26. Each is answered by the platform owner reading the
 Admin console; the answer is written into the Tenant table above with the date it was read.
 
 | Question | What the answer gates | Answer | Pages that ask it |

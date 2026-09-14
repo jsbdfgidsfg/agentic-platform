@@ -2,21 +2,16 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- **Objective restated 2026-09-13; see the platform HLD** ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
-- **Framing, 2026-09-13: this is a platform chapter seeded here.** Written as Wall-E's chapter, its
-  §1 (Agent Identity), §5 (operator identity), §6 (keyless everywhere) and §10 (the drift job) are
-  promoted to platform rules in [../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md)
-  (§2.1, §2.3, §2.5, §2.6, §6) and platform HLD §4. That page is the authority for the fleet;
-  this chapter stays the authority for Wall-E's own principals, its engine and the research
-  behind them. The edits page 04 §11 asks of this chapter are applied as dated lines: §1.4's
-  per-project deny policy becomes the folder policy `deny-agents-platform`; §5.5 gains K6, K7
-  and the rule that workforce operators never reach a Tier P surface; §6's "exactly three
-  grants" becomes SA-5; §10's drift job becomes page 04 §2.6; §11's deny-policy row is closed.
-  Wall-E's robot holds Super Admin since 2026-09-13 (platform HLD §13.1); no identity decision of
-  this chapter depends on the robot's Workspace role.
+- Last reviewed: 2026-09-14
+- Objective: see the platform HLD ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
+- Platform framing: Agent Identity (§1), operator identity (§5), keyless service accounts (§6)
+  and the drift job (§10) are platform rules on
+  [../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md)
+  (§2.1, §2.3, §2.5, §2.6, §3, §6), the authority for the fleet; this chapter stays the
+  authority for Wall-E's own principals, its engine and the research behind them. No identity
+  decision here depends on the robot's Super Admin role (platform HLD §13.1).
 - Maturity: **design. Nothing is built and nothing is enabled.**
-- 2026-09-13: four projects. `eve-controller@` and Eve's key are in `EVE_PROJECT`, Mo's three identities in `MO_PROJECT`, the Gemini Enterprise app and its service agent in `GEMINI_PROJECT`; `WALLE_PROJECT` holds one engine. [../project-topology.md](../project-topology.md) is the authority for placement and for every cross-project grant; this chapter names homes and points there. No identity decision changed.
+- Placement: `WALLE_PROJECT` holds one engine; Eve's identities and key are in `EVE_PROJECT`, Mo's in `MO_PROJECT`, the Gemini Enterprise app and its service agent in `GEMINI_PROJECT`. [../project-topology.md](../project-topology.md) is the authority for placement and every cross-project grant.
 - Research basis: Google Cloud, Google Workspace and Gemini Enterprise documentation, the IAM and Agent Platform release notes, and the `google-auth` and ADK source trees, read between 2026-09-03 and 2026-09-09. Every product fact below carries its launch stage. Anything the documentation does not settle is marked **unverified**, and nothing marked "likely" in the research is promoted to a fact here.
 - Depends on: [02](02-identity-and-auth.md) for the credential model, [03](03-lld.md) for the endpoint allowlist, [06](06-security-guardrails.md) for the threat model, [08](08-team-eve-mo.md) for the Eve and Mo contract. [11](11-prompt-security.md) covers content screening and [13](13-agent-interconnection.md) covers Agent Gateway and the registries. This chapter names them only where an identity decision depends on them.
 
@@ -37,33 +32,22 @@ Section 9 holds the one diagram. It is the whole chapter on one page.
 | Wall-E's runtime identity | **Agent Identity**, `identity_type=AGENT_IDENTITY`, set when the engine is created. `walle-agent@` is the fallback only if the Cloud Run hop spike in section 1.6 fails | GA since 2026-04-22 | Deploy config committed in git, a CI check on it, a post-deploy assertion on `spec.effectiveIdentity` |
 | Eve's and Mo's runtime identity | The same, for any reasoning layer they run on Agent Runtime, in `EVE_PROJECT` and `MO_PROJECT`. Eve's signing key stays on a non-agent identity, `eve-controller@EVE_PROJECT` | GA | Their design records, built against section 1.8 |
 | The robot's refresh token | Stays in regional Secret Manager at a pinned version, exactly as [02](02-identity-and-auth.md) says. The auth manager is not used for it | Auth manager GA per the IAM release notes entry of 2026-08-22 | `agentidentitycredentials.googleapis.com` left disabled, plus an org-policy constraint on `AuthProvider` |
-| Operator identity for the pilot | `Assumption:` operators are Workspace users. Google identities on the IAP page, `run.invoker` on the operators group, and the CLI break-glass path through `walle-operators-caller@` for K0 and K1 only | GA | IAM bindings by Google Group, IAP JWT verified in the action service |
+| Operator identity for the pilot | `Assumption:` operators are Workspace users. Google identities on the IAP page, and the CLI break-glass path through `walle-operators-caller@` (which holds the `run.invoker` binding, no human does) for K0 and K1 only | GA | IAM bindings by Google Group, IAP JWT verified in the action service |
 | Operators without a Google account | Workforce Identity Federation. The IAP page is their only handle. No CLI K0. The committed operator list holds opaque subjects, not emails | IAP with workforce identity GA since 2025-02-07. The `cloud-run` IAP resource type carries a Preview marker | Workforce pool, IAP settings, JWT `sub` check in code |
 | Both operator kinds on one approval page | Not until tested. One identity source per IAP resource | unverified | Build rule, section 5.3 |
-| Who may call `reasoningEngines.query` on Wall-E | Three principals as first designed, two after [14](14-hld-challenge.md) C10 removed `eve-controller@`, through a custom role bound on the engine resource; the first is `service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine…`, built from the **app** project's number. `WALLE_PROJECT` holds exactly one engine by topology, so the rule holds by construction | GA | Custom role, resource-level binding, `WALLE_PROJECT` holding one engine, a drift query |
+| Who may call `reasoningEngines.query` on Wall-E | Two principals ([14](14-hld-challenge.md) C10 removed `eve-controller@`), through a custom role bound on the engine resource; the first is `service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine…`, built from the **app** project's number. `WALLE_PROJECT` holds exactly one engine by topology, so the rule holds by construction | GA | Custom role, resource-level binding, `WALLE_PROJECT` holding one engine, a drift query |
 | Service account keys | None are created, anywhere, ever | Key constraints GA | Two org-policy constraints set explicitly on the project |
-| Impersonation | Exactly three `roles/iam.serviceAccountTokenCreator` grants exist and are listed in section 6. No workforce principal ever holds one | GA | IAM, drift query |
-
-## What this chapter changes in the earlier documents
-
-Stated first, so the corrections are not lost in the detail. Where a row says a document is wrong, the document is wrong and should be edited; this chapter is not a footnote to it.
-
-| Document and claim | Change |
-|---|---|
-| [02](02-identity-and-auth.md) principals table and [ARCHITECTURE](ARCHITECTURE.md) section 4.2: `walle-agent@` runs the agent | **Applied 2026-09-11** as a pointer at the top of ARCHITECTURE section 4 and in 02. Either `walle-agent@` or the agent principal, never both. With `AGENT_IDENTITY` the `serviceAccount` field must not be set. K3 in section 4.6 becomes "remove `run.invoker` from the agent principal". The two re-verification properties are re-run against the `principal://` identity, because nothing is inherited from the service account |
-| [SETUP](SETUP.md) Phase 12: the deploy passes `service_account`, and grants the Reasoning Engine service agent `serviceAccountTokenCreator` on `walle-agent@` | Both disappear on the Agent Identity path. They return only on the fallback. **Applied 2026-09-11** as SETUP Phase 12b, which runs the spike before Phase 12's production deploy |
-| [03](03-lld.md) ingress note and [ARCHITECTURE](ARCHITECTURE.md) section 7.5: the in-app allowlist is keyed on the verified `email` claim | **Applied 2026-09-11** in both. Keyed on the verified **identity** claim. An agent identity has no email. The claim its token carries is captured in the spike. Until then the allowlist row for the agent is `tbd` |
-| [02](02-identity-and-auth.md): `reasoningEngines.query` is granted to three principals only | Qualified. The Discovery Engine service agent's documented role is project-wide and carries query, update and delete on every engine in the project. Since 2026-09-13 `WALLE_PROJECT` holds exactly one `reasoningEngine` by topology — Eve's and Mo's, if any, are in `EVE_PROJECT` and `MO_PROJECT` — so the rule holds by construction; whether the engine-scoped role alone suffices is decision 42 |
-| [SETUP](SETUP.md) Phase 12: the Discovery Engine service agent is built from Wall-E's own project number | Wrong. The app lives in `GEMINI_PROJECT` (decided 2026-09-13), so the service agent is `service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine.iam.gserviceaccount.com`, built from the config key `GEMINI_PROJECT_NUMBER`, never from `PROJECT_NUMBER` |
-| [02](02-identity-and-auth.md) and [03](03-lld.md) policy step 5: the action service re-checks the asserted email against `walle-operators@` through the Directory API | True in case (a) only. A workforce subject is not a Workspace user. In case (b) the write-path check compares against the committed list and there is no live group to read |
-| [09](09-open-decisions.md) decision 19, [02](02-identity-and-auth.md)'s rejected-alternatives row and [10](10-adversarial-review.md)'s "facts that were wrong" row: Agent Identity is "a build decision with a published answer" | **Decision 19 rewritten 2026-09-11; the 02 and 10 rows corrected the same day.** Overstated. The launch stage is settled. The Cloud Run hop is **unverified in the documentation** and is a spike with a pass or fail result, section 1.6. Cloud Run's own Agent Identity support is a different feature and is Preview |
-| [03](03-lld.md) section "The agent" and [SETUP](SETUP.md) Phase 12: "on a Model Armor error the platform skips sanitisation and continues", stated as a caveat covering Model Armor on Agent Gateway | **Wrong for the gateway path.** On Agent Gateway, Model Armor is attached through a Service Extensions authorization extension whose `failOpen` field defaults to `false` and is `false` in Google's own sample, so a timeout or error **stops the request**. That is fail-closed. The skip-and-continue behaviour is documented for the floor-settings path, which screens the agent's own `generateContent` calls. [ARCHITECTURE](ARCHITECTURE.md), [03](03-lld.md) and [SETUP](SETUP.md) all carry the corrected statement as of 2026-09-11. The cost of being right is availability coupling: a Model Armor outage on the gateway path stops every Wall-E turn. Detail in [11](11-prompt-security.md) |
+| Impersonation | The `roles/iam.serviceAccountTokenCreator` grants are enumerated in section 6 (rule SA-5 of page 04 §2.3): two, three only on the fallback path. No workforce principal ever holds one | GA | IAM, drift query |
 
 ---
 
 ## 1. Agent Identity for the agents
 
 ### 1.1 What it is
+
+The fleet rule, the organisation-wide trust domain and the principal forms are
+[page 04 §2.1](../agentic-platform/04-identity-and-privileged-access.md#21-agent-identity-for-every-reasoning-layer-promotes-wall-e12-1);
+this section keeps Wall-E's resolution of them and the facts that page does not restate.
 
 Agent Identity gives an Agent Runtime instance a system-attested identity tied to the lifecycle of the resource that hosts it. GA since 2026-04-22 per both the IAM and the Agent Platform release notes. The identity is a principal identifier of the form
 
@@ -82,7 +66,7 @@ Four facts about that string, all GA.
 | Fact | Consequence for Wall-E |
 |---|---|
 | The trust domain is created at the organisation level, `agents.global.org-ORGANIZATION_ID.system.id.goog`, when the project has an organisation. Orgless projects get a project-level domain, and the documentation and the `google-auth` source disagree on its spelling (`project-` versus `proj-`) | Irrelevant here. `Assumption:` the Wall-E project sits under an organisation. Record the organisation id in [SETUP](SETUP.md) as a derived value |
-| The namespace is the engine's immutable resource path and the agent name is the immutable reasoning-engine id | The principal is fully determined by four values and cannot be renamed. Never type it by hand; read it back after deploy, section 8.1 step 5 |
+| The namespace is the engine's immutable resource path and the agent name is the immutable reasoning-engine id | The principal is fully determined by four values and cannot be renamed. Never type it by hand; read it back after deploy, [SETUP](SETUP.md) Phase 12b step 5 |
 | Deleting and recreating the engine produces a new id and therefore a new principal | Every resource-level binding on the old principal dies with it. Redeploy in place. A recreate is an identity change and goes through the IAM change checklist |
 | The SPIFFE form `spiffe://TRUST_DOMAIN/resources/SERVICE/RESOURCE_PATH` names the same identity | Gemini Enterprise shows this form on the Agent details page, section 4 |
 
@@ -120,29 +104,30 @@ The 24-hour rotation is Google-managed and needs no runbook entry.
 
 ### 1.4 IAM: allow policies, deny policies, and the automatic roles
 
-GA. An agent identity appears in allow policies, deny policies and Principal Access Boundary policies in three forms.
+GA. The principal and principal-set forms an agent identity takes in allow, deny and Principal
+Access Boundary policies, including the conflicting trust-domain spellings on Google's pages, and
+the two automatic roles `roles/aiplatform.agentDefaultAccess` and
+`roles/aiplatform.agentContextEditor` (permission lists and binding resource unverified, dumped
+and diffed before the first prod engine) are
+[page 04 §2.1](../agentic-platform/04-identity-and-privileged-access.md#21-agent-identity-for-every-reasoning-layer-promotes-wall-e12-1).
 
-| Form | Names |
-|---|---|
-| `principal://TRUST_DOMAIN/resources/aiplatform/projects/N/locations/europe-west1/reasoningEngines/ID` | One agent |
-| `principalSet://TRUST_DOMAIN/*` | Every agent identity in the trust domain, which is the organisation |
-| `principalSet://TRUST_DOMAIN/attribute.platformContainer/aiplatform/projects/PROJECT_NUMBER` | Every Agent Runtime identity in one project |
+**Deny policies turn the standing invariants into enforced rules.** [02](02-identity-and-auth.md)'s
+"`walle-agent@` can read no secret. Check this after every IAM change" is an audit finding, not a
+control: a mistaken grant defeats it until the next check. A deny policy survives the mistaken
+grant. The one Wall-E is under is the platform's folder policy `deny-agents-platform` at
+`fld-agentic-platform` (P61), whose denied principals include `WALLE_PROJECT`'s agent principal
+set and service-account principal set, with `walle-actions@` and `walle-actions-super@` as
+exception principals of the secrets rule only
+([page 04 §3](../agentic-platform/04-identity-and-privileged-access.md#3-the-folder-deny-policy-deny-agents-platform-with-verified-permission-names));
+no project-level copy exists on `WALLE_PROJECT` (SETUP Phase 12b step 7).
 
-The Agent Runtime page's own deny example uses a differently spelled trust domain. Trust the principal-identifiers reference page, which is the canonical list and matches the Agent Runtime page's allow examples.
-
-**Deny policies turn the two standing invariants into enforced rules.** [02](02-identity-and-auth.md) says "`walle-agent@` can read no secret. Check this after every IAM change." That is an audit finding, not a control: a mistaken grant defeats it until the next check. A project-level deny policy naming `principalSet://agents.global.org-ORGANIZATION_ID.system.id.goog/*` and denying `secretmanager.googleapis.com/versions.access`, `aiplatform.googleapis.com/reasoningEngines.setIamPolicy` and `run.googleapis.com/services.setIamPolicy` survives a mistaken grant. Eve's and Mo's agent identities, if any, are in `EVE_PROJECT` and `MO_PROJECT`; a deny policy is attached per project, so each of the three agent projects carries its own copy, and Wall-E's protects only what is in `WALLE_PROJECT`. `walle-actions@` is a service account and is never in that set. **Verify each permission name against the list of permissions supported in deny policies before applying**; the research did not, and a name that is not on the list makes the policy silently narrower than it reads. Section 8.1 step 9.
-
-**Lifted to the folder 2026-09-13** ([../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §3; platform HLD §4.5): the per-project copies are replaced by one folder deny policy, `deny-agents-platform` at `fld-agentic-platform`, naming the per-project agent principal set and each project's service-account principal set, with every permission name **verified** against Google's deny-supported list on 2026-09-13 (P61); Wall-E's project copy is deleted. The fleet-wide `principalSet://…/*` form above and deny-policy acceptance of agent principal sets stay `Assumption:` until a throwaway engine proves the spelling (P8).
-
-**The automatic roles.** An agent identity comes with `roles/aiplatform.agentDefaultAccess` and `roles/aiplatform.agentContextEditor`, attached by the platform, giving it "access to its own logging, metrics, model access, sessions, memories, and sandboxes (Preview)". Google recommends adding `roles/aiplatform.expressUser`, `roles/serviceusage.serviceUsageConsumer` and `roles/browser`. **The permission lists of the two automatic roles are unverified**: the pages retrieved do not render them, and the research could not confirm on which resource they are bound. Before S0, dump both with `gcloud iam roles describe` and confirm neither contains `secretmanager.*` or any `setIamPolicy` permission. Put that check in the IAM drift job. Until it has run once, the sentence "the agent's GCP footprint is these roles plus `run.invoker`" is a wish.
-
-Wall-E's entire GCP footprint under Agent Identity: the two automatic roles, `roles/serviceusage.serviceUsageConsumer`, `roles/browser`, `roles/logging.logWriter`, and `run.invoker` on `walle-actions`. **Not `roles/aiplatform.expressUser`**, although Google recommends it: bound at project level it carries `aiplatform.reasoningEngines.query` on every engine in the project, which would make the agent a fourth caller of its own engine, able to assert any operator's `user_id`. Grant instead only what inference and Sessions are shown to need at build, on the narrowest resource that works, and if `expressUser` proves unavoidable record it as a named exception to the three-principal rule in [02](02-identity-and-auth.md), boundary 2 and the setup verification list. Nothing else, and the deny policy above says so in a form a mistaken grant cannot undo.
+Wall-E's entire GCP footprint under Agent Identity: the two automatic roles, `roles/serviceusage.serviceUsageConsumer`, `roles/browser`, `roles/logging.logWriter`, and `run.invoker` on `walle-actions`. **Not `roles/aiplatform.expressUser`**, although Google recommends it: bound at project level it carries `aiplatform.reasoningEngines.query` on every engine in the project, which would make the agent a third caller of its own engine, able to assert any operator's `user_id`. Grant instead only what inference and Sessions are shown to need at build, on the narrowest resource that works, and if `expressUser` proves unavoidable record it as a named exception to the two-principal rule in [02](02-identity-and-auth.md), boundary 2 and the setup verification list. Nothing else, and the deny policy above says so in a form a mistaken grant cannot undo.
 
 ### 1.5 It replaces the service account. It does not sit beside it
 
 GA, and the point most likely to be got wrong at build. The REST reference for `ReasoningEngineSpec.identityType` is explicit: `AGENT_IDENTITY` means "Use Agent Identity. The serviceAccount field must not be set." `SERVICE_ACCOUNT` and the unspecified value mean the custom service account if set, otherwise the project's default Reasoning Engine service agent. The Cloud Run counterpart of the feature says the same thing from the other side: switching a service from a service account to an agent identity "assigns a new principal that doesn't inherit permissions from your previous service account".
 
-So the principals table in [02](02-identity-and-auth.md) has one row for the agent, and the row's identity is either `walle-agent@` or the agent principal. Nothing carries over. Every property verified against `walle-agent@` is re-verified against `principal://...` with Policy Analyzer after the switch, and every resource-level binding is made on the new principal.
+So the principals table in [02](02-identity-and-auth.md) has one row for the agent, and the row's identity is either `walle-agent@` or the agent principal. Nothing carries over. Every property verified against `walle-agent@` is re-verified against `principal://...` with Policy Analyzer after the switch, and every resource-level binding is made on the new principal. Kill switch K3, cutting the agent off, therefore removes `run.invoker` from whichever principal runs the agent: the agent principal on the Agent Identity path, `walle-agent@` only on the fallback.
 
 ### 1.6 The Cloud Run hop: the exact answer the research gives
 
@@ -156,7 +141,7 @@ Boundary 2 in [ARCHITECTURE](ARCHITECTURE.md) is "Cloud Run IAM `run.invoker`, I
 
 What is settled: if the token exists, its audience is the `walle-actions` service URL, or a custom audience configured on the service, because that is what the Cloud Run service-to-service page requires of any ID token it accepts. Agent Gateway egress is the documented governed path from an agent to an endpoint, and `iamcredentials.googleapis.com` sits in the gateway's essential-endpoint list, which hints at how such a token might be minted. A hint is not a mechanism.
 
-**So the hop is a spike, run before the production engine exists**, because the identity is fixed at creation. The spike is one day on a throwaway engine, section 8.1 step 7. It has a pass or fail result and the result is attached to the decision record either way. A design that assumed the pass would be designing the allowlist around a claim nobody has seen.
+**So the hop is a spike, run before the production engine exists**, because the identity is fixed at creation. The spike is one day on a throwaway engine, [SETUP](SETUP.md) Phase 12b step 3. It has a pass or fail result and the result is attached to the decision record either way. A design that assumed the pass would be designing the allowlist around a claim nobody has seen.
 
 ### 1.7 Position: adopt, at creation, with a gated fallback
 
@@ -172,17 +157,23 @@ The fallback is `identity_type=SERVICE_ACCOUNT` with `walle-agent@`, used only i
 
 ### 1.8 Eve and Mo
 
-Input to their designs, not their design.
-
-| Agent | Runtime identity | Holds | Does not hold |
-|---|---|---|---|
-| Eve's reasoning layer, if it has one on Agent Runtime | Its own agent identity, set at creation, in its own project | **Nothing on Wall-E's engine and nothing on `walle-actions`.** It reaches both only through `eve-controller@EVE_PROJECT`, the deterministic controller, which held the third query binding as first designed ([14](14-hld-challenge.md) C10 removes it; [../project-topology.md](../project-topology.md) §3 row 13) and is the holder of the read endpoints. Adding the reasoning layer as a caller would add a query principal and break boundary 2 | The KMS signer role, `reasoningEngines.query`, any `walle-actions` endpoint. Nothing an LLM loop can drive may produce an Eve signature or an Eve call, which is [08](08-team-eve-mo.md)'s rule that a safety interlock never runs through an LLM |
-| Eve's deterministic controller, the part that signs, halts and demotes | `eve-controller@EVE_PROJECT`, an attached service account on Cloud Run in Eve's project, exactly as [02](02-identity-and-auth.md) and [08](08-team-eve-mo.md) say | `roles/cloudkms.signer` on `eve-approval` in `EVE_PROJECT`; `run.invoker` on `walle-actions` in `WALLE_PROJECT`, a cross-project resource-level binding; dataset-level `dataViewer` on `walle_audit`; its own read-only Workspace credential per decision 10, stored in `EVE_PROJECT` | Any secret of Wall-E's; any project-level role in `WALLE_PROJECT` |
-| Mo | `mo-metrics@`, `mo-analyst@`, `mo-narrator@` in `MO_PROJECT` ([../mo/02-identity-and-access.md](../mo/02-identity-and-access.md)); an agent identity only if Mo ever runs on Agent Runtime | `mo-metrics@`: dataset-level `dataViewer` on `walle_audit` and `walle_workspace_logs` in `WALLE_PROJECT`. `mo-analyst@`: `run.invoker` on `walle-actions` for the two read endpoints. Both cross-project, resource-level | Everything else. Mo has no write path, and nothing of Mo's lives in `WALLE_PROJECT` |
-
-Decided 2026-09-13 ([platform HLD §13.2](../agentic-platform/01-hld.md), P34): Eve's reasoning layer exists as a **reporting path**, `eve-advisor@` in its own project `EVE_ADVISOR_PROJECT` under `fld-controllers`; it holds no signer, no `run.invoker`, no secret, and nothing it writes is read by Eve's gate or by either Wall-E action service. The first row's rule holds unchanged for it. The deterministic controller additionally holds `run.invoker` on `walle-actions-super`, halt path only (platform HLD §18 item 25).
-
-Eve, Mo and the Gemini Enterprise app each get their own project — decided 2026-09-13, [../project-topology.md](../project-topology.md) — for least privilege: a project-level role in one agent's project reaches nothing of another's. The reason in section 7 is one of them: the Discovery Engine service agent's documented role, if Eve is ever registered in Gemini Enterprise, is project-wide over every engine.
+Input to their designs, not their design. Eve's and Mo's reasoning layers, if they run on Agent
+Runtime, take their own agent identity at creation in their own projects and hold nothing on
+Wall-E's engine or either action service: Eve reaches Wall-E only through its deterministic
+controller `eve-controller@EVE_PROJECT`, an attached service account that holds the KMS signer,
+because nothing an LLM loop can drive may produce an Eve signature or an Eve call
+([08](08-team-eve-mo.md)), and adding a reasoning layer as a caller would add a query principal
+and break boundary 2 (Eve's reporting path `eve-advisor@`, P34, holds no signer, invoker or
+secret; [platform HLD §13.2](../agentic-platform/01-hld.md)). Every grant an Eve or Mo identity
+holds on a Wall-E resource — `run.invoker` on `walle-actions` and `walle-actions-super`,
+dataset-level readers on `walle_audit`, and the engine query binding that [14](14-hld-challenge.md)
+C10 removed and row 13 records as an anti-grant — is a resource-level row of
+[../project-topology.md](../project-topology.md#3-cross-project-grants) §3, never a project-level
+role, with Eve's and Mo's own grants on [../eve/02-identity-and-auth.md](../eve/02-identity-and-auth.md)
+and [../mo/02-identity-and-access.md](../mo/02-identity-and-access.md). The projects are separate
+for least privilege, a project-level role in one agent's project reaching nothing of another's,
+and section 7 gives one reason: the Discovery Engine service agent's documented role is
+project-wide over every engine.
 
 ### 1.9 What is enforcement-grade here, and what is not
 
@@ -225,7 +216,7 @@ GA since 2026-08-22 per the IAM release notes, Preview from 2026-06-18. They rep
 | `agentidentity.googleapis.com`, v1 and v1beta | `projects.locations.authProviders` with create, delete, get, list, patch, enable, disable, query, getIamPolicy, setIamPolicy; `authProviders.authorizations`; `accessSummaries` | **Enabled.** The IAM tutorial lists it as a prerequisite for deploying with an identity. Wall-E creates no auth provider on it |
 | `agentidentitycredentials.googleapis.com`, v1 | `authProviders.credentials:retrieve` and `credentials:finalize` | **Left disabled.** With it off, no auth provider can be exercised in the project. That is the mechanism behind section 2's "not used" |
 
-Both APIs can be placed in a VPC Service Controls perimeter, and agent identities can be named in ingress and egress rules, GA 2026-08-14. That matters for the perimeter decision [ARCHITECTURE](ARCHITECTURE.md) section 9 defers to before S1. Custom org-policy constraints exist for `agentidentity.googleapis.com/AuthProvider`, GA 2026-08-14. A custom constraint denying `AuthProvider` creation in the Wall-E project is the belt to the disabled API's braces, and closes the door on a future "convenient" delegated credential without a design change. Both are config steps in section 8.1.
+Both APIs can be placed in a VPC Service Controls perimeter, and agent identities can be named in ingress and egress rules, GA 2026-08-14. That matters for the perimeter decision [ARCHITECTURE](ARCHITECTURE.md) section 9 defers to before S1. Custom org-policy constraints exist for `agentidentity.googleapis.com/AuthProvider`, GA 2026-08-14. A custom constraint denying `AuthProvider` creation in the Wall-E project is the belt to the disabled API's braces, and closes the door on a future "convenient" delegated credential without a design change. Both are config steps in [SETUP](SETUP.md) Phase 12b step 1.
 
 ---
 
@@ -268,6 +259,8 @@ The plain `gcloud auth print-identity-token` without an audience is what the Clo
 
 ### 5.2 Case (b): operators exist only in an external identity provider
 
+The platform decides the workforce pool once ([page 04 §2.5](../agentic-platform/04-identity-and-privileged-access.md#25-workforce-identity-for-non-google-operators-only-if-p24-says-yes), P64): no pool until a population without Google identities exists, one organisation-level pool, 1 h sessions, no programmatic sign-in, and workforce operators admitted to Tier R and W surfaces only, never to a Tier P surface. Wall-E is Tier P-SA, so this section records the one-agent design and the facts page 04 does not restate; its consequence for Wall-E is the committed operator list per case, section 5.4.
+
 Workforce Identity Federation, GA. "Sync-less": no Google account is created and nothing is synchronised. A workforce pool is created at the organisation, a provider inside it points at the IdP over OIDC or SAML, and an attribute mapping turns the IdP's assertion into Google-side attributes.
 
 **Principal formats for workforce pools**, usable in allow and deny policies, GA.
@@ -295,6 +288,18 @@ Workforce Identity Federation, GA. "Sync-less": no Google account is created and
 **Constraints that shape the page.** One workforce pool and one provider per IAP application. Pool, OAuth client and IAP application in the same organisation. Device-based access levels are unsupported for workforce users, so the page cannot require a managed device; IP range and time-of-day levels still apply. If the Preview marker on the `cloud-run` resource type matters to a security reviewer, the GA fallbacks are App Engine or a load-balancer-fronted backend service, both GA resource types for the same feature.
 
 ### 5.3 What the approval surface asserts, in each case
+
+The platform rule for human access to every control surface (IAP with an access-level condition, the surface list and what each surface can pull) is [page 04 §6.2–§6.4](../agentic-platform/04-identity-and-privileged-access.md#64-the-surfaces); this section is Wall-E's approval-surface assertion design.
+
+**The rule.** This is the control that makes every L3 statement meaningful. The approve request carries a **per-human assertion the action service verifies itself**, with its signature checked against Google's keys and, for IAP, the audience checked. The service then checks the asserted identity against the **committed operator list in the deployed configuration**, not a live Directory read (section 5.4, [ARCHITECTURE](ARCHITECTURE.md) section 7.5), binds the verified identity into the approval record, and stores which surface asserted it. A surface that can assert consent without a per-human assertion the service can verify is the original defect one hop out: the model no longer claims a human approved, a service account does, and nothing verifiable travels with the claim. That is not acceptable, and a trusted caller identity alone does not satisfy the rule.
+
+**Acceptable surfaces**, one of which must exist before Stage 1 (it is a Stage 1 blocker); until one does, no family may go above L2, because L3 has no approval surface to use.
+
+| Surface | Per-human assertion | Verdict |
+|---|---|---|
+| An approval page behind Identity-Aware Proxy, `walle-approvals` | The `x-goog-iap-jwt-assertion` header, below. IAP authenticates the human; each approval is bound to `plan_hash` | **Acceptable**, the lesser build effort. The position of this chapter |
+| A Google Chat app with **app authentication** | The interaction event's Chat-verified sender, validated against Google's keys | **Acceptable**, the best experience and a separate build with real engineering effort |
+| Text-only Chat under **user authentication** (the robot's own token) plus a reply convention | None. Under user authentication the Chat API can send text only: no card, no button, no interactive widget, so one-click approve and veto are impossible and a parsed reply is not an authenticated approval | **Not acceptable.** The model would be back in the approval path |
 
 The approval surface is its own Cloud Run service, `walle-approvals`, with its own service account `walle-approvals@`, deployed with `--iap`. This is a position, and the reason is mechanical: IAP on Cloud Run is enabled per service and fronts all of it. Putting it on `walle-actions` would route the agent, Cloud Tasks and Eve through IAP as well and change every machine caller's token path. It also gives the credential holder no browser-facing path, which [09](09-open-decisions.md) decision 18 wants for a different reason.
 
@@ -333,21 +338,25 @@ The loss in case (b) is real and is the reason case (a) is the pilot: removal is
 
 ### 5.5 Which kill switch each kind of operator can pull
 
+What each switch does, who may pull it, its target time and what it does not stop are
+[ARCHITECTURE](ARCHITECTURE.md#46-kill-switches) §4.6; K7's relation to K0–K6 and the crisis
+order are [page 04 §9.7](../agentic-platform/04-identity-and-privileged-access.md#97-how-k7-sits-with-each-agents-k0k6).
+The mapping to the two kinds of operator:
+
 | Switch | Google-identity operator | Workforce operator |
 |---|---|---|
 | K0 halt, K1 demote | The IAP page, or the CLI through `walle-operators-caller@` | The IAP page only |
 | K2 stop new runs | `gcloud`, Scheduler pause and subscription detach | `gcloud`, after the login-config sign-in |
 | K3 cut the agent off | A project IAM admin, `gcloud` | The same, if that operator is the ladder owner |
 | K4 kill the credential | One call to the service, from the page or the CLI | From the page |
-| K5 revoke the grant | A Workspace super admin. Qualified 2026-09-13: the robot is now itself a super admin, so K5 is pulled by a **human** super admin other than the robot, on the two-person rota (the on-duty human super admin and the second human outside the Wall-E line), paged from the witness; at least two human super admins exist before the grant ([../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §8.5, §9.7) | **Never.** K5 is a Workspace operation and a workforce operator has no Workspace identity. At least one Google-identity super admin is on the rota in every configuration |
-| K6 remove Super Admin from the robot (added 2026-09-13) | A human super admin, `users.makeAdmin` with `status: false`, same two-person rota as K5 | **Never**, for the same reason as K5 |
-| K7 the fleet kill (added 2026-09-13) | Not an operator switch: a member of `platform-approvers@` through the PAM entitlement `ent-k7-human`, or the deterministic job on a severity-1 SIEM rule (platform HLD §11.4) | **Never.** Workforce operators are admitted to Tier R and W surfaces and **never to a Tier P surface** — band-B approval, Eve's console, the roster ([../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §2.5, P64). Wall-E is Tier P-SA, so for Wall-E case (b) of section 5.2 applies to no control surface at all |
+| K5 revoke the grant, K6 remove Super Admin from the robot | A **human** super admin other than the robot, on the two-person rota; at least two human super admins exist before the grant ([page 04 §8.5](../agentic-platform/04-identity-and-privileged-access.md#85-the-two-person-rule-for-the-privileged-tier-in-one-table)) | **Never.** These are Workspace operations and a workforce operator has no Workspace identity. At least one Google-identity super admin is on the rota in every configuration |
+| K7 the fleet kill | Not an operator switch: a member of `platform-approvers@` through `ent-k7-human`, or the deterministic job on a severity-1 SIEM rule | **Never.** Workforce operators never reach a Tier P surface ([page 04 §2.5](../agentic-platform/04-identity-and-privileged-access.md#25-workforce-identity-for-non-google-operators-only-if-p24-says-yes), P64); Wall-E is Tier P-SA, so for Wall-E case (b) of section 5.2 applies to no control surface at all |
 
 ---
 
 ## 6. Which identity mechanism applies where: keyless everywhere
 
-Four Google mechanisms cover every non-human principal in this design. Each applies to one kind of thing, and the table is the rule.
+The fleet's service-account policy (no keys, no cross-project attachment, one account per duty, enumerated impersonation, anti-grants) is [page 04 §2.3](../agentic-platform/04-identity-and-privileged-access.md#23-service-account-policy), rules SA-1 to SA-7; this section is Wall-E's instance. Four Google mechanisms cover every non-human principal in this design. Each applies to one kind of thing, and the table says which.
 
 | Mechanism | Stage | Applies to | In this design |
 |---|---|---|---|
@@ -357,7 +366,7 @@ Four Google mechanisms cover every non-human principal in this design. Each appl
 | **Managed workload identities** for GKE and Compute Engine | GA 2026-03-18; Compute Engine GA 2026-07-27; GKE flavour Preview | Workloads on those platforms | Not used. Wall-E has neither |
 | **Workforce Identity Federation** | GA | Humans without Google accounts | Case (b) operators only |
 
-**Impersonation.** `roles/iam.serviceAccountTokenCreator` grants `iam.serviceAccounts.getAccessToken` and is one of the five roles Google lists as carrying impersonation power, with `serviceAccountUser`, `workloadIdentityUser`, `serviceAccountAdmin` and `serviceAccountKeyAdmin`. Exactly three grants of it exist in Wall-E's project. Any fourth is drift. Promoted 2026-09-13 to rule SA-5 of [../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §2.3 (`<agent>-operators-caller@` and `<agent>-deployer@`, enumerated fleet-wide, never any human or workforce principal on `<agent>-actions@`, `-actions-super@` or `eve-controller@`); the third row below survives only on the fallback path.
+**Impersonation.** `roles/iam.serviceAccountTokenCreator` grants `iam.serviceAccounts.getAccessToken` and is one of the five roles Google lists as carrying impersonation power, with `serviceAccountUser`, `workloadIdentityUser`, `serviceAccountAdmin` and `serviceAccountKeyAdmin`. Wall-E's grants of it are the rows below, SA-5's enumeration for this project; any other is drift, and the third row exists only on the fallback path.
 
 | Grant | On | To | Why |
 |---|---|---|---|
@@ -367,30 +376,43 @@ Four Google mechanisms cover every non-human principal in this design. Each appl
 
 **`serviceAccountUser`, the actAs grant, is a separate list.** Deploying a Cloud Run service with an attached service account requires `iam.serviceAccountUser` on that account. The deployer identity `walle-deployer@` therefore holds it on `walle-actions@`, `walle-dispatcher@`, `walle-tasks@` and `walle-approvals@`, and on nothing else. That is the deploy-separation control in [ARCHITECTURE](ARCHITECTURE.md) section 4.2, and it is why the deployer is never an operator.
 
-Never: any human or workforce principal holding `serviceAccountTokenCreator` or `serviceAccountUser` on `walle-actions@` or `eve-controller@`. That is the one path that makes the deny-by-principal-set policies moot, because the impersonator becomes the service account. The drift job in section 10 checks exactly these two lists for `WALLE_PROJECT`, so it never alerts on a grant the design mandates. `eve-controller@` is in `EVE_PROJECT`, whose IAM Wall-E's job cannot read, so the `eve-controller@` half of the rule is asserted by Eve's own drift job there (decision 46).
+Never: any human or workforce principal holding `serviceAccountTokenCreator` or `serviceAccountUser` on `walle-actions@` or `eve-controller@`. That is the one path that makes the deny-by-principal-set policies moot, because the impersonator becomes the service account. The identity drift job (section 10, page 04 §2.6) checks exactly these two lists for `WALLE_PROJECT`, so it never alerts on a grant the design mandates. `eve-controller@` is in `EVE_PROJECT`, whose IAM Wall-E's job cannot read, so the `eve-controller@` half of the rule is asserted by Eve's own drift job there (decision 46).
 
-**Keys.** Long-lived JSON keys are not deprecated. Google describes them as "a security risk if not managed carefully", recommends avoiding them "whenever possible", and for organisations created on or after 2024-05-03 enforces `iam.managed.disableServiceAccountKeyCreation` and `iam.disableServiceAccountKeyUpload` by default. `Assumption:` the organisation's creation date is `tbd`, so both constraints are set explicitly on the Wall-E project rather than inherited, section 8.1 step 1. Wall-E holds zero keys. A service account principal set, `principalSet://cloudresourcemanager.googleapis.com/projects/N/type/ServiceAccount`, GA 2026-03-03, lets a deny policy name every service account in the project at once if a future control needs it.
+**Keys.** Long-lived JSON keys are not deprecated. Google describes them as "a security risk if not managed carefully", recommends avoiding them "whenever possible", and for organisations created on or after 2024-05-03 enforces `iam.managed.disableServiceAccountKeyCreation` and `iam.disableServiceAccountKeyUpload` by default. `Assumption:` the organisation's creation date is `tbd`, so both constraints are set explicitly on the Wall-E project rather than inherited, [SETUP](SETUP.md) Phase 12b step 1. Wall-E holds zero keys (SA-1). A service account principal set, `principalSet://cloudresourcemanager.googleapis.com/projects/N/type/ServiceAccount`, GA 2026-03-03, lets a deny policy name every service account in the project at once if a future control needs it.
 
 ---
 
 ## 7. Locking `aiplatform.reasoningEngines.query`
 
-The asserted end-user email is trustworthy exactly to the extent that only trusted callers can invoke the engine. [02](02-identity-and-auth.md) fixes that at three principals: the Gemini Enterprise Discovery Engine service agent of `GEMINI_PROJECT`, `walle-dispatcher@WALLE_PROJECT`, `eve-controller@EVE_PROJECT` — two after [14](14-hld-challenge.md) C10 removed the last. The first is a binding on the engine to a principal homed in another project. This section gives the mechanism and the one place the rule bends.
+The asserted end-user email is trustworthy exactly to the extent that only trusted callers can invoke the engine. Gemini Enterprise passes the signed-in user's email as `user_id`, which surfaces in ADK as the session user id; it is asserted by the calling service, not cryptographically bound to the user. [02](02-identity-and-auth.md) fixes the callers at **two principals and no others, ever**, counting inherited project and organisation bindings:
 
-**The recipe**, GA, from Google's own "Share an agent" page: create a custom role containing only `aiplatform.reasoningEngines.query`, and bind it on the engine resource, not the project, through `projects.locations.reasoningEngines.setIamPolicy` or Terraform's `google_vertex_ai_reasoning_engine_iam_member`. There is no predefined role that carries only that permission, and [SETUP](SETUP.md) already names the custom role `walleEngineQuery`. This chapter keeps that name. The research's `walleAgentInvoker` is the same role.
+| Principal | Address | Home |
+|---|---|---|
+| The Gemini Enterprise Discovery Engine service agent, **of the app project** | `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine.iam.gserviceaccount.com` | `GEMINI_PROJECT`, a binding on the engine to a principal homed in another project |
+| The dispatcher | `walle-dispatcher@WALLE_PROJECT` | `WALLE_PROJECT` |
+
+No Eve identity is on the engine. `eve-controller@EVE_PROJECT` was a third principal as first designed; [14](14-hld-challenge.md#c10--eves-streamquery-channel-can-assert-any-operators-identity-stands) C10 removed it, because a query principal asserts `user_id` and Eve verifying through the agent is Eve verifying through the thing it verifies. [../project-topology.md](../project-topology.md) row 13 records the absence as an anti-grant, and Eve reaches Wall-E only through `walle-actions`. A binding for `eve-controller@` on the engine is a defect, and so is a binding for `service-PROJECT_NUMBER@gcp-sa-discoveryengine…` (Wall-E's own project number): that principal never calls, and the app's real caller is then refused. This section gives the mechanism and the one place the rule bends.
+
+**The recipe**, GA, from Google's own "Share an agent" page: create a custom role containing only `aiplatform.reasoningEngines.query`, and bind it on the engine resource, not the project, through `projects.locations.reasoningEngines.setIamPolicy` or Terraform's `google_vertex_ai_reasoning_engine_iam_member`. There is no predefined role that carries only that permission — `roles/aiplatform.reasoningEngineUser` does not exist — and [SETUP](SETUP.md) names the custom role `walleEngineQuery` (title "Wall-E engine query", stage GA, the single permission).
+
+**Create the role before binding it.** `set-iam-policy` with a non-existent role fails with `INVALID_ARGUMENT`, and the engine then silently keeps whatever policy it inherits from the project, so the two-principal lock is simply absent. The engine policy holds exactly one binding, `walleEngineQuery`, with exactly the two members above; `get-iam-policy` on the engine must show two members and no other role. The commands, including the REST `setIamPolicy` alternative where the `gcloud beta ai reasoning-engines set-iam-policy` subcommand is missing, are in [SETUP](SETUP.md) "Lock down who may invoke the engine".
+
+**Confirming the service agent's address.** It is created lazily when the Gemini Enterprise app first runs. Confirm it on **`GEMINI_PROJECT`'s** IAM page with "Include Google-provided role grants" enabled; it does not appear on `WALLE_PROJECT`'s IAM page until it is bound there, because it is another project's principal.
 
 **IAM conditions do not apply.** The IAM conditions resource-attribute table lists no resource-name format for `aiplatform` or `reasoningEngines`, so a `resource.name` condition on an engine is not documented as supported. That is an inference from absence, and it is enough: do not design around conditions on the engine. Resource-level bindings do the job without them.
 
 **The Discovery Engine service agent.** Its address is `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine.iam.gserviceaccount.com`, where `GEMINI_PROJECT_NUMBER` is the number of the **Gemini Enterprise app's** project, `GEMINI_PROJECT`, and never Wall-E's `PROJECT_NUMBER`. The cross-project ADK page, which is the page for exactly this integration, says to grant it `roles/discoveryengine.serviceAgent` on the agent project, at project level. A different page, for Agent Search's streaming answers, names `roles/aiplatform.reasoningEngineServiceAgent` instead; it addresses a different feature and is not followed. `roles/discoveryengine.serviceAgent` carries `reasoningEngines.create`, `delete`, `get`, `list`, `query` and `update`, plus sandbox and extension permissions.
 
-That is the place the three-principal rule bends. A project-wide role that carries query, update and delete on every engine means "three principals on this engine" is true only while the project holds one engine. Two consequences.
+That is the place the two-principal rule bends. A project-wide role that carries query, update and delete on every engine means "two principals on this engine" is true only while the project holds one engine. Two consequences.
 
 | Consequence | Mechanism |
 |---|---|
 | `WALLE_PROJECT` holds exactly one `reasoningEngine`. Eve's and Mo's, if any, are in `EVE_PROJECT` and `MO_PROJECT`. [ARCHITECTURE](ARCHITECTURE.md) section 9 and [../project-topology.md](../project-topology.md) §2 say so explicitly | The four-project topology, and a drift query that fails on a second engine in the project |
-| Try the narrow grant first — **decision 42**. Bind `walleEngineQuery` on the engine to `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine…`, register the agent in the app in `GEMINI_PROJECT`, and see whether registration and invocation work across the project boundary. Whether the engine-scoped grant alone suffices cross-project is **not documented** | If it works, the documented project-level role is not applied and the rule holds by binding. If it fails, apply `roles/discoveryengine.serviceAgent` on `WALLE_PROJECT`, record it as the topology's single named project-level exception with the failing error, and note that the rule then holds by `WALLE_PROJECT` containing one engine |
+| Try the narrow grant first — **decision 42**. Bind `walleEngineQuery` on the engine to `service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine…`, register the agent in the app in `GEMINI_PROJECT`, and see whether registration and invocation work across the project boundary. Whether the engine-scoped grant alone suffices cross-project is **not documented** | If it works, the documented project-level role is not applied and the rule holds by binding. If it fails, apply `roles/discoveryengine.serviceAgent` on `WALLE_PROJECT`, record it as the topology's single named project-level exception with the failing error, and note that the rule then holds by `WALLE_PROJECT` containing one engine. Re-test the engine-level grant at each engine redeploy, so the fallback is removed the day Google's behaviour changes. The spike runs the Phase 13 registration and one query with the engine-level grant only ([SETUP](SETUP.md) Phase 12 and 13); the fallback is `gcloud projects add-iam-policy-binding` on `WALLE_PROJECT` for that same principal with `roles/discoveryengine.serviceAgent`, and nothing else |
 
 **The drift query.** Ten predefined roles carry `reasoningEngines.query`: `aiplatform.admin`, `aiplatform.editor`, `aiplatform.user`, `aiplatform.viewer`, `aiplatform.expressAdmin`, `aiplatform.expressUser`, `aiplatform.serviceAgent`, `aiplatform.customCodeServiceAgent`, `discoveryengine.serviceAgent`, `visualinspection.serviceAgent`. `aiplatform.user` and `aiplatform.viewer` are the two developers acquire casually. The daily job enumerates every project-level and inherited binding of those ten roles and alerts on any principal that is not the Discovery Engine service agent. Under Agent Identity the agent must **not** hold `roles/aiplatform.expressUser` at project level, precisely because it is on that list: an agent that can invoke its own engine can assert any operator's `user_id`. If the build finds `expressUser` unavoidable for inference or Sessions, it is a recorded exception with that residual stated, never an allowlisted default.
+
+**IAM narrows who can assert an email; it does not prove the assertion.** The action service still re-checks the asserted email against the operators group through the Directory API on every write, failing closed if it cannot check (section 5.4 for case (b), where no such group exists).
 
 Google's own warning on the sharing page is the documentation-level restatement of this design: "The security controls are determined by the code of the receiving agent ... don't grant direct access to the agent to untrusted entities." The receiving agent's code is not the enforcement point here. The action service is.
 
@@ -400,112 +422,22 @@ Google's own warning on the sharing page is the documentation-level restatement 
 
 Variable names follow [SETUP](SETUP.md). Values are never recorded here.
 
-### 8.1 Deploy the ADK agent with Agent Identity and bind it to the action service's invoker role
-
-Runs in place of [SETUP](SETUP.md) Phase 12's deploy block. Steps 1 to 6 are unconditional. Step 7 is the spike. Steps 8 onward depend on its result.
-
 > In every command block of this chapter `PROJECT` is Wall-E's own project — `WALLE_PROJECT` everywhere outside Wall-E's script and runbook ([../project-topology.md](../project-topology.md) §6). Nothing here is run against `GEMINI_PROJECT`, `EVE_PROJECT` or `MO_PROJECT`.
 
-**Step 1. APIs and key constraints.** Enable `agentidentity.googleapis.com`. Leave `agentidentitycredentials.googleapis.com` disabled. Set the two key constraints explicitly.
+### 8.1 Deploy the ADK agent with Agent Identity and bind it to the action service's invoker role
 
-```bash
-gcloud services enable aiplatform.googleapis.com agentidentity.googleapis.com --project="$PROJECT"
-gcloud services list --enabled --project="$PROJECT" | grep -c agentidentitycredentials   # expect 0
-
-for C in iam.managed.disableServiceAccountKeyCreation iam.disableServiceAccountKeyUpload; do
-  cat > "policy-${C}.yaml" <<EOF
-name: projects/${PROJECT}/policies/${C}
-spec:
-  rules:
-  - enforce: true
-EOF
-  gcloud org-policies set-policy "policy-${C}.yaml" --project="$PROJECT"
-done
-```
-
-**Step 2. The trust domain.** With an organisation it is `agents.global.org-${ORG_ID}.system.id.goog`. Do not construct it in scripts; read it back from the first engine in step 5 and record the literal value in [SETUP](SETUP.md).
-
-**Step 3. The deploy config in git.** Commit `.agent_engine_config.json` in the agent folder containing exactly `{ "identity_type": "AGENT_IDENTITY" }`, or set `identity_type` in `deploy.py`'s config, and remove `service_account`. CI fails the build unless the identity type is `AGENT_IDENTITY`, unless `google-auth>=2.45.0` is pinned, and if `GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES` appears anywhere in the config.
-
-```bash
-test "$(jq -r .identity_type agent/.agent_engine_config.json)" = "AGENT_IDENTITY"
-grep -Eq '^google-auth>=2\.45' agent/requirements.txt
-! grep -rq GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES agent/
-```
-
-**Step 4. Deploy.** Either the SDK path, which is [SETUP](SETUP.md) Phase 12's `deploy.py` with `"identity_type": types.IdentityType.AGENT_IDENTITY` in `config` and no `service_account`, or the ADK path, which creates a bare engine and sets the identity on the immediate update.
-
-```bash
-adk deploy agent_engine ./agent --project="$PROJECT" --region="$REGION" --display_name=wall-e
-```
-
-**Step 5. Read the identity back, and fail the pipeline if it is not an agent identity.**
-
-```bash
-EFFECTIVE="$(gcloud ai reasoning-engines describe "$ENGINE_ID" \
-  --project="$PROJECT" --location="$REGION" --format='value(spec.effectiveIdentity)')"
-case "$EFFECTIVE" in agents.global.org-*) ;; *) echo "not an agent identity: $EFFECTIVE"; exit 1;; esac
-```
-
-The principal is `principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${PROJECT_NUMBER}/locations/${REGION}/reasoningEngines/${ENGINE_ID}`. Compare the describe output with that template, record the literal form once in [SETUP](SETUP.md), and store it as `AGENT_PRINCIPAL` in the deployed configuration. It is never typed by hand after that.
-
-**Step 6. Baseline grants, and nothing else.**
-
-```bash
-# roles/aiplatform.expressUser is deliberately absent: it carries reasoningEngines.query project-wide. Section 7.
-for R in roles/serviceusage.serviceUsageConsumer roles/browser roles/logging.logWriter; do
-  gcloud projects add-iam-policy-binding "$PROJECT" --member="$AGENT_PRINCIPAL" --role="$R"
-done
-for R in roles/aiplatform.agentDefaultAccess roles/aiplatform.agentContextEditor; do
-  gcloud iam roles describe "$R" --format='value(includedPermissions)' | tr ',' '\n' \
-    | grep -E 'secretmanager\.|setIamPolicy' && { echo "$R carries a forbidden permission"; exit 1; }
-done
-```
-
-**Step 7. The spike, on a throwaway engine, before the production engine exists.** Three checks, each recorded pass or fail with its raw output.
-
-```bash
-# 7a. does Cloud Run IAM accept the principal as an invoker
-gcloud run services add-iam-policy-binding walle-actions --region="$REGION" \
-  --member="$SPIKE_PRINCIPAL" --role=roles/run.invoker
-```
-
-7b. From inside the spike agent, request an ID token for the audience `$ACTIONS_URL` through `google.auth.compute_engine.IDTokenCredentials(request, target_audience=ACTIONS_URL)`, or directly from the metadata endpoint `instance/service-accounts/default/identity?audience=`. Record whether a token is returned at all.
-
-7c. Call `GET $ACTIONS_URL/v1/operations` with it, then decode the JWT and record `sub`, `email` if present, and `aud`. The allowlist row for the agent is written from what the token actually carries.
-
-**Step 8a. Spike passed.** Keep the binding form from 7a on the production principal, and key the allowlist row on the claim 7c showed.
-
-```bash
-gcloud run services add-iam-policy-binding walle-actions --region="$REGION" \
-  --member="$AGENT_PRINCIPAL" --role=roles/run.invoker
-```
-
-**Step 8b. Spike failed.** Redeploy the production engine with `{ "identity_type": "SERVICE_ACCOUNT", "service_account": "walle-agent@${PROJECT}.iam.gserviceaccount.com" }`, restore the Reasoning Engine service agent's `serviceAccountTokenCreator` grant on `walle-agent@` from [SETUP](SETUP.md) Phase 12, bind `run.invoker` to `serviceAccount:walle-agent@...`, and log Agent Identity as deferred hardening with the spike output attached to the decision record.
-
-**Step 9. The standing invariants as a deny policy.** Applies on the Agent Identity path. Verify every permission name against the list of permissions supported in deny policies first; the research did not.
-
-```bash
-cat > deny-agents.json <<EOF
-{ "rules": [ { "denyRule": {
-    "deniedPrincipals": [ "principalSet://agents.global.org-${ORG_ID}.system.id.goog/*" ],
-    "deniedPermissions": [
-      "secretmanager.googleapis.com/versions.access",
-      "aiplatform.googleapis.com/reasoningEngines.setIamPolicy",
-      "run.googleapis.com/services.setIamPolicy" ] } } ] }
-EOF
-gcloud iam policies create walle-deny-agents --kind=denypolicies \
-  --attachment-point="cloudresourcemanager.googleapis.com/projects/${PROJECT_ID}" \
-  --policy-file=deny-agents.json
-```
-
-Add a custom org-policy constraint denying creation of `agentidentity.googleapis.com/AuthProvider` resources in the project, GA 2026-08-14, so section 2's position is enforced rather than remembered.
-
-**Step 10. Lock who may query the engine.** [SETUP](SETUP.md) Phase 12 already creates `walleEngineQuery` and binds it on the engine. The changes: the Discovery Engine service agent is `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com` — the config key `GEMINI_PROJECT_NUMBER`, the app project's, never `PROJECT_NUMBER` — granted `walleEngineQuery` on `projects/${PROJECT}/locations/${REGION}/reasoningEngines/${ENGINE_ID}`; `eve-controller@`'s binding is not made ([14](14-hld-challenge.md) C10); and the decision 42 spike in section 7 is run and recorded before any project-level role is considered.
-
-**Step 11. Register in Gemini Enterprise** with the resource path `projects/${PROJECT}/locations/${REGION}/reasoningEngines/${ENGINE_ID}`, share with the operators group only, open the Agent details page and confirm the displayed SPIFFE id equals `AGENT_PRINCIPAL`. Add that equality to the daily drift job.
-
-**Step 12. Re-verify after every IAM change.** `gcloud ai reasoning-engines get-iam-policy` shows only the custom-role bindings. Policy Analyzer for `AGENT_PRINCIPAL` shows no Secret Manager, Firestore write, BigQuery or KMS access. `gcloud run services get-iam-policy walle-actions` shows `run.invoker` for the agent principal, `walle-tasks@`, `eve-controller@${EVE_PROJECT}.iam.gserviceaccount.com`, `mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com` (read endpoints only, narrowed by the allowlist), `walle-approvals@`, `walle-operators-caller@` and the operators group — seven members — and nothing else. Eve's `eve-verifier@` and `eve-console@` join at S3 entry per Eve's design.
+The commands and verify steps are [SETUP](SETUP.md) Phase 12b, which runs in place of Phase 12's
+deploy block. The order is the design: APIs and key constraints and the CI-checked deploy config
+come first, the one-day spike on a throwaway engine (does Cloud Run IAM accept the principal as an
+invoker; does the agent obtain an ID token for the `walle-actions` audience; what claims it
+carries) runs **before the production engine exists**, because `identity_type` is fixed at
+creation, and only its result decides the deploy (Agent Identity, or `SERVICE_ACCOUNT` with
+`walle-agent@` and the decision record saying so), followed by reading the principal back, the
+baseline grants, the query lock of section 7 and the registration check of section 4. After every
+IAM change the engine policy (only the `walleEngineQuery` bindings), Policy Analyzer for
+`AGENT_PRINCIPAL` (no Secret Manager, Firestore write, BigQuery or KMS access) and the `run.invoker`
+members of `walle-actions` are re-verified, the last against the member list in
+[§10.1](#101-the-runinvoker-members-of-the-two-action-services) and nothing else.
 
 ### 8.2 Let a Workforce Identity operator reach the IAP-protected approval page
 
@@ -606,14 +538,7 @@ flowchart LR
         DSA["Discovery Engine service agent<br/>service-GEMINI_PROJECT_NUMBER@gcp-sa-discoveryengine<br/>of GEMINI_PROJECT, never Wall-E's number"]
     end
 
-    subgraph EVP["EVE_PROJECT"]
-        EVA["Eve reasoning layer, future<br/>own agent identity"]
-        EVC["eve-controller@EVE_PROJECT<br/>KMS signer on eve-approval, never an agent"]
-    end
-
-    subgraph MOP["MO_PROJECT"]
-        MOA["mo-analyst@MO_PROJECT<br/>read endpoints only"]
-    end
+    XP["Eve and Mo identities, in EVE_PROJECT and MO_PROJECT<br/>grants and edges: project-topology section 3 and section 9"]
 
     subgraph WAL["WALLE_PROJECT, one engine"]
         subgraph AGT["Agent identities, GA, replace service accounts"]
@@ -646,12 +571,9 @@ flowchart LR
     GE --> DSA
     DSA -->|"cross-project, walleEngineQuery on the engine<br/>spike, decision 42"| ENG
     DIS --> ENG
-    EVC -.->|"as first designed; removed by C10"| ENG
     ENG -->|"runs as"| WE
     WE -->|"execute, plans, operations<br/>ID token for a Cloud Run audience: unverified, spike"| CRA
-    EVC -->|"cross-project run.invoker<br/>approve, veto, halt, demote, read"| CRA
-    MOA -->|"cross-project run.invoker<br/>GET plans and runs only"| CRA
-    EVA -.->|"only through the controller"| EVC
+    XP -->|"cross-project run.invoker, resource-level<br/>narrowed by the in-app allowlist"| CRA
     TSK -->|"worker endpoint only"| CRA
     IAP --> APP
     APP -->|"approve, veto, halt, demote<br/>with the IAP JWT the service verifies itself"| CRA
@@ -664,19 +586,19 @@ flowchart LR
     classDef keyed fill:#fff0f0,stroke:#c62828,stroke-width:3px,color:#000
     classDef plain fill:#f2f7ff,stroke:#1565c0,stroke-width:1.5px,color:#000
     classDef human fill:#f5f5f5,stroke:#555,stroke-width:1.5px,color:#000
-    class WE,EVA agent
-    class ACT,EVC,SEC keyed
-    class DSA,DIS,TSK,APP,OPC,DEP,ENG,CRA,IAP,GE,MOA plain
+    class WE agent
+    class ACT,SEC keyed
+    class DSA,DIS,TSK,APP,OPC,DEP,ENG,CRA,IAP,GE,XP plain
     class OPA,OPB,CI human
 ```
 
-Read it for the absences, as with the diagrams in [ARCHITECTURE](ARCHITECTURE.md). No arrow from the agent identity to Secret Manager. No arrow from a workforce operator to `walle-actions` except through the IAP page. No arrow from any human to `walle-actions@` or `eve-controller@` by impersonation. No arrow from Eve's reasoning layer to the KMS key. And, since 2026-09-13, no arrow from any principal in `EVE_PROJECT`, `MO_PROJECT` or `GEMINI_PROJECT` to a project-level role in `WALLE_PROJECT`: every arrow that crosses a box is a binding on one resource ([../project-topology.md](../project-topology.md) §3).
+Read it for the absences, as with the diagrams in [ARCHITECTURE](ARCHITECTURE.md). No arrow from the agent identity to Secret Manager. No arrow from a workforce operator to `walle-actions` except through the IAP page. No arrow from any human to `walle-actions@` or `eve-controller@` by impersonation. No arrow from Eve's reasoning layer to the KMS key or to Wall-E at all. And no arrow from any principal in `EVE_PROJECT`, `MO_PROJECT` or `GEMINI_PROJECT` to a project-level role in `WALLE_PROJECT`: every arrow that crosses a box is a binding on one resource, and the full set of cross-project edges is [../project-topology.md](../project-topology.md#9-the-four-projects-and-every-cross-project-edge) §9.
 
 ---
 
 ## 10. What is logged, and the drift job
 
-Promoted 2026-09-13: the drift job is the platform's identity drift job, [../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §2.6 (and platform HLD §4.7 — one job in `CORE_PROJECT`, Security Health Analytics custom modules for the IAM-shaped checks). The table and checks below stay as Wall-E's input to it.
+Wall-E's identity drift checks run in the platform's identity drift job, one job in `CORE_PROJECT` with Security Health Analytics custom modules for the IAM-shaped checks ([page 04 §2.6](../agentic-platform/04-identity-and-privileged-access.md#26-the-identity-drift-job-promotes-wall-e12-10-and-hld-47), platform HLD §4.7). What Wall-E itself logs:
 
 | Signal | Source | Stage |
 |---|---|---|
@@ -686,28 +608,51 @@ Promoted 2026-09-13: the drift job is the platform's identity drift job, [../age
 | Every impersonation of `walle-operators-caller@` | Data Access logs for the IAM Service Account Credentials API. **Confirm during the K0 drill that the entry names the human**; this chapter has not verified its content | tbd |
 | Every auth-manager credential retrieval, were one ever configured | IAM permission-checked on the auth provider, so in Data Access logs when enabled. Not relevant while the API stays disabled | GA for the permission; log emission rated likely by the research |
 
-**The daily identity drift job**, run by a read-only principal, alerting on any row.
+**The drift job's per-agent checks** are page 04 §2.6's table, generalised from Wall-E's. The
+values Wall-E supplies to it:
 
-| Check | Fails when |
+| Check | Wall-E's value |
 |---|---|
-| `spec.effectiveIdentity` of the engine | It does not start with `agents.global.org-`, or differs from the recorded `AGENT_PRINCIPAL` |
-| The Gemini Enterprise Agent details page | The displayed SPIFFE id differs from `AGENT_PRINCIPAL`. This one is a human check until an API exposes the field |
-| Policy Analyzer for `AGENT_PRINCIPAL` | Any Secret Manager, Firestore write, BigQuery or KMS access |
-| The two automatic roles | Either contains `secretmanager.*` or a `setIamPolicy` permission |
-| Engines in the project | More than one |
-| Project-level and inherited bindings of the ten roles carrying `reasoningEngines.query` | Any principal at all, unless decision 42's fallback was recorded — then any principal other than `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com`. The agent principal appearing here means `expressUser` was granted: a recorded exception, or drift |
-| The engine's own IAM policy | Any member other than `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine…` and `walle-dispatcher@`, or any role other than `walleEngineQuery` |
-| `run.invoker` on `walle-actions` | Any member outside the seven listed in section 8.1 step 12 |
-| Dataset-level access on `walle_audit` and `walle_workspace_logs` | Any `READER` other than the Eve, Mo and validator identities named in [../project-topology.md](../project-topology.md) §3 rows 4, 5, 6 and 21; any authorised-view entry naming a view outside `WALLE_PROJECT` (row 9); any `WRITER` or `OWNER` beyond `walle-actions@`'s custom role and the sink writer |
-| Project-level bindings in `WALLE_PROJECT` to any `@${EVE_PROJECT}` or `@${MO_PROJECT}` principal | Any, once decisions 43 and 44 are resolved (row 26 there) |
-| KMS roles held by any Wall-E principal, and the pinned PEM set | Any `cloudkms.*` role on any Wall-E principal in `WALLE_PROJECT`'s policy, or `contracts/eve-public-keys/` differing from Eve's published key versions. The Eve-side rows — `cloudkms.signer` on `eve-approval`, accessors of `eve-refresh-token`, IAM on Eve's evidence dataset ([14](14-hld-challenge.md) C11 residual) — belong to **Eve's** drift job in `EVE_PROJECT`, which Wall-E's job cannot read (decision 46) |
-| `serviceAccountTokenCreator` anywhere in the project | Any grant outside the three in section 6 |
-| `serviceAccountUser` anywhere in the project | Any grant outside the deployer's list in section 6, or any grant to a human or a `principal://iam.googleapis.com/locations/global/workforcePools/...` member |
-| `run.admin` or `run.developer` on `walle-actions` or at project level | Held by any human or workforce principal |
-| The agent's deploy config | `GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES` present, or `google-auth` below 2.45.0 |
-| `agentidentitycredentials.googleapis.com` | Enabled |
-| Service account keys | Any key exists on any Wall-E service account |
-| The committed operator list, case (a) | Diverges from `walle-operators@` |
+| Project-level and inherited bindings of the ten roles carrying `reasoningEngines.query` (section 7) | No principal at all, unless decision 42's fallback was recorded — then none other than `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com`; the engine's own policy holds only `walleEngineQuery`, with that service agent and `walle-dispatcher@` |
+| `run.invoker` on `walle-actions` and `walle-actions-super` | Exactly the members of [§10.1](#101-the-runinvoker-members-of-the-two-action-services), and no human or group |
+| Dataset-level access on `walle_audit` and `walle_workspace_logs` | `READER` only for the Eve, Mo and validator identities of [../project-topology.md](../project-topology.md#3-cross-project-grants) §3 rows 4, 5, 6 and 21; no authorised view outside `WALLE_PROJECT` (row 9); no `WRITER` or `OWNER` beyond `walle-actions@`'s custom role and the sink writer |
+| Project-level bindings in `WALLE_PROJECT` to any `@${EVE_PROJECT}` or `@${MO_PROJECT}` principal | None, once decisions 43 and 44 are resolved (row 26) |
+| KMS roles and the pinned PEM set | No `cloudkms.*` role on any Wall-E principal; `contracts/eve-public-keys/` equal to Eve's published key versions. The Eve-side rows (`cloudkms.signer` on `eve-approval`, accessors of `eve-refresh-token`, IAM on Eve's evidence dataset, [14](14-hld-challenge.md) C11 residual) belong to Eve's drift job in `EVE_PROJECT` (decision 46) |
+
+### 10.1 The `run.invoker` members of the two action services
+
+The one member list the drift check and the after-every-IAM-change verify of §8.1 compare
+against. `run.invoker` is per service, not per path; the in-app allowlists of
+[03](03-lld.md#gcp-resource-inventory) narrow each member to its endpoints, and the cross-project
+rows are [../project-topology.md](../project-topology.md#3-cross-project-grants) §3. The design
+sources do not all agree, so each disagreement is marked **unverified** until the first build
+reads the policy back with `gcloud run services get-iam-policy`.
+
+**`walle-actions`:**
+
+| Member | Endpoints the allowlist admits | Source | Agreement |
+|---|---|---|---|
+| The agent principal (`walle-agent@` on the fallback) | Execute and plan | [02](02-identity-and-auth.md#principals-and-what-each-may-do), [ARCHITECTURE](ARCHITECTURE.md) §11 weakness 2, SETUP Phase 10 loop and Phase 12b | Agreed |
+| `walle-tasks@` | `POST /v1/tasks/item` only | 02, 03, ARCHITECTURE §11 weakness 2 | **Unverified**: SETUP Phase 10 binds `walle-actions@` for the Cloud Tasks callback instead and does not create `walle-tasks@` |
+| `walle-approvals@` | The approval endpoints, forwarding the IAP-asserted approver | ARCHITECTURE §11 weakness 2, §8.2 step 3 | **Unverified**: not in SETUP Phase 10's loop or in 03 |
+| `walle-operators-caller@`, impersonated by members of `walle-operators@` | `/v1/control/*` only; it can never approve | 02, 03, SETUP Phase 10, §5.1 | Agreed |
+| `eve-controller@EVE_PROJECT` | Approve, veto, halt, demote, and the read endpoints | Topology row 3, SETUP Phase 10 | Agreed |
+| `eve-verifier@EVE_PROJECT`, `eve-console@EVE_PROJECT` | Verifier: halt and demote. Console: `GET /v1/plans/{id}`, `GET /v1/ladder` | Topology row 3, SETUP Phase 10 | Timing unverified: bound in SETUP Phase 10, while Eve's design has them join at S3 entry |
+| `mo-analyst@MO_PROJECT` | `GET /v1/plans/{id}` and `GET /v1/runs/{id}` only | Topology row 8, SETUP Phase 10 | Agreed |
+| `platform-drift@CORE_PROJECT` | `/v1/control/halt` only, generated from the manifest | Topology row 36 (P73 extension), 03 | Not in SETUP Phase 10's loop |
+
+Never a member: any human or Google Group directly, the operators group included (platform rule,
+[page 04 §6.5](../agentic-platform/04-identity-and-privileged-access.md#65-what-a-human-never-does)); `mo-metrics@`,
+`mo-narrator@` or any other Mo identity; any `GEMINI_PROJECT` principal. `walle-dispatcher@` is not a
+member per 02 and ARCHITECTURE §11 weakness 2, but SETUP Phase 10's loop binds `SA_DISPATCH`:
+**unverified**, and the design sources win until the build decides.
+
+**`walle-actions-super`:** the agent's identity (band B and C endpoints, chat principal only); the
+`walle-approvals-super` surface's own service account (name *tbd*); `eve-controller@EVE_PROJECT`
+and `eve-verifier@EVE_PROJECT`, halt path only (topology row 27); `platform-drift@CORE_PROJECT`,
+halt path only (row 36). Never `walle-dispatcher@`, `walle-tasks@`, `eve-console@`, any Mo identity
+or any human ([02](02-identity-and-auth.md#principals-and-what-each-may-do),
+[03](03-lld.md#gcp-resource-inventory)).
 
 ---
 
@@ -717,16 +662,16 @@ Listed so that nobody upgrades one to a fact by repetition.
 
 | Item | Status | Closed by |
 |---|---|---|
-| An Agent Identity agent obtains a Google-signed ID token for a Cloud Run audience | unverified. No page documents it; `google-auth` has no ID-token path for agent identities | Spike 7b |
-| Cloud Run IAM accepts `principal://agents.global...` as a `run.invoker` member | The two research passes disagree; unverified | Spike 7a |
-| The claims in such a token | unverified | Spike 7c |
-| The on-the-wire `sub` and `email` for a workforce user in the IAP JWT | unverified. Documented prefixes cover Identity Platform only | Step 8.2.8, recorded per tenant |
+| An Agent Identity agent obtains a Google-signed ID token for a Cloud Run audience | unverified. No page documents it; `google-auth` has no ID-token path for agent identities | SETUP Phase 12b spike, 12b-b |
+| Cloud Run IAM accepts `principal://agents.global...` as a `run.invoker` member | The two research passes disagree; unverified | SETUP Phase 12b spike, 12b-a |
+| The claims in such a token | unverified | SETUP Phase 12b spike, 12b-c |
+| The on-the-wire `sub` and `email` for a workforce user in the IAP JWT | unverified. Documented prefixes cover Identity Platform only | Section 8.2 step 8, recorded per tenant |
 | Google identities and workforce identities as `identity_sources` on one IAP-protected Cloud Run service | Not addressed by the documentation | A test, or one identity source per page permanently |
 | Whether `AGENT_IDENTITY` can be reverted to `SERVICE_ACCOUNT` on an existing engine | unverified. The REST reference does not mark the field immutable; the Semantic Governance page says it is | Not needed if the decision is made before creation, which it is |
-| The permission lists and binding resource of `roles/aiplatform.agentDefaultAccess` and `roles/aiplatform.agentContextEditor` | unverified | Step 8.1.6 before S0 |
-| The deny-policy permission names in step 8.1.9 | Not checked against the supported list | Check before applying. **Closed 2026-09-13** by [../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §3: every name in the folder policy verified against Google's deny-supported list (P61) |
+| The permission lists and binding resource of `roles/aiplatform.agentDefaultAccess` and `roles/aiplatform.agentContextEditor` | unverified | SETUP Phase 12b step 6, before S0 |
+| The deny-policy permission names of the original project-level policy | Not checked against the supported list | **Closed 2026-09-13** by [../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §3: every name in the folder policy verified against Google's deny-supported list (P61) |
 | Whether the engine-scoped custom role `walleEngineQuery` alone suffices for the Gemini Enterprise app in `GEMINI_PROJECT` to register and invoke the engine in `WALLE_PROJECT` | Undocumented; Google documents only the project-level role for the cross-project case | Decision 42's spike, the narrow-grant test in section 7, before Phase 13 registration |
 | Agent Gateway's availability in europe-west1 | `tbd`. The stage itself is settled, GA 2026-06-18 | [13](13-agent-interconnection.md) |
 | Whether a plain service account may call `credentials:retrieve` | Undocumented. Only agent identities are shown as grantees | Not needed; the auth manager is not used |
-| The organisation's creation date, which decides whether key constraints are inherited | `tbd` | Set them explicitly regardless, step 8.1.1 |
+| The organisation's creation date, which decides whether key constraints are inherited | `tbd` | Set them explicitly regardless, SETUP Phase 12b step 1 |
 | The Gemini Enterprise location's identity provider | `tbd` | Read it in the console before the pilot. It decides case (a) or case (b) for T0 |

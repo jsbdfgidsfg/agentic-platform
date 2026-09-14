@@ -2,24 +2,20 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- **Objective restated 2026-09-13; see the platform HLD**
-  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §0.4 and §13.2 "Staging
-  re-cut"; this page carries §18 item 16; owner the Eve owner, gate the super-admin grant,
-  P143). Eve's staging is re-cut along its two layers: the **observe-and-report layer** is live
-  and drilled **before** Wall-E's account receives Super Admin, whatever the ladder stage, and
-  the **grant is a gate with its own checklist** in which the witness organisation is an item;
-  the **gate layer** keeps S3/S4 and the seeded-fault exit. The stage table below is unchanged
-  for the gate layer and gains the grant row.
+- Last reviewed: 2026-09-14
+- Objective: the platform HLD ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)
+  §0.4 and §13.2 "Staging re-cut"); this page carries §18 item 16 (owner the Eve owner, gate
+  the super-admin grant, P143).
 
 ## What the staging is for
 
-Eve acquires its two authorities on opposite schedules, because they point in opposite
-directions. **Halting and demoting can only ever make less happen**, so Eve gets them the
-moment it is a program at all, at S3 entry. **Signing can make more happen**, so Eve gets
-the key only at S4 entry, after a twelve-fault exercise it must pass at 100 %. Everything
-between those two points is deliberate: the stage a control arrives in is an argument, not
-a convenience.
+Eve's staging has two layers. The **observe-and-report layer** is live and drilled **before**
+Wall-E's account receives Super Admin, whatever the ladder stage, through a gate with its own
+checklist in which the witness organisation is an item; the **gate layer** keeps S3/S4 and the
+seeded-fault exit. Within the gate layer the two authorities arrive on opposite schedules —
+halting and demoting at S3 entry, because they can only make less happen, and signing at S4
+entry, after the twelve-fault exercise is passed at 100 % — as argued in
+[01-hld.md §4](01-hld.md#4-two-authorities-on-opposite-schedules).
 
 Before S3 entry, "Eve v0" is ten BigQuery scheduled queries pinned to their own service
 account and read by a human, and nothing else exists — no robot account, no OAuth client,
@@ -27,8 +23,8 @@ no token, no secret, no KMS key, no allowlist entry, no process. That is the who
 the staging: **the pilot carries no dormant credential, no unused key and no allowlist
 entry** for a consumer that does not yet exist.
 
-**Qualified 2026-09-13.** That paragraph holds for a Wall-E without Super Admin. The day the
-grant is due, the consumer exists: Eve's robot account, its credential, its sink over all six
+That paragraph holds for a Wall-E without Super Admin. The day the grant is due, the consumer
+exists: Eve's robot account, its credential, its sink over all six
 streams, the Reports API poll, the tenant-integrity rules, `eve.incidents`, the paging and the
 witness mirror must already be running — see "The super-admin grant" below. The credential is
 then not dormant: the poll exercises it every few minutes. The key and the allowlist entry
@@ -37,32 +33,32 @@ for **signing** still wait for S4 entry.
 Stage names, floors and levels are Wall-E's, from
 [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §7. Eve does not define
 its own stages; it declares what exists inside each of Wall-E's, and what it is trusted
-with there. Wall-E's floors are S0 3–4 weeks, S1 4–6, S2 6–8, S3 6–8, S4 8–12, S5 ongoing.
+with there. Wall-E's stage floors are in
+[../wall-e/05-autonomy-ladder.md §7](../wall-e/05-autonomy-ladder.md#7-the-six-stages).
 
 ## The stage table
 
 | Stage | What exists | What Eve is trusted with |
 |---|---|---|
-| **Before the super-admin grant — the observe-and-report layer** (added 2026-09-13; not a Wall-E stage, a gate that can fall at any stage) | `eve@<domain>` with the widened read set (E-16) and its credential; Eve's sink over **all six** Workspace streams; the Reports API poll by actor into `eve_workspace_reports`; `eve-reconciler` running reconciliation over every stream, the tenant-integrity rules of the detection catalogue, the daily roster check and the evidence heartbeat; `eve.incidents` and `eve.pages` with the reporting contract; `oncall.yaml` with a secondary outside the Wall-E line; `eve-export@` and the daily push; the **witness organisation** with its absence alarm and severity 1/2 channels; the control-caller allowlist entry for `eve-verifier@` on `walle-actions` and the halt-path invoker on `walle-actions-super`. **Still absent:** the KMS key, `eve-gate`, any `eve_authority: binding` cell. | **Halt on the tenant-integrity class, on `reconciliation_gap` and on `log_pipeline_silent`**, and reporting. Nothing that makes more happen. Drilled before the grant ("The super-admin grant" below). |
+| **Before the super-admin grant — the observe-and-report layer** (not a Wall-E stage, a gate that can fall at any stage) | `eve@<domain>` with the widened read set (E-16) and its credential; Eve's sink over **all six** Workspace streams; the Reports API poll by actor into `eve_workspace_reports`; `eve-reconciler` running reconciliation over every stream, the tenant-integrity rules of the detection catalogue, the daily roster check and the evidence heartbeat; `eve.incidents` and `eve.pages` with the reporting contract; `oncall.yaml` with a secondary outside the Wall-E line; `eve-export@` and the daily push; the **witness organisation** with its absence alarm and severity 1/2 channels; the control-caller allowlist entry for `eve-verifier@` on `walle-actions` and the halt-path invoker on `walle-actions-super`. **Still absent:** the KMS key, `eve-gate`, any `eve_authority: binding` cell. | **Halt on the tenant-integrity class, on `reconciliation_gap` and on `log_pipeline_silent`**, and reporting. Nothing that makes more happen. Drilled before the grant ("The super-admin grant" below). |
 | **S0 — Eyes** | Eve's GCP project (`EVE_PROJECT`, created under `FOLDER_ID` per [../project-topology.md](../project-topology.md)); `eve-v0@` with two dataset grants — `WRITER` on `eve`, made by Eve, and dataset-level `READER` on `walle_audit` in `WALLE_PROJECT`, made by Wall-E's runbook; the `eve` dataset; ten scheduled queries plus reconciliation and drift, pinned to that account, scheduled off the hour; the daily `walle_audit` mirror; one Cloud Monitoring absence alert on the metric series. In Wall-E's code: the eight endpoint contracts, `contracts/plan-body.v1.json`, the envelope schema, the `approvals` columns, the pinned-PEM verification path with a CI-only test key, the reason-code validator, the three sweeper/stamp mechanisms (inert), and a CI-only stub caller with denial tests 4, 5, 6 and 52. `thresholds.yaml` numbers stubbed. **Deliberately absent:** `eve@<domain>`, the OAuth client, the token, the secrets, the KMS key, the allowlist entry, `run.invoker`, `datastore.viewer`, `agentregistry.viewer`, any Pub/Sub subscription, and any Eve process. | **Nothing.** Eve v0 is queries a human reads. Daily write budget is 0; there is no autonomous write to gate or verify. |
 | **S1 — Hands held** | Unchanged, now with real rows. **The blind sampled human review starts here**, at `max(10 %, 5 items/week)`, graded without sight of any machine verdict, written write-ahead to `walle_audit.grades`. It must exist before Eve does: it is the thing that will later grade Eve, and the only bound on the compromised-Eve risk. | **Nothing.** An audit gap is a human's finding. At ten human-approved writes a day a machine halt would add latency, not safety. |
 | **S2 — Proposals** | **Eve's organisation-level admin-log sink into Eve's project is created here**, early, so the first enforcing window has history. Eve v0 gains the Google-side contract drift check against a committed privilege- and event-name snapshot. Reconciliation has now run ~10 weeks against real writes and its false-positive rate is measured — the numbers that will become halt thresholds are calibrated here, on data, before anything is wired to them. **Scheduled F2 sits at L3 here, not L4** — CC-32 in [08-contract-changes.md](08-contract-changes.md), because L4 means an Eve signature and Eve has no key for two more stages. | **Nothing.** This is the last stage at which that is true. |
-| **S3 entry — Eve onboarding** | The step [decision 36](../wall-e/09-open-decisions.md) opens, in one sitting (qualified 2026-09-13: whatever of it the super-admin grant row above already built is verified here, not rebuilt): `eve@<domain>` with role, hardware key, Trusted client, consented token (minus `apps.licensing`) and regional secrets in Eve's project; `eve-controller@`, `eve-verifier@`, `eve-console@`; the cross-project grants — in `WALLE_PROJECT`, made by Wall-E's runbook: `run.invoker` on `walle-actions` (three identities), dataset-level `READER` on `walle_audit` (the two runtime identities), the two project-level read roles of E-12 (pending topology decisions 43 and 44), and `CONTROL_CALLER_ALLOWLIST` with the cross-project emails `${SA_EVE},${SA_EVE_VERIFIER},${OPERATORS}`; in `EVE_PROJECT`, made by Eve: `CI_DEPLOYER`'s `objectCreator` on the `ladder/` prefix; the locked evidence bucket; the CI ladder-artefact publisher; `eve/config` and its external validator; `eve-reconciler`, `eve-console` and their schedules; the twelve seeded-fault fixtures. [Decision 18](../wall-e/09-open-decisions.md)'s control-plane split lands with this step. **Still absent:** the KMS key, the signer role, `eve-gate`, any cell with `eve_authority: binding`. | **Halting and demoting, immediately and for real** — the safe direction, which can only make less happen. Also verifying, reconciling, drift detection, and the daily operator-list reconciliation. Its verdicts on plans are observe-mode: logged, graded blind, enforcing nothing. Halt and demote are **live for the invariant class only**; rate-based triggers stay observe-only until their thresholds are calibrated. |
+| **S3 entry — Eve onboarding** | The step [decision 36](../wall-e/09-open-decisions.md) opens, in one sitting (whatever of it the super-admin grant row above already built is verified here, not rebuilt): `eve@<domain>` with role, hardware key, Trusted client, consented token (minus `apps.licensing`) and regional secrets in Eve's project; `eve-controller@`, `eve-verifier@`, `eve-console@`; the cross-project grants — in `WALLE_PROJECT`, made by Wall-E's runbook: `run.invoker` on `walle-actions` (three identities), dataset-level `READER` on `walle_audit` (the two runtime identities), no project-level role (topology decision 43 drops `agentregistry.viewer`; the Firestore discovery read waits on decision 44's resource-scoped form), and `CONTROL_CALLER_ALLOWLIST` with the cross-project emails `${SA_EVE},${SA_EVE_VERIFIER},${OPERATORS}`; in `EVE_PROJECT`, made by Eve: `CI_DEPLOYER`'s `objectCreator` on the `ladder/` prefix; the locked evidence bucket; the CI ladder-artefact publisher; `eve/config` and its external validator; `eve-reconciler`, `eve-console` and their schedules; the twelve seeded-fault fixtures. [Decision 18](../wall-e/09-open-decisions.md)'s control-plane split lands with this step. **Still absent:** the KMS key, the signer role, `eve-gate`, any cell with `eve_authority: binding`. | **Halting and demoting, immediately and for real** — the safe direction, which can only make less happen. Also verifying, reconciling, drift detection, and the daily operator-list reconciliation. Its verdicts on plans are observe-mode: logged, graded blind, enforcing nothing. Halt and demote are **live for the invariant class only**; rate-based triggers stay observe-only until their thresholds are calibrated. |
 | **S3 — Batch approval** | As at S3 entry, running ≥ 30 days against L3 batch executions. | Halt and demote. **Not approval.** Exit gate: **100 % catch** of the twelve seeded invariant-class faults, plus both negative controls not firing. Agreement with human verdicts is reported for information only — a 95 % agreement rate is not a gate for a deterministic checker. |
 | **S4 entry — Eve gates** | Adds, and only now: the `eve` key ring and `eve-approval` with its first PEM exported **before first use** and committed under CODEOWNERS; Data Access logging on `AsymmetricSign` and IAP; `eve-gate` and its 2-minute schedule; signature verification, the per-item vector and `eve_authority` in `walle-actions`; the `verdict_receipts` read; the blind sample wired as the only input to L4/L5 precision. **Scheduled F2 reaches L4 here** and not before, which makes it the first autonomous write in the programme (CC-32). | **Signing an approval** — but only for cells whose ladder entry explicitly sets `eve_authority: binding`, which is a pull request with two distinct authenticated approving reviewers, neither the author. Absent reads as advisory, and an Eve signature for an advisory cell is refused with `eve_authority_advisory`. That one field is the per-cell load-bearing switch, the fail-closed default, and the demotion target when an approval is overturned. |
 | **S5 — Steady state** | No new Eve component. F5 reaches L4 with a two-hour hold, so the **two-phase envelope** applies: `envelope_gate` at freeze opens the hold window, `envelope_release` re-verified against freshly re-read pre-state with a 15-minute TTL is required at release. More cells carry `eve_authority: binding`. Annual manual key rotation with a 30-day overlap, each new PEM exported at creation. | The same two authorities on more cells. `WRITE_HIGH` never reaches L5 on any trigger at any stage, so Eve's post-hoc path only ever covers reversible `WRITE_LOW` and `READ`, and pre-approval is permanently the `WRITE_HIGH` mechanism. |
 
 ## S0 — Eyes
 
-Eve v0 is a body of SQL a human reads. Ten scheduled queries compute the ten
-[../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §8 metrics on a 30-day
-rolling window, hourly, each result carrying its measured value, its threshold, its verdict
-and the hash of the query that produced it, with **Wilson interval bounds rather than point
-estimates**. Those ten include hard-invariant denials (with the T0-human
-`protected_principal` exclusion) and audit completeness. Two more queries are Eve v0's own:
-two-direction reconciliation, and config and ladder drift — twelve transfer configs in all,
-listed in [07-build-runbook.md](07-build-runbook.md) Phase 4. Results land in
-`eve.findings`. A human reads them weekly — about 30 minutes.
+Eve v0 is a body of SQL a human reads: twelve scheduled queries — the ten ladder metrics,
+among them hard-invariant denials and audit completeness, plus Eve v0's own two-direction
+reconciliation and config and ladder drift — hourly over a 30-day rolling window into
+`eve.findings`, with **Wilson interval bounds rather than point estimates**. The metric
+definitions are in [../mo/03-metrics-contract.md §7.2](../mo/03-metrics-contract.md#72-wall-es-pack--the-ten-metrics-audit-completeness-first)
+and the twelve queries, their sources and their checks in
+[07-build-runbook.md Phase 4](07-build-runbook.md#phase-4--the-twelve-scheduled-queries-pinned-and-off-the-hour).
+A human reads them weekly — about 30 minutes.
 
 Two operational facts shape how those queries are created, both verified 2026-09-12:
 
@@ -111,20 +107,14 @@ asserts it is absent from any admitted image.
 ## S1 — Hands held
 
 Eve is still nothing but queries, now reading real rows. One thing starts here and it is
-not Eve: **the blind sampled human review**, at `max(10 %, 5 items/week)` of executing
-items, graded without sight of any machine verdict, written write-ahead to
-`walle_audit.grades`.
-
-It starts two stages before Eve exists on purpose. It is the thing that will later grade
-Eve, and it is the only bound on the compromised-Eve risk — a bound that must already be
-running, with a habit and a rota behind it, before the component it bounds is built.
-[C16](../wall-e/14-hld-challenge.md) placed it at S1 for that reason, and it is the only
-input to precision at L4 and L5.
-
-The rate is `max(10 %, 5 items/week)` everywhere except one cell: **F7 at L4 takes 20 %**,
-because Eve cannot read licence state at all and its F7 verdicts are `verified_partial`
-with reason `licence_event_only` ([06-failure-modes.md](06-failure-modes.md)). A vetoed
-item enters the pool at the next draw regardless of rate.
+not Eve: **the blind sampled human review**, graded without sight of any machine verdict and
+written write-ahead to `walle_audit.grades` — two stages before Eve exists, because it will
+later grade Eve and is the only bound on the compromised-Eve risk, which is why
+[C16](../wall-e/14-hld-challenge.md) placed it at S1 and made it the only input to precision at
+L4 and L5. Its rate, `max(10 %, 5 items/week)` per cell, and its seeded draw are defined in
+[../mo/03-metrics-contract.md §13](../mo/03-metrics-contract.md#13-the-blind-sample-and-the-seed-protocol),
+which starts the sample at S3 and records that start as unresolved against this page; F7 at L4
+takes 20 % and a vetoed item joins the pool regardless of rate ([04-flows.md](04-flows.md) flow 7).
 
 Eve is trusted with nothing at S1. An audit gap is a human's finding. At ten
 human-approved writes a day a machine halt would add latency, not safety.
@@ -133,35 +123,15 @@ human-approved writes a day a machine halt would add latency, not safety.
 
 Two things happen here, both early on purpose.
 
-**Eve's own organisation-level admin-log sink is created.** `eve-workspace-audit`,
-org-level, `--include-children`, `--use-partitioned-tables`, filter
-`protoPayload.serviceName="admin.googleapis.com"`, **no actor exclusion**, routed to
-`eve_workspace_logs` in Eve's project. **Widened 2026-09-13** to all six Workspace streams
-(platform HLD §13.2; [07-build-runbook.md](07-build-runbook.md) Phase 7), and created at S2 or
-before the super-admin grant, whichever comes first. Verified
-2026-09-12: an aggregated organisation-level sink may route to a destination in another
-project — "When the destination is a Google Cloud project, the project can be in any
-organization" — and its writer identity must be granted `roles/bigquery.dataEditor` on that
-BigQuery dataset
-([Aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks)).
-Creating it at S2 rather than at S3 entry means Eve's **first enforcing window has months
-of history rather than zero rows**. It also moves Eve's evidence out of Wall-E's teardown
-blast radius: Eve reconciles against this copy, never against `walle_workspace_logs` in
-Wall-E's project. Org-level sink creation needs org-level permission, so the runbook allows
-calendar time for that approval — see [07-build-runbook.md](07-build-runbook.md).
-
-Two flags on that command are the difference between a usable copy and a mess nobody
-notices for months, and both are once-only. `--use-partitioned-tables` gives one
-`cloudaudit_googleapis_com_activity` table; without it Logging writes a date-sharded series
-`..._YYYYMMDD`, because "The default selection is a date-sharded table" ([Route logs to
-BigQuery](https://docs.cloud.google.com/logging/docs/export/bigquery), verified 2026-09-12).
-And `bq update --default_partition_expiration` must be set on the dataset **before** the
-sink first writes, because it sets the lifetime "for partitions in newly created
-partitioned tables" ([Updating
-datasets](https://docs.cloud.google.com/bigquery/docs/updating-datasets), verified
-2026-09-12) — miss it and Eve's org-wide admin-log copy has no retention bound at all.
-Neither is retrofittable to rows already written, which is the same non-backfill property
-as the actor exclusion.
+**Eve's own organisation-level admin-log sink is created.** `eve-workspace-audit`, over all
+six Workspace streams with no actor exclusion, into `eve_workspace_logs` in Eve's project, is
+created at S2 or before the super-admin grant, whichever comes first — early, so that Eve's
+first enforcing window has months of history rather than zero rows, and outside Wall-E's
+teardown blast radius, because Eve reconciles against this copy and never against
+`walle_workspace_logs`. The sink, its once-only flags and its retention are specified in
+[03-lld.md §13](03-lld.md#13-the-evidence-perimeter-for-a-super-admin-wall-e), and the commands,
+the order they run in and the calendar time the organisation-level permission needs are in
+[07-build-runbook.md Phase 7](07-build-runbook.md#phase-7--eves-organisation-level-admin-log-sink).
 
 **The thresholds are calibrated.** By the end of S2 reconciliation has run roughly ten
 weeks against real writes and its false-positive rate is measured. Every number that will
@@ -210,47 +180,20 @@ S2 is the last stage at which Eve is trusted with nothing.
 
 ## Why the Workspace credential is minted at S3 entry, not at Stage 0
 
-The runbook as written provisions Eve's robot account, its custom role, its hardening, its
-Trusted OAuth client, its consented refresh token and its regional secret in Phase 15, at
-Stage 0. This design moves all of it into the **Eve onboarding** step at S3 entry. Two
-reasons, and neither of them is the cost of repeating the consent:
-
-1. **The six-month unused-token expiry.** Google lists "The refresh token has not been used
-   for six months" among the reasons a refresh token stops working
-   ([OAuth 2.0](https://developers.google.com/identity/protocols/oauth2), re-verified
-   2026-09-12). Wall-E's own stage floors for S0–S2 total 13–18 weeks, which is under six
-   months — so a Stage-0 token dies only if the stages overrun, or if Eve's design and
-   build lag S3 entry. Both are plausible for a one-person team. The alternative, refreshing
-   the token monthly from a status command, keeps a **tenant-wide admin read credential warm
-   for a consumer that does not exist**, which is the wrong trade.
-2. **The scope freeze.** Scopes are frozen at the moment of consent. Consenting at Stage 0
-   freezes a scope list drafted before the verifier was designed. Consenting at S3 entry
-   freezes the list this design actually needs — and in particular drops `apps.licensing`
-   per [C13](../wall-e/14-hld-challenge.md), which a Stage-0 consent would have carried for
-   months. The cost of that drop is a permanent, declared limit on independence for F7,
-   recorded in [06-failure-modes.md](06-failure-modes.md) and carried in every F7
-   attestation.
-
-The same argument moves the KMS key and the allowlist entry out of Stage 0, and it is what
-[decision 36](../wall-e/09-open-decisions.md) and [C14](../wall-e/14-hld-challenge.md)
-settle. The seams stay in code from the first commit; only the provisioning moves.
-
-**Reversed in part 2026-09-13.** Both reasons above assume nothing needs Eve's credential
-before S3 entry. Once Wall-E's super-admin grant is due, the observe-and-report layer needs it,
-so the onboarding of the credential moves to that sitting (platform HLD §13.2). Reason 1 stops
-biting because the Reports API poll uses the token continuously. Reason 2 is honoured by fixing
-the **widened** privilege and scope set before that consent (E-16). The KMS key and the
-signing allowlist entry keep the S4-entry argument.
-
-**Contingency.** Eve's whole credential chapter is contingent on
-[decision 26](../wall-e/09-open-decisions.md) — whether a keyless service account may hold a
-custom admin role with no domain-wide delegation. Reworded 2026-09-13: decision 26 is closed
-for Wall-E by fact (P33, no Super Admin on a service account) and survives for Eve only, as
-E-16, due before the consent — now before the super-admin grant. If it may, then Eve's robot user, its
-consent, its hardware key, its refresh token and the six-month clock all disappear, and the
-onboarding step shrinks accordingly. Re-examine before onboarding rather than building the
-chapter as specified ([09-open-decisions.md](09-open-decisions.md) E-16). There is no
-domain-wide delegation in either variant.
+Eve's Workspace credential — robot account, custom role, hardening, Trusted OAuth client,
+consented refresh token and regional secret — moves out of Stage 0 into the Eve onboarding
+step for two reasons, Google's six-month unused-token expiry and the scope freeze at consent
+(which is what lets the consent drop `apps.licensing` per [C13](../wall-e/14-hld-challenge.md)),
+and the same argument moves the KMS key and the allowlist entry
+([decision 36](../wall-e/09-open-decisions.md), [C14](../wall-e/14-hld-challenge.md)) while the
+seams stay in code from the first commit. **Reversed in part 2026-09-13** (platform HLD §13.2,
+E-16): once Wall-E's super-admin grant is due the observe-and-report layer needs the
+credential, so its onboarding moves to that sitting, where the Reports API poll keeps the token
+in continuous use and the widened privilege and scope set is fixed before consent, while the
+KMS key and the signing allowlist entry keep the S4-entry argument. The clock, the scopes, and
+whether the chapter survives [decision 26](../wall-e/09-open-decisions.md) — closed for Wall-E
+by P33, open for Eve as E-16 before the consent, with no domain-wide delegation in either
+variant — are in [02-identity-and-auth.md](02-identity-and-auth.md#the-six-month-clock-and-when-consent-happens).
 
 ## S3 entry — what Eve is trusted with, and the observe-mode split
 
@@ -288,7 +231,7 @@ invariant-trigger list and is never a judgement call. At the approval point the 
 act is **refuse**, which costs an operator an approval; see
 [06-failure-modes.md](06-failure-modes.md).
 
-**Added 2026-09-13: reporting is a separate duty.** Halting stays on the closed list. Reporting
+**Reporting is a separate duty.** Halting stays on the closed list. Reporting
 anything wrong — including what no rule names — is a duty of the reporting path `eve-advisor`,
 report-only by construction and never a halt (platform HLD §13.2, P34). And the invariant class
 Eve halts on already includes, from the grant, the tenant-integrity rules, `reconciliation_gap`
@@ -330,7 +273,7 @@ tests Eve against plans someone constructed; it cannot surprise Eve the way a te
 That is what the two negative controls are for: without them, the cheapest way to pass a
 twelve-fault gate is to refuse everything, and an over-eager Eve would walk through.
 
-**Recorded, and repeated (added 2026-09-13; platform HLD §13.3).** Every run of the exercise
+**Recorded, and repeated (platform HLD §13.3).** Every run of the exercise
 writes one row per fault to `eve.seeded_fault_runs`; the exercise re-runs **monthly and on every
 `eve_config_version` change**, not only at the S3 exit gate, so the catch rate is a series Mo
 and the validator custodian read through `eve_quality`, not a one-off claim.
@@ -341,8 +284,8 @@ caught ≥ 95 % of deliberately seeded faults". [C12](../wall-e/14-hld-challenge
 the seeded-fault figure to 100 % and made agreement informational — a 95 % agreement rate
 is a sensible gate for a model and a meaningless one for a deterministic checker, which
 either implements the rule or does not. The ≥ 30 days of observation stands. The wording in
-[../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) still says 95 %/95 % at
-the time of writing and is on the edit list in
+[../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) still says 95 %/95 % and
+is on the edit list in
 [08-contract-changes.md](08-contract-changes.md).
 
 **One more thing must be true before S3 exit: the second grader.** Without a grader who is
@@ -354,7 +297,7 @@ reaches `eve_authority: binding` without them
 
 ## The super-admin grant — the observe-and-report layer and its checklist
 
-Added 2026-09-13 (platform HLD §0.4 P line, §13.2 "Staging re-cut", §18 item 16). Wall-E's
+This gate carries platform HLD §0.4 P line, §13.2 "Staging re-cut" and §18 item 16. Wall-E's
 account receives Super Admin on the day the last row of the platform's P line is green, and
 Eve's rows in that checklist are these. The grant is a **gate with its own checklist**, not a
 runbook phase, and none of these rows waits for a ladder stage.
@@ -458,7 +401,7 @@ L3 it takes two of them.
 - [01-hld.md](01-hld.md) — what Eve is, the components, the deterministic boundary
 - [02-identity-and-auth.md](02-identity-and-auth.md) — the principals, the credential and the key
 - [03-lld.md](03-lld.md) — the five recomputations and the envelope
-- [04-flows.md](04-flows.md) — the seven flows, including the blind sample draw
+- [04-flows.md](04-flows.md) — the eight flows, including the blind sample draw
 - [06-failure-modes.md](06-failure-modes.md) — what happens when each part of this is wrong
 - [07-build-runbook.md](07-build-runbook.md) — the ordered steps that bring each stage into existence
 - [08-contract-changes.md](08-contract-changes.md) — the edits this design forces on Wall-E's set
@@ -467,4 +410,4 @@ L3 it takes two of them.
 - [../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) — the contract
 - [../wall-e/09-open-decisions.md](../wall-e/09-open-decisions.md) — decisions 11, 18, 26, 29, 36
 - [../wall-e/14-hld-challenge.md](../wall-e/14-hld-challenge.md) — C12, C13, C14, C16
-- [../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §0.4, §13.2 — the tier gate and the staging re-cut (2026-09-13)
+- [../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §0.4, §13.2 — the tier gate and the staging re-cut

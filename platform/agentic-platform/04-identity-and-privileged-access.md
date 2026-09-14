@@ -2,31 +2,23 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
+- Last reviewed: 2026-09-14
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md) §4 (identity), §4.4
   (privileged access), §4.5 (deny policies and Principal Access Boundaries), §4.6 (the robot
   accounts), §11.4 (the fleet kill switch K7) and §13.1 items 6 and 7 (account hygiene, kill
-  switches). Answers HLD brief items H60, H62 and H63 and review gaps PS-02, PS-13 (the
-  compensating set for Google-personnel access — Access Transparency and Access Approval —
-  in §6.6; the residency decision itself is not this page's) and PS-17 of
-  [00-objective-review.md](00-objective-review.md). Nothing is built.
+  switches). Answers the identity and privileged-access findings of
+  [00-objective-review.md](00-objective-review.md), including the compensating set for
+  Google-personnel access (Access Transparency and Access Approval) in §6.6; the residency
+  decision itself is not this page's. Nothing is built.
 - What this page promotes: [../wall-e/12-agent-identity.md](../wall-e/12-agent-identity.md)
   §1 (Agent Identity), §5 (operator identity), §6 (keyless everywhere) and §10 (the drift job)
   from one agent's chapter to platform rules. It references them; it does not repeat them.
-- Standing constraints, unchanged: no domain-wide delegation; the language model holds no
-  credential and cannot approve; humans raise autonomy, machines lower it; no model produces an
-  Eve approval; Mo reaches production only through a merged pull request; safety interlocks are
-  plain authenticated REST; Wall-E holds Super Admin (P33) and the design is built around that
-  fact, not against it; no secrets on this page.
+- Standing constraints: as stated once in [01-hld.md § Status](01-hld.md#status).
 - Every Google product, role, permission, constraint, limit and launch stage below was
   re-verified on 2026-09-13 against the page cited beside it (§15). Where a fact could not be
-  verified the row says **unverified** and the value stays *tbd*. `Assumption:` marks inferred
-  facts. Five facts verified today **change the HLD** and are listed in §13 for the reconcile
-  pass: Privileged Access Manager cannot grant `roles/owner`; `roles/orgpolicy.policyAdmin`
-  and `roles/iam.denyAdmin` cannot be granted below the organisation; the PAB
-  blocked-permissions list is now read and answers P9; the Admin console session is fixed at
-  one hour by Google.
-- Decisions this page makes are numbered **P60–P70**, final ids in
+  verified the row says **unverified** and the value stays *tbd*; set-wide conventions are in
+  [README.md § Status](README.md#status).
+- Decisions this page makes are numbered **P60–P70**; the rows of record are in
   [12-open-decisions.md](12-open-decisions.md).
 - Diagrams: §9.2 (the fleet kill switch), §6.2 (the human access path).
 
@@ -40,22 +32,20 @@ Access Manager for every standing-dangerous role, Identity-Aware Proxy with a Co
 Access level for every human control surface, two human super admins with the robot never the
 recovery one, and a fleet kill switch outside every agent project. This page gives each of
 those its exact principals, permission names, roles, durations, approvers, custodians, drill
-cadence and failure behaviour, and records where verification changed the HLD's wording.
+cadence and failure behaviour.
 
-**The one rule.** Every control on this page names its **owner** (a role from HLD §0.3, never a
-person), the **resource** it sits on, how it is **verified** (a job, a drill or a CI check with
-a cadence) and what happens when it **fails** (fail-closed, fail-open with a page, or a
-detection with a latency). A control that cannot fill those four cells is not on this page.
-Controls are graded **enforcement** (Google or the platform refuses the action) or
-**detection** (it happens and something independent sees it within a stated latency), and
-nothing detection-grade stands alone in a safety case (HLD §0.2).
+**The one rule.** Every control on this page fills the four cells owner, resource, verified and
+fails, as the set's conventions require ([README.md § Status](README.md#status)), and is graded
+enforcement or detection by the rule of
+[01-hld.md §0.2](01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded): nothing
+detection-grade stands alone in a safety case.
 
 **Grade summary of this page**, so a reviewer sees the shape before the detail:
 
 | Control | Grade on 2026-09-13 | What would raise it |
 |---|---|---|
 | Agent Identity mandatory (§2.1) | enforcement for Agent Runtime engines by CI refusal; **detection** until the `identityType` custom constraint is proven (P4) | P4 spike |
-| Folder deny policy `deny-agents-platform` (§3) | **enforcement** — every permission name on the deny-supported list (verified today); the agent principal-set spelling still needs one throwaway engine (P8, narrowed) | P8 spike |
+| Folder deny policy `deny-agents-platform` (§3) | **enforcement** — every permission name on the deny-supported list (verified 2026-09-13); the agent principal-set spelling still needs one throwaway engine (P8, narrowed) | P8 spike |
 | Principal Access Boundary `pab-agents` (§4) | **enforcement** for `aiplatform`, `secretmanager`, `cloudkms`, `iam.serviceAccounts`, `storage`, `bigquery`, `pubsub`, `orgpolicy`, `artifactregistry`, `cloudbuild` (enforcement version 4); **no effect** on `run.routes.invoke` — P9 answered (§4.2, P60) | nothing; the Cloud Run gap is the deny policy's job |
 | Privileged Access Manager entitlements (§5) | **enforcement** (no standing dangerous role; approver ≠ requester is Google-enforced) | two-level approval when GA |
 | IAP + Context-Aware Access on control surfaces (§6) | **enforcement** for identity and IP; device posture enforcement needs the Chrome Enterprise Premium licence (*tbd*, P63) | the licence |
@@ -90,6 +80,15 @@ nothing detection-grade stands alone in a safety case (HLD §0.2).
    against it.** Multi-party approval (§8.4) puts a second admin between the robot's credential
    and the settings the hard-denied list forbids; the roster (§8.1) keeps two humans who can
    pull K6.
+7. **No domain-wide delegation, for any agent, at any stage.** Not for Wall-E, not for Eve, not
+   for Mo, and not for any agent the factory admits later. Each robot account (`walle@`, `eve@`)
+   holds its own consented refresh token and is never impersonated by anything; Mo and every
+   other agent hold no Workspace credential at all. The reason: DWD is a tenant-wide capability
+   scoped only by OAuth scopes, so a compromised delegate can act as anyone, including a super
+   admin; and a delegated verifier (Eve) could impersonate the robot it verifies, which would
+   make it no verifier (`eve/02` "There is no domain-wide delegation anywhere"). Granting DWD is
+   a super-admin-only task [S35] covered by Workspace multi-party approval (§8.4) and on the
+   hard-denied list.
 
 ---
 
@@ -103,8 +102,8 @@ nothing detection-grade stands alone in a safety case (HLD §0.2).
 | Every Cloud Run **reasoning** service uses Agent Identity for Cloud Run — **Pre-GA, beta gcloud track** (`gcloud beta run deploy … --functional-type=agent --identity-type=agent-identity`; Google's page, last updated 2026-09-10, §15 [S1]) — in **nonprod now, prod when GA** (HLD P5) | factory flag per manifest `runtime: cloud-run`; the switch "assigns a new principal that doesn't inherit permissions from your previous service account" [S1], so every binding is re-made on the new principal | platform owner | Cloud Run services labelled `reasoning=true` | CI; drift job on `functional-type` | a prod reasoning service on an attached service account is a **dated Tier R exception** in the register (`exception_expiry`), refused for Tier W and above |
 | Gemini Enterprise no-code agents carry the product's own agent identity (`principal://…/resources/discoveryengine/…`, §15 [S2]) | product | Gemini Enterprise admin | `GEMINI_PROJECT` | reconciliation (HLD §5.2) | n/a |
 | The line that removes the property — `GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES=False` (the Agent Runtime page names it as the opt-out of the default Context-Aware Access policy on agent tokens, §15 [S3]) — is refused fleet-wide | CI grep over every deploy manifest and container env; Security Health Analytics custom module over engine and service env vars | platform owner | every engine and reasoning service | CI + SHA module daily | CI: refused. SHA: severity 1 finding, K3 on the agent |
-| The two automatic roles `roles/aiplatform.agentDefaultAccess` and `roles/aiplatform.agentContextEditor` [S3] are **dumped and diffed** before the first prod engine and on every platform release: neither may contain `secretmanager.*`, any `*.setIamPolicy`, `iam.serviceAccounts.*` or `run.services.update` (`wall-e/12` §1.4 left their permission lists unverified; still unverified on 2026-09-13) | `gcloud iam roles describe` in the platform release pipeline; output committed to `platform/agentic-platform/evidence/roles/` | platform owner | the two roles | pipeline stage; diff alert | a diff that adds a forbidden permission blocks the release and opens a security-reviewer ticket; the deny policy (§3) already refuses those permissions to agent principals, which is why this is a check and not the fence |
-| `roles/aiplatform.expressUser` is **not** granted to agent principals (project-level it carries `reasoningEngines.query` on every engine in the project — `wall-e/12` §1.4) | factory never emits it; drift job | platform owner | agent projects | drift job | severity 2; removed by CI |
+| The two automatic roles `roles/aiplatform.agentDefaultAccess` and `roles/aiplatform.agentContextEditor` [S3] — attached by Google to every agent identity, giving it "access to its own logging, metrics, model access, sessions, memories, and sandboxes (Preview)"; the resource they are bound on is also unverified (`wall-e/12` §1.4) — are **dumped and diffed** before the first prod engine and on every platform release: neither may contain `secretmanager.*`, any `*.setIamPolicy`, `iam.serviceAccounts.*` or `run.services.update` (`wall-e/12` §1.4 left their permission lists unverified; still unverified on 2026-09-13) | `gcloud iam roles describe` in the platform release pipeline; output committed to `platform/agentic-platform/evidence/roles/` | platform owner | the two roles | pipeline stage; diff alert | a diff that adds a forbidden permission blocks the release and opens a security-reviewer ticket; the deny policy (§3) already refuses those permissions to agent principals, which is why this is a check and not the fence |
+| `roles/aiplatform.expressUser` is **not** granted to agent principals, although Google recommends adding it with `roles/serviceusage.serviceUsageConsumer` and `roles/browser` (the last two are granted, §2.2): bound at project level it carries `reasoningEngines.query` on every engine in the project, which would make the agent a caller of its own engine able to assert any operator's `user_id` (`wall-e/12` §1.4); if it proves unavoidable at build it is a named, recorded exception, never a silent grant | factory never emits it; drift job | platform owner | agent projects | drift job | severity 2; removed by CI |
 
 The trust domain is organisation-wide, `agents.global.org-ORG_ID.system.id.goog` (§15 [S2]).
 A single agent is `principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N/locations/europe-west1/reasoningEngines/ID`;
@@ -118,6 +117,13 @@ both last updated within the week, spell "all agents in a project" differently:
 | `principalSet://agents.global.org-ORG_ID.system.id.goog/attribute.platformContainer/aiplatform/projects/N` | the Agent Runtime Agent Identity page, IAM allow-policy examples (§15 [S3]); the "Configure IAM agent policies" page [S4] | allow policies (the query grant, `run.invoker`), and the deny policy's first attempt |
 | `//agents.global.org-ORG_ID.system.id.goog/attribute.container/projects/N` | the Principal Access Boundary page, "Agent identities" principal-set row (§15 [S5]) | PAB policy bindings |
 | `principalSet://<org.id>.global.agent.id.goog/*` | the Agent Runtime page's **deny-policy example** ("deny all agents across the org") [S3] — a trust-domain spelling that matches neither of the above and that `wall-e/12` §1.4 already flagged | nothing until P8's spike says which spelling IAM accepts in a deny policy |
+| `principalSet://agents.global.org-ORG_ID.system.id.goog/*` | every agent identity in the trust domain, which is the organisation; the form `wall-e/12` §1.4 took from the principal-identifiers reference (read 2026-09-09; the page did not render its content on 2026-09-14, so **not re-verified**) and which matches the Agent Runtime page's allow examples | nothing until P8's spike; `Assumption:` a deny policy accepts it |
+
+The PAB page (re-read 2026-09-14) also documents a project-scoped trust-domain variant for PAB
+bindings, `//agents.global.proj-PROJECT_NUMBER.system.id.goog/attribute.container/projects/PROJECT_NUMBER`,
+and confirms that the PAB binding form carries **no** `principalSet://` prefix: a PAB binding
+is written as in this table, never as `principalSet://agents…/attribute.container/projects/N`
+(§4.1).
 
 The factory emits the first form for allow and deny and the second for PAB bindings; the
 throwaway-engine spike of P8 (§12) records which forms IAM accepts where, and the factory
@@ -140,7 +146,7 @@ Set once at `fld-agentic-platform`; the factory implements it; the drift job ass
 | SA-1 | **No keys.** `iam.managed.disableServiceAccountKeyCreation` and `iam.managed.disableServiceAccountKeyUpload` enforced at the folder (HLD §3.3); `iam.googleapis.com/serviceAccountKeys.create` also in the deny policy (§3) for belt and braces | org policy; deny policy | enforcement | a key request is refused at the API; an existing key anywhere under the folder is a severity 1 SHA finding (none should exist) |
 | SA-2 | **No cross-project attachment.** `iam.disableCrossProjectServiceAccountUsage` enforced; every crossing is a binding of a foreign member on a resource (topology §5) | org policy | enforcement | refused |
 | SA-3 | **One account per duty.** An account that reads a credential (`secretmanager.secretAccessor` on a secret, `cloudkms.signerVerifier` on a key) never holds a deploy permission (`run.services.update`, `run.services.create`, `artifactregistry.repositories.uploadArtifacts`, `cloudbuild.builds.create`), and the reverse | factory generates both lists from the manifest; drift job asserts the intersection is empty | enforcement (factory) + detection (daily) | drift: severity 1, the offending binding removed by CI within one business day |
-| SA-4 | **No standing `roles/owner`, `roles/editor` on any platform project after the factory has run**; the factory's own CI identity `factory-apply@` holds `roles/resourcemanager.projectIamAdmin` **only as bindings conditioned on `iam.googleapis.com/modifiedGrantsByRole`** to non-credential roles, on the agent tier folders other than P-SA and on `fld-improvers-*`, nothing standing on `fld-agents-p-sa-*` or `fld-controllers-*`, never a basic role (P142, [02](02-landing-zone-and-tiers.md) §3.4; aligned 2026-09-13) | factory's last step removes basic roles from the creator; drift job | enforcement + detection | severity 1 finding; PAM is the only way back (§5) |
+| SA-4 | **No standing `roles/owner`, `roles/editor` on any platform project after the factory has run**; the factory's own CI identity `factory-apply@` holds `roles/resourcemanager.projectIamAdmin` **only as bindings conditioned on `iam.googleapis.com/modifiedGrantsByRole`** to non-credential roles, on the agent tier folders other than P-SA and on `fld-improvers-*`, nothing standing on `fld-agents-p-sa-*` or `fld-controllers-*`, never a basic role (P142, [02](02-landing-zone-and-tiers.md) §3.4) | factory's last step removes basic roles from the creator; drift job | enforcement + detection | severity 1 finding; PAM is the only way back (§5) |
 | SA-5 | **Impersonation is enumerated.** `roles/iam.serviceAccountTokenCreator` exists on exactly: `<agent>-operators-caller@` for Google-identity operators of that agent (the CLI K0/K1 path, `wall-e/12` §5.1), and `<agent>-deployer@` for the CI's Workload Identity Federation principal. `roles/iam.serviceAccountUser` exists on exactly: `<agent>-deployer@` → the agent's attached accounts, and through PAM to a human for one hour (§5). **Never** any human or workforce principal on `<agent>-actions@`, `-actions-super@` or `eve-controller@` | factory; SHA custom module "impersonation chain" (HLD §4.7); the deny policy refuses `getAccessToken`/`signBlob`/`signJwt`/`actAs` to agent principals and to the project SA set except the deployer (§3) | enforcement (deny for machines) + detection (humans, daily) | severity 1; removed by CI |
 | SA-6 | **Every account's reach is a generated row** of the register's identity table (`platform/agentic-platform/register/<agent>.yaml` → `identities:`), with the anti-grants (`walle-agent@`/the agent principal reads no secret; no Mo identity invokes a credential holder; no `MO_PROJECT` principal in `EVE_PROJECT`; no agent principal in another agent's project IAM) asserted by the drift job | factory + drift job | detection (daily, minutes for IAM changes via the Cloud Asset feed) | severity 1 |
 | SA-7 | **Default service accounts get nothing.** `iam.automaticIamGrantsForDefaultServiceAccounts` enforced | org policy | enforcement | — |
@@ -164,8 +170,7 @@ directly to a resource; a group is. Rules:
 `factory-groups@` is the one machine on the platform holding a Workspace admin role other than
 `walle@` and `eve@`. It is a Tier-P-class credential by the tier rule, so: it runs only from the
 CI job, its role is in the register's `privilege` column as `workspace_role:groups_admin`, it is
-on Eve's roster check, and it may not touch the control groups. This is decision **P65** (the
-id aligned with [12-open-decisions.md](12-open-decisions.md) on the reconcile pass of 2026-09-13).
+on Eve's roster check, and it may not touch the control groups. This is decision **P65**.
 
 ### 2.5 Workforce identity for non-Google operators (only if P24 says yes)
 
@@ -200,16 +205,39 @@ the check is IAM-shaped and SIEM rows otherwise. Owner: platform owner; reviewer
 security reviewer; latency: minutes for IAM and org-policy changes, daily for the rest; fails:
 an absent drift report for 26 hours is itself an absence alarm to `platform-security@`.
 
+**Per-agent assertions.** For every agent project the job also runs the checks below,
+generalised from Wall-E's set (`wall-e/12` §10, where the Wall-E-specific values — the seven
+invokers of `walle-actions`, `walle_audit`'s readers, the pinned Eve PEM set — stay as that
+agent's input). A per-agent value comes from the register's `identities:` rows (SA-6).
+
+| Check | Fails when |
+|---|---|
+| The engine's `spec.effectiveIdentity` | it does not start with `agents.global.org-`, or differs from the principal recorded in the register |
+| The SPIFFE id on the Gemini Enterprise agent details page | it differs from the recorded principal — a human check until an API exposes the field |
+| Policy Analyzer for the agent principal | any Secret Manager, Firestore write, BigQuery or KMS access |
+| Engines in an agent project | more than one |
+| Project-level and inherited bindings of the roles carrying `reasoningEngines.query` | any principal other than the app project's Discovery Engine service agent where the agent's recorded fallback allows it; the agent principal here means `expressUser` was granted (§2.1) — a recorded exception, or drift |
+| The engine's own IAM policy | any member other than the app project's Discovery Engine service agent and the agent's `-dispatcher@`, or any role other than the agent's engine-query custom role |
+| `run.invoker` on the action service | any member outside the agent's committed invoker list |
+| Dataset-level access on the agent's audit and log datasets | any reader other than those named in [../project-topology.md](../project-topology.md) §3; any authorised view outside the agent project; any writer beyond the action service's custom role and the sink writer |
+| Project-level bindings to a principal of `EVE_PROJECT`, `MO_PROJECT` or another agent project | any (SA-6) |
+| KMS roles on any agent principal, and the pinned Eve public-key set | any `cloudkms.*` role, or the pinned keys differing from Eve's published versions (the Eve-side rows are Eve's own drift job in `EVE_PROJECT`) |
+| `serviceAccountTokenCreator` and `serviceAccountUser` in the project | any grant outside SA-5, or any grant to a human or a workforce principal |
+| `run.admin` or `run.developer` on the action service or at project level | held by any human or workforce principal |
+| The agent's deploy config | `GOOGLE_API_PREVENT_AGENT_TOKEN_SHARING_FOR_GCP_SERVICES` present (§2.1), or `google-auth` below 2.45.0 (the bound-token path, `bindCertificateFingerprint`, arrived in 2.45.0 on 2025-12-15; an older library takes the unbound path silently — `wall-e/12` §1.3) |
+| `agentidentitycredentials.googleapis.com` | enabled in an agent project |
+| Service-account keys | any key on any account in the project (SA-1) |
+| The committed operator list | diverges from `<agent>-operators@` (§2.4) |
+
 ---
 
 ## 3. The folder deny policy `deny-agents-platform`, with verified permission names
 
 **Verified on 2026-09-13.** Google's "Permissions supported in deny policies" reference
-(§15 [S11], last updated 2026-09-10) rendered today. Every permission name below is on it; the
-one name the HLD used that is **not** on it is `aiplatform.googleapis.com/reasoningEngines.streamQuery`
-— the list carries `reasoningEngines.query` and the wildcard `reasoningEngines.*`, and no
-`streamQuery`, so this page drops the invented name and uses the wildcard where the HLD meant
-"every query form". Also verified: `cloudscheduler.googleapis.com/*` is **not** deniable, and
+(§15 [S11], last updated 2026-09-10) rendered on 2026-09-13. Every permission name below is on
+it. `aiplatform.googleapis.com/reasoningEngines.streamQuery` is **not** on it — the list carries
+`reasoningEngines.query` and the wildcard `reasoningEngines.*` — so the rules use the wildcard
+for every query form. Also verified: `cloudscheduler.googleapis.com/*` is **not** deniable, and
 `iam.googleapis.com/denypolicies.*` is **not** deniable — no deny policy can protect deny
 policies, which is why `roles/iam.denyAdmin` is PAM-only (§5) and every deny-policy write is a
 severity-1 detection (§2.6). Deny policies attach at organisation, folder or project, are
@@ -225,7 +253,7 @@ through the platform pipeline by a human holding the `ent-platform-policy` grant
 `principalSet://agents.global.org-ORG_ID.system.id.goog/attribute.platformContainer/aiplatform/projects/N`
 (spelling per §2.1, proven by P8's spike) and
 `principalSet://cloudresourcemanager.googleapis.com/projects/N/type/ServiceAccount`; plus
-(added 2026-09-13) the service-account entry of `MO_PROJECT`, emitted by the `improver-project`
+the service-account entry of `MO_PROJECT`, emitted by the `improver-project`
 module's privileged phase ([02](02-landing-zone-and-tiers.md) §3.3), so that R1–R5 fence Mo's
 identities by enforcement rather than by the absence of an allow grant.
 No principal from `fld-platform-core`, `fld-controllers` or `fld-gemini-enterprise` is ever in
@@ -244,9 +272,8 @@ form, read 2026-09-13).
 | R1 secrets | `secretmanager.googleapis.com/versions.access`, `secretmanager.googleapis.com/versions.add`, `secretmanager.googleapis.com/secrets.setIamPolicy` | each action service's attached account (`<agent>-actions@`, `<agent>-actions-super@`) and `eve-controller@` — the exception lifts R1 as a whole for them, which is why R1 holds nothing but secret permissions; **their** secret scope is then the ordinary allow policy on the one secret each reads | the reasoning layer, the dispatcher, the deployer and every other project account can never read a credential, whatever allow grant a mistake adds | a mistaken grant does nothing; the drift job still reports it |
 | R2 signing | `cloudkms.googleapis.com/cryptoKeyVersions.useToSign`, `cloudkms.googleapis.com/cryptoKeyVersions.useToDecrypt`, `cloudkms.googleapis.com/cryptoKeys.setIamPolicy` | `eve-controller@` only (the approval signer, HLD §8.3) | no agent, no Mo identity (the `MO_PROJECT` entry above), no deployer can ever sign an approval | as R1 |
 | R3 impersonation and keys | `iam.googleapis.com/serviceAccountKeys.create`, `iam.googleapis.com/serviceAccounts.getAccessToken`, `iam.googleapis.com/serviceAccounts.getOpenIdToken`, `iam.googleapis.com/serviceAccounts.signBlob`, `iam.googleapis.com/serviceAccounts.signJwt`, `iam.googleapis.com/serviceAccounts.implicitDelegation`, `iam.googleapis.com/serviceAccounts.actAs`, `iam.googleapis.com/serviceAccounts.setIamPolicy` | `<agent>-deployer@<agent project>` — the per-project deploy identity of P142, the release pipeline's impersonation target, never a CI-project account — for `actAs` only, in its own rule R3b (it must act as the attached accounts to deploy); `<agent>-operators-caller@` is not a denied principal's target — the human callers who impersonate it are not in the denied set | the "impersonator becomes the service account" path `wall-e/12` §6 calls the one that makes deny-by-principal moot | refused at the API |
-| R4 self-modification | `run.googleapis.com/services.create`, `run.googleapis.com/services.update`, `run.googleapis.com/services.delete`, `run.googleapis.com/services.setIamPolicy`, `run.googleapis.com/jobs.create`, `run.googleapis.com/jobs.update`, `run.googleapis.com/jobs.setIamPolicy`, `aiplatform.googleapis.com/reasoningEngines.create`, `aiplatform.googleapis.com/reasoningEngines.update`, `aiplatform.googleapis.com/reasoningEngines.delete`, `aiplatform.googleapis.com/reasoningEngines.setIamPolicy`, `artifactregistry.googleapis.com/repositories.uploadArtifacts`, `cloudbuild.googleapis.com/builds.create` | `<agent>-deployer@<agent project>` (P142: the CI's impersonation target and the only principal that creates or updates the engine and the action service; `platform-deployer@CICD_PROJECT` of an earlier page 09 draft is retired) — and **only** while the P4 spike has not made Binary Authorization plus CI-only deploy Google-enforced; even then the deployer keeps `services.update` because something must deploy | D11 of the charter: no agent deploys itself, its peers, or its ceilings | refused |
+| R4 self-modification | `run.googleapis.com/services.create`, `run.googleapis.com/services.update`, `run.googleapis.com/services.delete`, `run.googleapis.com/services.setIamPolicy`, `run.googleapis.com/jobs.create`, `run.googleapis.com/jobs.update`, `run.googleapis.com/jobs.setIamPolicy`, `aiplatform.googleapis.com/reasoningEngines.create`, `aiplatform.googleapis.com/reasoningEngines.update`, `aiplatform.googleapis.com/reasoningEngines.delete`, `aiplatform.googleapis.com/reasoningEngines.setIamPolicy`, `artifactregistry.googleapis.com/repositories.uploadArtifacts`, `cloudbuild.googleapis.com/builds.create` | `<agent>-deployer@<agent project>` (P142: the CI's impersonation target and the only principal that creates or updates the engine and the action service; no CI-project deployer account exists) — and **only** while the P4 spike has not made Binary Authorization plus CI-only deploy Google-enforced; even then the deployer keeps `services.update` because something must deploy | D11 of the charter: no agent deploys itself, its peers, or its ceilings | refused |
 | R5 governance and evidence | `orgpolicy.googleapis.com/policy.set`, `orgpolicy.googleapis.com/policies.create`, `orgpolicy.googleapis.com/policies.update`, `orgpolicy.googleapis.com/policies.delete`, `orgpolicy.googleapis.com/customConstraints.*`, `logging.googleapis.com/sinks.create`, `logging.googleapis.com/sinks.update`, `logging.googleapis.com/sinks.delete`, `logging.googleapis.com/buckets.update`, `logging.googleapis.com/buckets.delete`, `storage.googleapis.com/buckets.setIamPolicy`, `bigquery.googleapis.com/datasets.setIamPolicy`, `resourcemanager.googleapis.com/projects.setIamPolicy`, `resourcemanager.googleapis.com/folders.setIamPolicy`, `iam.googleapis.com/principalaccessboundarypolicies.*`, `iam.googleapis.com/roles.create`, `iam.googleapis.com/roles.update`, `iam.googleapis.com/roles.delete`, `modelarmor.googleapis.com/floorSettings.update`, `modelarmor.googleapis.com/templates.update`, `modelarmor.googleapis.com/templates.delete`, `agentregistry.googleapis.com/services.create`, `agentregistry.googleapis.com/services.update`, `agentregistry.googleapis.com/services.delete`, `agentidentity.googleapis.com/authProviders.create`, `agentidentity.googleapis.com/authProviders.update`, `agentidentity.googleapis.com/authProviders.delete`, `agentidentity.googleapis.com/authProviders.setIamPolicy`, `privilegedaccessmanager.googleapis.com/entitlements.*`, `privilegedaccessmanager.googleapis.com/grants.*`, `discoveryengine.googleapis.com/engines.setIamPolicy` | none | no agent or agent-project machine can loosen a floor, silence a sink, rewrite IAM, register itself, mint an auth provider, or touch PAM | refused |
-
 | R6 factory credential fence (P142) | `secretmanager.googleapis.com/versions.access`, `secretmanager.googleapis.com/versions.add`, `secretmanager.googleapis.com/secrets.setIamPolicy`, `cloudkms.googleapis.com/cryptoKeyVersions.useToSign`, `cloudkms.googleapis.com/cryptoKeyVersions.useToDecrypt`, `cloudkms.googleapis.com/cryptoKeys.setIamPolicy`, `iam.googleapis.com/serviceAccounts.getAccessToken`, `iam.googleapis.com/serviceAccounts.signBlob`, `iam.googleapis.com/serviceAccounts.signJwt`, `iam.googleapis.com/serviceAccounts.implicitDelegation`, `iam.googleapis.com/serviceAccounts.actAs`, `iam.googleapis.com/serviceAccounts.setIamPolicy` (all from R1–R3's verified set); denied principal `principal://iam.googleapis.com/projects/-/serviceAccounts/factory-apply@CICD_PROJECT.iam.gserviceaccount.com` | none | the routine factory identity, which holds a conditioned `projectIamAdmin` on the agent tier folders, can never read `walle-refresh-token` or any other secret, use a key, impersonate a credential holder or re-point a secret's IAM, whatever a condition mistake allows — it creates empty secrets and accounts; the bindings that open them are the privileged phase's ([02](02-landing-zone-and-tiers.md) §3.4) | refused at the API; the factory's negative test reads a canary secret at every release and a success is severity 1 |
 
 Rules R1–R6 are one policy; R3b is a second rule inside it so that the `actAs` exception does
@@ -259,10 +286,19 @@ signs the incident note.
 **`deny-eve-project-foreign`** stays on `EVE_PROJECT` as topology decision 48 records (HLD §4.5);
 this page adds nothing to it.
 
-**`deny-agents-halt`** — the second lever of K7, kept in git, never attached in normal state —
-is specified in §9.3 with the verified names `aiplatform.googleapis.com/reasoningEngines.*`,
-`run.googleapis.com/routes.invoke`, `run.googleapis.com/jobs.run`,
-`run.googleapis.com/jobs.runWithOverrides` and `pubsub.googleapis.com/topics.publish`.
+**Landing-zone additions, defined on [02](02-landing-zone-and-tiers.md) §4.4.** Two more
+fences sit beside this page's policies: `pab-core-ci`, a second PAB binding `factory-apply@`
+and `platform-drift@` to `fld-agentic-platform`, so the factory identity cannot act outside the
+platform folder even through a mistaken binding elsewhere; and `deny-core-agents` on
+`fld-platform-core`, denying every permission to every agent principal form once P8 proves the
+forms (until then the drift job asserts absence). 02 §4.4 also fixes the attachment shape
+used here: the factory's privileged phase adds each project's service-account principal set and
+its action service's exception principals to `deny-agents-platform`. The PAB's grade is the
+one §4.3 records (P9 answered by P60).
+
+**`deny-agents-halt`** — the second lever of K7 (KF-2), kept in git, never attached in normal
+state — is specified with its verified permission list in
+[§9.3](#93-the-four-levers-verified).
 
 This section is decision **P61**: the deny rule set as verified, `streamQuery` dropped, P8
 narrowed to the principal-set spelling.
@@ -276,12 +312,16 @@ narrowed to the principal-set spelling.
 PAB policies are organisation-level resources
 (`organizations/ORG_ID/locations/global/principalAccessBoundaryPolicies/pab-agents`), bound to
 principal sets; the "Agent identities" principal-set row on Google's page is
-`//agents.global.org-ORG_ID.system.id.goog/attribute.container/projects/N` (§15 [S5]). Limits:
+`//agents.global.org-ORG_ID.system.id.goog/attribute.container/projects/N` (§15 [S5]; re-read
+2026-09-14, page last updated 2026-09-14: the row reads "All agent identities in the specified
+project's trust domain", with the alternative format
+`//agents.global.proj-PROJECT_NUMBER.system.id.goog/attribute.container/projects/PROJECT_NUMBER`,
+and no `principalSet://` prefix on either). Limits:
 1,000 policies per organisation, 500 rules per policy, 10 policies bound per principal set, 500
 resources per policy [S5]. "Principal Access Boundary policies can block all permissions that are
 included in the policy's enforcement version"; if a policy cannot block a permission, "the
 policy has no effect on whether principals can use the permission" [S5]. The **blocked-permissions
-reference rendered today** (§15 [S16], last updated 2026-09-10): the current default enforcement
+reference rendered on 2026-09-13** (§15 [S16], last updated 2026-09-10): the current default enforcement
 version is **4**; each version blocks everything the previous one did.
 
 Roles (verified on the IAM roles reference [S17]): `roles/iam.principalAccessBoundaryAdmin`,
@@ -311,8 +351,8 @@ Roles (verified on the IAM roles reference [S17]): `roles/iam.principalAccessBou
 |---|---|
 | Policy | `pab-agents`, enforcement version pinned to **4** in Terraform (never `latest`, so a version bump is a reviewed change); rules: `//cloudresourcemanager.googleapis.com/folders/<fld-agentic-platform>` plus the named core resources agents legitimately reach — the aggregated Pub/Sub topics in `CORE_PROJECT` and the approval surface — each listed as a resource, never a whole core project |
 | Bindings | one `google_iam_folders_policy_binding`-class binding per agent project, made by the factory, on `//agents.global.org-ORG_ID.system.id.goog/attribute.container/projects/N`; the `-p-sa` singleton binds a stricter twin `pab-agents-p-sa` whose only resource is `WALLE_PROJECT` and the approval surface |
-| Grade | **enforcement-grade** for everything in §4.2 marked yes — which includes the engine-query path, so the HLD's caveat that "nobody has shown that `reasoningEngines.query` … [is] blockable" is closed; **no effect** on `run.routes.invoke`, so the PAB is **not** in the safety case for "an agent cannot invoke a foreign action service": that sentence rests on resource-level IAM and the deny policy. Trust boundary B7's grade line in HLD §15 changes from "PAB (detection-grade until P9)" to "PAB (enforcement for aiplatform, secrets, keys, storage, BigQuery, Pub/Sub; not for Cloud Run invoke)" |
-| K7 | KF-4 moves from "unproven, not counted" to **counted for engine queries** (§9.3) |
+| Grade | **enforcement-grade** for everything in §4.2 marked yes — which includes the engine-query path (`reasoningEngines.query` is blockable); **no effect** on `run.routes.invoke`, so the PAB is **not** in the safety case for "an agent cannot invoke a foreign action service": that sentence rests on resource-level IAM and the deny policy. Trust boundary B7's grade line in HLD §15 reads "PAB (enforcement for aiplatform, secrets, keys, storage, BigQuery, Pub/Sub; not for Cloud Run invoke)" |
+| K7 | KF-4 is **counted for engine queries** (§9.3) |
 | Owner / resource / verified / fails | platform owner through PAM (§5); the organisation (policy) and each project (binding); drift job compares policy JSON and binding list daily and reacts to the Cloud Asset feed in minutes; an edit or unbinding is severity 1; a version bump is a reviewed pull request whose evidence is the re-read blocked list |
 
 This is decision **P60**.
@@ -321,7 +361,7 @@ This is decision **P60**.
 
 ## 5. Privileged Access Manager: the entitlement catalogue
 
-### 5.1 Facts verified on 2026-09-13, three of which change the HLD
+### 5.1 Facts verified on 2026-09-13
 
 | Fact | Source | Consequence |
 |---|---|---|
@@ -329,13 +369,13 @@ This is decision **P60**.
 | Maximum entitlement duration **7 days**; a grant's requested duration runs "between 30 minutes (`1800s`) and 168 hours (`604800s`)" | [S20] | the catalogue's durations are far below the ceiling; **30 minutes is the floor**, which is why no entitlement below is shorter |
 | "You can't approve your own request" | [S21] | approver ≠ requester is **Google-enforced**, not a rota rule |
 | Approvers may be groups; "up to two levels of sequential approvals", "up to five approvals per level"; multi-level is **Preview** and needs SCC Premium or Enterprise; "Activate access without approvals" exists | [S18], [S20] | single-level GA now; two named approvers in one approver set until multi-level is GA |
-| **PAM "doesn't support legacy basic roles (Owner, Editor, and Viewer)"**; it supports predefined roles, custom roles and the **new basic roles Admin (`roles/admin`), Writer (`roles/writer`), Reader (`roles/reader`)**, which are themselves **Preview** on the IAM roles page | [S18], [S20], [S22] | **HLD §4.4 row 1 (`roles/owner` on one agent project, 2 h) cannot be built.** Replaced by `ent-project-repair` below |
-| **`roles/orgpolicy.policyAdmin`: "Lowest-level resources where you can grant this role: Organization"** | [S23] | **HLD §4.4 row 4 and §11.4 ("folder-level entitlement", "at `fld-agentic-platform`") cannot hold for org policy.** The org-policy and PAB-admin entitlements live at the **organisation**; folder-scoped ones stay at the folder |
-| **`roles/iam.denyAdmin`: "Lowest-level resources where you can grant this role: Organization"** (read today on the IAM roles reference; an earlier draft of this page assumed folder) | [S17] | `roles/iam.denyAdmin` cannot be a folder-level entitlement either: it moves from `ent-folder-admin` to `ent-platform-policy`. Deny **policies** still attach at the folder (§3) — the role that edits them is granted at the organisation |
+| **PAM "doesn't support legacy basic roles (Owner, Editor, and Viewer)"**; it supports predefined roles, custom roles and the **new basic roles Admin (`roles/admin`), Writer (`roles/writer`), Reader (`roles/reader`)**, which are themselves **Preview** on the IAM roles page | [S18], [S20], [S22] | **`roles/owner` on an agent project cannot be a PAM entitlement.** `ent-project-repair` below replaces it |
+| **`roles/orgpolicy.policyAdmin`: "Lowest-level resources where you can grant this role: Organization"** | [S23] | **No folder-level org-policy entitlement exists.** The org-policy and PAB-admin entitlements live at the **organisation**; folder-scoped ones stay at the folder |
+| **`roles/iam.denyAdmin`: "Lowest-level resources where you can grant this role: Organization"** (read 2026-09-13 on the IAM roles reference) | [S17] | `roles/iam.denyAdmin` cannot be a folder-level entitlement either: it moves from `ent-folder-admin` to `ent-platform-policy`. Deny **policies** still attach at the folder (§3) — the role that edits them is granted at the organisation |
 | IAM conditions can be set on entitlement roles "in the same way that you add conditions to allow policy role bindings"; "Don't include service agent roles in entitlements" | [S20] | the deploy entitlement's `serviceAccountUser` is conditioned to one account (`Assumption:` a `resource.name` condition on a service-account binding is honoured for `actAs` — verify at build) |
 | PAM "supports all types of identities, including Cloud Identity, Workforce Identity Federation, Workload Identity Federation, and agent identities"; service accounts and agent identities as **approvers** are Preview | [S18], [S20] | requesters: "All principal types are supported except `allUsers` and `allAuthenticatedUsers`", up to 20 requesting principals per entitlement, more through a group [S20] — so `k7-executor@`, a service account, **may request** the K7 grant, and so may the CI's WIF principal; approvers stay human until the service-account-approver Preview clears |
 | Setup needs `roles/privilegedaccessmanager.admin` plus, per scope, `roles/iam.securityAdmin` (organisation), `roles/resourcemanager.folderAdmin` (folder) or `roles/resourcemanager.projectIamAdmin` (project); the organisation-level service agent `service-org-ORG_NUMBER@gcp-sa-pam.iam.gserviceaccount.com` gets the PAM service agent role whatever the scope | [S24] | the PAM admin role itself is held by `platform-owners@` **standing** — it is the one standing administrative role on the platform, because PAM cannot bootstrap itself; its use is a severity-2 detection outside a change window and `roles/privilegedaccessmanager.admin` is on the roster review (§8) |
-| gcloud: `gcloud pam grants create --entitlement … --requested-duration … --justification …` (the page read today shows the `alpha` track — verify the GA track at build); `gcloud pam grants approve` / `deny` | [S25], [S21] | the runbook commands |
+| gcloud: `gcloud pam grants create --entitlement … --requested-duration … --justification …` (the page read on 2026-09-13 shows the `alpha` track — verify the GA track at build); `gcloud pam grants approve` / `deny` | [S25], [S21] | the runbook commands |
 
 ### 5.2 The catalogue
 
@@ -353,11 +393,11 @@ such** in the register, and switched to an approver the day the security reviewe
 | `ent-secret-read` | one secret (resource-scoped by condition) | `roles/secretmanager.secretAccessor` | 30 min | `platform-owners@` | security reviewer | rotation, incident forensics |
 | `ent-folder-admin` | `fld-agentic-platform` and, separately, each tier folder | `roles/resourcemanager.folderAdmin`, `roles/logging.configWriter`, `roles/modelarmor.floorSettingsAdmin`, `roles/agentregistry.admin` (on `CORE_PROJECT`), `roles/cloudscheduler.admin` | 1 h | `platform-owners@` | security reviewer; at Tier P two named approvers in the approver set | floor change, sink change, registry repair, KF-3 pulled or reverted by hand |
 | `ent-platform-policy` | **the organisation** (forced by the lowest grant level of org-policy admin and of deny admin) | `roles/orgpolicy.policyAdmin`, `roles/iam.denyAdmin`, `roles/iam.principalAccessBoundaryAdmin` (PAB policies are organisation resources) | 1 h | `platform-owners@` | security reviewer **and** a second named approver (two approvers in the set; two-level when GA) | org-policy baseline change, deny-policy change, KF-1/KF-2/KF-4 by hand, PAB version bump — the highest entitlement on the platform, and the reason the organisation-level SetIamPolicy alert exists |
-| `ent-ge-admin` | `GEMINI_PROJECT` | `roles/discoveryengine.agentspaceAdmin` | 1 h | `ge-admins@` | security reviewer (HLD §4.4 row; at Tier C with one person: no-approval activation with mandatory justification, recorded as such — [03](03-gemini-enterprise-environment.md) §4, P49; aligned 2026-09-13) | app registration, feature toggles, emergency unpublish (HLD §2.2); reads stay standing through the viewer role |
+| `ent-ge-admin` | `GEMINI_PROJECT` | `roles/discoveryengine.agentspaceAdmin` | 1 h | `ge-admins@` | security reviewer (HLD §4.4 row; at Tier C with one person: no-approval activation with mandatory justification, recorded as such — [03](03-gemini-enterprise-environment.md) §4, P49) | app registration, feature toggles, emergency unpublish (HLD §2.2); reads stay standing through the viewer role |
 | `ent-k7-human` | the organisation (org policy, deny, PAB) + `fld-agentic-platform` (Scheduler) — two entitlements activated together | `roles/orgpolicy.policyAdmin`, `roles/iam.denyAdmin`, `roles/iam.principalAccessBoundaryAdmin`, `roles/cloudscheduler.admin` | 1 h | `platform-approvers@` (the platform owner, the security reviewer, the second human) | **none — "Activate access without approvals"**, mandatory justification with the incident id; every activation pages the second human and the on-duty desk | a fleet stop must not wait for an approver at 03:00; the two-person property is carried by the page-on-activation and by the recovery path (§9.5), which is two-human |
 | `ent-k7-executor` | as `ent-k7-human` | as `ent-k7-human` | 30 min | `k7-executor@CORE_PROJECT` (a service account is a documented requester — verified [S20], §5.1; contingency §9.4) | none; justification = the SIEM case id passed by the caller | the machine path of K7 (HLD §11.4: "never by a model") |
-| `ent-project-move` (added 2026-09-13) | the source parent of `GEMINI_PROJECT` (the organisation if the project sits at the root, else its current folder — *tbd* at the import) **and** `fld-gemini-enterprise`: two entitlements activated together; verified at build that the move succeeds with exactly these two | `roles/resourcemanager.projectMover` — Google requires it on both the source and the destination, and on the organisation when the project is not in a folder ([move a project](https://docs.cloud.google.com/resource-manager/docs/moving-projects-folders), read 2026-09-13) | 1 h | `platform-owners@` | security reviewer | the `GEMINI_PROJECT` import change window (P43, P48) and nothing else; any other `MoveProject` under the folder is a SIEM rule; the entitlement is deleted after the import |
-| `ent-factory-singleton` (added 2026-09-13, P142) | `fld-agents-p-sa-*` and `fld-controllers-*` (one entitlement per folder) | `roles/resourcemanager.projectCreator`, `roles/serviceusage.serviceUsageAdmin`, `roles/iam.serviceAccountCreator`, `roles/resourcemanager.projectIamAdmin` (unconditioned, for these projects' duty bindings; secret-level and key-level IAM such as `eve-controller@`'s signer and `walle-actions-super@`'s accessor is still refused to `factory-apply@` by R6 and is made by the approving human's own `ent-project-repair` grant in the same window) | 1 h | `factory-apply@CICD_PROJECT` (a service account is a documented requester, §5.1) | security reviewer; for `fld-agents-p-sa-*` two named approvers; for `fld-controllers-*` the Eve owner or the security reviewer, never the Wall-E owner | the Wall-E and Eve projects are applied rarely and only with a human watching; outside a grant `factory-apply@` is not a principal in `WALLE_PROJECT` or `EVE_PROJECT` at all, which keeps Eve's decision-48 foreign-principal count exact (HLD §18 item 25). Deny rule R6 still applies during the grant |
+| `ent-project-move` | the source parent of `GEMINI_PROJECT` (the organisation if the project sits at the root, else its current folder — *tbd* at the import) **and** `fld-gemini-enterprise`: two entitlements activated together; verified at build that the move succeeds with exactly these two | `roles/resourcemanager.projectMover` — Google requires it on both the source and the destination, and on the organisation when the project is not in a folder ([move a project](https://docs.cloud.google.com/resource-manager/docs/moving-projects-folders), read 2026-09-13) | 1 h | `platform-owners@` | security reviewer | the `GEMINI_PROJECT` import change window (P43, P48) and nothing else; any other `MoveProject` under the folder is a SIEM rule; the entitlement is deleted after the import |
+| `ent-factory-singleton` (P142) | `fld-agents-p-sa-*` and `fld-controllers-*` (one entitlement per folder) | `roles/resourcemanager.projectCreator`, `roles/serviceusage.serviceUsageAdmin`, `roles/iam.serviceAccountCreator`, `roles/resourcemanager.projectIamAdmin` (unconditioned, for these projects' duty bindings; secret-level and key-level IAM such as `eve-controller@`'s signer and `walle-actions-super@`'s accessor is still refused to `factory-apply@` by R6 and is made by the approving human's own `ent-project-repair` grant in the same window) | 1 h | `factory-apply@CICD_PROJECT` (a service account is a documented requester, §5.1) | security reviewer; for `fld-agents-p-sa-*` two named approvers; for `fld-controllers-*` the Eve owner or the security reviewer, never the Wall-E owner | the Wall-E and Eve projects are applied rarely and only with a human watching; outside a grant `factory-apply@` is not a principal in `WALLE_PROJECT` or `EVE_PROJECT` at all, which keeps Eve's decision-48 foreign-principal count exact (HLD §18 item 25). Deny rule R6 still applies during the grant |
 | `ent-witness-export-repair` | `EVE_PROJECT` | `roles/iam.serviceAccountAdmin` on `eve-export@` | 1 h | `eve-owners@` | the second human | the one cross-organisation push identity (HLD §13.2) |
 
 Owner of the catalogue: platform owner; reviewer: security reviewer; resource: as the Scope
@@ -367,14 +407,7 @@ excepted), and the quarterly review reads every grant from the SIEM; fails: a st
 is severity 1 and is removed by the pipeline; a grant outside a change window without an
 incident id is severity 2 to the security reviewer.
 
-**Google-personnel access** (the PS-13 compensating set for privileged data paths): Access
-Transparency logs for the organisation and the tenant, edition-dependent (*tbd*, HLD §4.4);
-Access Approval on `fld-agents-p`, `fld-controllers`, `EVE_WITNESS_PROJECT` and — per
-[08](08-data-logging-retention-sovereignty.md) §7.2 DL-7.5, P111, aligned 2026-09-13 —
-`LOGGING_PROJECT` and `CORE_PROJECT`, with `platform-security@` and the platform owner as
-approvers; both feed the SIEM; an Access Approval request outside a Google support case the
-platform opened is severity 2, an auto-approved request severity 2, the setting disabled
-severity 1.
+Google-personnel access is not a PAM entitlement; its compensating set is §6.6.
 
 This section is decision **P62**.
 
@@ -382,7 +415,7 @@ This section is decision **P62**.
 
 ## 6. Human access to every control surface
 
-### 6.1 The rule (PS-17, H62)
+### 6.1 The rule
 
 **All human access to any agent control surface — approval pages, consoles, the ladder-state
 page, the registry viewer, the K7 job's page — passes through Identity-Aware Proxy on Cloud Run
@@ -433,6 +466,19 @@ Cloud console, the gcloud command-line tool (Cloud SDK), any applications … th
 authorization for Google Cloud scopes". The IAP sign-in is a Google sign-in and inherits the
 OU's 2SV enforcement.
 
+**The Admin console access level on the robot OU (Workspace Context-Aware Access, P7).** The
+levels above are Access Context Manager levels for IAP. The robot accounts get a separate,
+Workspace-side level: an access level on the **Admin console** for `/Automation/Service
+Identities` that no device satisfies. It is cheap, Google-native and needs no second person, and
+it is adopted, but it is graded **detection-plus-friction, `Assumption:` until its applicability
+to super admins is verified with Google (P7)**, never "impossible by policy": Google's page on
+assigning access levels to the Admin console is silent on whether super admins are subject to
+it, and the product page says Context-Aware Access "controls app access only from end user
+accounts" [S37] and does not restrict API access from service accounts, silent on user-account
+API tokens. There is **no** Admin SDK API access level — Google's app table has no such entry.
+So "an interactive login is an incident" (severity 1) stays the control that survives Super
+Admin (HLD §4.6). The setting is read daily in §8.2.
+
 ### 6.4 The surfaces
 
 | Surface | Project | Audience group | Access level (target) | What it can do | K-switch reach |
@@ -447,7 +493,7 @@ OU's 2SV enforcement.
 | Admin console | Workspace | the two human super admins; delegated admins | Google's fixed **1 h** admin-console session ("set to one hour and can't be modified", §15 [S6]); the OU's 2SV; the Admin console Context-Aware Access level of HLD §4.6 (`Assumption:` on super admins, P7) | K5, K6, roster, MPA approvals | K5, K6 |
 
 Owner: each surface's project owner; access levels and the OU settings: platform owner
-(Workspace side applied by the Gemini Enterprise administrator role, the same person today);
+(Workspace side applied by the Gemini Enterprise administrator role, the same person on 2026-09-13);
 resource: the IAP-enabled Cloud Run services; verified: drift job asserts every service labelled
 `control-surface=true` has `--iap`, `--no-allow-unauthenticated`, the access-level condition
 and only the named group; `iap.googleapis.com` Data Access logs on at the folder (HLD §7.1);
@@ -466,8 +512,11 @@ the robot's session (HLD §13.1 band C).
 
 ### 6.6 Google-personnel access
 
-Covered in §5.2's last paragraph: Access Transparency where the edition allows, Access Approval
-on the privileged folders and the witness, both to the SIEM.
+Access Transparency (DL-7.4) and Access Approval (DL-7.5, P111) — their scope, approvers,
+SIEM routing and severities — are defined once in
+[08 §7.2](08-data-logging-retention-sovereignty.md#72-the-compensating-set). One rule this page
+adds to that set: an Access Approval request outside a Google support case the platform opened
+is severity 2.
 
 ---
 
@@ -505,8 +554,7 @@ A third super admin exists only as a **dated exception** during a hand-over betw
 its removal is on the exit checklist and the roster check (§8.2) fails while it exists beyond
 the date.
 
-This section is decision **P69** (the id aligned with [12-open-decisions.md](12-open-decisions.md)
-on the reconcile pass of 2026-09-13).
+This section is decision **P69**.
 
 ---
 
@@ -541,7 +589,8 @@ against the committed roster — HLD §13.1 item 5) and by the SecOps super-admi
    now being implemented for organizations with Workspace for Education, Workspace for
    Nonprofits, Cloud Identity, Android Enterprise, and organizations using a Workspace
    Enterprise edition with a third-party single sign-on (SSO) provider"; 90-day notice to super
-   admins; "After 30 days, they will not be able to access web apps until they enroll";
+   admins and 60-day notice to other admins; a 15-day lockout for mobile apps and "After 30
+   days, they will not be able to access web apps until they enroll" (§8.2);
    "Admins subject to the Google-set 2SV enforcement policy cannot bypass it", §15 [S36]), so
    the platform enforces "Only security key" on the OU itself and drift-checks it, and notes
    that if the tenant enters Google's scope the 30-day web lockout applies to an unenrolled
@@ -549,6 +598,16 @@ against the committed roster — HLD §13.1 item 5) and by the SecOps super-admi
 4. `roles/privilegedaccessmanager.admin`, `roles/resourcemanager.organizationAdmin`, the
    Groups Admin role of `factory-groups@` and every Workspace admin role holder are on the same
    quarterly roster review as the super admins (HLD §5.3 privilege review).
+5. A third human super admin exists only as a **dated hand-over exception** (§7.2); the roster
+   check fails while it exists beyond its date.
+6. The robot is on the committed **floor list** of protected principals and is a protected
+   principal under its own N7 rule (`wall-e/03` "Protected principals"). It appears in
+   `directory.admins.list` because it is a super admin, and the floor assertion requires it
+   there.
+
+`eve@` is on the committed roster file as a **non-admin**: any role on it beyond its read-only
+custom role is severity 1. The committed roster is signed by the security reviewer, and the
+SIEM's super-admin detection set includes rule SA-06 ([07](07-monitoring-detection-incident-response.md)).
 
 This is decision **P68**.
 
@@ -561,7 +620,9 @@ This is decision **P68**.
 | Google Cloud session control | re-authentication every 1 h, method Security key | admin OUs, operator OUs, `/Automation/Break-Glass` | Policy API read | [S30] |
 | 2-Step Verification | enforced, "Only security key"; new-user enrollment period the shortest offered; backup codes admin-generated and sealed | admin OUs, robot OU, break-glass OU | Policy API read; Eve's roster check reads `isEnrolledIn2Sv` | [S29] |
 | Login challenges, recovery options | on; **no** recovery phone or email on the robots and the break-glass accounts (the general admin advice to "add recovery options" [S32] is deliberately not followed for machine and break-glass accounts — a recovery channel is a takeover channel that nobody monitors) | robots, break-glass | Policy API read; Directory API `users.get` fields | [S32] |
-| Context-Aware Access on the Admin console | an access level no device satisfies, on the robot OU (HLD §4.6) — detection-plus-friction, `Assumption:` on super admins (P7) | robot OU | Policy API read | [S37] |
+| Context-Aware Access on the Admin console | an access level no device satisfies, on the robot OU (§6.3; HLD §4.6) — detection-plus-friction, `Assumption:` on super admins (P7) | robot OU | Policy API read | [S37] |
+| Super-admin self-recovery | **Off at the top OU** (top OU = all super admins); the setting is per organisational unit or configuration group, so the drift job asserts no child OU or configuration group re-enables it. Google's default is On for most editions including Enterprise Standard and Plus, and Off by default only for Frontline Standard, Business Plus, Education Standard and Plus, Enterprise Essentials Plus, G Suite Basic and Cloud Identity Premium (verified 2026-09-13) | every super admin, robots included | Policy API read on every OU and configuration group | [S33] |
+| Google-set admin 2SV enforcement | not a universal rule: a gradual, edition-scoped rollout, on 2026-09-13 applying to Workspace for Education, Nonprofits, Cloud Identity, Android Enterprise and Enterprise editions using a third-party SSO provider; notice 90 days to super admins, 60 days to other admins; once subject, lockout after 15 days for mobile apps and 30 days for web, with no bypass for admins under the Google policy. Where the tenant is not in scope, admin 2SV is the tenant's own "Only security key" policy above, drift-checked; the 30-day web lockout is why the robot's key enrolment (`./walle workspace` M2A) runs before the enforcement step (M2B) (verified 2026-09-13) | every admin, robots included | edition read (*tbd*, §14); Eve's `isEnrolledIn2Sv` read | [S36] |
 
 ### 8.3 Key custodians
 
@@ -577,6 +638,14 @@ This is decision **P68**.
 Two people can always reconstruct any account; no single person holds both keys of any robot or
 break-glass account; every envelope opening is witnessed by someone from the other
 administration line.
+
+**The key count, stated once.** Robot keys: **four** — two for `walle@` (key A, key B) and two
+for `eve@` — all in the safe; a runbook scoped to one robot (`wall-e/SETUP.md` asks for the two
+keys of `$ROBOT`) counts only its own two, and `wall-e/PREREQUISITES.md` counts all four
+because M2A checks enrolment on both robots by Phase 3. Human super-admin keys: two per human
+admin account (§7.2), one carried and one spare in the safe — **two spares** in the safe.
+Break-glass: **two**, one per `brk-gcp-*@` account (§7.1). In the safe: eight keys; in total,
+with the two carried human keys, ten.
 
 ### 8.4 Workspace multi-party approval: the two-person rule Google enforces
 
@@ -595,7 +664,7 @@ it on; per-setting selection and a delegated "multi-party approval" admin role e
 **Decision P66: multi-party approval is ON for every covered setting, console and API, before
 the super-admin grant.** What it buys, graded:
 
-| Hard-denied item (HLD §13.1 item 2) | Before | With MPA on |
+| Hard-denied item (the list: [wall-e/03 § The hard-denied list](../wall-e/03-lld.md#the-hard-denied-list)) | Before | With MPA on |
 |---|---|---|
 | `roleAssignments.insert` of Super Admin or any role; custom role privilege changes | refused in code by the action service; detected by Eve and the SIEM | **refused by Google until a second admin approves** — the robot's credential alone cannot complete it, in the console or through the API |
 | Domain-wide delegation | code + detection | Google-enforced second approver |
@@ -609,7 +678,8 @@ must never be an MPA approver: the action services never call the approval surfa
 class `escalation_denied`), the approver set is the two human admin accounts plus the delegated
 MPA role held by nobody else, and an approval event whose actor is `walle@` is severity 1.
 "Turn Multi-party approval settings on or off" is a super-admin-only task ([S35]) — `Assumption:`
-that turning it off is not itself MPA-protected — so it is on the hard-denied list, on Eve's
+that turning it off is not itself MPA-protected — so it is on the
+[hard-denied list](../wall-e/03-lld.md#the-hard-denied-list), on Eve's
 tenant-integrity rules and in the SIEM's severity-1 set (a change to the setting is treated
 like a change to audit-log sharing). Owner: platform owner (applied by the Gemini Enterprise
 administrator role); verified: the Policy API read in the drift job daily plus the admin audit
@@ -688,7 +758,7 @@ flowchart TB
 
 | Lever | Mechanism | Verified on 2026-09-13 | Grade | Target time | What it does not stop |
 |---|---|---|---|---|---|
-| **KF-1** service denial | `constraints/gcp.restrictServiceUsage` runs in **allow-list mode** on every folder and allow and deny modes are mutually exclusive ([02](02-landing-zone-and-tiers.md) §4.1 B15, P44), so the lever is a **policy replacement**: the committed file `k7/restrict-service-usage.yaml` — the tier's allow-list minus `aiplatform.googleapis.com` and `run.googleapis.com` (both on Google's supported-services list for the constraint, §15 [S40]) — replaces the policy on the selected tier folders (wording aligned 2026-09-13; an earlier draft said "denylist … adding"); the constraint "controls the runtime access to all in-scope resources" and "immediately applies to all access to all resources within the scope of the policy, with eventual consistency" [S41]; dry-run mode exists and is used in the drill's first pass; the constraint "excludes … Identity and Access Management (IAM), Cloud Logging, and Cloud Monitoring" so logs keep flowing [S41] | constraint, semantics, modes, services, dry-run: verified | **enforcement** | 60 s | `Assumption:` a Cloud Run instance already processing a request finishes it rather than being killed — measured in every drill; Workspace API calls already issued |
+| **KF-1** service denial | `constraints/gcp.restrictServiceUsage` runs in **allow-list mode** on every folder and allow and deny modes are mutually exclusive ([02](02-landing-zone-and-tiers.md) §4.1 B15, P44), so the lever is a **policy replacement**: the committed file `k7/restrict-service-usage.yaml` — the tier's allow-list minus `aiplatform.googleapis.com` and `run.googleapis.com` (both on Google's supported-services list for the constraint, §15 [S40]) — replaces the policy on the selected tier folders; the constraint "controls the runtime access to all in-scope resources" and "immediately applies to all access to all resources within the scope of the policy, with eventual consistency" [S41]; dry-run mode exists and is used in the drill's first pass; the constraint "excludes … Identity and Access Management (IAM), Cloud Logging, and Cloud Monitoring" so logs keep flowing [S41] | constraint, semantics, modes, services, dry-run: verified | **enforcement** | 60 s | `Assumption:` a Cloud Run instance already processing a request finishes it rather than being killed — measured in every drill; Workspace API calls already issued |
 | **KF-3** Scheduler pause | `cloudscheduler.jobs.pause` on every job under the selected folders (`roles/cloudscheduler.admin`, permission and role verified on the roles reference [S17]); the job re-lists after 60 s to catch a job created during the pause | verified | enforcement | 2 min | Pub/Sub push subscriptions — detached by the same job (`pubsub.subscriptions.update`) |
 | **KF-4** principal ineligibility | `pab-agents` (and `pab-agents-p-sa`) updated to a rule set with **no resources**: every bound agent principal loses eligibility for every `aiplatform.googleapis.com/*` permission and everything else in §4.2 — engine queries by agents stop; the Discovery Engine service agent's queries are not agent principals and are stopped by KF-1 instead | blocked list read: `aiplatform.googleapis.com/*` in version 1 [S16] | **enforcement for engine queries and everything in §4.2**; no effect on `run.routes.invoke` (the deny policy's job) | 2 min (PAB propagation: "a principal's details are still propagating through the system" is the documented error mode [S5]) | Cloud Run invocation |
 | **KF-2** deny | attach `deny-agents-halt` at `fld-agentic-platform`: rule denying `aiplatform.googleapis.com/reasoningEngines.*`, `run.googleapis.com/routes.invoke`, `run.googleapis.com/jobs.run`, `run.googleapis.com/jobs.runWithOverrides`, `pubsub.googleapis.com/topics.publish` (all on the deny-supported list [S11]) to the per-project agent sets and the per-project service-account sets of the selected folders; **no exception principals** | permission names verified; the agent principal-set spelling in a deny policy is P8's spike | enforcement once P8 is proven; until then counted as a second copy of KF-1 | 2–7 min ([S13]) | nothing KF-1 does not already stop; it exists so that a KF-1 revert by mistake does not silently restart the fleet |
@@ -705,7 +775,7 @@ principal form is still a spike.
 | Job | Cloud Run job `k7-executor` in `CORE_PROJECT`, `europe-west1`; image built and attested through the platform's Binary Authorization pipeline (HLD §9); the code reads four committed files (`k7/restrict-service-usage.yaml`, `k7/scheduler-pause.txt`, `k7/pab-empty.json`, `k7/deny-agents-halt.json`) from the image, never from a bucket or a request; input is `{scope: [folders], case_id, dry_run}` and nothing else |
 | Identity | `k7-executor@CORE_PROJECT`, keyless; holds standing **nothing** beyond `run.jobs.run` self-invocation; obtains its rights by activating `ent-k7-executor` (§5.2) with `case_id` as the justification, then applies the levers, then ends its own grant ("Requesters can also end their active grants" is Preview [S18] — `Assumption:` until GA, the 30-minute expiry is the end) |
 | Who may execute it | `roles/run.invoker` on the **job** (resource-level) for: `platform-approvers@`; the SIEM's outbound principal (`roles/run.invoker` carries exactly `run.instances.invoke`, `run.jobs.run` and `run.routes.invoke` — verified on the Cloud Run roles reference, §15 [S43]). Nobody in any agent project; no agent principal (R4 of the deny policy refuses `run.jobs.*` for them anyway, and the PAB puts `CORE_PROJECT` outside their boundary) |
-| The SIEM path | only the **auto-K7 subset** of [07](07-monitoring-detection-incident-response.md) §6.5 (aligned 2026-09-13) calls the job: SG-01 (organisation, folder or core-project IAM by `walle@` or an agent principal), SG-02 (sink, bucket or `auditConfigs` change), SG-03 (deny-policy, PAB, floor or org-policy change outside a PAM window), SG-04 (core-project deletion or `restrictServiceUsage` change) and PL-02 (a foreign principal in another agent's project or in `EVE_PROJECT`) — over plain authenticated REST (`run.googleapis.com` jobs `run` method with the principal's ID token); SA-* rules never fleet-kill (they halt the named agent, K0, and page); evidence silence is not a K7 trigger but the `log_pipeline_silent` halt of 07 §7; the rule's YARA-L is security-reviewer code-owned; the desk is paged in parallel; the subset is dry-run until the SIEM's outbound identity exists (P10); **no model anywhere on this path** |
+| The SIEM path | only the **auto-K7 subset** of [07](07-monitoring-detection-incident-response.md) §6.5 calls the job: SG-01 (organisation, folder or core-project IAM by `walle@` or an agent principal), SG-02 (sink, bucket or `auditConfigs` change), SG-03 (deny-policy, PAB, floor or org-policy change outside a PAM window), SG-04 (core-project deletion or `restrictServiceUsage` change) and PL-02 (a foreign principal in another agent's project or in `EVE_PROJECT`) — over plain authenticated REST (`run.googleapis.com` jobs `run` method with the principal's ID token); SA-* rules never fleet-kill (they halt the named agent, K0, and page); evidence silence is not a K7 trigger but the `log_pipeline_silent` halt of 07 §7; the rule's YARA-L is security-reviewer code-owned; the desk is paged in parallel; the subset is dry-run until the SIEM's outbound identity exists (P10); **no model anywhere on this path** |
 | Contingency if the first drill shows the job cannot activate its grant (a service account is a documented PAM requester [S20], so this is a drill contingency, not an open question) | (a) the job runs under a **Workload Identity Federation** principal instead — a WIF identity is explicitly a supported PAM identity type [S18] — through a small OIDC issuer the pipeline already trusts; or (b) as a last resort a **standing custom role** `k7Executor` at the organisation holding only `orgpolicy.policy.set`, `orgpolicy.policies.create`, `orgpolicy.policies.update`, `iam.denypolicies.create`, `iam.denypolicies.update`, `iam.principalAccessBoundaryPolicies.update`, `cloudscheduler.jobs.pause`, `cloudscheduler.jobs.list`, `pubsub.subscriptions.update` — accepted as a **dated residual** because the job's code is attested and fixed, its only writable inputs are the four files in the image, and its two invokers are enumerated. The spike deciding (a) or (b) is part of the first K7 drill; owner platform owner, reviewer security reviewer |
 | Human path | the same job, executed from `k7-console` or `gcloud run jobs execute k7-executor --args=...`; the **manual** path when the job itself is suspect: activate `ent-k7-human`, run the pipeline's `k7 apply` stage by hand from a managed device (the four files, Terraform), time recorded by hand |
 | Logging | every lever writes an Admin Activity audit log by construction (org policy, deny, PAB, Scheduler); the job writes a structured `k7.applied` row per lever with the measured time into `CORE_PROJECT`'s evidence table and the witness; the PAM grant is an Admin Activity log [S19] |
@@ -738,21 +808,23 @@ CI refuses any Tier X discussion and any P-SA promotion citing a K7 drill older 
 reviewer witnesses and signs; fails: a missed drill is a severity-2 finding on the ladder-state
 page and freezes every raise until it is run.
 
-This section is decision **P67** (the id aligned with [12-open-decisions.md](12-open-decisions.md)
-on the reconcile pass of 2026-09-13).
+This section is decision **P67**.
 
 ### 9.7 How K7 sits with each agent's K0–K6
 
 | Switch | Scope | Who pulls | Time | K7 relation |
 |---|---|---|---|---|
-| K0 halt writes | one agent's action service (`/v1/control/halt`) | any operator, Eve, a breaker | < 5 s | the first thing pulled, always; K7 does not replace it — under KF-1 the halt endpoint itself is refused (it is Cloud Run in the folder), so the agent's halt state as recorded in Firestore stays whatever it was; the lift re-asserts `no_writes` (§9.5) |
+| K0 halt writes | one agent's action service (`/v1/control/halt`) | any operator, Eve, a breaker | < 5 s from the call (agent design target); < 60 s from the decision (platform target) | the first thing pulled, always; K7 does not replace it — under KF-1 the halt endpoint itself is refused (it is Cloud Run in the folder), so the agent's halt state as recorded in Firestore stays whatever it was; the lift re-asserts `no_writes` (§9.5) |
 | K1 demote | one cell | any operator, Eve | < 5 s | as K0; the lift demotes every Tier W cell one level |
 | K2 stop new runs | one agent's Scheduler jobs and push subscriptions | an operator with the rights | seconds | KF-3 is K2 for every job in the folder at once |
 | K3 cut the agent off | remove `run.invoker` from the agent principal | a project IAM admin | ~1 min | KF-2 is K3 for every agent at once, by deny instead of by unbinding; KF-4 is the same for engine queries |
 | K4 kill the credential | the action service revokes its own refresh token | one operator call | seconds | **independent of K7**; pulled with K7 whenever the credential is suspect; K7 makes the K4 endpoint unreachable under KF-1, so **K4 is called before K7** in the P-SA runbook, or through the Admin console (K5) after |
-| K5 revoke the grant / suspend the robot | the robot account `walle@` in the tenant (`tokens.delete`, `users.update` `suspended: true`) | Admin console, a human super admin | seconds | independent; the two-person rota (§8.5) |
-| K6 remove Super Admin from the robot | the robot's role in the tenant | Admin console, a human super admin (`users.makeAdmin false`) | seconds | independent; the switch that survives a token already minted (HLD §13.1 item 7) |
-| **K7** fleet stop | tier folders or the fleet | `platform-approvers@`, the SIEM rule, the job | < 5 min | above |
+| K5 revoke the grant / suspend the robot | the robot account `walle@` in the tenant (`tokens.delete`, `users.update` `suspended: true`) | Admin console, a human super admin | seconds to pull; pulled within 30 min of a severity-1 acknowledgement | independent; the two-person rota (§8.5) |
+| K6 remove Super Admin from the robot | the robot's role in the tenant | Admin console, a human super admin (`users.makeAdmin false`) | within 60 min | independent; the switch that survives a token already minted (HLD §13.1 item 7) |
+| **K7** fleet stop | tier folders or the fleet | `platform-approvers@`, the SIEM rule, the job | KF-1 < 60 s; < 5 min end to end | above |
+
+The Time column states the containment targets of
+[07 §9.2](07-monitoring-detection-incident-response.md#92-the-on-call-tool-escalation-and-acknowledgement-targets).
 
 Order for the P-SA crisis scenario (the tabletop's default, HLD §7.6): K0 `halt_all` → K4 →
 K7 (P-SA folder) → K5 → K6 if the account itself is suspect → evidence preservation → the
@@ -771,7 +843,7 @@ first, then per-agent forensics.
 | ID-04 | Service-account policy SA-1..7 (§2.3) | platform owner | folder and projects | org policy; drift daily/minutes | refused; severity 1 |
 | ID-05 | Groups: naming, label, hand-managed control list (§2.4) | platform owner | Cloud Identity groups | reconciliation daily | severity 1 on control groups |
 | ID-06 | Workforce pool shape (§2.5) | platform owner | the pool | Terraform diff | not created until P24 |
-| ID-07 | Deny policy `deny-agents-platform` R1–R5 (§3) | platform owner | `fld-agentic-platform` | drift minutes/daily; P8 spike evidence | severity 1; re-applied after sign-off |
+| ID-07 | Deny policy `deny-agents-platform` R1–R6 (§3) | platform owner | `fld-agentic-platform` | drift minutes/daily; P8 spike evidence | severity 1; re-applied after sign-off |
 | ID-08 | PAB `pab-agents`, version 4, bindings per project (§4) | platform owner | organisation + projects | drift minutes/daily | severity 1 |
 | ID-09 | PAM catalogue, no standing dangerous role (§5) | platform owner; security reviewer | folder, organisation, projects | drift; quarterly grant review | severity 1 binding removed |
 | ID-10 | IAP + access level on every control surface (§6) | surface owner; platform owner | IAP-enabled Cloud Run services; ACM levels | drift daily | surface goes dark |
@@ -786,102 +858,20 @@ first, then per-agent forensics.
 
 ## 11. What this page requires of other pages
 
-- **[../wall-e/12-agent-identity.md](../wall-e/12-agent-identity.md)**: §1.4's per-project deny
-  policy becomes the folder policy of §3 (one copy for the fleet; Wall-E's project copy is
-  deleted); §5.5's table gains the K7 row and the "workforce operators never on Tier P
-  surfaces" rule; §6's "exactly three grants" of `serviceAccountTokenCreator` becomes SA-5 of
-  §2.3; §10's drift job becomes §2.6; §11's "deny-policy permission names not checked" row is
-  closed by §3.
-- **[../wall-e/02-identity-and-auth.md](../wall-e/02-identity-and-auth.md)** (rewritten per
-  HLD §18 item 1): the roster of §8.1, the custodians of §8.3, the session facts of §8.2 (the
-  Admin console session is Google's fixed hour, not a tenant setting), MPA of §8.4, K6 and the
-  K4-before-K7 order of §9.7.
-- **[../eve/02-identity-and-auth.md](../eve/02-identity-and-auth.md)**: `eve-controller@` is
-  the exception principal of R2 and one of R1's; Eve's roster check gains the four accounts of
-  §8.1, the break-glass logins of §7.1, the MPA setting of §8.4 and `factory-groups@`'s role;
-  Eve records `k7_active` when its `halt_all` calls fail under KF-1 and does not count them as
-  agent failures; Eve never invokes K7 (§9.2).
-- **[../mo/02-identity-and-access.md](../mo/02-identity-and-access.md)**: no change to Mo's
-  grants; Mo's three accounts are in the denied set of §3 through their project's
-  service-account principal set, which is what MD-9 wanted.
-- **[../project-topology.md](../project-topology.md)** §3 and §5: the folder deny policy, the
-  PAB bindings, `platform-drift@`'s folder role and the K7 job's entitlements are the named
-  exceptions of HLD §18 item 25; §5's constraint table gains `iam.managed.disableServiceAccountKeyUpload`
-  (the managed name, HLD §3.3) and the note that org-policy admin is organisation-level only.
-- **[../gemini-enterprise.md](../gemini-enterprise.md)** and
-  **[../google-workspace.md](../google-workspace.md)**: the super-admin roster row is §8.1 (as
-  roles, not names); the edition questions this page raises — Context-Aware Access editions,
-  MPA editions, Google session control editions — are the same *tbd* edition row.
+The edits this page requires of the Wall-E, Eve and Mo sets and of the shared pages
+(`wall-e/12`, `wall-e/02`, `eve/02`, `mo/02`, `project-topology.md`, `gemini-enterprise.md`,
+`google-workspace.md`) are listed, with owners and gates, in
+[01-hld.md §18](01-hld.md#18-what-this-hld-requires-of-the-wall-e-eve-and-mo-sets) items 1, 8,
+17, 20 and 25 and its shared-pages list.
 
 ---
 
 ## 12. Decisions recorded on this page (P60–P70 in [12-open-decisions.md](12-open-decisions.md))
 
-| Id | Decision | Options considered | Owner | Gate it blocks |
-|---|---|---|---|---|
-| **P60** | The PAB is enforcement-grade for the permissions its enforcement version 4 blocks — including every `aiplatform` permission, so engine queries — and has no effect on `run.routes.invoke`; P9 is answered; KF-4 counts for engine queries; B7's grade line is rewritten (§4.3) | keep the PAB as a detection-grade backstop (rejected: the list is now read) | platform owner, security reviewer | K7 lever KF-4; trust boundary B7 |
-| **P61** | The deny rule set R1–R5 as verified names; `reasoningEngines.streamQuery` dropped for the `reasoningEngines.*` wildcard; `iam.denypolicies.*` and `cloudscheduler.*` recorded as not deniable; P8 narrowed to the agent principal-set spelling, proven on a throwaway engine (§3) | — | platform owner | the folder baseline (Tier R) |
-| **P62** | PAM catalogue without `roles/owner` (unsupported): `ent-project-repair` is a predefined-role bundle, `roles/admin` deferred until GA; org-policy and PAB-admin entitlements at the organisation (forced by the lowest grant level); `ent-k7-human` and `ent-k7-executor` activate without approval and page; `roles/iam.denyAdmin` is organisation-level, so deny-policy edits sit in `ent-platform-policy`; the PAM admin role is the one standing administrative role (§5) | `roles/admin` now (rejected: Preview); folder-level org-policy entitlement (impossible) | platform owner, security reviewer | Tier R (no standing owner); K7 |
-| **P63** | Every human control surface behind IAP on Cloud Run with `al-platform-operator` (device posture, Chrome Enterprise Premium licence *tbd*) — `al-platform-operator-lite` (IP + time) until the licence exists; security key carried by "Only security key" 2SV and Google Cloud session control at 1 h on the OUs (§6) | load-balancer IAP (rejected: not needed for Cloud Run); no access level (rejected) | platform owner | Tier W control surfaces; the licence line in HLD §0.5 |
-| **P64** | Workforce pool only on P24 yes; when made: organisation-level, 1 h session, programmatic sign-in disabled, allowed services limited, IP+time level only, never on a Tier P surface, own IAP surface (§2.5) | one pool per agent (rejected) | platform owner | none until P24 |
-| **P65** | `factory-groups@` (Workspace Groups Admin) makes agent groups from the register; control groups are hand-managed by two humans and refused by the job; every platform group is a security group (§2.4) | groups by hand for everything (rejected at hundreds of agents); one SA with Super Admin (refused by fact and by design) | platform owner | Tier R factory |
-| **P66** | Workspace multi-party approval ON for every covered setting, console and API, before the grant; the robot never an approver; "MPA off" hard-denied and severity 1 (§8.4) | leave MPA off (rejected: it is the only Google-enforced two-person rule over the robot's credential) | platform owner | the super-admin grant; edition *tbd* |
-| **P67** | K7 executor job and drill calendar: monthly nonprod full drill, quarterly manual and SIEM-path drills, quarterly KF-3 in prod on `fld-agents-r/prod`, semi-annual KF-1 in prod on `fld-agents-r/prod` only, no production P-SA drill; a service account is a verified PAM requester; the (a) WIF principal / (b) standing custom role contingency is kept for the first drill (§9) | monthly prod drills (rejected: a fleet stop in prod monthly is an availability cost the tiers below P do not need) | platform owner, security reviewer | Tier R (K7 is mandatory from R); Tier X's six-month drill history |
-| **P68** | The roster: exactly three super admins in steady state (two human admin accounts, one outside the Wall-E line, and `walle@`), robot never the only nor the recovery one, custodians as §8.3, both-direction paging (§8.1) | four with a spare human (rejected: a fourth standing super admin is a fourth target; the hand-over exception covers it) | the platform owner; second human | the super-admin grant |
-| **P69** | Break-glass: two GCP accounts with standing Organization Administrator and PAM admin, sealed keys with cross-line custodians, login = severity 1, quarterly drill; Workspace break-glass = the two human super admins with spare keys and admin-generated backup codes; a third super admin only as a dated hand-over exception (§7) | PAM-only with no break-glass (rejected: PAM cannot bootstrap itself) | platform owner, second human | the super-admin grant |
-| **P70** | K7's scope excludes `fld-controllers`, `fld-platform-core` and `fld-gemini-enterprise`; K4 is pulled before K7 in the P-SA runbook; lifting K7 is a two-human change that re-asserts K0 on Tier P and K1 on Tier W (§9.1, §9.5, §9.7) | include the controllers (rejected: Eve must keep paging under K7) | platform owner | the incident runbooks (07) |
-
----
-
-## 13. Claims another page must match (for the reconcile pass)
-
-1. **HLD §4.4 row 1**: "`roles/owner` on one agent project, 2 h" — PAM does not support legacy
-   basic roles [S18]. Replace with `ent-project-repair` (§5.2). **HLD §3.2** "humans get it
-   back through PAM" — same correction.
-2. **HLD §4.4 row 4 and §11.4**: `roles/orgpolicy.policyAdmin`, `roles/iam.denyAdmin` and
-   `roles/iam.principalAccessBoundaryAdmin` cannot be folder-level entitlements; they are
-   organisation-level (`ent-platform-policy`, `ent-k7-*`) [S23], [S17], [S5]. The K7 job "holds its
-   folder-level entitlement" becomes "holds an organisation-level entitlement for org policy,
-   deny and PAB, folder-level for Scheduler".
-3. **HLD §4.5 and §15 (B7), §11.4 KF-4, P9**: the PAB blocked list is read; version 4 blocks
-   `aiplatform.googleapis.com/*`, not `run.routes.invoke`. The PAB is enforcement-grade for
-   engine queries and secrets and no fence for Cloud Run invocation (§4.2, P60).
-4. **HLD §4.5 and §11.4 KF-2**: `aiplatform.googleapis.com/reasoningEngines.streamQuery` is not
-   a deny-supported permission name; use `reasoningEngines.*` (§3). Every other name in the
-   HLD's deny row is verified. P8 is narrowed to the principal-set spelling.
-5. **HLD §4.6 and §13.1 item 6, `wall-e/02` "Session length"**: the Admin console session is
-   **one hour, fixed by Google** [S6]; "short session control on the OU" applies to other
-   Google services and to Google Cloud session control (1–24 h, security key), not to the
-   Admin console (§8.2).
-6. **HLD §13.1 item 2 and §7.3**: Workspace multi-party approval (P66) makes role assignment,
-   DWD, 2SV, session control, login challenges, account recovery, SSO and CAA changes
-   Google-enforced two-person acts; the hard-denied list's role-assignment and DWD rows gain
-   the grade "enforcement (Google) + code"; the severity-1 set gains "MPA setting changed" and
-   "MPA approval by `walle@`" [S38], [S39].
-7. **HLD §4.2**: Cloud Run + IAP for workforce users is Preview and device-based access levels
-   are unavailable to them [S10]; workforce operators never reach Tier P surfaces (§2.5).
-8. **HLD §0.5**: a Chrome Enterprise Premium licence line for device-posture access levels
-   (*tbd*) [S27].
-9. **HLD §4.1 / P5**: Agent Identity for Cloud Run is Pre-GA on the beta gcloud track with
-   `--functional-type=agent --identity-type=agent-identity` [S1]; the Cloud Run agent principal
-   form is `…/resources/run/projects/N/locations/R/services/NAME`.
-10. **`wall-e/12` §1.4 and HLD §4.2**: the per-project agent principal set has two documented
-    spellings (`attribute.platformContainer/aiplatform/projects/N` for IAM, `attribute.container/projects/N`
-    for PAB) and the deny example uses a third; the factory uses the first two until P8's spike.
-11. **HLD §7.3 and Eve's pages**: new severity-1 rows — break-glass sign-in, control-group
-    change without a merge, MPA setting change, a fourth super admin, any K7 lever present
-    outside an incident, deny-policy or PAB edit outside the pipeline.
-12. **HLD §11.4**: K7's scope excludes `fld-controllers`, `fld-platform-core`,
-    `fld-gemini-enterprise`; lever order KF-1, KF-3, KF-4, KF-2; the lift is a two-human change.
-13. **HLD §5.1 register**: `privilege` gains the value `workspace_role:groups_admin` for
-    `factory-groups@`, so the `agents.md` privilege column shows every Workspace-privileged
-    machine, not only agents.
-14. **Topology §5**: the managed constraint name is `iam.managed.disableServiceAccountKeyUpload`
-    (HLD §3.3 form), and `iam.disableCrossProjectServiceAccountUsage` stays enforced.
-15. **HLD §11.4 and 07's incident runbooks**: the K7 job's identity is a service account that
-    requests its own PAM grant — a documented requester type [S20]; `roles/run.invoker` on
-    the job is enough to execute it (it carries `run.jobs.run`, [S43]); a PAM grant cannot be
-    shorter than 30 minutes [S20], so every "one-shot" entitlement on the platform is 30 min.
+This page records P60–P70, each where its section decides it: P60 §4.3, P61 §3, P62 §5.2, P63
+§6.4, P64 §2.5, P65 §2.4, P66 §8.4, P67 §9.6, P68 §8.1, P69 §7.2, P70 §9.1, §9.5 and §9.7.
+Options considered, owners, gates and state are held once in the register,
+[12-open-decisions.md](12-open-decisions.md#1-how-this-register-works).
 
 ---
 
@@ -901,9 +891,9 @@ first, then per-agent forensics.
 | Chrome Enterprise Premium licence and cost for device-posture access levels | *tbd* | procurement; until then `al-platform-operator-lite` |
 | The "Only security key" 2SV mode's interaction with IAP sign-in for workforce users | not applicable until P24 | — |
 
-Closed by a second read on 2026-09-13, so they no longer appear above: a service account is a
-documented PAM requester [S20]; `roles/run.invoker` carries `run.jobs.run` [S43];
-`roles/iam.denyAdmin` is organisation-level only [S17] (§5.1, §5.2 amended accordingly).
+Verified on 2026-09-13 and therefore not in the table: a service account is a documented PAM
+requester [S20]; `roles/run.invoker` carries `run.jobs.run` [S43]; `roles/iam.denyAdmin` is
+organisation-level only [S17] (§5.1, §5.2).
 
 ---
 
@@ -919,7 +909,7 @@ documented PAM requester [S20]; `roles/run.invoker` carries `run.jobs.run` [S43]
 - [S8] https://docs.cloud.google.com/iam/docs/workforce-identity-federation — pools at the organisation; principal forms; last updated 2026-09-10
 - [S9] https://docs.cloud.google.com/iam/docs/reference/rest/v1/locations.workforcePools — `sessionDuration` "must be greater than 15 minutes (900s) and less than 12 hours (43200s)", default 3600 s; `accessRestrictions.allowedServices` (immutable), `disableProgrammaticSignin`
 - [S10] https://docs.cloud.google.com/iap/docs/use-workforce-identity-federation — Cloud Run support Preview; "Access levels based on device information are not available when using Workforce Identity Federation"; sessions 15 min–12 h; one workforce pool per application; last updated 2026-09-10
-- [S11] https://docs.cloud.google.com/iam/docs/deny-permissions-support — permissions supported in deny policies (rendered via raw fetch; the browser-rendered navigation page is what earlier reviewers saw); every name in §3 and §9.3 present; `reasoningEngines.streamQuery`, `cloudscheduler.googleapis.com/*`, `iam.googleapis.com/denypolicies.*` absent; last updated 2026-09-10
+- [S11] https://docs.cloud.google.com/iam/docs/deny-permissions-support — permissions supported in deny policies (rendered via raw fetch; the browser-rendered page shows only navigation); every name in §3 and §9.3 present; `reasoningEngines.streamQuery`, `cloudscheduler.googleapis.com/*`, `iam.googleapis.com/denypolicies.*` absent; last updated 2026-09-10
 - [S12] https://docs.cloud.google.com/iam/docs/deny-overview — attachment levels, inheritance, exception principals, 500/500 limits, eventual consistency; last updated 2026-09-10
 - [S13] https://docs.cloud.google.com/iam/docs/deny-access — `roles/iam.denyAdmin`, `roles/iam.denyReviewer`; attachment-point formats; "within 2 minutes … 7 minutes or more"
 - [S14] Terraform google provider resource docs (hashicorp/terraform-provider-google, `website/docs/r/`): `iam_deny_policy`, `iam_principal_access_boundary_policy`, `iam_folders_policy_binding`, `iam_organizations_policy_binding`, `iam_projects_policy_binding`, `privileged_access_manager_entitlement`, `org_policy_policy` — existence and argument names (`max_request_duration`, `eligible_users`, `manual_approvals`, `approvals_needed`, `requester_justification_config`, `role_bindings`; `denied_principals`, `denied_permissions`, `exception_principals`; `enforcement_version`)
@@ -957,7 +947,7 @@ documented PAM requester [S20]; `roles/run.invoker` carries `run.jobs.run` [S43]
 ## Related
 
 - [01-hld.md](01-hld.md) — the parent: §4, §4.4–4.7, §11.4, §13.1 items 6–7, §15, §17 (P4, P5, P7, P8, P9, P16, P24, P33), §18 item 25
-- [00-objective-review.md](00-objective-review.md) — gaps PS-02, PS-13, PS-14, PS-17; brief items H60, H62, H63
+- [00-objective-review.md](00-objective-review.md) — the review findings this page answers
 - [../wall-e/12-agent-identity.md](../wall-e/12-agent-identity.md) — the promoted seed: Agent Identity, operator identity, keyless everywhere, the drift job
 - [../wall-e/02-identity-and-auth.md](../wall-e/02-identity-and-auth.md) — the robot account, the OAuth clients, K5
 - [../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) — §4.6 K0–K5, §7.5 the committed operator list, weakness 12

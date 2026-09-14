@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
+- Last reviewed: 2026-09-14
 - Maturity: **design — nothing built.** No folder, no factory run, no project made by the
   factory, no gateway, no registry entry, no sink, no SIEM, no witness organisation, no robot
   account with Super Admin. The four projects of [../project-topology.md](../project-topology.md)
@@ -14,70 +14,46 @@
   each detail one part of it and record their decisions; [12-open-decisions.md](12-open-decisions.md)
   is the register of record, P1–P143.
 - Objective: `.agent-work/OBJECTIVE.md` (outside the wiki), restated in
-  [00-objective-review.md](00-objective-review.md) §1. Standing constraints that no page
-  loosens: no domain-wide delegation; the language model holds no credential and cannot
-  approve; humans raise autonomy, machines lower it; no model produces an Eve approval; Mo
-  reaches production only through a merged pull request; safety interlocks are plain
-  authenticated REST; Wall-E holds Super Admin (the owner's decision of 2026-09-13, P33 —
-  designed around, not re-argued).
+  [00-objective-review.md](00-objective-review.md) §1. No page loosens the platform's standing
+  constraints — no domain-wide delegation, no credential in the model, humans raise autonomy,
+  and Wall-E's Super Admin (P33) designed around rather than re-argued — stated in full in
+  [01-hld.md Status](01-hld.md#status).
 - Conventions on every page: `Assumption:` marks inferred facts; *tbd* marks values nobody has
   decided; every Google product, launch stage, IAM role, organisation-policy constraint, API,
   article and date carries a source verified on 2026-09-13 or says "unverified"; no company
-  names, no secrets, no person named for a role; every control names its owner (a role), the
-  resource it sits on, how it is verified and what happens when it fails.
+  names, no secrets, no person named for a role; every control names its owner (a role from HLD
+  §0.3), the resource it sits on, how it is verified (a job, a drill or a CI check, with a
+  cadence) and what happens when it fails (fail-closed, fail-open with a page, or a detection
+  with a latency) — a control that cannot fill those four cells is not on the page; controls are
+  graded enforcement or detection by the rule of [01-hld.md](01-hld.md) §0.2.
 
 ## What the platform is
 
 A Google Cloud landing zone — one folder tree, one factory, one register — on which an
-organisation can run hundreds of agents, classical or autonomous, with the same six containment
-primitives applied to every one of them by the tier it belongs to: a trust boundary the agent
-cannot redraw (folders, organisation policy, a factory-made project, a folder deny policy); its
-autonomy held as data that only a human raises and any machine lowers; a capability ceiling
-outside the agent's process (the model holds no credential; an action service holds it and
-decides); a fleet kill switch outside every agent project, drilled; a model-free monitor with
-halt authority; and evidence the judged thing cannot forge or silence. Every agent gets a
-project of its own with a Google-issued keyless identity, an egress gateway that is default-deny
-with Model Armor at the edge, sinks it cannot delete and an absence alarm if they go quiet, a
-register row that fixes its owner, tier, purpose, data classes, EU AI Act class and TISAX class
-before it exists, and an admission gate that refuses it without them. The Gemini Enterprise
-tenant app is the one front door, itself bound to a gateway so it can reach only registered
-engines. Tiers are lettered — C classical, R read tools, W write agents, P privileged (P-SA the
-super-admin singleton), X AGI-class — and a tier does not open until the people and the bought
-services it needs exist; on 2026-09-13 that is one administrator, so Tiers C and R can open and
-everything above them is gated on hiring, buying and signing. The three agents — Wall-E, the
-doer with Super Admin; Eve, the deterministic controller with a witness outside the tenant; Mo,
-the improver that never touches production — are the first three tenants of the platform and
-the proof that its rules can be met, not its definition.
+organisation can run hundreds of agents, classical or autonomous, behind the Gemini Enterprise
+tenant app as the one front door ([01-hld.md §0.1](01-hld.md#01-thesis)). Every agent gets the
+six containment primitives CP1–CP6 ([§0.2](01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded))
+by the lettered tier it belongs to — C, R, W, P (P-SA the super-admin singleton), X — and a tier
+does not open until the people and bought services it needs exist ([§11](01-hld.md#11-the-tier-model),
+[§0.4](01-hld.md#04-the-tier-gate-what-must-exist-before-a-tier-opens)). Wall-E (the doer with
+Super Admin), Eve (the deterministic controller with a witness outside the tenant) and Mo (the
+improver that never touches production) are its first three tenants and the proof that its rules
+can be met, not its definition.
 
 ## What it deliberately is not
 
-The full list is [01-hld.md](01-hld.md) §16. The lines a reader most needs before reading on:
-
-- It does not narrow a super-admin account; nothing in Workspace or GCP can. The perimeter
-  around Wall-E is custody, a scope split, a split control plane, detection latency and the
-  witness, and the pages say so rather than claim otherwise.
-- It does not let any model produce an approval, a signature, a halt, a veto or a refusal. A
-  model may narrate and may page a human at severity 2; nothing it writes is read by the gate.
-- It does not make Eve's control path structurally unreachable by a super admin inside the
-  tenant's organisation; it moves the evidence, the incident record and the pager outside, and
-  records the control-path relocation as the end state (P15).
-- It does not evaluate model capabilities, detect deception or claim AGI containment. Tier X
-  is designed ([09](09-supply-chain-secrets-recovery.md) §4–§5) and closed.
-- It does not run a SOC; it buys acknowledgement for Tier P and runs Google's detections for
-  the rest. It does not place the folder in Assured Workloads while Agent Gateway, Registry
-  and Identity are outside the package ([08](08-data-logging-retention-sovereignty.md) §7.1).
-- It does not host a second super-admin agent, a third-party agent without a supplier row, or
-  an agent without a register row; it does not train or modify models; it grants domain-wide
-  delegation to nothing; it does not back up Workspace.
-- It does not promise EU AI Act or TISAX outcomes. It promises the mechanisms and the evidence
-  and lists, per regime, what the regulator or the assessor still decides.
-- It does not automate the Admin console under any robot session, by browser or computer use.
+It does not narrow a super-admin account, since nothing in Workspace or GCP can, and it does not
+let any model produce an approval, a signature, a halt, a veto or a refusal. It does not make
+Eve's control path structurally unreachable by a super admin inside the tenant's organisation,
+does not run a SOC, and does not claim AGI containment (Tier X is closed). It does not promise EU
+AI Act or TISAX outcomes, only the mechanisms and the evidence; the full list is
+[01-hld.md §16](01-hld.md#16-what-the-platform-does-not-do).
 
 ## Documents
 
 | Page | What it is | Decisions |
 |---|---|---|
-| [00-objective-review.md](00-objective-review.md) | The objective verbatim, the verdict on the documentation that existed before it, the gap register (111 gaps, 24 blocking), the 82-item brief the HLD had to answer, and the two compliance frames | — |
+| [00-objective-review.md](00-objective-review.md) | The objective verbatim, the verdict on the documentation that existed before it, the gap register (111 gaps, 24 blocking), the 82-item brief the HLD had to answer (indexed to the register rows that answer it), and pointers to the two compliance frames | — |
 | [01-hld.md](01-hld.md) | The parent: thesis and six primitives, the RACI and tier gate, the charter (promises and demands), the secure Gemini Enterprise environment, landing zone, identity, registry, gateways and Model Armor, monitoring, perimeter and sovereignty, supply chain, recovery, the tier model and fleet kill switch, the autonomy contract, the three agents, EU AI Act and TISAX frames, trust boundaries, what it does not do, and what it requires of the three agent sets (§18) | P1–P34 |
 | [02-landing-zone-and-tiers.md](02-landing-zone-and-tiers.md) | The tier model in full, every folder named, project-per-agent and the factory (Fabric modules, CI identity, naming, labels, budgets, nonprod), the organisation-policy baseline and custom constraints, what is shared in `platform-core` and what stays per agent, and what is promoted from the Wall-E chapters | P35–P47 |
 | [03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) | The tenant app as the one front door: project and folder placement, administration through PAM, `eu` location and CMEK, identity provider, the user population's three gates, the feature baseline, console Model Armor, agent admission and revocation, the tenant egress gateway `gemini-egress`, connectors, audit logging, and the runbook to baseline | P48–P59 |
@@ -89,7 +65,7 @@ The full list is [01-hld.md](01-hld.md) §16. The lines a reader most needs befo
 | [09-supply-chain-secrets-recovery.md](09-supply-chain-secrets-recovery.md) | Binary Authorization and attested images, the vulnerability gate, HSM everywhere and the key project, secrets, CMEK exceptions, recovery classes and the restore-boots-halted mechanism, the code-execution tier, and AGI-class containment (what Tier X would be and why it stays closed) | P115–P124 |
 | [10-eu-ai-act.md](10-eu-ai-act.md) | The regulatory state as amended, provider and deployer roles, the classification of every system (Wall-E's Art. 6 path, F7's profiling boundary, Eve, `eve-advisor`, Mo, the tenant app), the obligation crosswalk with owner and evidence per article, the evidence register, and what "bulletproof" can mean | P125–P132 |
 | [11-tisax.md](11-tisax.md) | The target (label, level, scope), module scope, shared responsibility with Google and the supplier file, the control-by-control mapping, the super-admin deviation record, separation of duties as a counted minimum per stage, supplier onboarding and exit, assurance cadence, the risk register and the legal register | P133–P141 |
-| [12-open-decisions.md](12-open-decisions.md) | The register of record: all 143 decisions in one sequence, grouped by the gate they block, with why each matters, the recommendation, owner, where it is recorded, the disagreements between pages, and the index into Wall-E's, Eve's and Mo's registers | P1–P141 |
+| [12-open-decisions.md](12-open-decisions.md) | The register of record: all 143 decisions in one sequence, grouped by the gate they block, with why each matters, the recommendation, owner, where it is recorded, the disagreements between pages, and the index into Wall-E's, Eve's and Mo's registers | P1–P143 |
 
 Two pages outside this folder are part of the design and are pointed at, not copied:
 [../project-topology.md](../project-topology.md) (the four projects and every cross-project
@@ -164,31 +140,25 @@ policy, the log view instead of an organisation sink).
 
 | Thing | State |
 |---|---|
-| The design | complete for pages 00–12; decisions P1–P143 recorded; the reconcile pass over the platform pages (page-to-page claims in each page's "claims other pages must match" section, and §7 of the register) run on 2026-09-13 — every HLD correction carries a dated line; the agent-set changes it names are the propagation stage of HLD §18, not yet run |
+| The design | complete for pages 00–12; decisions P1–P143 recorded; page-to-page disagreements resolved in [12-open-decisions.md](12-open-decisions.md) §7, whose rows 10–14 stay open until the agent sets carry them; the agent-set changes are the propagation stage of HLD §18 (P143), not yet run |
 | The organisation | one administrator, no SOC, no second super admin outside his own line, no security reviewer, no Eve owner, no DPO engaged, no ISMS names supplied (HLD §0.3) |
 | Google Cloud | no `fld-agentic-platform`, no factory, no project of the four; `GEMINI_PROJECT` exists as the tenant app's project and is to be imported |
 | Google Workspace | the tenant exists with Gemini Enterprise licences; no robot account, no robot OU, no multi-party approval, no sandbox tenant |
 | Verification | every Google and regulatory fact cited on pages 02–11 was checked against its URL on 2026-09-13; items that could not be verified are listed per page under "Unverified" and stay *tbd* |
 | Spikes | none run; P3 (perimeter), P4/P42 (custom constraints), P57 (tenant gateway binding), P61 (deny-policy principal spelling) are the ones the first nonprod project exists to run |
-| Gates | Tier C and Tier R can open with the people who exist; Tier W needs a second operator, a security reviewer and a blind grader; the super-admin grant needs the §4 group of the register green; Tier X is closed |
+| Gates | Tier C and Tier R can open with the people who exist; Tier W, Tier P and the super-admin grant wait on people, bought services and the register's §4 group; Tier X is closed ([01-hld.md §0.4](01-hld.md#04-the-tier-gate-what-must-exist-before-a-tier-opens)) |
 
 ## How the three agent sets relate to this one
 
-The three sets were written before the platform and before the objective made Wall-E a super
-admin. They stand as the designs of the first three tenants; the platform lifted their
-platform-grade content to fleet rules and left their agent-specific content where it was.
-
-| Set | What it is on the platform | What the platform took from it | What it must change (HLD §18) |
-|---|---|---|---|
-| [../wall-e/README.md](../wall-e/README.md) | The Tier P-SA singleton: a super-admin robot account, an action service in two halves (`walle-actions`, `walle-actions-super`), a catalogue in three bands, the autonomy ladder | Chapters 11 (prompt security), 12 (agent identity), 13 (agent interconnection) and `project-topology.md` are the seeds of pages 06, 04, 05 and 02 — referenced, never copied (P47); the ladder's numbers became the fleet defaults (P77); its deny policy became the folder's (P61); its sinks became the platform's (P104) | Identity chapter rewritten around a super-admin account; bands and the hard-denied list; SETUP phases that the factory now performs; every "never Super Admin" line (HLD §18 items 1–7) |
-| [../eve/README.md](../eve/README.md) | The dedicated, deterministic controller for Tier P: a control path with no model, a reporting path that may reason (`eve-advisor`, P34), a witness outside the tenant, an owner outside the Wall-E line | The verifier pattern, generalised as the platform verifier for Tier W (P79); the reporting path as the platform's RP-1..RP-6 (P98); the heartbeats and silence halt (P97); the export and the witness (P107) | Observe-and-report before the grant; the witness; the second human; `eve-advisor` as a new component; the sink filter widened (HLD §18 items 9–17) |
-| [../mo/README.md](../mo/README.md) | One Mo per platform: metric packs per agent, proposals as pull requests, no credential anywhere | The validator custodian as a platform service (`VALIDATOR_PROJECT`, P45); the metric pack as the per-tier measurement row; the blind-grading capacity as the Tier W cap (P25); the SOC metrics it does not produce (P103) | Mo rows for Eve; the git host and CI identity (P22); the narrator's Art. 50 label (P128) (HLD §18 items 18–24) |
-
-The relation in one sentence: the platform is the set of rules an agent inherits by being in a
-folder; Wall-E, Eve and Mo are the three agents whose designs proved the rules were needed, and
-they now have to obey them like any other tenant. Their open decisions (Wall-E 1–52, Eve
-E-1..E-20, Mo M-1..M-11) stay in their own registers; [12-open-decisions.md](12-open-decisions.md)
-§8 indexes which platform row supersedes, generalises or depends on each.
+The sets ([Wall-E](../wall-e/README.md), [Eve](../eve/README.md), [Mo](../mo/README.md)) were
+written before the platform and stand as the designs of its first three tenants: the platform
+lifted their platform-grade content to fleet rules (for example chapters 11–13 and
+`project-topology.md` as seeds, P47) and left their agent-specific content where it was. The
+edits each set must make, with owners and gates, are
+[01-hld.md §18](01-hld.md#18-what-this-hld-requires-of-the-wall-e-eve-and-mo-sets) (P143). Their
+open decisions (Wall-E 1–52, Eve E-1..E-20, Mo M-1..M-11) stay in their own registers, and
+[12-open-decisions.md §8](12-open-decisions.md#8-index-agent-set-decisions-and-the-platform-rows-that-touch-them)
+indexes which platform row supersedes, generalises or depends on each.
 
 ## Related
 

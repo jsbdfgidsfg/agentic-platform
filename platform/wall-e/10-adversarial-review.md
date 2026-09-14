@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
+- Last reviewed: 2026-09-14
 - **Objective restated 2026-09-13; see the platform HLD** ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
   **The role model changed on 2026-09-13**: Wall-E's robot holds Super Admin on a dedicated,
   licensed user account, not a narrow custom role (platform HLD "What this reverses and what it
@@ -13,8 +13,6 @@
   survive — the floor list and transitive expansion as the protected-principal check, now with
   the robot itself on it, and the safe-field allowlist and ladder as the only separation — and
   what replaces the role is platform HLD §13.1 items 2 and 10. No verdict below is rewritten.
-- 2026-09-13: A2 carries a dated placement note. Eve's key now lives in `EVE_PROJECT`
-  ([../project-topology.md](../project-topology.md)); no attack verdict changed.
 - Two independent reviews of the design as written, 2026-09-08: an **adversarial pass**
   (17 attacks) and a **consistency and fact pass** (contradictions between documents,
   guardrails with no mechanism, and every Google Cloud and Workspace claim checked against
@@ -92,7 +90,7 @@ and is it true". It found a different and equally serious class of problem.
 |---|---|
 | **Operators had no credential path at all.** `run.invoker` was granted to three service accounts and no human | Nobody could halt, demote, veto or approve. Every kill-switch timing in the design was unmeasurable because the switch was unreachable |
 | **Cloud Run IAM is per service, not per path** | The promise that the agent "has no IAM on the control endpoints" was false as built — one grant covers every endpoint. It now needs an in-app allowlist, and ideally a second service |
-| **The custom admin role cannot be sliced as described.** There is no standalone suspend privilege, and licence management has no read-only half (corrected 2026-09-13: Google's privilege definitions list *Suspend users* among the Update sub-permissions that can be individually delegated ([privilege definitions](https://knowledge.workspace.google.com/admin/users/administrator-privilege-definitions)); moot for Wall-E as Super Admin, still relevant to any delegated admin role on the platform.) | Granting profile editing at Stage 1 unavoidably grants suspension; granting "licence read" at Stage 0 would have granted assign and revoke during the read-only stage |
+| **The custom admin role cannot be sliced as described.** There is no standalone suspend privilege, and licence management has no read-only half *Stale as of 2026-09-13:* Google's privilege definitions now list *Suspend users* among the Update sub-permissions that can be individually delegated; moot for Wall-E as Super Admin, still relevant to any delegated admin role on the platform ([02 §"Workspace privilege facts"](02-identity-and-auth.md#workspace-privilege-facts)). | Granting profile editing at Stage 1 unavoidably grants suspension; granting "licence read" at Stage 0 would have granted assign and revoke during the read-only stage |
 | **Organisational-unit scoping breaks Stage 0.** Groups and Reports privileges cannot be unit-scoped, and every Stage 0 report is tenant-wide | The design needs two role assignments, not one |
 | **A missing scope.** Group classification depends on knowing which groups carry an admin role, and the frozen scope list had no way to read that | Scopes freeze at consent, so this would have been discovered after the one irreversible step |
 | **Stage 0's zero write budget denied every shadow item** | The budget check runs before the level forces a dry run, so the stage whose entire purpose is generating evidence would have generated none |

@@ -2,31 +2,27 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
+- Last reviewed: 2026-09-14
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md) §7 (monitoring and
   detection), §13.2 (Eve's reporting contract, the witness, the second human), §0.3 (roles),
   §0.4 (the tier gate) and §14.1 (Art. 73). Nothing is built. This page answers HLD brief items
   F44–F51 and gap-register rows MON-01, MON-02, MON-03 and PS-07 of
-  [00-objective-review.md](00-objective-review.md) §4–§5, and (cited 2026-09-13) MON-06 (§3, SCC
-  Premium), MON-07 (§5, the correlation contract), MON-08 (§6, the detection catalogue), MON-09
-  (§14, SOC metrics), MON-10 (§13, tabletops) and MON-11 (the evidence register, held in
+  [00-objective-review.md](00-objective-review.md) §4–§5, and MON-06 (§3, SCC Premium), MON-07
+  (§5, the correlation contract), MON-08 and the platform half of EVE-03 (§6, the detection
+  catalogue), MON-09 (§14, SOC metrics), MON-10 (§13, tabletops) and MON-11 (the evidence register, held in
   [10](10-eu-ai-act.md) §5 with the exports of [08](08-data-logging-retention-sovereignty.md) §5.5).
 - What this page decides: the SIEM contract and the default instance; the Security Command
   Center scope; the detection catalogue and who owns it; the super-admin detection set hosted
   outside `WALLE_PROJECT`; the pipeline heartbeats and the `log_pipeline_silent` halt; the
   correlation contract on every audit row; the "registered ⇒ feeding the SIEM" module; the
   incident-response organisation, its tool, its runbooks, its regulatory clocks, its exercises
-  and its metrics; and the platform reporting path every verifier uses. Decisions are recorded
-  in §16 as **P92–P103**, final ids in [12-open-decisions.md](12-open-decisions.md).
+  and its metrics; and the platform reporting path every verifier uses. Its decisions are
+  **P92–P103** in [12-open-decisions.md](12-open-decisions.md).
 - What this page does not do: it does not re-decide the retention schedule (HLD §7.5, P13), the
   perimeter (HLD §8, P3), the kill-plane mechanics of K7 (HLD §11.4) or Eve's control path
   (HLD §13.2). Where it touches them it cites the section and says what it adds.
-- Standing constraints, unchanged and load-bearing here: no domain-wide delegation (every feed
-  below is organisation-owned and needs none); the language model holds no credential and
-  cannot approve; **no model produces an Eve approval**; Eve's reporting path may reason but
-  writes reports and pages only; humans raise autonomy, machines lower it (a SIEM rule may pull
-  a kill lever, never release one); safety interlocks are plain authenticated REST; Wall-E holds
-  Super Admin by the owner's decision (P33) and this page designs around it.
+- Standing constraints: as the [HLD Status](01-hld.md#status) states them; this page designs
+  around Wall-E's Super Admin (P33).
 - Conventions: `Assumption:` marks inferred facts; *tbd* marks values nobody has decided;
   every Google product, tier, region, API and article named here carries a source in §18,
   re-verified on 2026-09-13 unless the row says "unverified"; no gcloud flag, role, constraint
@@ -56,8 +52,9 @@ Three properties are held throughout, and the reader should check each section a
    project. A rule that lives where its subject holds owner is not a detection (HLD CP6).
 2. **Absence is a signal.** Every feed has a heartbeat and every heartbeat has an absence alarm
    whose channel does not share the feed's failure domain (§7).
-3. **Nothing detection-grade stands alone.** Each rule in the catalogue names the enforcement
-   control it backs or the reason it is the last line (HLD §0.2). Where it is the last line —
+3. **Nothing detection-grade stands alone** (the grades are defined in
+   [HLD §0.2](01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded)). Each rule in
+   the catalogue names the enforcement control it backs or the reason it is the last line. Where it is the last line —
    the super-admin set — the page says so, and the residual sits in the signed deviation (P33).
 
 ---
@@ -73,8 +70,8 @@ account inside the tenant.
 | # | Feed | Mechanism (verified 2026-09-13, §18) | Carries | Owner | Lag budget | Absence detection |
 |---|---|---|---|---|---|---|
 | F1 | Workspace events → SIEM | Admin console, Menu → Reporting → Data integrations → **Google Security Operations export**; configured with the SecOps customer id, token and instance id; needs the **Reports** administrator privilege; editions Enterprise Standard/Plus, Frontline Plus, Education Standard/Plus (tenant edition *tbd*, [../google-workspace.md](../google-workspace.md)); exports **all** supported event types (Admins, Users, Groups, OAuth, SAML, Login, Rules, Gmail, Drive, Chat, Calendar, Meet, Devices, Chrome, Takeout, Data Studio, Vault… — no selective export); only events after connection; up to 24 h before the first data | the desk's copy of everything, including the Gmail/Drive/Calendar/Chat/Meet/Chrome streams Cloud Logging never receives | a **human** Workspace administrator holding the Reports privilege configures it (never `walle@` — the export setting is on the hard-denied list, HLD §13.1 item 2); IT security owns | `Assumption:` 15 min steady-state (verify at build) | SIEM heartbeat rule H-2 (§7) |
-| F2 | Cloud Audit Logs and Workspace-in-Cloud-Logging → `LOGGING_PROJECT` → SIEM | the two aggregated sinks of [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §3.2 (aligned 2026-09-13) — `S-org` at the organisation for the Workspace audit streams (admin, groups and login on every edition; OAuth token and SAML only on Enterprise Standard/Plus, Education Standard/Plus, Voice Premier or Cloud Identity Premium; Access Transparency only on Enterprise Plus and Education — [share data with Google Cloud services](https://knowledge.workspace.google.com/admin/getting-started/share-data-with-google-cloud-services), updated 2026-09-10; the tenant edition is *tbd* and a Stage 0 precondition of this feed's completeness check, added 2026-09-13) and `S-folder` over `fld-agentic-platform` with `includeChildren`, intercepting, for the five audit families — into `LOGGING_PROJECT`, then the locked `europe-west1` evidence bucket, the identity bucket and the BigQuery dataset (HLD §7.1); the SIEM reads the `siem` log view of `platform-evidence-logs` (the `identity` view only on IT security's request); SecOps ingests Cloud Logging directly (the ingest page rendered as an index only on 2026-09-13; the mechanism — direct ingestion configured from SecOps, or a Pub/Sub sink — is **unverified this pass** and fixed at build) | every Admin Activity and Data Access entry the folder produces; the Workspace entries Google shares with Cloud Logging | platform owner | sink: seconds; SIEM: `Assumption:` 5 min | H-1 (Eve's independent copy) and H-2 |
-| F3 | SCC findings → SIEM and → pager | SecOps ingests SCC findings by default (lens, §18); independently, one **notification config** at the organisation (`gcloud scc notifications create … --pubsub-topic … --filter …`, filters as in `findings.list`) to a Pub/Sub topic in `CORE_PROJECT` whose subscriber posts to the Terraform-managed channel — **SCC does not page on its own** | ETD (incl. the eight Workspace findings), SHA + custom modules, AI Protection, Sensitive Actions, Agent Platform Threat Detection (nonprod) | organisation IT security (P11) | near-real time (Google) | H-3: a synthetic SHA custom-module finding raised weekly by the drift job and expected at the desk |
+| F2 | Cloud Audit Logs and Workspace-in-Cloud-Logging → `LOGGING_PROJECT` → SIEM | the two aggregated sinks of [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §3.2 — `S-org` at the organisation for the Workspace audit streams (admin, groups and login on every edition; OAuth token and SAML only on Enterprise Standard/Plus, Education Standard/Plus, Voice Premier or Cloud Identity Premium; Access Transparency only on Enterprise Plus and Education — [share data with Google Cloud services](https://knowledge.workspace.google.com/admin/getting-started/share-data-with-google-cloud-services), updated 2026-09-10; the tenant edition is *tbd* and a Stage 0 precondition of this feed's completeness check) and `S-folder` over `fld-agentic-platform` with `includeChildren`, intercepting, for the five audit families — into `LOGGING_PROJECT`, then the locked `europe-west1` evidence bucket, the identity bucket and the BigQuery dataset (HLD §7.1); the SIEM reads the `siem` log view of `platform-evidence-logs` (the `identity` view only on IT security's request); SecOps ingests Cloud Logging directly (the ingest page rendered as an index only on 2026-09-13; the mechanism — direct ingestion configured from SecOps, or a Pub/Sub sink — is **unverified on 2026-09-13** and fixed at build) | every Admin Activity and Data Access entry the folder produces; the Workspace entries Google shares with Cloud Logging | platform owner | sink: seconds; SIEM: `Assumption:` 5 min | H-1 (Eve's independent copy) and H-2 |
+| F3 | SCC findings → SIEM and → pager | SecOps ingests SCC findings by default (§18); independently, one **notification config** at the organisation (`gcloud scc notifications create … --pubsub-topic … --filter …`, filters as in `findings.list`) to a Pub/Sub topic in `CORE_PROJECT` whose subscriber posts to the Terraform-managed channel — **SCC does not page on its own** | ETD (incl. the eight Workspace findings), SHA + custom modules, AI Protection, Sensitive Actions, Agent Platform Threat Detection (nonprod) | organisation IT security (P11) | near-real time (Google) | H-3: a synthetic SHA custom-module finding raised weekly by the drift job and expected at the desk |
 | F4 | Agent-layer events → SIEM, **metadata only** | each action service publishes `halt.set`, `content.flagged`, `override.applied`, `run.verified`, `reconciliation_gap`, denial rows and the heartbeat row to the project's Pub/Sub topic (factory-made, HLD §3.2); ids, reason codes and hashes only — never prompt or payload; the platform's SIEM feed subscribes to every topic labelled `tier ∈ {W,P,P-SA}` | the correlation keys of §5 and the closed denial vocabulary | agent owner emits; platform owner owns the subscription | seconds | the per-agent heartbeat (§4, §7) |
 | F5 | Eve's independent copies (not a SIEM feed; the verifier's own evidence) | Eve's organisation-level sink over all six Workspace streams → `eve_workspace_logs`; Eve's Reports API poll by actor → `eve_workspace_reports`; the daily push to the witness by `eve-export@` (HLD §13.2) | what Eve reconciles against `walle_audit` | Eve owner | sink: seconds; Reports API: per-application lag budgets in `thresholds.yaml` | H-1 (in `EVE_PROJECT` and in the witness) |
 
@@ -164,7 +161,7 @@ provisions itself if P10 is unanswered on the day the last other row of the tier
 | S6 desk | 24x7 acknowledgement of the severity-1 set within the targets of §9.2 | Tier P gate row (HLD §0.4) | retainer signed; a paged drill |
 | S7 outbound | Can call an authenticated REST endpoint (the K7 job in `CORE_PROJECT`) from a rule, with an identity the platform can bind `roles/run.invoker` to on that one resource | HLD §11.4, §18 item 25 | a drill call to the nonprod K7 job |
 | S8 entities | Can key on the four entity types of HLD §7.4: agent principal, robot user, OAuth client id, operator | correlation across a tenant and an organisation | an entity search for `walle@` returns rows from F1, F2 and F4 |
-| S9 access | Reader access for the second human and IT security through a group the platform does not administer; no reader for any agent principal or `mo-*` group | independence | group memberships listed |
+| S9 access | Reader access for the second human and IT security through a group the platform does not administer; no reader for any agent principal or `mo-*` group; the SIEM itself is never given a reader on any agent's content logs or on `eve.advice` or other narrative (F4 is metadata only) | independence | group memberships listed |
 
 **Decision P92.** The nine clauses above are
 the SIEM contract; P10 is decided by IT security against it; the platform's factory provisions
@@ -176,20 +173,20 @@ Owner: IT security (decision), platform owner (the contract and the default). Ga
 Verified on 2026-09-13 (§18): SecOps has a **Europe multi-region** ("data resides in data centers
 within the member states of the European Union", named as Belgium, Netherlands and Finland) and
 single regions **`europe-west2` London, `europe-west3` Frankfurt, `europe-west6` Zurich,
-`europe-west9` Paris, `europe-west12` Turin, `europe-central2` Warsaw** (Warsaw added
-2026-09-13; London and Zurich are outside the EU); there is **no `eu` location and no
+`europe-west9` Paris, `europe-west12` Turin, `europe-central2` Warsaw** (London and Zurich
+are outside the EU); there is **no `eu` location and no
 `europe-west1`** for SecOps; data residency is "always enabled" for SecOps; default retention
 **12 months**, extendable **to 60 months** on the purchase order (the licence defines the
 maximum; extension through SecOps support). The region list is verified on Google's SecOps
 data-residency terms page, fully readable by raw fetch on 2026-09-13 (last modified 2026-06-24;
-applies to SecOps SIEM and SOAR); an earlier pass read it truncated.
+applies to SecOps SIEM and SOAR).
 
 | Item | Decision | Reason |
 |---|---|---|
 | Location | **Europe multi-region** | The platform's home is `europe-west1` (Belgium), which the multi-region includes; London and Zurich are outside the EU and are excluded by S1; a single region would make the SIEM the one platform store with a different residency shape from the log bucket. If the ISMS requires a nameable single site for the TISAX scope statement (P20), `europe-west3` is the fallback (`europe-west9`, `europe-west12` and `europe-central2` are the other EU single regions), recorded as a dated change |
 | Retention | Ordered at **the smallest term the order form allows that is ≥ 400 days** (`Assumption:` 24 months if terms are annual, 14 if monthly — granularity unverified; the number follows P13 if the DPO sets a different ceiling) | S2 |
 | Feeds | F1 native export; F2 direct Cloud Logging ingestion (mechanism fixed at build, §1.1); F3 default; F4 Pub/Sub | S3 |
-| Curated content | Cloud Threats and Workspace curated detections on (lens-verified categories) | free coverage the catalogue does not have to write |
+| Curated content | Cloud Threats and Workspace curated detections on (categories verified 2026-09-13, §18) | free coverage the catalogue does not have to write |
 | Case management | SecOps cases (SOAR case management is part of SecOps — verified via the documentation index and case pages, §18); playbooks used for enrichment and paging only, **never** for any action on an agent, a Workspace object or a kill lever other than the K7 REST call of §6.5 | S5; the standing constraint that safety interlocks are plain REST |
 | Outbound identity | the SecOps outbound principal for the K7 webhook is *tbd* (HLD §18 item 25 leaves it with P10); until it is known, K7 is human-pulled and the auto-K7 subset of §6.5 is dry-run | S7 |
 | Access | `siem-readers@` (IT security, the second human), `siem-content@` (security reviewer + MDR partner) — groups administered by IT security, not by the platform | S9 |
@@ -207,12 +204,9 @@ not change.
 
 ## 3. Security Command Center Premium at organisation level
 
-Answers gap MON-06.
-
 Verified on 2026-09-13 (§18): SCC has three tiers, Standard, Premium and Enterprise; **the
 Enterprise tier is deprecated since 2026-05-21 and shuts down on 2027-05-21**, after which
-Enterprise organisations move to Premium automatically — so the review's claim stands and
-Enterprise is not chosen. Premium includes Event Threat Detection (Cloud Logging and Google
+Enterprise organisations move to Premium automatically — so Enterprise is not chosen. Premium includes Event Threat Detection (Cloud Logging and Google
 Workspace), Security Health Analytics with custom modules, AI Protection, Sensitive Actions
 Service, Agent Platform Threat Detection and the Model Armor findings integration. AI Protection
 went GA in Enterprise on 2025-12-12 and **GA in Premium on 2026-03-05**. Agent Platform Threat
@@ -222,23 +216,22 @@ incompatibility outright on the Agent Runtime gateway page: "The Security Comman
 Engine Threat Detection service isn't available when Agent Gateway is enabled for an agent"
 ([deploy with Agent Gateway](https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/runtime/agent-gateway-runtime-deploy),
 updated 2026-09-08; the same fact as [06](06-gateways-model-armor-perimeter.md) row G1 and
-§2.4, P82 — the earlier "re-checked at build" hedge removed 2026-09-13). ETD's Workspace findings need
+§2.4, P82). ETD's Workspace findings need
 **Premium activated at the organisation level** and Workspace logs shared with Cloud Logging.
 Premium at organisation level is sold as a subscription or pay-as-you-go.
 
 | Item | Decision | Owner | Verified by | On failure |
 |---|---|---|---|---|
 | Tier and level | **Premium, organisation-level activation** (Tier C precondition, HLD §0.4); subscription vs pay-as-you-go is P11's funding question | organisation IT security (P11) | the activation shown in the console; a Workspace ETD finding observed in a drill (a 2SV toggle on a nonprod test account) | no Workspace findings, no SHA custom modules: Tier C stays closed |
-| Data residency of SCC itself | **Part of P94; corrected 2026-09-13.** SCC offers `eu`, `us` and `sa` residency locations. The data-residency page (updated 2026-09-09) restricts AI Discovery, the Gemini inventory and Model Armor **only in KSA (`sa`)**; in `eu` they are available. The one location-independent loss on Premium is the SHA **"Resources scanned" counts on the Compliance page**. Two real caveats: "Some detectors in Cloud Run Threat Detection and Container Threat Detection can't be enabled when you enable data residency", and "the Data Location terms do not apply to pre-General Availability (GA) features and services" — which covers Agent Platform Threat Detection (Preview) in nonprod. Recommendation: **`eu`**, because findings carry resource names and Workspace user identities | IT security with the platform owner | the activation location; a Model Armor `MATCH_FOUND` in nonprod appears in SCC; the enabled Cloud Run Threat Detection detector list is diffed against the expected list after activation | a detector the catalogue relies on that cannot be enabled under residency: its rule moves to the SIEM over Cloud Audit Logs and is recorded as a dated row in the compliance mapping; the Preview ATD findings are recorded in the supplier file as outside the Data Location terms |
+| Data residency of SCC itself | **Part of P94.** SCC offers `eu`, `us` and `sa` residency locations. The data-residency page (updated 2026-09-09) restricts AI Discovery, the Gemini inventory and Model Armor **only in KSA (`sa`)**; in `eu` they are available. The one location-independent loss on Premium is the SHA **"Resources scanned" counts on the Compliance page**. Two real caveats: "Some detectors in Cloud Run Threat Detection and Container Threat Detection can't be enabled when you enable data residency", and "the Data Location terms do not apply to pre-General Availability (GA) features and services" — which covers Agent Platform Threat Detection (Preview) in nonprod. Recommendation: **`eu`**, because findings carry resource names and Workspace user identities | IT security with the platform owner | the activation location; a Model Armor `MATCH_FOUND` in nonprod appears in SCC; the enabled Cloud Run Threat Detection detector list is diffed against the expected list after activation | a detector the catalogue relies on that cannot be enabled under residency: its rule moves to the SIEM over Cloud Audit Logs and is recorded as a dated row in the compliance mapping; the Preview ATD findings are recorded in the supplier file as outside the Data Location terms |
 | Services on for `fld-agentic-platform` | ETD (all curated Cloud Threats and the eight Workspace findings: SSO Enablement Toggle, SSO Settings Changed, Strong Authentication Disabled, Two Step Verification Disabled, Account Disabled Hijacked, Disabled Password Leak, Government Based Attack, Suspicious Login Blocked); SHA plus the custom modules of HLD §4.7 (baseline drift, Cloud Run ingress, impersonation chains, keys, token-creator sprawl, dataset readers, image digests, `walle@` org-level role); AI Protection (asset inventory incl. MCP servers; Model Armor findings; Google Recommended AI Essentials posture); Sensitive Actions Service (Add Sensitive Role at the organisation, Organization Policy Changed, Remove Billing Admin — all relevant to a super admin reaching Organization Administrator); Agent Platform Threat Detection **on nonprod only** (Preview; prod engines are gateway-bound) | platform owner configures; IT security owns | a weekly synthetic SHA finding (H-3); the custom-module list diffed against git by the drift job | a missing module is a drift finding; the synthetic finding not arriving is H-3 |
 | Sensitive Actions constraint | The `_Required` and `_Default` organisation buckets stay where Google keeps them; the platform **copies** with the aggregated sink and never redirects `_Required`. Reason, verified: Sensitive Actions cannot detect if logs use CMEK or if log-bucket storage is configured outside the `global` location | platform owner | the sink configuration in Terraform | redirecting `_Required` silently blinds Sensitive Actions — refused in code review |
 | Paging | SCC does not page. One organisation-level notification config, filter `state="ACTIVE" AND severity="CRITICAL" OR severity="HIGH"` (exact filter committed), to `projects/CORE_PROJECT/topics/scc-findings`; a Cloud Run job subscribes and posts to the Terraform-managed channel (§9.2). Everything else reaches the desk through the SIEM | platform owner | the notifier's own heartbeat (a weekly synthetic finding must produce a page at the desk) | no page for a CRITICAL finding is itself a severity-2 incident |
-| Audit Manager | as HLD §7.1, with the exact framework names of the overview page (updated 2026-09-03): "ISO 27001:2022", "NIST AI 600-1 Privacy Controls" and "Google Recommended AI Essentials - Gemini Enterprise Agent Platform" monthly — all three available only with SCC Premium or Enterprise or Assured Workloads (P94 supplies Premium). **Scheduled audits and organisation-level assessments are Preview**; folder- and project-scope assessments are not, so the monthly run targets `fld-agentic-platform` and is triggered by Cloud Scheduler or by hand until GA. Frameworks used before 2026-06-30 can no longer be run; historical reports stay readable (aligned 2026-09-13) | platform owner | the report object in the evidence bucket, dated | a missing monthly report is a drift finding |
+| Audit Manager | as HLD §7.1, with the exact framework names of the overview page (updated 2026-09-03): "ISO 27001:2022", "NIST AI 600-1 Privacy Controls" and "Google Recommended AI Essentials - Gemini Enterprise Agent Platform" monthly — all three available only with SCC Premium or Enterprise or Assured Workloads (P94 supplies Premium). **Scheduled audits and organisation-level assessments are Preview**; folder- and project-scope assessments are not, so the monthly run targets `fld-agentic-platform` and is triggered by Cloud Scheduler or by hand until GA. Frameworks used before 2026-06-30 can no longer be run; historical reports stay readable | platform owner | the report object in the evidence bucket, dated | a missing monthly report is a drift finding |
 
 **Decision P94.** SCC Premium at organisation level with the service set above
 (Enterprise is not chosen because it is deprecated), and SCC's data-residency location —
-recommendation `eu` (in `eu` only the Compliance page's resources-scanned counts are lost;
-the Model Armor compensation reasoning of an earlier draft is withdrawn, 2026-09-13); before
+recommendation `eu` (in `eu` only the Compliance page's resources-scanned counts are lost); before
 activation, confirm which Cloud Run Threat Detection detectors residency disables, because the
 location is chosen at activation. Owner: organisation IT security with
 the platform owner. Gate: Tier C.
@@ -284,18 +277,40 @@ an agent that stops feeding.
 | A5 | The absence policies exist and a forced absence in nonprod paged the desk within the target | the drill record |
 | A6 | Only then: registry card `prod`, `gemini-egress` entry, share | HLD §5.3 |
 
-**Reconciliation, nightly, in `CORE_PROJECT`** (HLD §5.2): every registry card in `prod` must
-have had a heartbeat in the SIEM in the last 24 h (R), 4 h (W) or 15 min (P) — the same silence
-budgets as [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) P74, so
-the two pages fire on one number. A card without one
-is a `shadow_or_silent_agent` finding: severity 3 at R, 2 at W, **1 at P** — and at P the
-finding is also the H-4 heartbeat rule of §7. The response is not "fix the monitoring": the
-agent's share is removed until the heartbeat returns — the reconciliation job sets the row
-`suspended` by an automated pull request and triggers the CI pipeline run whose `terraform
-apply` removes the `gemini-egress` policy entry; the job itself holds no write on the gateway
-policy or any registry, so CI stays the only writer ([05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md)
-§5–§6, P73; aligned 2026-09-13 — an earlier draft gave the job a PAM-elevated right). An agent
-that cannot be seen is not published — that is what "registered ⇒ feeding" enforces.
+**The continuous invariant (P74).** Admission proves the feed once; the failure that matters —
+an agent that keeps acting while its evidence has stopped — happens after admission. So for every
+register row with `status ∈ {pilot, prod}` and `env = prod`, within the last *silence budget* of
+its tier: (a) the project's monitoring-baseline heartbeat (§4.1) has been received at the tier's
+detection desk, and (b) for Tier W and above, at least one row has landed in
+`<agent_id>_audit.runs` or the action service has written its idle heartbeat row
+(`decision = heartbeat`, one per hour, part of `audit.schema` §9.4). The two sets of numbers on
+this page are two observers, not a disagreement: the **absence policies** of §4.1 (heartbeat 2 h
+at W, 15 min at P; audit rows 4 h at W, 60 min at P) are per project and fire first; the
+**silence budgets** below are evaluated by the reconciliation job in `CORE_PROJECT` (HLD §5.2) on
+every run — the daily full run at 06:00 Europe/Paris and the feed-driven incremental runs of
+[05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) §6.2 (P73) — as the
+second observer, and are the budgets of P74.
+
+| Tier | Detection desk | Silence budget | Finding | On breach |
+|---|---|---|---|---|
+| C | SCC AI asset inventory + console Model Armor logs in `LOGGING_PROJECT` | 24 h — the console agent has no heartbeat; the check is that the app's `discoveryengine` Data Access log still names the agent | severity 3 | row `suspended`; console unpublish requested from `ge-admins@` |
+| R | central logging (`LOGGING_PROJECT`) | 24 h | `shadow_or_silent_agent`, severity 3 | row `suspended`; `gemini-egress` entry removed by CI |
+| W | central logging + SCC | 4 h | `shadow_or_silent_agent`, severity 2 | as R, plus `halt_all` on the action service over plain REST from the reconciliation job's principal, which holds `run.invoker` on `/v1/control/halt` only, listed in the manifest's invoker set |
+| P, P-SA | SIEM, 24x7 | 15 min (`Assumption:`, the same number as Eve's `log_pipeline_silent` heartbeat, §7) | `shadow_or_silent_agent`, **severity 1** through the witness channel; also the H-4 heartbeat rule of §7 | Eve already halts on `log_pipeline_silent`; the job's action is the row and the egress entry; the absence of the *reconciliation job's own* heartbeat at the witness is itself severity 1 |
+
+The response is not "fix the monitoring": the agent's share is removed until the heartbeat
+returns — the reconciliation job sets the row `suspended` by an automated pull request and
+triggers the CI pipeline run whose `terraform apply` removes the `gemini-egress` policy entry;
+the job itself holds no write on the gateway policy or any registry, so CI stays the only writer
+([05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) §5–§6, P73). If the job cannot reach a
+source it reports `source_unavailable` for that source and does **not** suspend rows on missing
+data — suspension needs positive evidence of silence from at least one source that *is*
+reachable; a job that cannot reach any source pages severity 2 on itself. Leaving `suspended` is
+a human act: a pull request setting `status: prod` again, referencing the incident, merged under
+the tier's reviewer rule — machines lower, humans raise. Owner: platform owner; the SIEM content
+for Tier P is owned with the MDR partner (HLD §0.3). Verified: a monthly drill in nonprod breaks
+one agent's log sink and measures time-to-`suspended`; the times go to the evidence bucket. An
+agent that cannot be seen is not published — that is what "registered ⇒ feeding" enforces.
 
 **Decision P95.** The baseline variants, heartbeat cadences, absence windows and
 the unpublish-on-silence response above. Owner: platform owner; the P-SA windows are reviewed
@@ -305,8 +320,6 @@ SIEM invariant.
 ---
 
 ## 5. The correlation contract
-
-Answers gap MON-07.
 
 Every audit row on the platform carries the keys below (HLD §7.4 and §12.3). This section says
 where each key originates, who writes it, how it reaches the SIEM and how an investigator joins
@@ -337,8 +350,8 @@ reconciliation, the SIEM's join rules and the incident record all read the same 
 
 Each query is a saved search in the SIEM and a SQL view in `LOGGING_PROJECT`; the tabletop
 records the wall-clock time each took. **One log scope and one observability scope** span
-`fld-agentic-platform` and the organisation's Workspace logs (HLD §7.4; log scopes verified in
-the lens), granted to `siem-readers@` and the second human without any project-level role.
+`fld-agentic-platform` and the organisation's Workspace logs (HLD §7.4; log scopes verified
+2026-09-13, §18), granted to `siem-readers@` and the second human without any project-level role.
 
 Owner: platform owner (the contract as `audit.schema` fields); every agent owner (compliance,
 CI-checked by the schema validator); the security reviewer (the query set). Verified: the
@@ -350,43 +363,49 @@ Workspace event with no row is Eve's `reconciliation_gap` and a halt (HLD §13.2
 
 ## 6. The detection catalogue
 
-Answers gap MON-08 (and the platform half of EVE-03).
-
 ### 6.1 Ownership and lifecycle
 
 | Aspect | Rule |
 |---|---|
 | Where the catalogue lives | one page in this set (the catalogue page is generated from `detections/*.yaml` in the platform repository; its columns: id, threat-model row, source feed, rule file, severity, runbook id, owner, test fixture, last fired, last reviewed, coverage tag) |
 | Who owns content | the **security reviewer** (HLD decision 37 role, IT security from Tier W) with the MDR partner from Tier P; code owners on `detections/` are IT security — **no agent repository and no agent owner can change a platform or super-admin rule** |
-| Detection-as-code | SecOps rules in YARA-L 2.0 held as files, deployed by the CI pipeline with the Terraform resource `google_chronicle_rule` (verified: required `instance`, `location`; `text` holds the YARA-L; a `scope` may bind a data-access scope) — a separate deployment/enabling resource is **unverified this pass** and is fixed at build; if the organisation's SIEM is chosen, its own API, same pipeline shape |
+| Detection-as-code | SecOps rules in YARA-L 2.0 held as files, deployed by the CI pipeline with the Terraform resource `google_chronicle_rule` (verified: required `instance`, `location`; `text` holds the YARA-L; a `scope` may bind a data-access scope) — a separate deployment/enabling resource is **unverified on 2026-09-13** and is fixed at build; if the organisation's SIEM is chosen, its own API, same pipeline shape |
 | Tests | every rule has a fixture: a synthetic event set replayed in nonprod (the seeded-fault protocol of Eve's S3 gate and the injection suite of `wall-e/11` §6 supply most), plus **Test Rule / retrohunt against historical data** in SecOps (verified: Test Rule in the Rules Editor; YARA-L Retrohunt over a chosen window, default one week) run before enabling; a rule with no fixture cannot merge |
 | Review | quarterly, in the same sitting as Eve's threshold review; last-fired older than 180 days with no fixture change is a finding ("dead rule"); precision per rule from the SOC metrics (§14) |
 | Coverage | stated against the platform threat table (HLD §15 boundaries) and one public agent-threat taxonomy — P21 picks it (OWASP Agentic or MAESTRO; currency verified before citing); each rule carries a `coverage:` tag |
 | Curated content | SecOps Cloud Threats and Workspace curated detections enabled; ETD's own findings arrive by F3; curated rules are not in git but are listed in the catalogue with `owner: google` |
-| Severity vocabulary | the platform reuses [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) §9 (1: effect on a protected principal, interactive robot login, forged approval, out-of-plan execution; 2: verification drift, budget cap, overturned approval, out-of-window run; 3: policy rejection, unexplained failure, audit gap) and extends it platform-wide: severity 1 also covers any tampering with an evidence store, a sink, an audit config, a floor, a deny policy, a PAB or the K7 plane, and any evidence absence beyond its window |
+| Severity vocabulary | the platform reuses the severity table of [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md#9-severity-and-automatic-response) §9 and extends it platform-wide: severity 1 also covers any tampering with an evidence store, a sink, an audit config, a floor, a deny policy, a PAB or the K7 plane, and any evidence absence beyond its window |
 
 ### 6.2 The super-admin set (Workspace side) — SIEM-hosted, severity 1, owned by IT security
 
 The HLD's §7.3 table, made buildable: each rule gets an id, a precise source, the join it needs,
 its runbook and its test. Every rule keys on the actor `walle@` **and** on the two committed
-OAuth client ids (a token minted to the robot from another client is rule SA-05 itself).
+OAuth client ids (a token minted to the robot from another client is rule SA-05 itself). Every
+rule is severity 1 and pages the second human outside the Wall-E line in parallel with the
+on-duty desk (§1.2).
 Hosting: the SIEM, mirrored as Eve's tenant-integrity rules in the reconciler limb
 ([01-hld.md](01-hld.md) §13.2) so that two independent evaluators exist — the desk's and the
-verifier's — and the page compares their firing in the metrics (§14).
+verifier's — and the page compares their firing in the metrics (§14). Eve's paging conditions 5
+and 6 ([../eve/06-failure-modes.md](../eve/06-failure-modes.md#the-page-budget-and-the-paging-conditions))
+are SA-03 and SA-04 mirrored into Eve's `thresholds.yaml`; the page budget number stays *tbd*.
 
-| Id | Rule | Source | Join / logic | Runbook | Test fixture |
-|---|---|---|---|---|---|
-| SA-01 | Any `admin.googleapis.com` `methodName` by `walle@` **not** in the committed allow-list derived from the catalogue's Workspace-method map **and** not claimed by a band-B audit row within 5 min | F1 admin events; F2 `admin.googleapis.com`; F4 band-B rows | allow-list file `detections/walle-allowlist.yaml`, regenerated by CI from the catalogue and the band-B method table, reviewed with the ceiling module | RB-06 out-of-catalogue action | a nonprod band-B call without its audit row |
-| SA-02 | Any admin-role creation or assignment by `walle@`; any `users.makeAdmin` by anyone (the method is `POST …/users/{userKey}/makeAdmin`, scope `admin.directory.user`, verified); any change to another admin's security settings, backup codes or recovery options by `walle@` | F1, F2 admin | none needed | RB-06; if the target is a human super admin, RB-01 | nonprod sandbox tenant: `makeAdmin` on a test user |
-| SA-03 | Any change to Sharing options, the SecOps export configuration, the Admin console activity rules, API controls, OAuth app trust, domain-wide delegation, 2SV policy, SSO, super-admin self-recovery, session settings — by **any** actor (these are posture changes; the actor tells the desk which runbook) | F1 (the export carries Admin events even when Sharing is off); F2; ETD Workspace findings (SSO/2SV/strong-auth toggles) | the specific `eventName` values per setting are committed after a nonprod observation — the event names for the Sharing options and export settings are **unverified** and, until observed, the absence alarms H-1/H-2 are the detector | RB-04 self-silencing; RB-01 if actor is `walle@` | toggle each setting on the sandbox tenant, record the event names |
-| SA-04 | Any `login.googleapis.com` event for `walle@` or `eve@` — an interactive login is by definition an incident (the robot never logs in; K-class evidence) | F2 login (Data Access, routed to the locked bucket); F1 Login events | none | RB-02 interactive login | sandbox tenant login on the robot's twin |
-| SA-05 | Any OAuth token authorisation on `walle@` from a client id outside the two committed ones; any consent change on the two clients; any `tokens.delete` on `walle@` not attributed to K4/K5 | F2 `oauth2.googleapis.com` (Admin Activity + Data Access); F1 OAuth | committed client-id list | RB-01 leaked token | authorise a third client on the sandbox twin |
-| SA-06 | Daily roster diff: super admins and delegated admins from Eve's own `users.list` (`isAdmin`) and `roleAssignments.list` versus the committed roster; also the Reports-privilege holders (who can switch F1 off) | Eve's credential (HLD §13.1 item 5); the SIEM re-checks from F1 Users/Admin events | roster file signed by the security reviewer | RB-06; RB-04 | add a delegated admin on the sandbox |
-| SA-07 | Robot-attributed admin event with no matching `walle_audit` or band-B row within 5 min (Eve's completeness metric, near-real-time) | F1/F2 join F4 | window ±5 min on actor/method/target | RB-01 (a row-less action means the credential acted outside the service) | replay an event without its row |
-| SA-08 | Any event by `walle@` in an application outside the catalogue's families (Drive, Gmail, Calendar, Vault, Takeout, Data Studio…) | F1 (the streams Cloud Logging lacks); Eve's Reports poll | application allow-list | RB-01 / RB-06 | sandbox Drive action as the twin |
-| SA-09 | Membership change on `ge-admins@`, `ge-builders@`, `eve-owners@`, `walle-operators@`, `walle-protected@`, `platform-approvers@`, the `mo-*` groups, the `eve-console` IAP audience group, and (added 2026-09-13, review-findings pass) `walle-super-approvers@`, the audience of the band-B `SUPER` approval surface, which Wall-E's hard-denied list and manifest already treat as a control group; any change to the two OAuth clients' consent or scopes | F1 Groups; F2 `cloudidentity.googleapis.com`; reconciliation | committed operator list | RB-06; RB-04 | group edit on nonprod |
+| Id | Rule | Why | Source | Join / logic | Runbook | Test fixture |
+|---|---|---|---|---|---|---|
+| SA-01 | Any `admin.googleapis.com` `methodName` by `walle@` **not** in the committed allow-list derived from the catalogue's Workspace-method map **and** not claimed by a band-B audit row within 5 min | the credential acted outside both lanes | F1 admin events; F2 `admin.googleapis.com`; F4 band-B rows | allow-list file `detections/walle-allowlist.yaml`, regenerated by CI from the catalogue and the band-B method table, reviewed with the ceiling module | RB-06 out-of-catalogue action | a nonprod band-B call without its audit row |
+| SA-02 | Any admin-role creation or assignment by `walle@`; any `users.makeAdmin` by anyone (the method is `POST …/users/{userKey}/makeAdmin`, scope `admin.directory.user`, verified); any change to another admin's security settings, backup codes or recovery options by `walle@` | hard-denied escalation attempted or succeeded | F1, F2 admin | none needed | RB-06; if the target is a human super admin, RB-01 | nonprod sandbox tenant: `makeAdmin` on a test user |
+| SA-03 | Any change to Sharing options, the SecOps export configuration, the Admin console activity rules, API controls, OAuth app trust, domain-wide delegation, 2SV policy, SSO, super-admin self-recovery, session settings — by **any** actor (these are posture changes; the actor tells the desk which runbook) | posture change, including self-silencing of monitoring | F1 (the export carries Admin events even when Sharing is off); F2; ETD Workspace findings (SSO/2SV/strong-auth toggles) | the specific `eventName` values per setting are committed after a nonprod observation — the event names for the Sharing options and export settings are **unverified** and, until observed, the absence alarms H-1/H-2 are the detector | RB-04 self-silencing; RB-01 if actor is `walle@` | toggle each setting on the sandbox tenant, record the event names |
+| SA-04 | Any `login.googleapis.com` event for `walle@` or `eve@` — an interactive login is by definition an incident (the robot never logs in; K-class evidence) | an interactive login is by definition an incident, and the one control that survives Super Admin | F2 login (Data Access, routed to the locked bucket); F1 Login events | none | RB-02 interactive login | sandbox tenant login on the robot's twin |
+| SA-05 | Any OAuth token authorisation on `walle@` from a client id outside the two committed ones; any consent change on the two clients; any `tokens.delete` on `walle@` not attributed to K4/K5 | leaked-token signature | F2 `oauth2.googleapis.com` (Admin Activity + Data Access); F1 OAuth | committed client-id list | RB-01 leaked token | authorise a third client on the sandbox twin |
+| SA-06 | Daily roster diff: super admins and delegated admins from Eve's own `users.list` (`isAdmin`) and `roleAssignments.list` versus the committed roster; also the Reports-privilege holders (who can switch F1 off) | a fourth super admin, or the robot's own role removed — `role_assignment_added` / `role_assignment_missing`, severity 1, paging in both directions (P68; [../eve/03-lld.md](../eve/03-lld.md) §14) | Eve's credential (HLD §13.1 item 5); the SIEM re-checks from F1 Users/Admin events | roster file signed by the security reviewer | RB-06; RB-04 | add a delegated admin on the sandbox |
+| SA-07 | Robot-attributed admin event with no matching `walle_audit` or band-B row within 5 min (Eve's completeness metric, near-real-time) | Eve's completeness metric in near real time; a row-less action means the credential acted outside the service | F1/F2 join F4 | window ±5 min on actor/method/target | RB-01 (a row-less action means the credential acted outside the service) | replay an event without its row |
+| SA-08 | Any event by `walle@` in an application outside the catalogue's families (Drive, Gmail, Calendar, Vault, Takeout, Data Studio…) | reach into the families the robot never needs | F1 (the streams Cloud Logging lacks); Eve's Reports poll | application allow-list | RB-01 / RB-06 | sandbox Drive action as the twin |
+| SA-09 | Membership change on `ge-admins@`, `ge-builders@`, `eve-owners@`, `walle-operators@`, `walle-protected@`, `platform-approvers@`, the `mo-*` groups, the `eve-console` IAP audience group, `walle-super-approvers@`, the audience of the band-B `SUPER` approval surface, which Wall-E's hard-denied list and manifest already treat as a control group; any change to the two OAuth clients' consent or scopes | control-plane tampering | F1 Groups; F2 `cloudidentity.googleapis.com`; reconciliation | committed operator list | RB-06; RB-04 | group edit on nonprod |
 
 ### 6.3 The super-admin set (GCP organisation side) — the reach into the organisation
+
+These rules watch the robot's path into the GCP organisation: a super admin can reach
+Organization Administrator, and from there the sinks, buckets, audit configs, policies and floors
+every other detection depends on.
 
 | Id | Rule | Source | Runbook | Test |
 |---|---|---|---|---|
@@ -405,14 +424,14 @@ verifier's — and the page compares their firing in the metrics (§14).
 | PL-01 | Heartbeat absence per tier windows (§4, §7) | F4, witness | 3/2/1 by tier | RB-03, RB-05 |
 | PL-02 | Any agent principal appearing in another agent's project IAM; any `mo-*` principal in `EVE_PROJECT`; any foreign principal in `EVE_PROJECT` beyond the named exceptions (HLD §4.7) | F2; drift job | 1 | RB-04 |
 | PL-03 | `secretmanager` `AccessSecretVersion` by a non-service identity or by any agent principal | F2 Data Access | 1 | RB-01 |
-| PL-04 | Model Armor `MATCH_FOUND` rate per agent above its baseline; any floor or template write outside CI — a floor write outside a PAM grant with a matching ticket is severity 2, any write by a principal other than the platform Terraform identity is severity 1 at Tier P ([06-gateways-model-armor-perimeter.md](06-gateways-model-armor-perimeter.md) §3.4, P86; aligned 2026-09-13) | F2 sanitize logs / F3 AI Protection | 2 / 1 | RB-09 injection reaching a write (if paired with a write) |
+| PL-04 | Model Armor `MATCH_FOUND` rate per agent above its baseline; any floor or template write outside CI — a floor write outside a PAM grant with a matching ticket is severity 2, any write by a principal other than the platform Terraform identity is severity 1 at Tier P ([06-gateways-model-armor-perimeter.md](06-gateways-model-armor-perimeter.md) §3.4, P86) | F2 sanitize logs / F3 AI Protection | 2 / 1 | RB-09 injection reaching a write (if paired with a write) |
 | PL-05 | Gateway access-policy change on `gemini-egress` or any egress gateway outside CI; an engine deployed without a gateway binding (custom constraint deny is enforcement; this is the check that the constraint is still there) | F2 | 1 | RB-04 |
 | PL-06 | Binary Authorization policy violation or `breakglass` use | F2 | 1 | RB-07 |
 | PL-07 | Budget alert at 90 % on any P-SA or controllers project (a burst of activity is a signal, not only a cost) | Billing budgets | 3 | ticket |
 | PL-08 | Registry card write outside CI (`agentregistry` Admin Activity) | F2 | 2 | RB-06 |
 | PL-09 | SCC CRITICAL/HIGH finding on any platform project | F3 | 2 | per finding |
-| PL-10 | Tenant-app posture ([03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) §13, added 2026-09-13): `UpdateEngine` unbinding `gemini-egress` or `UpdateAssistant` changing the console Model Armor setting or failure mode outside a change window; `StreamAssist` by `walle@` or `eve@`; an engine mutated (`UpdateReasoningEngine`, `DeleteReasoningEngine`) by the Discovery Engine service agent in any agent project — severity 1; a `discoveryengine` Admin Activity entry by a principal without an active PAM grant, a share to "All users in the organization" or of a Tier R+ agent to a group not in its row, a `gemini-registry` or gateway-policy write outside CI, an org-policy write on `fld-gemini-enterprise` — severity 2; no `StreamAssist` for 4 business hours or no drift-job report for 26 h — severity 3 | F2 Admin Activity and Data Access; PAM logs; register | 1 / 2 / 3 as listed | RB-04; RB-06 |
-| PL-11 | Evidence-store state ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §5.1, §9, added 2026-09-13): any `UpdateBucket`, `DeleteBucket`, retention-policy or lock change, or any KMS key state change (disable, destroy, IAM) on the evidence keys, in `LOGGING_PROJECT`, `CORE_PROJECT`, `EVE_PROJECT` or `KMS_PROJECT` | F2 | 1 | RB-04 |
+| PL-10 | Tenant-app posture ([03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) §13): `UpdateEngine` unbinding `gemini-egress` or `UpdateAssistant` changing the console Model Armor setting or failure mode outside a change window (it removes a fence); `StreamAssist` by `walle@` or `eve@`; an engine mutated (`UpdateReasoningEngine`, `DeleteReasoningEngine`) by the Discovery Engine service agent `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com` in any agent project (only possible on the project-level fallback; proves the fallback is dangerous) — severity 1; a `discoveryengine` Admin Activity entry by a principal without an active PAM grant, a share to "All users in the organization" or of a Tier R+ agent to a group not in its row, a `gemini-registry` or gateway-policy write outside CI, an org-policy write on `fld-gemini-enterprise` — severity 2; no `StreamAssist` for 4 business hours or no drift-job report for 26 h — severity 3 | F2 Admin Activity and Data Access; Cloud Audit Logs in the agent project (engine mutations); Cloud Asset Inventory `ORG_POLICY` feed (org-policy writes on `fld-gemini-enterprise`); PAM logs; register | 1 / 2 / 3 as listed | RB-04; RB-06 |
+| PL-11 | Evidence-store state ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §5.1, §9): any `UpdateBucket`, `DeleteBucket`, retention-policy or lock change, or any KMS key state change (disable, destroy, IAM) on the evidence keys, in `LOGGING_PROJECT`, `CORE_PROJECT`, `EVE_PROJECT` or `KMS_PROJECT` | F2 | 1 | RB-04 |
 | PL-12 | Access Approval disabled on any enrolled folder or project — severity 1; an auto-approved Access Approval request — severity 2 ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §7.2 DL-7.5) | F2; Access Approval Pub/Sub | 1 / 2 | RB-08 |
 | PL-13 | Declared-versus-discovered classification finding from Sensitive Data Protection discovery: severity 3, severity 2 when the store is class `evidence` and the infoType is a credential pattern ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §6.1) | `platform_logs.classification_findings` | 3 / 2 | ticket; the register row corrected |
 | PL-14 | The Data Access canary DL-4.3 ([08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §4.3) missing its daily heartbeat — a second canary beside H-2, proving the Data Access families reach the locked bucket; severity 1 for Tier P (halt reason `log_pipeline_silent`) | `platform_logs.canary` | 1 (P) / 2 | RB-04, RB-05 |
@@ -439,8 +458,8 @@ with the PAM entitlement can remove it.
 
 **Decision P96.** Catalogue ownership with IT security as code owner, YARA-L
 detection-as-code through `google_chronicle_rule` deployed by CI, a fixture per rule as a merge
-condition, the rule ids SA-01…SA-09, SG-01…SG-07, PL-01…PL-15, AG-* above (PL-10…PL-15 added
-on the reconcile pass of 2026-09-13 from pages 03, 08 and 09), and the auto-K7 subset. Owner: security reviewer;
+condition, the rule ids SA-01…SA-09, SG-01…SG-07, PL-01…PL-15, AG-* above (PL-10…PL-15 carry the rules
+pages 03, 08 and 09 require), and the auto-K7 subset. Owner: security reviewer;
 platform owner for the pipeline. Gate: Tier W for PL-*, the super-admin grant for SA-*/SG-*.
 
 ---
@@ -449,19 +468,28 @@ platform owner for the pipeline. Gate: Tier W for PL-*, the super-admin grant fo
 
 The super-admin robot can, in one console visit, stop the stream every detection above reads.
 The only defence that does not depend on the stream is a **heartbeat with an absence alarm on a
-channel the stream's owner does not control**. Four heartbeats, three failure domains.
+channel the stream's owner does not control**. Four heartbeats and one credential check, three failure domains.
 
 | Id | What is expected | Window | Where the alarm lives | Channel | Response |
 |---|---|---|---|---|---|
 | H-1 | Rows in `eve_workspace_logs` (Eve's own sink over all six streams) — the tenant produces admin/login/token events continuously in business hours | **no rows for 60 min in business hours** (HLD §7.3 and §13.2 use the same number); 240 min outside | (a) Cloud Monitoring absence policy in `EVE_PROJECT`; (b) **the witness**: the absence alarm on the mirrored heartbeat table in `EVE_WITNESS_PROJECT` (HLD §13.2) | (a) the platform channel; (b) the witness's SMS + mobile app + pager to the second human — channels the tenant's super admins do not administer | **halt reason `log_pipeline_silent`**: `eve-reconciler` sets `no_autonomous` and, for P-SA, `halt_all` on `walle-actions` and `walle-actions-super` through `/v1/control/halt` (machines lower); page severity 1; RB-04 |
 | H-2 | The SIEM sees F1 (a Workspace event) and F2 (a Cloud Audit Logs entry from `LOGGING_PROJECT`) — the platform emits a synthetic pair every 15 min: a harmless Admin-console-free event (`Assumption:` a `groups` membership no-op on a canary group by the reconciliation job's own identity, observed in F1 Groups and F2 `cloudidentity.googleapis.com`) | no canary in the SIEM for **45 min** | a SIEM absence rule **and** a Cloud Monitoring absence policy in `CORE_PROJECT` on the canary's acknowledgement (the SIEM posts back a receipt to a Pub/Sub topic; missing receipts fire the policy) — so the SIEM's own outage is seen from outside the SIEM | the platform channel; at Tier P also the MDR desk's own monitoring | severity 1 for P (the primary control is blind), 2 otherwise; RB-05 |
 | H-3 | A weekly synthetic SHA custom-module finding reaches the desk | 8 days | Cloud Monitoring in `CORE_PROJECT` | platform channel | severity 2: SCC notification path broken |
+| Eve credential | Eve's own token keeps working — `invalid_grant` from Google means Eve's credential is gone and Eve can no longer read the streams it reconciles | on the first failure | `eve-reconciler` | a severity 1 page through Eve's reporting contract ([../eve/03-lld.md](../eve/03-lld.md) §15) | **halt reason `log_pipeline_silent`**, as H-1; only a human re-bootstrap of Eve's credential restores it ([../eve/03-lld.md](../eve/03-lld.md) §14) |
 | H-4 | Every P-tier action service's 5-min heartbeat (F4) and, specifically, Eve's `eve_last_seen` stamp in `walle-actions` (Eve's condition 1, [../eve/06-failure-modes.md](../eve/06-failure-modes.md)) and `eve-export@`'s daily push to the witness | 15 min (heartbeat); 26 h (witness push) | the agent project (liveness); the **witness** for the push | agent channel; witness channels | agent silent → `shadow_or_silent_agent` (§4.2); Eve silent → RB-03 (Wall-E's `eve_last_seen` absence already drops Eve-gated cells to advisory-or-halt per the Eve set); witness push missing → severity 1, RB-03 |
 
-Two heartbeats that are often read as one, stated apart (reconcile pass, 2026-09-13): H-1 is
-the **Workspace stream** into `eve_workspace_logs`, 60 minutes in business hours; the Data
-Access canary DL-4.3 of [08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md)
-§4.3 (PL-14) is a **15-minute** proof that the Data Access families reach the locked bucket.
+The Eve-side checks (H-1, the Eve credential, H-4's Eve rows) run in Eve's **reconciler limb**
+(`eve-reconciler`, identity `eve-verifier@`) and never in the gate limb; every halt they cause
+goes through `POST /v1/control/halt` with a code from Eve's `reasons.yaml` or a catalogue rule id,
+and nothing they do raises anything. `log_pipeline_silent` sets `no_autonomous` for **every agent
+Eve verifies** and `halt_all` on `walle-actions` and `walle-actions-super`: silence is what a super
+admin can manufacture, so the default state of silence is a halt, not an alert about it.
+
+Two heartbeats that are often read as one, stated apart: H-1 is the **Workspace stream** into
+`eve_workspace_logs`, 60 minutes in business hours; the Data Access canary DL-4.3 of
+[08-data-logging-retention-sovereignty.md](08-data-logging-retention-sovereignty.md) §4.3 (PL-14)
+is a **daily** proof that the Data Access families reach the locked bucket, its entries expected
+within 15 minutes.
 Both end in the halt reason `log_pipeline_silent`; they are two rules on two objects, not one
 number.
 
@@ -499,9 +527,9 @@ verifies is not a control, and because hundreds of agents will have dozens of ve
 | RP-1 | Every verifier (Eve's control path, the platform verifier of HLD §12.4, any future agent-specific verifier) has a **verifier owner** recorded in the register who is **not** in the administration line of any agent it verifies, and a `oncall.yaml` naming a primary and a secondary outside that line | register schema; the admission gate refuses a Tier W+ agent whose verifier owner equals its owner or its operator group's owner |
 | RP-2 | Severity 1 and 2 pages go to the verifier owner **in parallel** with the detection desk; the agent owner is in copy unless the actor is the agent owner | `eve.pages`-style tables per verifier with recipient, channel, delivery result, acknowledgement; CI assertion on the recipient set |
 | RP-3 | Reports whose subject is a **human** with authority over the agent (level raises, halt clears, threshold edits, `eve_authority` promotions, any request on a protected principal by the ladder owner, any PAM grant on the agent's project by its owner) go **out of band from the witness** to the verifier owner as **sole recipient** | the witness channels; for Eve, the second human; for other verifiers, their owner through the same witness project (one witness serves the platform) |
-| RP-4 | The reporting path may reason (P34) but is **report-only**: it writes reports and pages; nothing it writes is read by any gate or action service; it pages at severity 2 only, within a page budget, citing the deterministic finding that triggered it | no grant, no reader (HLD §13.2); CI check |
+| RP-4 | The reporting path may reason (P34) but is **report-only**: it writes reports and pages; nothing it writes is read by any gate or action service; it pages at severity 2 only, within a page budget, citing the deterministic finding that triggered it | no grant, no reader (HLD §13.2); CI check; Eve's instance is [../eve/01-hld.md](../eve/01-hld.md#3-deterministic-by-absence-not-by-discipline) §3 |
 | RP-5 | The witness holds every verifier's incidents copy and its acknowledgement records; a page unacknowledged past its target is re-paged to the secondary and, past twice the target, to the incident commander | the witness's Cloud Monitoring policies on the acknowledgement table |
-| RP-6 | Page budget: more than three pages a week from one reason code raises a `threshold suspect` ticket (Eve's rule, made platform-wide); a verifier that exceeds its budget for two weeks has its severity-2 rules reviewed, never silenced | `eve.pages` and equivalents; the metrics of §14 |
+| RP-6 | Page budget: more than three pages a week from one reason code raises a `threshold suspect` ticket (Eve's rule, made platform-wide); a verifier that exceeds its budget for two weeks has its severity-2 rules reviewed, never silenced | `eve.pages` and equivalents; the metrics of §14; Eve's budget is [../eve/06-failure-modes.md](../eve/06-failure-modes.md#the-page-budget-and-the-paging-conditions) |
 
 The reporting contract table of the HLD (§13.2) stands as the P-SA instance of this rule; for
 Tier W agents the desk row reads "next business morning" and the verifier owner is the platform
@@ -619,8 +647,8 @@ folded in as RB-06…RB-10.
 - **Contain.** **K4** (the service revokes its own refresh token) then **K5** by the on-duty
   super admin: revoke the OAuth grant for both client ids on `walle@` (`tokens.delete`,
   scope `admin.directory.user.security`, verified) and **suspend** `walle@` (`users.update` with
-  `suspended: true`, verified field) — an access token already issued lives **up to 60 minutes**,
-  so the desk watches SA-01/SA-07/SA-08 for that hour and pre-stages **K6** (`makeAdmin false`)
+  `suspended: true`, verified field, scope `admin.directory.user`) — an access token already issued lives **up to 60 minutes**,
+  so the desk watches SA-01/SA-07/SA-08 for that hour and pre-stages **K6** (`users.makeAdmin` with `status: false`)
   if any post-suspension event appears. If SG-01…SG-04 fired, **K7** (auto or by hand) and RB-04.
 - **Investigate.** Every event by `walle@` since the last known-good heartbeat, joined to audit
   rows (§5 query 2); the target list (users, groups, roles, settings) becomes the recovery
@@ -792,7 +820,7 @@ the Digital Omnibus (HLD §14.1) Annex III obligations apply from **2027-12-02**
 the Art. 6(3) derogation — so on 2026-09-13 the taxonomy is operated **voluntarily and as the
 fallback's readiness**, and becomes mandatory the day any register row is high-risk. The
 organisation is both provider and deployer of Wall-E (`Assumption:` the entity named by P23), so
-the deployer's duty to inform the provider first (Art. 26(5); text not re-fetched this pass) is
+the deployer's duty to inform the provider first (Art. 26(5); text not re-fetched on 2026-09-13) is
 internal, and one owner reports.
 
 | Platform event class | Art. 3(49) limb | Examples on this platform | Assessor | Report owner | Deadline |
@@ -853,8 +881,6 @@ Owner: legal and the DPO; the incident commander operates it. Gate: Stage 1 of a
 
 ## 13. Tabletop exercises
 
-Answers gap MON-10.
-
 | Item | Decision |
 |---|---|
 | Cadence | **Quarterly** until the platform has run Tier P for four consecutive quarters without a severity-1 incident caused by a control gap; **semi-annual** after that; and one **before Stage 1 of the first Tier W agent** and one **before the super-admin grant** (both gate rows) |
@@ -871,8 +897,6 @@ IT security. Gate: Stage 1 (first tabletop), the super-admin grant (the crisis s
 ---
 
 ## 14. SOC metrics
-
-Answers gap MON-09.
 
 Produced **monthly**; the platform-wide ones by the detection desk from the SIEM and the case
 system, **never** from `MO_PROJECT`; the Wall-E-scoped ones by Mo as a metric pack over
@@ -914,7 +938,7 @@ Wall-E and Eve packs). Owner: security reviewer. Gate: Tier W (first pack), Tier
 | SIEM contract S1–S9 | IT security (P10), platform owner (default) | the SIEM instance | gate evidence per clause | Tier P does not open |
 | SCC Premium, org-level, services | organisation IT security | organisation activation | ETD Workspace finding in a drill; module list diff | Tier C does not open; drift finding |
 | Monitoring baseline module | platform owner | every agent project | admission A1–A5; SHA custom module | admission refused; drift finding |
-| Registered ⇒ feeding | platform owner | registry cards, `gemini-egress` policy | nightly reconciliation | share removed until heartbeat returns |
+| Registered ⇒ feeding | platform owner | registry cards, `gemini-egress` policy | the reconciliation job's daily and feed-driven runs (§4.2) | share removed until heartbeat returns |
 | Correlation contract | platform owner (schema), agent owner (rows), security reviewer (queries) | `audit.schema`, SIEM parsers | schema validator in CI; tabletop query timings | `audit_gap` sev 3; `reconciliation_gap` halt |
 | Detection catalogue and rules | security reviewer (content), IT security code owners | `detections/` in git, SIEM rules | fixture per rule in CI; retrohunt before enable; quarterly review | rule cannot merge; dead-rule finding |
 | Super-admin set SA/SG | IT security | SIEM (never `WALLE_PROJECT`); mirrored in Eve's reconciler | fixtures on the sandbox tenant; two-evaluator agreement metric | a divergence is a finding; a missing rule blocks the grant |
@@ -933,83 +957,17 @@ Wall-E and Eve packs). Owner: security reviewer. Gate: Tier W (first pack), Tier
 
 ## 16. Decisions recorded on this page
 
-Final ids P92–P103, recorded in [12-open-decisions.md](12-open-decisions.md). Numbering continues
-[01-hld.md](01-hld.md) §17, which ends at P34.
-
-| Id | Decision | Recommendation / value | Owner | Gate it blocks |
-|---|---|---|---|---|
-| P92 | The SIEM contract S1–S9 and the platform-provisioned default if P10 is unanswered at the gate | own SecOps instance per §2.2 | IT security (P10); platform owner (contract, default) | Tier P |
-| P93 | SecOps location and retention | Europe multi-region; retention ordered ≥ 400 days (term granularity *tbd*); `europe-west3` fallback if the ISMS needs a single site | IT security | Tier P |
-| P94 | SCC Premium at organisation level with the service set of §3; Enterprise not chosen; SCC data-residency location | Premium; `eu` location recommended, Model Armor restriction verified before activation | organisation IT security | Tier C |
-| P95 | Monitoring baseline variants, heartbeat cadences, absence windows, unpublish-on-silence | §4 | platform owner (with the Eve owner for P windows) | Tier R (module), Tier P (SIEM invariant) |
-| P96 | Detection catalogue ownership, detection-as-code toolchain, fixture-per-rule merge rule, rule ids SA-01…SA-09, SG-01…SG-07, PL-01…PL-15, AG-*, the auto-K7 subset | §6 | security reviewer; platform owner | Tier W (PL-*), the grant (SA-*/SG-*) |
-| P97 | The four heartbeats, windows and `log_pipeline_silent` semantics | §7 | Eve owner; platform owner | the super-admin grant |
-| P98 | The platform reporting path RP-1…RP-6 (every verifier reports to a human outside the owner's line; Eve's contract is the first instance) | §8 | Eve owner; security reviewer | Tier W; the grant |
-| P99 | On-call tool rule, escalation ladder, acknowledgement and containment targets | §9.2 | incident commander role; platform owner | Tier P (24x7), Tier W (channel) |
-| P100 | One incident record in the SIEM's case system, mandatory fields, witness copy, monthly locked export | §10 | incident commander role | Tier W; Tier P |
-| P101 | Art. 73 taxonomy, assessor and report owner, deadlines; GDPR 72-hour path with the DPO accountable; negative determination on critical infrastructure | §12 | legal, DPO; incident commander operates | Stage 1 (DPO path); the grant (Art. 73 live) |
-| P102 | Tabletop cadence, participants, scenarios, evidence, pass criteria | §13 | IT security | Stage 1; the grant |
-| P103 | SOC metric set and producer split (desk platform-wide; Mo for the Wall-E and Eve packs) | §14 | security reviewer | Tier W; Tier P |
-
-Decisions in the agent sets this page touches (dated pointer lines to be added in the
-propagation stage): Wall-E 11 (on-call → §9.2), 37 (security reviewer → §6.1), 39 (rebuild
-checklist → RB-01/02), decision 14 (signed assertion → RB-09); Eve E-2/E-13 (second human → §8),
-E-18 (paging conditions 5–6 → filled by SA-03/SA-04 as Eve's mirrored rules; the budget number
-stays *tbd* at S2), E-14 (retention → HLD §7.5, unchanged here); Mo M-5, M-8 (metric packs →
-§14).
-
----
-
-## 17. What another page must match (for the reconcile pass)
-
-- The heartbeat windows: **60 min business hours** for `eve_workspace_logs` rows, **15 min** for
-  Eve's heartbeat and for P-tier action-service heartbeats, **26 h** for the witness push, **45 min**
-  for the SIEM canary — HLD §7.3 and §13.2 already say 60 and 15; the Eve set's condition 1 says
-  15 (unchanged).
-- The halt reason `log_pipeline_silent` sets `no_autonomous` platform-wide for the affected
-  verifier's agents and `halt_all` on the P-SA lanes; cleared by one human call; every clear is a
-  report about the administrator (RP-3).
-- Acknowledgement targets: sev 1 **15 min / 60 min** (`Assumption:`), sev 2 **4 business hours**
-  (`Assumption:`), C–W "next business morning" — identical to HLD §7.6 and §13.2.
-- Containment targets: K0 < 60 s, **K5 ≤ 30 min of acknowledgement** (`Assumption:`, new), K6 ≤ 60
-  min (new), K7 KF-1 < 60 s and < 5 min end to end (HLD §11.4).
-- The auto-K7 subset is **SG-01, SG-02, SG-03, SG-04, PL-02** only; SA-* rules never fleet-kill.
-- Rule ids **SA-01…SA-09, SG-01…SG-07, PL-01…PL-15, AG-\***, heartbeat ids **H-1…H-4**, runbook
-  ids **RB-01…RB-11**, reporting rules **RP-1…RP-6**, SIEM clauses **S1–S9** — other pages cite
-  these ids, not prose.
-- Eve's paging conditions 5 and 6 are filled from SA-03 (posture change by any actor) and SA-04
-  (interactive login) as mirrored rules in the reconciler limb; the Eve set's `thresholds.yaml`
-  gains them; the page budget number stays *tbd*.
-- The SIEM is **never** given a reader on any agent's content logs or on `eve.advice`/narrative;
-  F4 is metadata only; the SIEM's readers group is administered by IT security.
-- `_Required` and `_Default` organisation buckets are copied by the aggregated sink and never
-  redirected (Sensitive Actions constraint).
-- SecOps has no `eu` location and no `europe-west1`; the chosen location is the **Europe
-  multi-region**; SCC's own residency location is `eu` (P94, pending the Model Armor check).
-- SCC **Premium** at organisation level; Enterprise deprecated 2026-05-21, shutdown 2027-05-21;
-  AI Protection GA in Premium since 2026-03-05; Agent Platform Threat Detection Preview, nonprod
-  only.
-- The reconciliation job in `CORE_PROJECT` holds **no** write on the `gemini-egress` policy or
-  any registry: unpublish-on-silence is an automated pull request setting the row `suspended`
-  plus a CI pipeline run whose `terraform apply` removes the entry ([05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md)
-  §5–§6, P73; aligned 2026-09-13). Its grant rows for the topology page are the ones §6.3 of
-  page 05 lists (the platform-drift@ exception of HLD §18 item 25, extended).
-- Heartbeat H-1 (60 min, the Workspace stream) and the Data Access canary DL-4.3 / PL-14 (15 min,
-  the audit families into the locked bucket) are two rules on two objects (§7).
-- The K5 mechanics named here: `tokens.delete` (scope `admin.directory.user.security`) and
-  `users.update` `suspended: true` (scope `admin.directory.user`); K6: `users.makeAdmin`
-  `status: false`.
-- Art. 73 deadlines 15 / 10 / 2 days and 73(6); GDPR 72 h (Art. 33), Art. 34 for high risk; the
-  Omnibus date 2027-12-02 — all as HLD §14.1.
-- The incident record lives in the SIEM's case system, not in `platform/wall-e/incidents/`
-  (which does not exist); the Wall-E ladder page's "write an incident note" becomes "open or
-  update the case".
+This page's decisions are P92–P103, each stated as "Decision Pnn" at the end of the section that
+argues it; their state, owner and gate are held in
+[12-open-decisions.md](12-open-decisions.md#1-how-this-register-works), and the agent-set
+decisions they touch (Wall-E 11, 14, 37, 39; Eve E-2, E-13, E-14, E-18; Mo M-5, M-8) are indexed in
+[12-open-decisions.md §8](12-open-decisions.md#8-index-agent-set-decisions-and-the-platform-rows-that-touch-them).
 
 ---
 
 ## 18. Sources (read 2026-09-13 unless stated)
 
-Verified this pass:
+Verified on 2026-09-13:
 
 - https://docs.cloud.google.com/security-command-center/docs/release-notes — Enterprise tier deprecated 2026-05-21, shutdown 2027-05-21, automatic move to Premium; AI Protection GA in Enterprise 2025-12-12 and in Premium 2026-03-05; Agent Engine Threat Detection Preview from 2025-11-17
 - https://docs.cloud.google.com/security-command-center/docs/service-tiers — Standard, Premium, Enterprise (deprecated); Premium includes ETD (Cloud Logging and Workspace), SHA custom modules, AI Protection, Sensitive Actions, Agent Platform Threat Detection, Model Armor findings
@@ -1022,7 +980,7 @@ Verified this pass:
 - https://docs.cloud.google.com/security-command-center/docs/data-residency-support — SCC `eu`/`us`/`sa` locations; AI Discovery, Gemini inventory and Model Armor restricted in KSA only; "Resources scanned" compliance counts restricted; some Cloud Run and Container Threat Detection detectors unavailable under residency; Data Location terms do not apply to pre-GA features (updated 2026-09-09, re-read 2026-09-13); "for Google SecOps data residency is always enabled"
 - https://docs.cloud.google.com/security-command-center/docs/activate-scc-overview — Premium at organisation level: subscription or pay-as-you-go
 - https://cloud.google.com/terms/secops/data-residency — verified by raw fetch on 2026-09-13 (last modified 2026-06-24): Europe multi-region (EU member states) and single regions including `europe-central2` Warsaw; applies to SecOps SIEM and SOAR; earlier also confirmed by https://security.googlecloudcommunity.com/news-announcements-9/expanding-google-secops-data-residency-5276 (Google's own announcement: Europe multi-region in EU member states — Belgium, Netherlands, Finland; `europe-west2`, `europe-west3`, `europe-west6`, `europe-west9`, `europe-west12`) and by the SecOps paragraph of https://docs.cloud.google.com/security-command-center/docs/data-residency-support — **re-verify on the order form**
-- https://docs.cloud.google.com/chronicle/docs/about/data-retention (rendered as an index on both passes; the linked "Configure SIEM data retention" page returned 404 on the second pass): 12-month default; maximum raised to 60 months; extension on the purchase order through SecOps support — figures from the lens's verified table, **unverified from the primary page this pass**
+- https://docs.cloud.google.com/chronicle/docs/about/data-retention (rendered as an index when read; the linked "Configure SIEM data retention" page returned 404): 12-month default; maximum raised to 60 months; extension on the purchase order through SecOps support — figures from the monitoring review's facts table, **unverified from the primary page**
 - https://knowledge.workspace.google.com/admin/reports/export-log-events-to-google-security-operations-to-monitor-insider-risk — the SecOps export: editions, console path, all event types, customer id/token/instance id, up to 24 h initial delay, Reports privilege
 - https://knowledge.workspace.google.com/admin/getting-started/share-data-with-google-cloud-services — Sharing options: Menu → Account → Account settings → Legal and compliance; super administrator; Groups Enterprise, Admin, User, OAuth, SAML, Access Transparency logs; "no new data is shared" when off
 - https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging — the shared log types; `admin.googleapis.com`, `cloudidentity.googleapis.com`, `login.googleapis.com`, `oauth2.googleapis.com`; `insertId` and `uniqueQualifier` present; Admin Activity in `_Required` (400 days), Data Access in `_Default`
@@ -1039,17 +997,17 @@ Verified this pass:
 - https://artificialintelligenceact.eu/article/73/ — deadlines 15 / 10 / 2 days; initial incomplete report; 73(6)
 - https://artificialintelligenceact.eu/article/3/ — definitions (49) serious incident and (61) widespread infringement
 - https://gdpr-info.eu/art-33-gdpr/ and https://gdpr-info.eu/art-34-gdpr/ — 72 hours; processor duty; phased information; 33(5); Art. 34 high-risk communication and exemptions
-- The lens report `.agent-work/review/monitoring.md` (facts table, read 2026-09-13): SecOps ingests SCC findings by default and Cloud Logging directly; log scopes; Audit Manager frameworks
+- The monitoring review report `.agent-work/review/monitoring.md` (outside the wiki; facts table, read 2026-09-13): SecOps ingests SCC findings by default and Cloud Logging directly; log scopes; Audit Manager frameworks
 
-Not verified this pass and marked in the text: the mechanism of F2's SecOps ingestion (direct vs
+Not verified on 2026-09-13 and marked in the text: the mechanism of F2's SecOps ingestion (direct vs
 Pub/Sub — the ingest page rendered as an index); the SecOps 12-month default and 60-month
-maximum retention (primary page not reachable; lens figures carried); the SecOps retention term
+maximum retention (primary page not reachable; the review's figures carried); the SecOps retention term
 granularity; the
 exact SCC `eu`-location restriction on Model Armor findings; a Terraform rule-deployment
 resource beside `google_chronicle_rule`; the UDM field paths for the correlation keys; the
 Workspace admin `eventName` values for the Sharing options and SecOps export changes and the
 Model Armor floor-write method name (observed on the sandbox tenant before the rules are
-enabled); F1's steady-state lag; Art. 26(5)'s text (cited from the HLD and the lens); the market
+enabled); F1's steady-state lag; Art. 26(5)'s text (cited from the HLD and the monitoring review); the market
 surveillance authority for the entity; the SecOps outbound identity for the K7 webhook (P10); the
 tenant's Workspace edition (F1's prerequisite); SecOps rule-performance metric names.
 
@@ -1081,8 +1039,10 @@ tenant's Workspace edition (F1's prerequisite); SecOps rule-performance metric n
   this page extends with `log_pipeline_silent`
 - [../eve/06-failure-modes.md](../eve/06-failure-modes.md) — the page budget, paging conditions
   1–6, `oncall.yaml`, the no-operator window
-- [../project-topology.md](../project-topology.md) §3 — the grant rows this page adds (SIEM
-  outbound → K7; reconciliation job → `gemini-egress` entry through PAM)
+- [../project-topology.md](../project-topology.md) §3 — the grant row this page adds (SIEM
+  outbound → K7); the reconciliation job's rows are those of
+  [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) §6.3 (it holds no
+  write on `gemini-egress`)
 - [../gemini-enterprise.md](../gemini-enterprise.md) — the tenant app whose `StreamAssist` log
   supplies the human `sub`
 - [../google-workspace.md](../google-workspace.md) — the tenant edition F1 depends on

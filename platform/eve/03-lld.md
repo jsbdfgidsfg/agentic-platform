@@ -2,14 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- **Objective restated 2026-09-13; see the platform HLD**
-  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2; this page carries §18
-  items 12–15; owner the Eve owner, gate the super-admin grant, P143). Added here: the evidence
-  perimeter (§13), the detection catalogue, roster check and evidence heartbeat (§14), the
-  reporting contract (§15), the new reason codes, `eve.incidents`, `eve.seeded_fault_runs` and
-  the `eve_quality` dataset. The verdict function, the envelope and the recomputations are
-  unchanged.
+- Last reviewed: 2026-09-14
+- 2026-09-13: objective restated for a super-admin Wall-E (P33) — see the platform HLD
+  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2, §18 items 12–15; owners
+  and gates P143).
 
 This page is the inside of Eve. [01-hld.md](01-hld.md) says what Eve is and is not;
 [02-identity-and-auth.md](02-identity-and-auth.md) says which principal holds which key.
@@ -19,15 +15,13 @@ stored, and what a signature over it actually covers.
 Everything here is code. No part of this page describes a model, a prompt or a judgement.
 That is a requirement, not a style: [C12](../wall-e/14-hld-challenge.md) and
 [decision 34](../wall-e/09-open-decisions.md) settle that no language model may produce an
-Eve approval or signature, and [01-hld.md](01-hld.md) lists the five mechanical
+Eve approval or signature, and [01-hld.md](01-hld.md) lists the seven mechanical
 enforcements that make it true by construction rather than by discipline.
 
-**Narrowed 2026-09-13 to the authority path** (platform HLD §13.2, P34). "Everything here is
-code" is true of the verifier this page describes — `eve-gate` and `eve-reconciler`, every
-approve, refuse, veto, halt and demote, and every row they write. It is not a statement about
-all of Eve any more: the report-only `eve-advisor` in `EVE_ADVISOR_PROJECT` may reason, writes
-narratives and `eve.advice` through the `eve_advice` dataset (§15), and is read by humans and
-by nothing on this page. No input to `decide` and no row the reconciler acts on comes from it.
+"Everything here is code" covers the control path this page describes — `eve-gate` and
+`eve-reconciler`, every verdict and every row they write. The report-only reporting path,
+`eve-advisor`, is outside it, and nothing on this page reads what it writes
+([01-hld.md §3](01-hld.md#3-deterministic-by-absence-not-by-discipline)).
 
 ---
 
@@ -110,11 +104,11 @@ execution. Re-fetching and asserting the hash has not moved bounds the window in
 substitution can survive to the few hundred milliseconds between the assertion and the
 `AsymmetricSign` call.
 
-If any step is inconclusive rather than contradicted, the item is **refused**, not halted.
-Refusing costs an operator an approval; halting costs the programme. That bias is stated
-in full in [06-failure-modes.md](06-failure-modes.md) and is an amendment to item 5 of
-[../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md), recorded as E-7 in
-[09-open-decisions.md](09-open-decisions.md).
+If any step is inconclusive rather than contradicted, the item is **refused**, not halted —
+the bias stated in [01-hld.md §4](01-hld.md#4-two-authorities-on-opposite-schedules) and
+[06-failure-modes.md](06-failure-modes.md), recorded as E-7 in
+[09-open-decisions.md](09-open-decisions.md) as an amendment to item 5 of
+[../wall-e/08-team-eve-mo.md](../wall-e/08-team-eve-mo.md).
 
 ## 3. The five recomputations
 
@@ -162,18 +156,10 @@ Contradiction → `pre_state_mismatch`, refuse and raise a ticket. Unreadable �
 ### 3.3 The effective level, re-derived independently
 
 This is the recomputation that catches a lying **policy chain** rather than a lying plan
-body. [../wall-e/03-lld.md](../wall-e/03-lld.md) defines the effective level for one item
-as:
-
-```
-effective = min( ceiling[risk_tier][trigger_for_ceiling],   # code, never raised by config
-                 config.families[f].levels[t],              # the ladder
-                 playbook.level,                            # a playbook may cap itself
-                 override[f][t] )                           # live, demote-only
-```
-
-Eve evaluates that expression itself, from four inputs none of which is the plan's own
-claim:
+body. Eve evaluates the effective-level expression of
+[../wall-e/03-lld.md](../wall-e/03-lld.md#the-autonomy-config) — the minimum of the code
+ceiling, the ladder level, the playbook cap and the live, demote-only override — with its own
+implementation, from four inputs none of which is the plan's own claim:
 
 | Term | Eve's source |
 |---|---|
@@ -216,11 +202,21 @@ S3 entry — and it is the one not to cut. Without it, Eve re-running Wall-E's o
 code would mean the verification-success metric that unlocks L4 and L5 is measuring itself:
 the checker and the checked would share a bug by construction, and the number that gates
 the whole ladder would be an identity. The same argument produced the independent ceiling
-table in 3.3. It is also the proportionate answer to
-[C52](../wall-e/14-hld-challenge.md)'s finding that nothing in the set has ever run against
-a harness.
+table in 3.3: Eve compiles its **own** table from the CI-published ladder artefact, because
+recomputing the hash and re-reading pre-state catch a lying plan body, and only an
+independent level re-derivation catches a lying policy chain. It is also the proportionate
+answer to [C52](../wall-e/14-hld-challenge.md)'s finding that nothing in the set has ever run
+against a harness, and it is the reason this design was chosen over the alternatives.
 
 Predicate unmet → `predicate_unmet`, refuse.
+
+**The platform's Tier W weakening does not apply to Eve.** The platform HLD §12.4
+generalises Eve's shape into a **platform verifier** for Tier W agents whose predicates are
+compiled from the same manifest the agent uses, and records that this weakens the "second
+implementation" property, accepted for Tier W with four compensations (P79). That weakening
+is a Tier W acceptance and does not reach Eve: Tier P and the P-SA singleton keep a dedicated,
+hand-written Eve, and the second implementation written from the typed specification and
+differentially tested stands unweakened for Wall-E.
 
 **The limit, stated rather than narrowed away.** A second implementation is not a second
 author. The differential test catches divergence from Wall-E's version; it does not catch
@@ -323,12 +319,11 @@ and separating Eve rejections from human ones is a column, not a state (E-11 in
 `walle-actions` verifies **offline against a pinned PEM** as the primary path, with Cloud
 KMS `GetPublicKey` as fallback only:
 
-- Each key version's PEM is exported at creation, **before first use**, to
-  `gs://<eve-project>-eve-evidence/keys/` — the `keys/` prefix of the **locked** evidence
-  bucket, not a bucket of its own — **and** committed to
-  `contracts/eve-public-keys/<version>.pem` in Wall-E's repository under `ladder.yaml`'s
-  CODEOWNERS. `GetPublicKey` returns PEM usable for exactly this offline verification
-  (verified 2026-09-12, source above).
+- Each key version's PEM is archived at creation, **before first use**, in the locked evidence
+  bucket and in Wall-E's repository under `ladder.yaml`'s CODEOWNERS — the archive rule is
+  [02-identity-and-auth.md](02-identity-and-auth.md#the-pem-archive-in-two-places-before-first-use).
+  `GetPublicKey` returns PEM usable for exactly this offline verification (verified 2026-09-12,
+  source above).
 - No IAM grant inside Wall-E's project can substitute a key, because the trusted material is
   a committed file under code ownership rather than a live lookup.
 - A KMS outage does not stop verification.
@@ -383,8 +378,8 @@ file is rejected before signing.
 | Pre-approval (→ refuse) | `plan_hash_mismatch`, `pre_state_mismatch`, `predicate_unmet`, `level_overclaim`, `config_version_unknown`, `ceilings_sha_mismatch`, `target_protected`, `target_out_of_scope`, `rollback_absent`, `item_count_over_cap`, `trigger_uncorroborated`, `plan_expired`, `eve_read_failed`, `canonicalisation_failed`, `eve_config_stale` |
 | Post-hoc | `post_state_mismatch`, `unverified_within_sla`, `audit_row_missing`, `admin_event_unmatched`, `licence_event_only`, `no_audit_stream`, `verification_deferred_lag` (the last two explicitly **not** failures) |
 | Control plane (→ demote or halt) | `control_plane_divergence`, `audit_claim_divergence`, `ladder_drift`, `epoch_regression`, `google_contract_drift`, `reconciliation_gap`, `evidence_stalled`, `eve_key_unavailable`, `disagreement_rate`, `false_refusal_rate`, `registry_mismatch`, `no_operator_window` |
-| Evidence and roster (→ halt), added 2026-09-13 | `log_pipeline_silent` — evidence silence (heartbeat H-1, Eve's token `invalid_grant`, the witness push missing): `no_autonomous` for every agent Eve verifies and `halt_all` on `walle-actions` and `walle-actions-super`, cleared by one human call, every clear a report about the administrator ([../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md) §7, P97); `role_assignment_added`, `role_assignment_missing` — the daily roster check in either direction (§14; [../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §8.1, P68). `reconciliation_gap` keeps its code and widens to every ingested stream (§14) |
-| Detection (→ per rule: `halt_all` on the P-SA lanes and a severity-1 page, or a page or ticket), added 2026-09-13 | The rule ids of the detection catalogue (§14): the tenant-integrity rules mirror the SIEM's `SA-01`…`SA-09` and carry those ids; Eve's own baseline and divergence rules carry ids *tbd* at S2 calibration. Each rule row declares its one action, exactly as a reason code does |
+| Evidence and roster (→ halt) | `log_pipeline_silent` — evidence silence (heartbeat H-1, Eve's token `invalid_grant`, the witness push missing): `no_autonomous` for every agent Eve verifies and `halt_all` on `walle-actions` and `walle-actions-super`, cleared by one human call, every clear a report about the administrator ([../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md) §7, P97); `role_assignment_added`, `role_assignment_missing` — the daily roster check in either direction (§14; [../agentic-platform/04-identity-and-privileged-access.md](../agentic-platform/04-identity-and-privileged-access.md) §8.1, P68). `reconciliation_gap` keeps its code and widens to every ingested stream (§14) |
+| Detection (→ per rule: `halt_all` on the P-SA lanes and a severity-1 page, or a page or ticket) | The rule ids of the detection catalogue (§14): the tenant-integrity rules mirror the SIEM's `SA-01`…`SA-09` and carry those ids; Eve's own baseline and divergence rules carry ids *tbd* at S2 calibration. Each rule row declares its one action, exactly as a reason code does |
 
 Two codes deserve their reading spelled out. `verification_deferred_lag` is not a fault: it
 is the verdict on a write that is confirmed from current state but whose audit event has not
@@ -422,11 +417,10 @@ post_hoc:
   deep_pass_hours: 6                # upgrade verified_state_only -> verified
   gap_after_hours: 6                # nothing landed -> reconciliation_gap
   lag_budget_minutes:
-    # Every budget here clocks ONE stream: the Admin audit log, which is the only thing
-    # Eve's sink filter (serviceName="admin.googleapis.com") carries.
-    # Qualified 2026-09-13: the sink now carries all six Workspace streams (section 13);
-    # these two rows still clock the Admin stream for post-hoc verification of Wall-E's
-    # catalogued writes, and the other streams' budgets are under evidence.reports_poll.
+    # Every budget here clocks ONE stream: the Admin audit log, where Wall-E's catalogued
+    # writes land. The sink carries all six Workspace streams (section 13); these two rows
+    # clock the Admin stream for post-hoc verification, and the other streams' budgets are
+    # under evidence.reports_poll.
     admin: 15                       # Assumption:
     groups: 15                      # Assumption: same stream, same number as admin.
                                     # Wall-E's F3 group-member writes go through the
@@ -452,7 +446,7 @@ paging:
   eve_demotions_per_hour_severity_2: 3
 oncall:
   file: oncall.yaml                 # the no-operator window
-# ---- added 2026-09-13, platform HLD section 13.2 and page 07 sections 7-8 -------------
+# ---- super-admin evidence: platform HLD section 13.2 and page 07 sections 7-8 --------
 evidence:
   reports_poll:
     actors: [robot, eve_robot, every_super_admin_on_roster]
@@ -493,8 +487,8 @@ reporting:
 
 Four notes on those numbers. The lag budgets are `Assumption:` and stay so — what is *not*
 an assumption is which stream they clock, and that is the Admin audit log for both rows,
-because Eve's sink filter carries nothing else (qualified 2026-09-13: it now carries six
-streams; these two rows still clock the Admin stream for catalogued writes). Verified 2026-09-12: only Access
+because that is where Wall-E's catalogued writes land, even though the sink carries six
+streams. Verified 2026-09-12: only Access
 Transparency, Admin Audit, Enterprise Groups Audit, Login Audit, OAuth Token Audit and SAML
 Audit export to Cloud Logging, and Calendar is not among them ([Workspace audit
 logs](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging)); group-member
@@ -507,18 +501,17 @@ on measured data before anything is wired to it**, then reviewed quarterly — E
 against real writes by then and its false-positive rate will be measured, which is the only
 honest way to set a halt threshold.
 
-The rows added on 2026-09-13 take their numbers from the platform: the heartbeat windows from
+The `evidence`, `reconciliation`, `roster` and `reporting` rows take their numbers from the platform: the heartbeat windows from
 [../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md)
 §7 (P97), the acknowledgement targets and re-page rule from §8–§9 of the same page (RP-5, P99,
 both `Assumption:` until the detection-desk contract fixes them), the page rule from RP-6.
 The per-application Reports lag budgets are *tbd* and calibrated at S2 like the rest (E-18);
 "business hours" is the value already used by `eve_silence`.
 
-Two thresholds in this file belong to `walle-actions` rather than to Eve — the four
-business hours before `eve_silence` sets `no_autonomous`, and the 60 minutes and four hours
-of the evidence-stale sweeper. They are listed in
-[08-contract-changes.md](08-contract-changes.md) as edits Eve forces back on Wall-E, and
-Eve's copy is the reference the two are asserted equal against.
+The sweeper thresholds — the four business hours before `eve_silence` sets `no_autonomous`, and
+the 60 minutes and four hours of `eve_evidence_stale` — belong to `walle-actions`, as specified
+in [08-contract-changes.md §3](08-contract-changes.md#3-wall-es-side-of-this-design); Eve's
+copy is the reference the two are asserted equal against.
 
 ## 8. The data plane
 
@@ -527,11 +520,11 @@ Eve's copy is the reference the two are asserted equal against.
 | `walle_audit.{actions,runs,plans,approvals,verifications,config_versions}` | Wall-E, `WALLE_PROJECT` | dataset-level `dataViewer` (`READER`) in `WALLE_PROJECT`, granted by Wall-E's runbook (CC-22) to `eve-v0@`, `eve-controller@`, `eve-verifier@` of `EVE_PROJECT`; jobs run in `EVE_PROJECT` | `run_id`, plus ADK `invocation_id` | Provided by Wall-E's runbook since 2026-09-13. Query jobs run in Eve's project, so no `bigquery.jobUser` is needed in Wall-E's |
 | `walle_workspace_logs` | Wall-E, `WALLE_PROJECT` — since 2026-09-13 an authorised view `platform_logs_views.walle_workspace_logs` in `LOGGING_PROJECT` (P104, P107), with `eve-verifier@` holding dataset-level `READER` on `platform_logs_views` there | not used for reconciliation; dataset-level `READER` for `eve-verifier@` **proposed** (topology decision 47), no grant today | — | Superseded by Eve's own sink. The standing check that Wall-E's copy still carries no actor exclusion needs a mechanism: reading the organisation sink's filter would need organisation-level `logging.viewer`, refused. Decision 47's form is a data-level comparison — robot-actor admin events per day in `eve_workspace_logs` against `walle_workspace_logs`, a persistent deficit being the finding — which needs that dataset-level `READER` on `walle_workspace_logs` in `WALLE_PROJECT`, made by Wall-E's runbook. Until it lands the claim is not asserted by Eve |
 | `eve_workspace_logs` | Eve | owner | `insertId`, robot actor | Eve's evidence. One DAY-partitioned `cloudaudit_googleapis_com_activity` table, 400-day partition expiry — the sink is created with `--use-partitioned-tables` and the dataset's default partition expiration is set before it, neither of which is the default and neither retrofittable. Since 2026-09-13 the sink carries all six Workspace streams (§13), so the dataset also holds the Data Access table the login, token and SAML entries land in (table name as Logging creates it, *tbd* until the first rows) |
-| `eve_workspace_reports` (added 2026-09-13) | Eve | owner | `id.uniqueQualifier`, actor, application | The Reports API poll by actor (§13), DAY-partitioned, 400 days |
-| `eve_quality` (added 2026-09-13) | Eve | owner; authorised views over `eve.*` | `run_id`, incident id | Dataset-level `READER` to `mo-metrics@MO_PROJECT` and the validator custodian, made by Eve's runbook; no free-text columns; never `grades_blind` or `review_queue_blind` (platform HLD §13.3) |
-| Authorised-view dataset for the reporting path, and `eve_advice` (added 2026-09-13) | Eve | owner | incident id | `eve-advisor@` holds `READER` on the view dataset (name *tbd*) and `dataEditor` on `eve_advice`; **no control-path identity reads `eve_advice`** |
-| `grades_eve` (added 2026-09-13) | the platform approval surface; **dataset proposed 2026-09-13: `eve_grades` in `VALIDATOR_PROJECT`**, owned by the validator custodian ([09-open-decisions.md](09-open-decisions.md) E-21; [../project-topology.md](../project-topology.md) rows 45–46) | **none** — no Eve identity writes it | `run_id`, item | Grades of Eve's verdicts, written by the approval surface and never by `eve-console`; the blind sample is drawn by the approval surface. The input Mo's Eve quality numbers come from, beside `seeded_fault_runs`, golden replay and `eve_last_seen` (platform HLD §13.3) |
-| Witness `eve_mirror` and bucket, `EVE_WITNESS_PROJECT` (added 2026-09-13) | the witness administrators | `eve-export@`: `bigquery.dataEditor` on `eve_mirror`, `storage.objectCreator` on the retention-locked bucket | table, `dt` | The daily push; the absence alarm lives there (§14) |
+| `eve_workspace_reports` | Eve | owner | `id.uniqueQualifier`, actor, application | The Reports API poll by actor (§13), DAY-partitioned, 400 days |
+| `eve_quality` | Eve | owner; authorised views over `eve.*` | `run_id`, incident id | Dataset-level `READER` to `mo-metrics@MO_PROJECT` and the validator custodian, made by Eve's runbook; no free-text columns; never `grades_blind` or `review_queue_blind` (platform HLD §13.3) |
+| Authorised-view dataset for the reporting path, and `eve_advice` | Eve | owner | incident id | `eve-advisor@` holds `READER` on the view dataset (name *tbd*) and `dataEditor` on `eve_advice`; **no control-path identity reads `eve_advice`** |
+| `grades_eve` | the platform approval surface; **dataset proposed 2026-09-13: `eve_grades` in `VALIDATOR_PROJECT`**, owned by the validator custodian ([09-open-decisions.md](09-open-decisions.md) E-21; [../project-topology.md](../project-topology.md) rows 45–46) | **none** — no Eve identity writes it | `run_id`, item | Grades of Eve's verdicts, written by the approval surface and never by `eve-console`; the blind sample is drawn by the approval surface. The input Mo's Eve quality numbers come from, beside `seeded_fault_runs`, golden replay and `eve_last_seen` (platform HLD §13.3) |
+| Witness `eve_mirror` and bucket, `EVE_WITNESS_PROJECT` | the witness administrators | `eve-export@`: `bigquery.dataEditor` on `eve_mirror`, `storage.objectCreator` on the retention-locked bucket | table, `dt` | The daily push; the absence alarm lives there (§14) |
 | `eve.*` | Eve | owner | `run_id` | Wall-E's deployers hold no IAM |
 | `eve.walle_audit_mirror` | Eve | owner | `run_id` | Daily append-only copy, outside Wall-E's teardown blast radius |
 | Firestore (Wall-E) | Wall-E, `WALLE_PROJECT` | **none today.** The project-level `datastore.viewer` of the 2026-09-12 design is not granted by Wall-E's runbook (`EVE_PROJECT_ROLES = ()`, SETUP Phase 6); `eve-gate` has no Firestore read until topology decision 44 lands — `datastore.viewer` under an IAM Condition scoped to the `(default)` database (spike, expression unverified), or `GET /v1/plans?state=pending_eve` on `walle-actions` (CC-33, a contract change). Epochs and drills come through `GET /v1/plans/{id}` and `GET /v1/ladder` meanwhile, as claims | plan id, `(family, trigger)` | Epochs read strongly consistently and stamped into every verdict once the read exists |
@@ -569,9 +562,9 @@ ids, counts and hashes only.
 | `review_queue` | table | The sampled items drawn for blind grading, with Eve's verdict and reason columns present | S3 entry |
 | `review_queue_blind` | **view** over `review_queue` | An allowlisted column set. Eve's verdict and reason columns are **absent by construction**, not hidden by the console | S3 entry, before the S3 exit gate |
 | `grades_blind` | table | The grader's accept or reject per item, grader identity, `ts`, written by `eve-console` | S3 entry |
-| `pages` | table | Every page Eve raised, its reason code, `ts` — the input to the page budget. **Added 2026-09-13** (platform HLD §13.2): recipient, channel, delivery result, acknowledgement (ts, by) | S3 entry; with the observe-and-report layer before the super-admin grant |
-| `incidents` (added 2026-09-13) | table | severity, rule (reason code or catalogue rule id), actor, targets **as ids**, evidence pointers, narrative (sourced from `eve_advice`, written by `eve-advisor@`; empty when the reporting path is not built), recipients, acknowledgement ts and by, resolution, root-cause link, and the SIEM `case_id` it is reconciled against nightly (P100) | Before the super-admin grant |
-| `seeded_fault_runs` (added 2026-09-13) | table | fault id, required verdict, observed verdict, pass or fail, `eve_config_version`, `ts`; other columns *tbd*. Written monthly and on every `eve_config_version` change (platform HLD §13.3) | S3 entry (the S3 exit gate is its first row set) |
+| `pages` | table | Every page Eve raised, its reason code, `ts` — the input to the page budget; plus recipient, channel, delivery result, acknowledgement (ts, by) | S3 entry; with the observe-and-report layer before the super-admin grant |
+| `incidents` | table | severity, rule (reason code or catalogue rule id), actor, targets **as ids**, evidence pointers, narrative (sourced from `eve_advice`, written by `eve-advisor@`; empty when the reporting path is not built), recipients, acknowledgement ts and by, resolution, root-cause link, and the SIEM `case_id` it is reconciled against nightly (P100) | Before the super-admin grant |
+| `seeded_fault_runs` | table | fault id, required verdict, observed verdict, pass or fail, `eve_config_version`, `ts`; other columns *tbd*. Written monthly and on every `eve_config_version` change (platform HLD §13.3) | S3 entry (the S3 exit gate is its first row set) |
 
 Columns beyond those named are *tbd*.
 
@@ -585,7 +578,7 @@ is added to the `eve` dataset's access list as an authorized view, and
 `dataViewer` on `eve`, and it is a plain view whose blindness is the column allowlist.
 If `eve.walle_audit_mirror` is later read by Mo from S4 (topology decision 51), the mirror
 moves to a dataset of its own first, because a dataset-level `READER` covers every table.
-The same argument, added 2026-09-13, is why Mo's and the custodian's read of Eve's quality
+The same argument is why Mo's and the custodian's read of Eve's quality
 data is a separate dataset of authorised views, `eve_quality`, and not a grant on `eve`:
 `eve` holds `grades_blind` and `review_queue`, which Mo must never see.
 
@@ -615,7 +608,7 @@ One row per verified item in `eve.verdicts`.
 | `verified_state_only` | Current state matches within the 60-minute SLA; the attributing event has not landed yet, or — for the calendar family — will never land | `verification_deferred_lag`, `no_audit_stream` |
 | `verified_partial` | Verified as far as Eve's privileges allow, with the gap named | `licence_event_only` |
 | `drift` | Post-state contradicts what the plan said would happen | `post_state_mismatch` |
-| `reconciliation_gap` | A gap in either direction that has outlived its lag budget. Since 2026-09-13 also any robot-attributed event in **any** ingested stream with no matching `walle_audit` or band-B audit row (§14) — a halt | `audit_row_missing`, `admin_event_unmatched`, `reconciliation_gap` |
+| `reconciliation_gap` | A gap in either direction that has outlived its lag budget; also any robot-attributed event in **any** ingested stream with no matching `walle_audit` or band-B audit row (§14) — a halt | `audit_row_missing`, `admin_event_unmatched`, `reconciliation_gap` |
 | `unverifiable` | Eve could not establish the outcome for a reason other than lag | `eve_read_failed`, `unverified_within_sla` |
 
 The transitions and their timers are in [04-flows.md](04-flows.md). Two rules govern them
@@ -648,7 +641,7 @@ Workspace payload.
 
 Its job is a CI test, not an archive: a golden-replay job recomputes archived verdicts
 offline from their bundles and requires **bit-identical** output. A verdict that cannot be
-reproduced that way fails the build. This is the fourth of the five enforcements of the
+reproduced that way fails the build. This is the fourth of the seven enforcements of the
 deterministic boundary in [01-hld.md](01-hld.md), and it is also what makes an attestation
 worth citing — a promotion cites one URL, and everything behind that URL can be recomputed
 by someone who does not trust the person who ran it.
@@ -684,7 +677,7 @@ reach the key. See [02-identity-and-auth.md](02-identity-and-auth.md).
 
 ## 13. The evidence perimeter for a super-admin Wall-E
 
-**Added 2026-09-13** (platform HLD §13.2; §18 item 13). Sections 1–12 describe how Eve
+(Platform HLD §13.2; §18 item 13.) Sections 1–12 describe how Eve
 verifies a catalogued plan. Under the objective the robot holds Super Admin, so Eve must also
 see what the robot did **outside** any plan, and must say plainly where it cannot see. The
 perimeter below is a declared limit carried in every attestation.
@@ -697,6 +690,32 @@ perimeter below is a declared limit carried in every attestation.
 | The SecOps native export (page 07 §1.1 F1) | everything above plus Calendar, Meet, Devices, Chrome | organisation-owned; the detection desk's copy, not Eve's | IT security |
 | **The "records nothing" list** | customer Takeout by a super admin; Admin console user-data views; Vault searches without export (`Assumption:` per capability, verified or refuted before the grant) | declared, not hidden; the input to band C's watch in Wall-E's `/v1/handoff` | Eve owner |
 
+**The sink, specified.** `eve-workspace-audit` is a **third, Eve-owned organisation-level
+sink**, created with `--include-children` and `--use-partitioned-tables`, based on the filter
+`protoPayload.serviceName="admin.googleapis.com"` widened to the six streams above, with **no
+actor exclusion**; the exact filter is in [07-build-runbook.md](07-build-runbook.md) Phase 7.
+Its writer identity holds `roles/bigquery.dataEditor` on `eve_workspace_logs` only. Verified
+2026-09-12: an aggregated organisation sink may route to a destination in another project,
+its writer identity needing `roles/bigquery.dataEditor` there
+([aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks)); a
+BigQuery sink writes **date-sharded** tables unless `--use-partitioned-tables` is given
+([route logs to BigQuery](https://docs.cloud.google.com/logging/docs/export/bigquery)); and
+the dataset's `--default_partition_expiration` of 400 days must be set **before** the sink
+first writes, because it binds only tables created after it
+([updating datasets](https://docs.cloud.google.com/bigquery/docs/updating-datasets)). Eve
+reconciles against **this** copy, never `walle_workspace_logs` in Wall-E's project; the sink
+never carries an actor exclusion, never lives in Wall-E's project and is never merged into the
+platform's aggregated sink. Its rows are the object of heartbeat H-1 (§14). It exists from
+**S2** — early, deliberately, so Eve's first enforcing window has months of history rather
+than zero rows — and in any case before the super-admin grant.
+
+**The Reports poll, specified.** `eve-reconciler`, as `eve-verifier@` with `eve@`'s token,
+calls `activities.list` per actor and application into `eve_workspace_reports`. Verified
+2026-09-13: every application name in the table is an allowed `applicationName`, the scope is
+`admin.reports.audit.readonly`, and `userKey` accepts a primary email. It is the only Eve route
+for applications Cloud Logging never receives (Drive, Vault, Takeout, Data Studio …), it reads
+activity metadata only, never content, and it exists before the super-admin grant.
+
 **What Eve reads with it.** Eve's read privilege and scope set are **fixed before the
 one-sitting consent** (E-16): domain and customer settings (`admin.directory.domain.readonly`,
 `admin.directory.customer.readonly`), every Reports application above, the existing Directory
@@ -707,16 +726,14 @@ usable by a super administrator only (verified 2026-09-13,
 so Eve sees those settings change through their events. The set is on
 [02-identity-and-auth.md](02-identity-and-auth.md).
 
-**The daily export.** `eve-export@` exports yesterday's `walle_audit.*`, `eve.findings`,
-`eve.verdicts`, `eve.incidents` and `eve.pages` as newline-delimited JSON with a SHA-256
-manifest per table per day into `exports/` of Eve's locked bucket, then pushes the day and a
-heartbeat row to the witness's `eve_mirror` and bucket (P107;
-[../agentic-platform/08-data-logging-retention-sovereignty.md](../agentic-platform/08-data-logging-retention-sovereignty.md)
-§5.4). `eve-verifier@`, which cannot write the bucket, recomputes each manifest's row count.
+**The daily export.** `eve-export@` exports yesterday's audit and Eve tables with SHA-256
+manifests into `exports/` of Eve's locked bucket and pushes the day and a heartbeat row to the
+witness, as specified in
+[../agentic-platform/08-data-logging-retention-sovereignty.md §5.4](../agentic-platform/08-data-logging-retention-sovereignty.md#54-the-daily-export-to-the-evidence-bucket-closes-decision-31) (P107).
 
 ## 14. The detection catalogue, the roster check and the evidence heartbeat
 
-**Added 2026-09-13** (platform HLD §13.1 item 5, §13.2; §18 item 14). All three run in the
+(Platform HLD §13.1 item 5, §13.2; §18 item 14.) All three run in the
 **reconciler limb** (`eve-reconciler`, identity `eve-verifier@`) and **never in the gate
 limb**; every halt they cause goes through `POST /v1/control/halt` with a code from
 `reasons.yaml` or a catalogue rule id, and nothing here raises anything.
@@ -735,7 +752,7 @@ and one action:
 
 | Class | Rules | Severity | Action |
 |---|---|---|---|
-| Tenant integrity | actor `walle@`; targets `eve@`, Eve's role, super-admin assignments, DWD, 2SV, audit sharing, API controls, the operator and control groups — mirroring the SIEM's `SA-01`…`SA-09` ([../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md) §6.2) so that the desk's evaluator and the verifier's are independent and their firing is compared | 1 | `halt_all` on the P-SA lanes, page (§15); K5/K6 stay human |
+| Tenant integrity | the SIEM's `SA-01`…`SA-09` of [../agentic-platform/07-monitoring-detection-incident-response.md §6.2](../agentic-platform/07-monitoring-detection-incident-response.md#62-the-super-admin-set-workspace-side--siem-hosted-severity-1-owned-by-it-security), mirrored so that the desk's evaluator and the verifier's are independent and their firing is compared; Eve's copy also targets `eve@` and Eve's role | 1 | `halt_all` on the P-SA lanes, page (§15); K5/K6 stay human |
 | Writes outside the catalogue's families | any write by `walle@` in a stream or application no catalogue family or band-B method covers (SA-08's shape) | 1 | as above |
 | Posture change by any actor, interactive robot login | SA-03 and SA-04 mirrored; they fill Eve's paging conditions 5 and 6 ([06-failure-modes.md](06-failure-modes.md)) | 1 | as above |
 | Baselines | volume, time-of-day and target-population per family | 2–3 | page or ticket; calibrated at S2 (E-18) |
@@ -754,25 +771,21 @@ holder is `role_assignment_added`; a roster account that lost its role is
 "`walle@` holds no organisation-level IAM role" is the platform drift job's, not Eve's.
 
 **The evidence heartbeat.** Silence is what a super admin can manufacture, so the default state
-of silence is a halt, not an alert about it (P97):
-
-| Heartbeat | Window | Alarm in | On firing |
-|---|---|---|---|
-| H-1: rows in `eve_workspace_logs` | none for 60 min in business hours, 240 outside | Cloud Monitoring in `EVE_PROJECT` **and** the witness, on the mirrored heartbeat table | `log_pipeline_silent`; severity 1 |
-| Eve's token returns `invalid_grant` | on the first failure | `eve-reconciler` | `log_pipeline_silent`; severity 1; only a human re-bootstrap restores the credential |
-| H-4: `eve_last_seen` in `walle-actions`; `eve-export@`'s daily witness push | 15 min; 26 h | the agent project; **the witness** | Eve silent → page 07 RB-03; push missing → severity 1 |
-
-`log_pipeline_silent` sets `no_autonomous` for every agent Eve verifies and `halt_all` on
-`walle-actions` and `walle-actions-super`; it is cleared by one authenticated human call, and
-every clear is a report about the administrator (§15). The witness holds the alarm because an
-absence policy inside the tenant's organisation pages through a channel a super admin who
-reaches Organization Administrator can delete.
+of silence is a halt, not an alert about it (P97). Eve's reconciler raises `log_pipeline_silent`
+— severity 1, `no_autonomous` for every agent Eve verifies and `halt_all` on `walle-actions` and
+`walle-actions-super`, cleared by one authenticated human call that is itself a report about the
+administrator (§15) — when H-1 finds no `eve_workspace_logs` rows for 60 minutes in business
+hours (240 outside), and when Eve's token returns `invalid_grant`, which only a human
+re-bootstrap restores; on H-4, a missing `eve_last_seen` stamp for 15 minutes follows runbook
+RB-03 and a missing daily witness push for 26 hours pages severity 1. The windows, where each
+alarm lives and why the witness holds it are canonical in
+[../agentic-platform/07-monitoring-detection-incident-response.md §7](../agentic-platform/07-monitoring-detection-incident-response.md#7-pipeline-heartbeats-and-the-logpipelinesilent-halt).
 
 ## 15. The reporting contract
 
-**Added 2026-09-13** (platform HLD §13.2 against decision 14; §18 item 15; the platform rule
+(Platform HLD §13.2 against decision 14; §18 item 15; the platform rule
 RP-1…RP-6 of [../agentic-platform/07-monitoring-detection-incident-response.md](../agentic-platform/07-monitoring-detection-incident-response.md)
-§8, of which this is the first instance, P98).
+§8, of which this is the first instance, P98.)
 
 | Severity | Examples | Channel | Recipients | Acknowledge within | Escalate to |
 |---|---|---|---|---|---|
@@ -808,15 +821,11 @@ thresholds and re-runs the seeded-fault set before it pages again (P123).
 
 ## What this page fixes for other documents
 
-- The canonical serialisation, the hash algorithm and the full signed field list, which
-  [C39](../wall-e/14-hld-challenge.md) requires to exist **before the approve endpoint is
-  built** and which do not exist in [../wall-e/03-lld.md](../wall-e/03-lld.md) today.
-- `items_hash`, `eve_key_version`, `approver_type` and `eve_authority_advisory`, all of
-  which are edits back into Wall-E's set — listed with their gates in
-  [08-contract-changes.md](08-contract-changes.md).
-- Eve's closed reason vocabulary, which is separate from and does not modify Wall-E's
-  denial vocabulary.
-- Added 2026-09-13: the evidence perimeter, the detection catalogue's classes, the roster
-  check's codes, `log_pipeline_silent` and the reporting contract that Wall-E's
-  `06-security-guardrails.md` Monitoring section, the platform pages 07 and 08, and Mo's
-  Eve quality pack read against.
+This page defines the canonical serialisation, the hash algorithm and the full signed field
+list that [C39](../wall-e/14-hld-challenge.md) requires before the approve endpoint is built,
+Eve's closed reason vocabulary (separate from Wall-E's denial vocabulary), and the evidence
+perimeter, detection catalogue classes, roster codes, `log_pipeline_silent` and reporting
+contract that Wall-E's `06-security-guardrails.md`, the platform pages 07 and 08 and Mo's Eve
+quality pack read against; every edit they force back into Wall-E's set — `items_hash`,
+`eve_key_version`, `approver_type`, `eve_authority_advisory` — is listed with its gate in
+[08-contract-changes.md §1](08-contract-changes.md#1-the-contract-change-table).

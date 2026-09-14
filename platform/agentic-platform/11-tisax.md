@@ -2,13 +2,12 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
+- Last reviewed: 2026-09-14
 - Maturity: detailed design of the TISAX frame of [01-hld.md](01-hld.md) §14.2 and §14.3
   (parent sections; also §0.3 RACI, §0.4 tier gate, §5.3 supplier rule, §9 penetration test,
-  §13.1 item 12 and P33 the deviation, §17 P20 and P32). Answers brief items I74–I82 and gaps
-  TIS-01, TIS-02, TIS-03 of [00-objective-review.md](00-objective-review.md); the base is the
-  `tisax` lens report of 2026-09-13. Nothing here is built; every ENX and Google fact was
-  re-verified on 2026-09-13 against the URLs in §16.
+  §13.1 item 12 and P33 the deviation, §17 P20 and P32). Answers the TISAX brief items and gaps
+  of [00-objective-review.md](00-objective-review.md). Nothing here is built; every ENX and
+  Google fact was verified on 2026-09-13 against the URLs in §16.
 - What this page is: **the compliance-mapping page for the TISAX rows** that the HLD called
   `0x-compliance-mapping.md` (§14.2, §14.3) — the control-by-control table with mechanism,
   evidence, owner, split and status — and, until a separate page exists, **the supplier file**
@@ -16,11 +15,9 @@
   the risk register (§10) and the legal register (§11).
 - Decisions this page makes are numbered **P133–P141**, final ids in
   [12-open-decisions.md](12-open-decisions.md).
-- Standing constraints, unchanged: no domain-wide delegation; the language model holds no
-  credential and cannot approve; humans raise autonomy, machines lower it; no model produces an
-  Eve approval; Mo reaches production only through a merged pull request; safety interlocks are
-  plain authenticated REST; Wall-E holds Super Admin by the owner's decision (P33) and this page
-  designs the deviation record around it, not against it.
+- Standing constraints: as stated in the [HLD Status](01-hld.md#status), unchanged. Wall-E
+  holds Super Admin by the owner's decision (P33) and this page designs the deviation record
+  around it, not against it.
 - Conventions: `Assumption:` marks inferred facts; *tbd* marks values nobody has decided; ISA
   control numbers are given once as **ISA2027 (= ISA 6.0.3)** because ISA2027 keeps the
   information-security control set and, `Assumption:`, its numbering (§1); control titles are
@@ -58,10 +55,10 @@ on 4.2.1 for a super-admin robot however good the compensation is.
 | Operator and catalogue | TISAX is governed by the ENX Association on behalf of the VDA; the questionnaire is the VDA ISA | [S1], [S4] |
 | Catalogue in force | **VDA ISA 6.0.3**, published 2024-04-25, "basis of TISAX Assessments starting later than 2024-04-01"; assessments ordered before 2024-04-01 could still run on ISA 5 | [S1] |
 | Successor | **VDA ISA2027**, published 2026-07-01, "the basis of TISAX Assessments ordered from 2027"; "assessments ordered before 2027-01-01 can still be performed with ISA6"; the last day to order an ISA 6 assessment is 2026-12-31; redline ISA2027 versus 6.0.1 published 2026-08-07 "for your information only" | [S1], [S2] |
-| What ISA2027 changes | Supplier management: organisations with high protection needs must document, review and monitor supplier compliance and verify suppliers "through TISAX labels or equivalent assessments"; every "aspects considered" item must be consciously considered with a rationale "explainable during an assessment"; mappings updated to ISO/IEC 27001:2022 and NIST CSF 2.0; Prototype Protection consolidated into two domains; future versions named for the year they take effect, published each summer, mandatory the following 1 January. `Assumption:` the information-security control numbering is unchanged — the lens read "same 46 controls, 44 edited"; the ISMS confirms on the redline when it orders | [S2] |
-| Modules | Information Security (chapters 1–7); Prototype Protection; Data Protection (ISA 6.0.3: 9.1.1–9.8.1, written for an Art. 28 GDPR processor). Whether ISA2027 renumbers the Data Protection module is *unverified* | [S3], lens §1 |
+| What ISA2027 changes | Supplier management: organisations with high protection needs must document, review and monitor supplier compliance and verify suppliers "through TISAX labels or equivalent assessments"; every "aspects considered" item must be consciously considered with a rationale "explainable during an assessment"; mappings updated to ISO/IEC 27001:2022 and NIST CSF 2.0; Prototype Protection consolidated into two domains; future versions named for the year they take effect, published each summer, mandatory the following 1 January. `Assumption:` the information-security control numbering is unchanged — a reading of the redline on 2026-09-13 found "same 46 controls, 44 edited"; the ISMS confirms on the redline when it orders | [S2] |
+| Modules | Information Security (chapters 1–7); Prototype Protection; Data Protection (ISA 6.0.3: 9.1.1–9.8.1, written for an Art. 28 GDPR processor). Whether ISA2027 renumbers the Data Protection module is *unverified* | [S3] |
 | Assessment objectives (labels) | The handbook lists twelve: Info high, Info very high, **Confidential**, **Strictly confidential**, High availability, Very high availability, Proto parts, Proto vehicles, Test vehicles, Proto events, Data, Special data. Confidential / High availability replaced "Info high" and Strictly confidential / Very high availability replaced "Info very high" for assessments ordered from 2024-04-01; older labels stay valid and received the new ones automatically | [S3], [S5] |
-| Objective → level | Confidential, High availability, Test vehicles, **Proto events**, Data → **AL2**; Strictly confidential, Very high availability, Proto parts, Proto vehicles, Special data → **AL3**. Handbook v2.8: "As of 1 January 2025, the assessment level for the assessment objectives Test vehicles and Proto events is AL 2 instead of AL 3" (corrected 2026-09-13; this row had Proto events at AL3). Prototype Protection does not apply to the platform (§3), so the correction changes no platform decision | [S3] |
+| Objective → level | Confidential, High availability, Test vehicles, **Proto events**, Data → **AL2**; Strictly confidential, Very high availability, Proto parts, Proto vehicles, Special data → **AL3**. Handbook v2.8: "As of 1 January 2025, the assessment level for the assessment objectives Test vehicles and Proto events is AL 2 instead of AL 3". Prototype Protection does not apply to the platform (§3) | [S3] |
 | Assessment levels | AL1 self-assessment, existence checked only, "not used in TISAX"; AL2 plausibility check of the self-assessment with evidence review and web-conference interview; AL2.5 full remote verification, methodically compatible with a later AL3 upgrade; AL3 document examination, planned interviews, on-site observation, unplanned interviews | [S3] |
 | Pass criterion | Maturity scale 0–5; the target for most controls is **maturity 3** ("established": defined, documented, followed); some questions carry a target of 2 or 4; the ISA result sheet marks the target line per chapter. The handbook itself does not state a single number — it is the ISA's per-question target | [S3], [S6] |
 | Validity | "Your assessment result is valid for three years" | [S3] |
@@ -111,7 +108,7 @@ ISMS) and the organisation's own GDPR programme are the frame, not 9.x. The rule
 | Case | Data Protection module | Who decides | Enforced where |
 |---|---|---|---|
 | Wall-E, Eve, Mo, any agent on employee or organisational data as controller | not an objective; 9.x used as the DPO's checklist (below) | DPO | register row `tisax_class` + `data_classes` |
-| A hosted agent that processes **a customer's or an OEM's data on that customer's behalf** (processor) | **becomes an assessment objective for that agent's scope**; the Data label (Special data if Art. 9 categories) is ordered for the site with that agent's processing in scope; the supplier rule of §8 applies to every model and service in its path | DPO + ISMS, at the register-row review | the register's admission gate (HLD §5.3): a row whose `purpose` names third-party-controller data cannot reach `status: prod` without a `tisax_dp_scope: true` flag and a dated DPO entry — **an added field**, recorded as P134 and to be adopted by [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) |
+| A hosted agent that processes **a customer's or an OEM's data on that customer's behalf** (processor) | **becomes an assessment objective for that agent's scope**; the Data label (Special data if Art. 9 categories) is ordered for the site with that agent's processing in scope; the supplier rule of §8 applies to every model and service in its path | DPO + ISMS, at the register-row review | the register's admission gate (HLD §5.3): a row whose `purpose` names third-party-controller data cannot reach `status: prod` without a `tisax_dp_scope: true` flag and a dated DPO entry — a register field ([05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) §3.2), recorded as P134 |
 
 The 9.x checklist the DPO works from now, as inputs the platform owes (ISA 6.0.3 numbering; the
 ISA2027 numbering of the module is *unverified*):
@@ -238,15 +235,14 @@ assessor is handed; the owner (role); the responsibility split of §4.2; the sta
 control** (no mechanism exists on 2026-09-13; a document cannot supply it), **ISMS**
 (organisational, outside the platform's authority).
 
-**Resource and failure mode (added 2026-09-13).** These tables map controls to mechanisms; they
+**Resource and failure mode.** These tables map controls to mechanisms; they
 do not restate them. For every row whose mechanism links to another page, **the linked
 mechanism's control row carries the resource, the verification and the failure mode** (pages
 02–10 each carry controls tables, and [12](12-open-decisions.md) names the recording page of
 every decision). For rows with no link — the ISMS-owned and `missing control` rows — the resource
 is the named evidence artefact and the failure mode is the same for every row: an artefact absent
 or out of date at the quarterly ISMS review is a finding to the row's owner, recorded in §10's
-risk register, and the TISAX assessment is not ordered while any such row is open. This replaces
-a per-row failure column that would only repeat the linked rows.
+risk register, and the TISAX assessment is not ordered while any such row is open.
 
 ### 5.1 Chapter 1 — policies and organisation
 
@@ -270,7 +266,7 @@ a per-row failure column that would only repeat the linked rows.
 | Control | Platform mechanism | Evidence artefact | Owner | Split | Status |
 |---|---|---|---|---|---|
 | 2.1.1 qualification, 2.1.2 contractual, 2.1.4 remote work | ISMS's HR controls; the platform adds nothing beyond its access rules (every operator from a corporate device through Context-Aware Access, [04](04-identity-and-privileged-access.md) §6) | HR records; CAA level export | ISMS | I | ISMS |
-| 2.1.3 awareness and training | §7.4: a training outline per role (operator, approver, blind grader, key custodian, incident commander, Eve owner), completion recorded, refreshed at each stage transition; folded with EU AI Act Art. 4 literacy | completion record in the evidence bucket | ISMS (delivery); platform owner (content) | I / P | doc + record |
+| 2.1.3 awareness and training | §7.4: a training outline per role (operator, approver, blind grader, key custodian, incident commander, Eve owner), completion recorded, refreshed at each stage transition; folded with EU AI Act Art. 4 literacy; 9.7.2 applies too only if the Data Protection module ever enters scope (§3) | completion record in the evidence bucket | ISMS (delivery); platform owner (content) | I / P | doc + record |
 
 ### 5.3 Chapter 3 — physical
 
@@ -283,7 +279,7 @@ a per-row failure column that would only repeat the linked rows.
 | Control | Platform mechanism | Evidence artefact | Owner | Split | Status |
 |---|---|---|---|---|---|
 | 4.1.1 identity management | Agent Identity for every reasoning layer; keyless everywhere; the three principal populations; groups made by the factory and reconciled daily ([04](04-identity-and-privileged-access.md) §2, promoting [../wall-e/12-agent-identity.md](../wall-e/12-agent-identity.md) §1, §6) | IAM policy exports per project; drift-job output | platform owner | P | built-by-design |
-| 4.1.2 secure authentication of privileged users | Hardware-key-only 2SV on the robot OU and on human super-admin accounts; no interactive login for robots (severity 1); short session; Context-Aware Access on the Admin console ([04](04-identity-and-privileged-access.md) §8) | 2SV policy export; activity-rule config; SIEM cases | platform owner | P | built-by-design |
+| 4.1.2 secure authentication of privileged users | Hardware-key-only 2SV on the robot OU and on human super-admin accounts; no interactive login for robots (severity 1); short session; Context-Aware Access on the Admin console ([04](04-identity-and-privileged-access.md) §8); a written privileged-account procedure covering creation, hardware-key custody, no interactive login, the robot-login activity rule and the rebuild checklist of decision 39 ([../wall-e/09-open-decisions.md](../wall-e/09-open-decisions.md)) | 2SV policy export; activity-rule config; SIEM cases; the procedure | platform owner | P | built-by-design |
 | 4.1.3 access to information and services (approval, revocation) | PAM entitlements with justification and approver; the register's `audience_groups`; `revoke` | PAM grant logs | platform owner | P | built-by-design |
 | **4.2.1 access rights — need-to-know, least privilege, approval, review** | Resource-level grants only, every crossing enumerated ([../project-topology.md](../project-topology.md) §3, §9); deny policies and PAB; PAM as the access-review evidence; **quarterly roster review** of every super admin, every Workspace admin-role holder, `roles/privilegedaccessmanager.admin` and `roles/resourcemanager.organizationAdmin` against the signed roster ([04](04-identity-and-privileged-access.md) §8.1 rule 4; HLD §5.3); and **the super-admin robot as a signed deviation (§6)** | IAM exports; PAM logs; the quarterly review record; the deviation record | platform owner; security reviewer (review) | P | built-by-design, **with a signed deviation** an assessor may still refuse |
 
@@ -369,28 +365,39 @@ the evidence it points at, nothing else:
 
 ### 6.3 Compensations as preconditions — the checklist the gate reads
 
-Every row is an item of HLD §13.1, restated as a gate condition with its verification. "Green"
-is a machine-readable state where one exists; where not, it is a dated record in the evidence
-bucket. The super-admin grant runbook step refuses to proceed while any row is not green.
+Every row is an item of HLD §13.1, restated as a gate condition with its verification and the
+enforcement grade the HLD gave it. "Green" is a machine-readable state where one exists; where
+not, it is a dated record in the evidence bucket. Each row is a row of the register's
+`gate_checklist` for Wall-E, with a date and a signer; the admission gate refuses a `tier: P`
+row with an empty line, and the super-admin grant runbook step ([../wall-e/SETUP.md](../wall-e/SETUP.md)
+"The gate: what must be green before step 5") refuses to proceed while any row is not green.
 
-| # | Precondition (HLD §13.1 item) | Green means | Verified by | Owner |
-|---|---|---|---|---|
-| 1 | Three bands in code (item 1) | `walle-actions` exposes `/v1/execute` only; `walle-actions-super` exposes `/v1/execute-generic` and `/v1/handoff`; CI asserts neither `SUPER` nor `WRITE-generic` appears in any `playbook.uses` | CI job output attached | Wall-E owner |
-| 2 | The two lists signed (item 2, P29) | the hard-denied and band-B-only lists committed, hash recorded in the deviation file, denial suite green on "write targeting the robot itself" and "any `makeAdmin`" | denial-suite report | Wall-E owner; security reviewer |
-| 3 | Two credentials, two services (item 3) | two OAuth clients, one reader each, `cloud-platform` in neither, checked in CI against the consent screen | CI check; Secret Manager IAM export | Wall-E owner |
-| 4 | Band-B requester rule (item 4) | live fail-closed `isAdmin` check for `SUPER`, approver ≠ requester, canonical request hash bound on the IAP surface | unit tests + one dry-run band-B request in the sandbox tenant | Wall-E owner |
-| 5 | Detection as the primary control (item 5) | Eve's reconciliation live with minute latency; daily roster check from Eve's credential; evidence heartbeat paging; SIEM severity-1 set deployed and drilled | a seeded-fault run caught within target; SIEM rule export | Eve owner; IT security |
-| 6 | Account hygiene (item 6) | 2SV "Only security key" on the robot OU; self-recovery Off at the top OU with the child-OU drift check green; no recovery channels; two human super admins on the roster; robot never the recovery one | drift-job report; roster diff | platform owner |
-| 7 | Kill switches K0–K6 drilled (item 7) | K6 (`users.makeAdmin false` by a human) rehearsed in the sandbox tenant; K5/K6 rota of two humans recorded in the witness | drill record younger than 30 days | platform owner; second human |
-| 8 | Perimeter (item 8) | P3 spike 1 passed; ingress value drift-checked; Access Approval on `WALLE_PROJECT`; PAM on the deploy grant with a second reviewer | ingress export; PAM entitlement export | platform owner |
-| 9 | Permanent ceiling (item 9) | `SUPER` rows L3 two-person, other triggers L0, in code; CI assertion green | CI job output | Wall-E owner |
-| 10 | Lost role scoping replaced (item 10) | the denial suite's inverted exit checklist ("`$ROBOT` is a super admin, on the floor list, and every super-admin-class request is denied in the catalogue lane") green | denial-suite report | Wall-E owner |
-| 11 | Second human outside the Wall-E line (item 11) | named; owner of `eve-owners@`; holds `sa-2-admin@`; not in any Wall-E group | group-membership export; §7's CI separation check | ISMS |
-| 12 | The signed record (item 12) | this file signed by all three signatories; R-01 accepted | the file | security reviewer |
-| 13 | EU AI Act position (item 13, P28) | the intended-purpose statement signed with legal | the [10-eu-ai-act.md](10-eu-ai-act.md) `#wall-e` entry (the page the HLD called `ai-act.md`) | legal |
-| + | Penetration test done (HLD §0.4, §9) | report filed; no open critical or high finding | the report | IT security |
-| + | Tabletop of the crisis scenario run ([07](07-monitoring-detection-incident-response.md) §13) | dated record | `evidence/tabletops/<date>/` | incident commander |
-| + | Hardware-key custody witnessed (SK-8) | custody record in the witness bucket | the record | security reviewer |
+**The order.** Eve's observe-and-report layer live and drilled → the grant → Wall-E's Stage 0 on
+the narrow client with every write family at L1 → Stage 1. The grant precedes Stage 0: before it
+the robot exists, is licensed and hardened, holds no admin role and reads nothing, and the tenant
+is watched by Eve's observe-and-report layer only. Eve's own grant rows (G-1..G-7) are canonical
+on [../eve/05-stages.md](../eve/05-stages.md) "The super-admin grant — the observe-and-report
+layer and its checklist"; row 5 below points at them.
+
+| # | Precondition (HLD §13.1 item) | Grade | Green means | Verified by | Owner |
+|---|---|---|---|---|---|
+| 1 | Three bands in code (item 1) | enforcement (code) | `walle-actions` exposes `/v1/execute` only; `walle-actions-super` exposes `/v1/execute-generic` and `/v1/handoff`; CI asserts neither `SUPER` nor `WRITE-generic` appears in any `playbook.uses` | CI job output attached | Wall-E owner |
+| 2 | The two lists signed (item 2, P29) | enforcement (code) | the hard-denied and band-B-only lists committed, hash recorded in the deviation file, denial suite green on "write targeting the robot itself" and "any `makeAdmin`" | denial-suite report | Wall-E owner; security reviewer |
+| 3 | Two credentials, two services (item 3) | enforcement (Google, by scope) | two OAuth clients, one reader each, `cloud-platform` in neither, checked in CI against the consent screen | CI check; Secret Manager IAM export | Wall-E owner |
+| 4 | Band-B requester rule (item 4) | enforcement (code) | live fail-closed `isAdmin` check for `SUPER`, approver ≠ requester, canonical request hash bound on the IAP surface | unit tests + one dry-run band-B request in the sandbox tenant | Wall-E owner |
+| 5 | Detection as the primary control (item 5) | detection, minute latency, with absence alarms | Eve's observe-and-report layer live and drilled against the sandbox tenant (Eve's rows G-1..G-7); Eve's reconciliation live with minute latency; daily roster check from Eve's credential; evidence heartbeat paging; the witness organisation exists, receives the heartbeat, and its absence alarm has fired once on purpose; a SIEM with 24x7 acknowledgement hosting the super-admin detection set SA-01..SA-09 and SG-01..SG-07 ([07](07-monitoring-detection-incident-response.md) §6.2, §6.3), each rule with a passing test fixture, deployed and drilled | a seeded-fault run caught within target; Eve owner's drill record; SIEM rule export with test results | Eve owner; IT security |
+| 6 | Account hygiene (item 6) | enforcement (Google) plus detection; the Admin console CAA level detection-plus-friction (`Assumption:`, P7) | 2SV "Only security key" on the robot OU; the hygiene set of the robot's service OU complete; self-recovery Off at the top OU with the drift check green on every child OU and configuration group (none re-enables it); no recovery channels; exactly two human super admins, `sa-1-admin@` and `sa-2-admin@`, on separate admin accounts, hold Super Admin before the grant; robot never the only or the recovery one; **Workspace multi-party approval on** for every covered setting, console and API, including "Role assignment and custom role privilege updates" (P66; edition eligibility *tbd*) | drift-job report; roster diff; the Super Admin role's admin list read in the Admin console | platform owner |
+| 7 | Kill switches K0–K6 drilled (item 7) | enforcement (human) | K6 (`users.makeAdmin false` by a human) rehearsed on the sandbox tenant's robot twin, and the next robot call fails; K5/K6 rota of two humans recorded in the witness | drill record younger than 30 days | platform owner; second human |
+| 8 | Perimeter (item 8) | enforcement (IAM now; ingress policy after P3) | P3 spike 1 passed; ingress value drift-checked; Access Approval on `WALLE_PROJECT`; PAM on the deploy grant with a second reviewer | ingress export; PAM entitlement export; the spike record | platform owner |
+| 9 | Permanent ceiling (item 9) | enforcement (code) | `SUPER` rows L3 two-person, other triggers L0, in code; CI assertion green | CI job output | Wall-E owner |
+| 10 | Lost role scoping replaced (item 10) | enforcement (code) | both action services deployed with the two lists and the hard invariants; the denial suite's inverted exit checklist ("`$ROBOT` is a super admin, on the floor list, and every super-admin-class request is denied in the catalogue lane") green against the sandbox tenant | denial-suite report `denials-<date>.json` | Wall-E owner |
+| 11 | Second human outside the Wall-E line (item 11) | organisational | named; owner of `eve-owners@`; holds `sa-2-admin@`; not in any Wall-E group (§7.1) | group-membership export; §7's CI separation check | ISMS |
+| 12 | The signed record (item 12) | organisational | this file signed by all three signatories; R-01 accepted | the file | security reviewer |
+| 13 | EU AI Act position (item 13, P28) | documentation | the intended-purpose statement signed with legal | the [10-eu-ai-act.md](10-eu-ai-act.md) `#wall-e` entry (the page the HLD called `ai-act.md`) | legal |
+| + | Penetration test done (HLD §0.4, §9) | — | report filed; no open critical or high finding | the report | IT security |
+| + | DPIA started; works-council information given (HLD §0.4, P129) | — | dated records | the records | DPO; HR, legal |
+| + | Tabletop of the crisis scenario run ([07](07-monitoring-detection-incident-response.md) §13) | — | dated record | `evidence/tabletops/<date>/` | incident commander |
+| + | Hardware-key custody witnessed (SK-8) | — | custody record in the witness bucket | the record | security reviewer |
 
 **How it fails.** Any row turning red after the grant is a severity-2 finding with a 30-day
 window to restore it; two rows red at once, or row 5, 6 or 11 red at all, is severity 1 and the
@@ -412,7 +419,8 @@ site's ISMS role register.
 
 | Role (HLD §0.3) | Short id | Must not also be |
 |---|---|---|
-| Platform owner | PO | security reviewer; Eve owner (at P); second human; incident commander at P |
+| Platform owner | PO | the IT security lead; security reviewer; AI compliance owner; Eve owner (at P); second human; incident commander at P |
+| AI compliance owner (P131, [10-eu-ai-act.md](10-eu-ai-act.md) §4.1) | ACO | platform owner; an agent owner |
 | Agent owner (per agent; Wall-E owner today) | AO | approver of its own requests; blind grader of its own playbooks; deployer's second reviewer for its own agent |
 | Operator / approver | OP | requester of what it approves (always); at P-SA the band-B approver must be a human super admin who is not the requester |
 | Security reviewer (decision 37) | SR | platform owner; Mo's CI operator; validator custodian is in SR's project but may be SR |
@@ -422,9 +430,17 @@ site's ISMS role register.
 | Blind grader | BG | owner of the playbooks graded |
 | Detection desk | DD | — (bought at P) |
 | Incident commander | IC | platform owner at P |
-| Human super admin (two) | SA1, SA2 | SA2 is outside the Wall-E line; neither is the robot's key custodian alone (two custodians, one each) |
+| Human super admin (two) | SA1, SA2 | SA2 is outside the Wall-E line; neither is the robot's key custodian alone (two custodians, one each); each holds the role only on a separate admin account with a short session, never on a daily account; the robot is never the only or the recovery super admin |
 | DPO contact | DPO | — |
 | Validator custodian | VC | Mo's CI operator |
+
+**The second human outside the Wall-E administration line** (SA2 = EO at the grant) is a
+prerequisite of the super-admin grant and a platform role, not a favour: a person in IT security,
+named before the grant, owner of `eve-owners@`, administrator of the witness organisation,
+required reviewer on `eve/config`, holder of `sa-2-admin@`, member of no `walle-*` group, the
+parallel recipient of every severity 1 and 2 page, the **sole recipient of reports about the
+administrator's own actions**, and the second name on the K5/K6 rota. The interim state "the four
+owner groups are one person" expires on the grant date (§6.2 precondition rule).
 
 ### 7.2 The minimum per stage
 
@@ -553,7 +569,7 @@ in the site register under its own ids. **Row one is the super-admin deviation.*
 | R-05 | Google's per-service TISAX coverage unconfirmed for Agent Runtime, Gemini Enterprise, Model Armor `global`, Gateway, Registry, BigQuery `EU`, organisation `_Required` buckets, SecOps | §4.3; P32 | 2 | 2 | mitigate: ENX result share requested; Compliance Reports Manager read; residual accepted per item | platform owner; ISMS | ISMS per item |
 | R-06 | Tenancy segregation at Google is invisible to the platform (5.3.4) | §4.4 | 1 | 3 | **accept**: the segregation note; Google's reports; Access Transparency | ISMS | ISMS |
 | R-07 | Assured Workloads EU Data Boundary not adopted; Gateway and Registry outside the package | [08](08-data-logging-retention-sovereignty.md) P110; HLD P12 | 2 | 1 | accept with the compensating set (`resourceLocations`, Access Transparency, Access Approval); revisit trigger recorded | platform owner | security reviewer |
-| R-08 | Firestore, the organisation `_Default`/`_Required` log buckets and the Tier R content buckets on Google-managed keys (no CMEK); the central evidence and identity buckets and Tier W+ content buckets are on explicit HSM keys (P112; wording narrowed 2026-09-13) | [09](09-supply-chain-secrets-recovery.md) P119; [08](08-data-logging-retention-sovereignty.md) P112 | 1 | 1 | accept at Confidential; reopen at Strictly confidential | platform owner | security reviewer |
+| R-08 | Firestore, the organisation `_Default`/`_Required` log buckets and the Tier R content buckets on Google-managed keys (no CMEK); the central evidence and identity buckets and Tier W+ content buckets are on explicit HSM keys (P112) | [09](09-supply-chain-secrets-recovery.md) P119; [08](08-data-logging-retention-sovereignty.md) P112 | 1 | 1 | accept at Confidential; reopen at Strictly confidential | platform owner | security reviewer |
 | R-09 | Prompt injection through Workspace-controlled strings in tool results; screening is detection-grade | [../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md); [06](06-gateways-model-armor-perimeter.md) | 2 | 2 | mitigate: taint bit and inbox ceiling (enforcement); Model Armor and the injection suite (detection) | Wall-E owner | security reviewer |
 | R-10 | Model monoculture: Wall-E, Mo's narrator and every agent run Gemini; a model failure steers all but Eve | HLD §11.4 | 1 | 2 | accept until Tier X; second family for advisory monitors (P26) | platform owner | security reviewer |
 | R-11 | eve-advisor's AI Act class and its effect on TISAX evidence (a model narrating administrators' actions) | HLD P19, P34 | 2 | 2 | mitigate: report-only by construction; pages at sev 2 only until classified | Eve owner; legal | legal |
@@ -618,7 +634,7 @@ finishes the left column; only building, hiring or buying finishes the right one
 | Controls that do not exist on 2026-09-13 | What creates it | Owner | Gate |
 |---|---|---|---|
 | A second, third and fourth human in the roles of §7.2 | hiring or assignment by the ISMS | ISMS | Tier W (3), the grant (4) |
-| The compensating controls of §6.3 in their built state | the Wall-E, Eve and platform builds | Wall-E owner; Eve owner; platform owner | the grant |
+| The compensating controls of §6.3 in their built state (even built, an assessor may still refuse maturity 3 on 4.2.1 for a super-admin robot, §6.1) | the Wall-E, Eve and platform builds | Wall-E owner; Eve owner; platform owner | the grant |
 | The ENX result share for SYN0NK, filed; per-service coverage answers | the ISMS's ENX account; P32 request to Google | ISMS; platform owner | assessment order |
 | The agent register with CI enforcement and daily reconciliation | build ([05](05-registry-and-autonomy-contract.md)) | platform owner | Tier C |
 | Data Access audit logs on, retention decided and enforced, the SIEM feed | build ([08](08-data-logging-retention-sovereignty.md), [07](07-monitoring-detection-incident-response.md)); DPO decision | platform owner; DPO | Tier R; Stage 1; Tier P |
@@ -631,7 +647,7 @@ finishes the left column; only building, hiring or buying finishes the right one
 | The supplier onboarding and exit procedures, first executed and rehearsed | first external dependency; annual rehearsal | platform owner | first external dependency |
 | The witness organisation | IT security builds it (P14) | IT security | the grant |
 | The separation-of-duties CI check | build | platform owner | Tier W |
-| The `tisax_dp_scope` register field and gate condition (the field is in [05](05-registry-and-autonomy-contract.md) §3.2 since the reconcile pass of 2026-09-13; the gate check is a build item) | build ([05](05-registry-and-autonomy-contract.md)) | platform owner | the first processor-role agent |
+| The `tisax_dp_scope` register field and gate condition (the field is in [05](05-registry-and-autonomy-contract.md) §3.2; the gate check is a build item) | build ([05](05-registry-and-autonomy-contract.md)) | platform owner | the first processor-role agent |
 
 ---
 
@@ -661,17 +677,14 @@ after every internal audit. Class `record`, ten years, per [08](08-data-logging-
 
 ## 14. Decisions recorded (P133–P141 in [12-open-decisions.md](12-open-decisions.md))
 
-| Id | Decision | Options considered | Owner | Gate it blocks |
-|---|---|---|---|---|
-| **P133** | The TISAX target: label **Confidential** (`Assumption:`; Strictly confidential only if the ISMS classes the named stores secret, which also raises AL3 and reopens P12, P119, P110); **no availability label**; **AL2** (AL2.5 accepted if proposed); scope location *tbd* from the ISMS, with Google, the witness's Google organisation and every third party as external IT services of that scope; mapping against **ISA2027** with 6.0.3 cross-reference, mandatory column for high protection need; NIS2 applicability delegated to the legal register. Closes HLD P20's recommendation into a page decision pending the ISMS's confirmation | Strictly confidential + AL3 now (rejected: no partner requirement known; the on-site level would gate the whole platform on a physical assessment of a site not yet named); an availability label (rejected: not critical IT services) | ISMS (confirms); platform owner | assessment order |
-| **P134** | Module scope: Information Security in full; **Data Protection module not an assessment objective** (controller-side internal platform), with the 9.x list as the DPO's checklist; it becomes an objective for the scope of any hosted agent that processes a customer's or an OEM's data as processor — enforced by a new register field `tisax_dp_scope` and a DPO entry at the admission gate; **Prototype Protection not applicable**, dated negative determination | treat 9.x as applicable now (rejected: wrong role, wrong label); no rule for future processor-role agents (rejected: "hundreds of agents" makes it likely) | DPO; ISMS; platform owner (the field) | assessment order; the first processor-role agent |
-| **P135** | This page is the TISAX compliance-mapping page the HLD named `0x-compliance-mapping.md`, and its §4 is the supplier file until a separate page exists; the responsibility split is kept per control and re-dated on every product-stage change; the ENX result share for SYN0NK is requested by the ISMS and filed; per-service coverage stays *tbd* per item until closed from the share or Compliance Reports Manager, never assumed; the 5.3.4 segregation note is written as §4.4 | a separate mapping page per regime (deferred: reconcile may split it); treating the public Google page as evidence (rejected: it is not) | platform owner; ISMS | assessment order |
-| **P136** | The super-admin deviation record: one file (P33's), the sections of §6.2, three signatories (platform owner decides, security reviewer signs, ISMS enters); the thirteen HLD compensations plus the penetration test, the tabletop and the custody record are **gate conditions** the grant runbook refuses to pass without; after the grant, any row red is severity 2 with 30 days, rows 5/6/11 or two rows red is severity 1 and **K6** until green; re-signed quarterly, at every Wall-E stage transition, and on any severity-1 credential incident | "before S1" items instead of gate conditions (rejected by the HLD); self-signature by the platform owner (rejected: 1.2.2) | platform owner; security reviewer | the super-admin grant |
-| **P137** | Separation of duties as a counted minimum: the incompatibility matrix of §7.1; **1 human at Stage 0 / Tier R (self-review recorded), 3 at Stage 1 / Tier W, 4 at the super-admin grant, 4 plus a bought 24x7 desk at Stage 3**; a CI separation check in `CICD_PROJECT` evaluating the matrix against group memberships and the roster daily and on every merge, feeding the admission gate; SR = EO at the first grant only as a dated ISMS exception; one training outline per role with completion records counted by the gate | a promise of staffing without a count (rejected: unassessable); five humans at the grant as the hard minimum (kept as the clean state; four with a dated exception is the floor) | ISMS (names); platform owner (the check) | Tier W; the grant |
-| **P138** | One supplier procedure for every external agent, MCP server, Marketplace app, connector and model: declared on the register row first; assessed (TISAX label shared on the ENX portal or an equivalent independent assessment at very high protection need; the same or an accepted risk assessment at high); ISMS acceptance and contract; technical admission under the HLD's rules (MCP only as a gateway-governed endpoint of a Tier R+ agent, explicit `tool_filter`, no elicitation callbacks; external agents L0 for writes and tainted; no write scope on connectors); the one-run admission gate; annual review with label-expiry tracking; the exit procedure of §8.4 with export-before-delete and a removal record per row; rehearsed annually on a throwaway project; Wall-E's "no MCP either way" promoted to the Tier P default | admitting MCP servers as Gemini Enterprise data stores (rejected: the managed constraint stays enforced); accepting vendor questionnaires alone at very high need (rejected: ISA2027) | platform owner; ISMS | the first external dependency |
-| **P139** | Assurance cadence: penetration test before Stage 1 of any Tier P agent (for Wall-E, before the grant) with the scope of §9, a scoped test of the approval surface and the action service before Stage 1 of the first Tier W agent, annually and on any new lane or front door, grey-box, bought, owned by IT security; internal audit annually by the ISMS's auditor (never the platform owner or the deviation's signatory), first before the assessment order and after any severity-1; management review quarterly (ladder state, risk register, deviation, SOC metrics, supplier *tbd* items, training) and annually into the ISMS's review, minutes kept ten years | penetration test only at the grant (rejected: the first write is the first exposure); self-audit counted as internal audit (rejected: 1.5.2 wants independence) | IT security; ISMS; platform owner | Stage 1; the grant; assessment order |
-| **P140** | The platform risk register as a page kept by the security reviewer (or an export of the ISMS's tool), three-point L/I until the ISMS maps its scale, treatment and a signed acceptance file per accepted row, **row one R-01 the super-admin deviation**, rows R-02..R-17 as §10, refreshed at every stage decision and management review; an accepted row without its acceptance at the assessment order blocks the order | keeping risks inside each page's residual tables only (rejected: 1.4.1 wants a register with owners and acceptance) | security reviewer; ISMS | assessment order |
-| **P141** | The legal and contractual register of §11 with GDPR, the EU AI Act as amended by Regulation (EU) 2026/1744, national labour and works-council law (*tbd* country), NIS2 (applicability *tbd*, ENX crosswalk of 2025-06-29 if it applies), the Google agreements and data-processing terms (titles *tbd*), Preview-product terms, the TISAX participation terms, customer/OEM security clauses, the internal policy ids; owned by the ISMS with legal, platform rows kept by the platform owner, audited annually | — | ISMS; legal; platform owner | assessment order |
+The text, options considered, owner and gate of each decision this page records are rows of the
+register ([how it works](12-open-decisions.md#1-how-this-register-works)): P133 the target
+(§2), P134 module scope (§3), P135 this page as the mapping page and supplier file (§4), P140
+the risk register (§10) and P141 the legal register (§11) under
+[§6](12-open-decisions.md#6-later); P136 the super-admin deviation record (§6), P138 the
+supplier procedure (§8) and P139 the assurance cadence (§9) under
+[§4](12-open-decisions.md#4-before-the-super-admin-grant); P137 separation of duties as a
+counted minimum (§7) under [§3](12-open-decisions.md#3-before-any-tier-w-agent-writes).
 
 ---
 
@@ -680,7 +693,7 @@ after every internal audit. Class `record`, ten years, per [08](08-data-logging-
 | Item | Why it matters | Closes when |
 |---|---|---|
 | That ISA2027 keeps the ISA 6.0.3 numbering of the information-security controls (this page cites one number per control on that basis) | every row of §4.2 and §5 | the ISMS downloads the ISA2027 workbook and the redline of 2026-08-07; a renumbering becomes a cross-reference column here |
-| The exact ISA titles of 5.3.3 and 5.3.4 (paraphrased "return and removal from external IT services", "shared external IT services"); the 6.0.3 chapter-5 and chapter-6 title pages the lens used returned 404 on 2026-09-13 | wording only; the requirements are as the lens recorded | same |
+| The exact ISA titles of 5.3.3 and 5.3.4 (paraphrased "return and removal from external IT services", "shared external IT services"); the 6.0.3 chapter-5 and chapter-6 title pages returned 404 on 2026-09-13 | wording only; the requirements stand as mapped in §4.2 and §5 | same |
 | Whether ISA2027 renumbers or restructures the Data Protection module (9.x) | §3's checklist numbering | same |
 | The ENX label-renaming news page (behind the participant sign-in); the rename and its 2024-04-01 date were confirmed from the handbook's objective list and secondary sources | §1 | the ISMS's ENX account reads the news item |
 | Google's per-service TISAX coverage (Agent Runtime and its tenant project, Gemini Enterprise, Model Armor `global`, Agent Gateway, Agent Registry, BigQuery `EU`, organisation `_Required` buckets, SecOps) | R-05; §4.3 | the ENX result share; Compliance Reports Manager; P32 |
@@ -704,14 +717,13 @@ after every internal audit. Class `record`, ten years, per [08](08-data-logging-
 - [S8] ISA 1.2.4 requirement text: https://www.cyberday.ai/requirement/tisax-1-2-4-definition-of-responsibilities-with-service-providers
 - [S9] Google Cloud TISAX page — participant statement, labels, "for data classified as secret", scope ID SYN0NK, assessment IDs ATTRRN-1 and ATTRRN-2, "exclusively retrievable over the ENX Portal", Europe regions including `europe-west1` Belgium, Google Workspace data regions, no service named: https://cloud.google.com/security/compliance/tisax (fetched raw on 2026-09-13)
 - [S10] ISA 6 change summary (1.6.x, 5.2.8, 5.2.9 titles): https://vda-isa-berater.com/en/vda-isa-catalog-6/
-- Lens report: `.agent-work/review/tisax.md` (2026-09-13), whose §3 applicability map, §5 split and §6 evidence list this page turns into controls.
 
 ---
 
 ## Related
 
 - [01-hld.md](01-hld.md) — parent: §0.3 RACI, §0.4 tier gate, §5.3 supplier rule and privilege review, §7.5 retention, §7.6 incidents, §8.3 keys, §9 supply chain and penetration test, §10 recovery, §13.1 the thirteen compensations and P33, §14.2 the TISAX frame, §14.3 the supplier file and mapping page, §17 P12, P13, P20, P22, P32.
-- [00-objective-review.md](00-objective-review.md) — gap register TIS-01..TIS-16; brief items I74–I82; §6.2.
+- [00-objective-review.md](00-objective-review.md) — the TISAX gaps and brief items this page answers; §6.2.
 - [02-landing-zone-and-tiers.md](02-landing-zone-and-tiers.md) — nonprod folders, the `owner` label as the 1.3.1 asset owner, CMEK constraints held for the label.
 - [03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) — connector and Marketplace supplier rule; Gemini Enterprise's own compliance listing.
 - [04-identity-and-privileged-access.md](04-identity-and-privileged-access.md) — the roster, PAM as access-review evidence, the two-person rule, key custodians.
@@ -724,4 +736,3 @@ after every internal audit. Class `record`, ten years, per [08](08-data-logging-
 - [../wall-e/11-prompt-security.md](../wall-e/11-prompt-security.md), [../wall-e/12-agent-identity.md](../wall-e/12-agent-identity.md), [../wall-e/13-agent-interconnection.md](../wall-e/13-agent-interconnection.md) — the platform-grade seeds promoted here (injection posture, keyless identity and operator lists, the no-MCP position and Agent Registry as a catalogue).
 - [../project-topology.md](../project-topology.md) — the enumerated cross-project grants that evidence 4.2.1.
 - [../eve/01-hld.md](../eve/01-hld.md), [../mo/01-hld.md](../mo/01-hld.md) — the failure-mode pages feeding the risk register.
-- `.agent-work/review/tisax.md` — the lens report this page is built on.

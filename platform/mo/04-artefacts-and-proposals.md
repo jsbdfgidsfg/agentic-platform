@@ -2,19 +2,18 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- Objective restated 2026-09-13; see the platform HLD
-  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3, §18 item 22). Added on
-  that date: the misbehaviour taxonomy and coverage map as the first Eve artefact (§1.6), the
-  Eve scorecard (§1.7), the Art. 72 plan per high-risk system (§1.8), the `eve/config` path
-  allowlist (§3.2), the closed Eve proposal type set (§3.5) with its reviewer rules and the
-  30-day cross rule (§3.6), and agent-neutral names — the drop box is `mo-proposals` (§3.7).
-  The title keeps "five" because Wall-E's five are unchanged.
+- Last reviewed: 2026-09-14
+- Objective restated 2026-09-13 (platform HLD
+  [../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3): Mo also measures and
+  proposes for Eve (§1.6, §1.7, §3.2, §3.5–§3.6), writes an Art. 72 plan per high-risk system
+  (§1.8), and uses agent-neutral names (§3.7). The title keeps "five" for Wall-E's five.
 
-Mo was built backwards from five things a human reads — Wall-E's five; since 2026-09-13 also
-the Eve and compliance artefacts of §1.6–§1.8. Everything else in the design —
+Mo was built backwards from five things a human reads — Wall-E's five, plus the Eve and
+compliance artefacts of §1.6–§1.8. Everything else in the design —
 the metric queries, the authorised views, the three identities, the drop box — exists
-because one of these five needs it. This page says exactly what each one contains, on what
+because one of these five needs it. The design starts from what a human reads and ends at the
+SQL, not the other way round: if an artefact would not change a decision someone actually
+takes, the pipeline behind it is not built. This page says exactly what each one contains, on what
 schedule, for whom, at which path; then it follows a proposal from the moment `mo-reporter`
 writes a bundle to the moment two humans merge it, and names every place the path refuses.
 
@@ -39,7 +38,7 @@ also the drop box's path allowlist. These design pages live at `platform/mo/`; t
 different directories in different repositories and the distinction is deliberate. If the
 artefact directory is ever moved, the allowlist string moves with it, in the same pull
 request, and that pull request is not one Mo may author. The same `Assumption:` covers the
-paths added on 2026-09-13 — `platform/eve/mo/**` for the Eve artefacts and
+Eve and Art. 72 paths — `platform/eve/mo/**` for the Eve artefacts and
 `platform/<agent>/mo/art72-plan.md` for each Art. 72 plan — which follow Wall-E's pattern and
 are fixed when Mo-8 creates the directories.
 
@@ -54,13 +53,17 @@ are fixed when Mo-8 creates the directories.
 | 3 | Weekly digest | `platform/wall-e/mo/digest-YYYY-Www.md` | Monday 08:00 Europe/Paris | `walle-operators@` | S2 |
 | 4 | Regression explanation | `platform/wall-e/mo/regression-<cell>-<date>.md` | On a detected change point, not on a calendar | The ladder owner | S2 |
 | 5 | Monthly cost report | `platform/wall-e/mo/cost-YYYY-MM.md` | Monthly | Decision 38's stop-or-continue review | **S1** |
-| 6 | Misbehaviour taxonomy and detector coverage map — **the first Eve artefact** (added 2026-09-13) | `platform/eve/mo/coverage-map.md` | First edition before Wall-E's Stage 1 (P143); regenerated on every `eve_config_version` change and after every seeded-fault run | The Eve owner, the security reviewer | Before Wall-E's Stage 1 |
-| 7 | Eve scorecard — the Eve quality pack (added 2026-09-13) | `platform/eve/mo/scorecard.md` | Weekly reporter run | The Eve owner | When `eve_quality` exists |
-| 8 | Art. 72 post-market monitoring plan, one per high-risk system (added 2026-09-13) | `platform/<agent>/mo/art72-plan.md` | On every stage decision; re-cut when the Commission's Art. 72(3) template is adopted | The AI compliance owner | S2 for Wall-E |
+| 6 | Misbehaviour taxonomy and detector coverage map — **the first Eve artefact** | `platform/eve/mo/coverage-map.md` (`Assumption:` path) | First edition before Wall-E's Stage 1 (P143); regenerated on every `eve_config_version` change and after every seeded-fault run; any calendar cadence beyond those triggers *tbd* | The Eve owner, the security reviewer | Before Wall-E's Stage 1 |
+| 7 | Eve scorecard — the Eve quality pack | `platform/eve/mo/scorecard.md` (`Assumption:` path) | Weekly reporter run | The Eve owner | When `eve_quality` exists |
+| 8 | Art. 72 post-market monitoring plan, one per high-risk system | `platform/<agent>/mo/art72-plan.md` (`Assumption:` path) | On every stage decision; re-cut when the Commission's Art. 72(3) template is adopted | The AI compliance owner | S2 for Wall-E |
 
 The cost report is first because it is the artefact that answers whether any of this should
 continue, and [decision 38](../wall-e/09-open-decisions.md) sets that review at S1 exit.
 Every other artefact is about levels, and no level moves before S2.
+
+Each artefact is markdown, regenerated as a pull request through the drop box of §3 and never
+pushed. A further output is not an artefact but a contract: the **proposal bundle**, specified
+field by field in [§3.1](#31-the-bundle-contract).
 
 Four supporting outputs are not artefacts in this sense — nobody reads them as prose — but
 the artefacts are assembled from them and the validator reads them directly:
@@ -168,7 +171,7 @@ on safety, if that is what is true.
 
 ### 1.6 The misbehaviour taxonomy and coverage map — the first Eve artefact
 
-Added 2026-09-13 (platform HLD §13.2, §13.3). Improving Eve starts from knowing what Eve is
+Platform HLD §13.2, §13.3. Improving Eve starts from knowing what Eve is
 supposed to catch. With Wall-E holding Super Admin, the misbehaviour Eve must report is no
 longer bounded by a role: role grants, security settings, DWD, API controls, data-region and
 retention changes, sinks and audit-log sharing, the robot acting on itself or on Eve, and any
@@ -192,19 +195,16 @@ aggregate: class names and counts, never a person, and it follows the suppressio
 
 ### 1.7 The Eve scorecard
 
-Added 2026-09-13. The human face of the Eve quality pack
-([03-metrics-contract.md](03-metrics-contract.md) §7.3): per Wall-E cell, the false-refusal
-Wilson bounds, the wrong-accept count, agreement, pages versus budget, time-to-verdict,
-time-to-acknowledge, availability from Wall-E's stamp, the seeded-fault catch at the last run,
-and `metric_divergence`. Each figure carries its source and, where the source rule says so,
-the label `self_reported`. Until the validator custodian holds `READER` on `eve_quality`
+The human face of the Eve quality pack, per Wall-E cell — the metrics E1–E9 and their sources
+are defined in [03-metrics-contract.md](03-metrics-contract.md#73-the-eve-quality-pack) §7.3.
+Each figure carries its source and, where the source rule says so, the label `self_reported`. Until the validator custodian holds `READER` on `eve_quality`
 (P30), the page opens with the fixed line "Advisory — not re-derivable by the validator yet".
 Eve reads nothing on it.
 
 ### 1.8 The Art. 72 post-market monitoring plan, per high-risk system
 
-Added 2026-09-13 ([../agentic-platform/10-eu-ai-act.md](../agentic-platform/10-eu-ai-act.md)
-§4.4; platform HLD §14.1). For each agent the register marks high-risk, Mo's artefacts **are**
+[../agentic-platform/10-eu-ai-act.md](../agentic-platform/10-eu-ai-act.md) §4.4; platform HLD
+§14.1. For each agent the register marks high-risk, Mo's artefacts **are**
 the post-market monitoring plan, and this page is the plan's text: one paragraph naming the
 artefacts (the scorecard with audit completeness first, `ladder-state.md`, the digest, the
 regression explanation, the cost report, and for a Tier P agent the Eve scorecard and coverage
@@ -213,7 +213,17 @@ every Art. 73 assessment outcome and every Art. 86 explanation request. Owner: t
 reader: the AI compliance owner. It is regenerated as a pull request like every other artefact,
 and re-cut into the Commission's Art. 72(3) template when that is adopted (date unverified,
 per page 10). A silent Mo is severity 2 on that page, which is why the plan names the
-freshness alert as its liveness control.
+freshness alert as its liveness control. The plan's verification: the digest lands weekly, and
+`metric_divergence` between Mo and Eve is watched.
+
+The loop the plan describes: the agent's audit dataset (its Art. 12 log) feeds T0 and the blind
+grading; they feed the artefacts; the artefacts feed a promotion record carrying its Art. 9
+residual-risk statement; a human merges the level change, which is a pre-determined change in
+the sense of Annex IV 2(f); and the changed agent writes back to its audit dataset. Three
+inputs enter from outside that loop: the Art. 73 assessment outcomes, the Art. 86 explanation
+requests, and Eve's findings and verdicts through `eve_quality`. The plan's text per system is
+one paragraph in the agent's entry; whether that entry carries the paragraph itself or links
+this page is unverified.
 
 ---
 
@@ -237,77 +247,33 @@ no Firestore.
 
 ### 2.2 The draw, and the seed protocol
 
-The draw algorithm is published so that anyone can re-run it:
-
-```
-ORDER BY FARM_FINGERPRINT(CONCAT(week_seed, cell, run_id, CAST(item_index AS STRING)))
-LIMIT  GREATEST(CEIL(0.10 * n), 5)
-```
-
-over the executed items in the cell for that week — `max(10 %, 5 items/week)`, which is
-C16's rate and is **per cell**, so every live cell carries its own floor of five graded items
-a week.
-
-`week_seed` is generated and committed **by CI after the week has closed**, into an
-**append-only per-week seed file** in the configuration repository: one entry per week,
-written only by the CI job, never by a human and never by Mo. A commit that rewrites an
-existing week's entry is not a correction — it is the detectable event, and it is visible in
-the same history that carries every other change to that repository. Four consequences, and
-each of them is the point:
-
-1. The draw cannot be anticipated at plan-freeze time, so no item can be arranged to be
-   reviewed or to escape review.
-2. Nobody chooses the sample — including Mo, which has no input to the seed and no way to
-   write one.
-3. The validator re-draws the sample from the published seed and refuses any merge whose
-   sample membership differs. An auditor with dataset-level read on
-   `${WALLE_PROJECT}.walle_audit` and job rights in their own project can do the same,
-   months later, from the seed in the evidence block.
-4. The seed a bundle cites is **anchored to that file** at ingestion ([§3.3](#33-ingestion-and-the-bot-author)),
-   the way `scorecard_sha256` is anchored to a published scorecard. Without the anchor, the
-   validator's re-draw compares a membership against a claim that descends from the same seed:
-   it proves the bundle is internally consistent and proves nothing about *which* seed that is.
-
-The protocol is in force from **S3 entry**, when the sampler starts running
-([05-staging.md](05-staging.md)) — not from S4. A stage of sampling on an unspecified seed
-produces grades nobody can re-draw, and those are the grades L4 is later argued from.
-
-Achieved coverage against the floor is itself a metric. A miss sets
-`sample_coverage_below_floor` and the cell is `not_ready`: thinning the sample makes a cell
-less promotable, never more.
+The weekly blind sample is `max(10 %, 5 items/week)` **per cell**, drawn by a published
+`FARM_FINGERPRINT` ordering over a seed CI commits after the week closes into an append-only
+per-week seed file, so nobody — Mo included — chooses or can anticipate it, and the validator,
+or an auditor months later, re-draws it from the seed; the draw expression, the seed protocol
+(in force from S3 entry) and the coverage metric are defined in
+[03-metrics-contract.md](03-metrics-contract.md#13-the-blind-sample-and-the-seed-protocol) §13.
+What the proposal path adds is the anchor: ingestion refuses a bundle whose cited seed is not
+the one the seed file records for `week(window_end)` ([§3.3](#33-ingestion-and-the-bot-author)),
+the way `scorecard_sha256` is anchored to a published scorecard. Without it, the validator's
+re-draw proves only that a bundle agrees with itself, not *which* seed it used.
 
 ### 2.3 Who may grade, and what is excluded
 
-Graders must appear on a committed grader list of **human principals**.
-
-| Condition | Effect |
-|---|---|
-| Grade from a non-human principal | Excluded, counted in `grades_excluded` |
-| Grade from the author of the playbook version under test | Excluded, counted |
-| `blind = FALSE` or `saw_eve_verdict = TRUE` | Excluded from L4/L5 precision, counted |
-| `WRITE_HIGH` cell, second grade by someone other than the playbook file's `owner:`, at ≥ 20 % coverage | Required. Below it the cell reports `no_second_grader` and **can never pass L2** |
-| Double-grade coverage moves during a promotion window | The evidence block carries `double_grade_coverage`; the validator refuses a bundle whose coverage moved mid-window |
-| Two grades disagree and no adjudication row exists | The cell is **`not_ready` with reason `disagreement_unadjudicated`** until the adjudication row lands |
-
-Unblinding therefore makes a cell less promotable rather than more, and an unadjudicated
-disagreement **stops the cell** rather than being quietly dropped — otherwise double-grading
-becomes a rubber stamp that only ever adds accepts. Blocking is stricter than the rule it
-replaces, not looser: counting the disagreement as one wrong item let the cell continue with a
-distorted number and an inflated floor, while a block cannot be cleared by ignoring it. The
-arithmetic behind that change is in [03-metrics-contract.md](03-metrics-contract.md) §10.
-
-`no_second_grader` is reported from **S0**, months before it can bite, because
-[14](../wall-e/14-hld-challenge.md) C17 makes a second grader a condition for a `WRITE_HIGH`
-cell to pass **L2** — which happens at S2, while [decision 11b](../wall-e/09-open-decisions.md)
-puts the second person at S3. Mo surfaces that conflict; it cannot resolve it, because it
-cannot supply a person. It is provisional decision 45 in
-[08-open-decisions.md](08-open-decisions.md).
+Only human principals on the committed grader list may grade. Grades from a non-human, from
+the author of the playbook version under test, or made unblinded are excluded and counted in
+`grades_excluded`; a `WRITE_HIGH` cell needs a 20 % second grade by someone other than the
+playbook owner and an unadjudicated disagreement blocks the cell — the full rules are in
+[03-metrics-contract.md](03-metrics-contract.md#10-grading-rules) §10. `no_second_grader` is
+reported from **S0** because [14](../wall-e/14-hld-challenge.md) C17 makes a second grader a
+condition for passing **L2**, at S2, while [decision 11b](../wall-e/09-open-decisions.md) puts
+the second person at S3; Mo surfaces that conflict and cannot supply a person
+([M-4](08-open-decisions.md), [05-staging.md](05-staging.md#the-second-grader-conflict-at-s2)).
 
 ### 2.4 Agreement
 
-Reported as **raw agreement** and **Gwet's AC1**. Cohen's κ is reported and **never gated
-on**: at a base rate around 95 % it collapses towards zero for reasons that have nothing to
-do with grader quality, and gating on it would demote good playbooks.
+Raw agreement and Gwet's AC1 are reported; Cohen's κ is reported and never gated on — see
+[03-metrics-contract.md](03-metrics-contract.md#10-grading-rules) §10.
 
 ### 2.5 What the grading surface must write
 
@@ -327,35 +293,35 @@ computable at all.
 
 ### 2.6 The weekly human cost, stated plainly
 
-`max(10 %, 5 items/week)` is a **per-cell** rate, not a programme-wide one, and that is what
-makes this number bigger than it first looks. At an S4 volume of roughly 200 executing items a
-week across the whole programme, [05](../wall-e/05-autonomy-ladder.md) §7's S4 row lights up
-eight or more live `(family, trigger)` cells — F3, F4 and F7 on scheduled, F2 and F3 on event,
-F1 and writes on inbox, plus chat. Each carries roughly 25 executing items a week, so in every
-one of them the floor of five binds rather than the 10 %:
-
-| Line | At an S4 volume of ~200 executing items a week |
-|---|---|
-| Live `(family, trigger)` cells | ~8 |
-| Executing items per cell | ~25 a week |
-| Blind sample per cell | **5 a week** — the floor binds, 10 % would give 3 |
-| Blind sample, programme | **≥ 40 items a week**, not ~20 |
-| Double-graded for `WRITE_HIGH` | ~20 % of those, plus adjudication of disagreements |
-
-That is at least **two hours a week, indefinitely, from a named human who is not the playbook
-owner** — plus a second grader who does not yet exist. The "one hour a week" this page
-previously carried read the floor as programme-wide and understates the real figure by at
-least a factor of two. Add about 30 minutes a week reading the digest and about 2 hours a
-quarter on the review.
-
-It cannot be automated. It cannot be sampled more thinly without the cell going `not_ready`.
-It cannot be delegated to a model without destroying the thing it measures. Mo does not
-create this cost — [05](../wall-e/05-autonomy-ladder.md) §8 and C16 do — but Mo is useless
-without it, so it appears on Mo's line in the S1-exit review rather than in a footnote.
+Because the rate is per cell, at an S4 volume of about 200 executing items a week across ~8
+live cells the floor of five binds everywhere: at least 40 graded items a week plus 20 %
+double-grading and adjudication — **at least two hours a week, indefinitely, from a named human
+who is not the playbook owner**, plus a second grader who does not yet exist
+([03-metrics-contract.md](03-metrics-contract.md#133-coverage-is-itself-a-metric) §13.3; the
+digest and quarterly-review hours are in
+[05-staging.md](05-staging.md#run-human--the-real-number-and-the-one-that-decides-whether-the-programme-survives)).
+It cannot be automated, sampled more thinly without the cell going `not_ready`, or delegated to
+a model. Mo does not create this cost — [05](../wall-e/05-autonomy-ladder.md) §8 and C16 do —
+but Mo is useless without it, so it appears on Mo's line in the S1-exit review rather than in a
+footnote.
 
 ---
 
 ## 3. From bundle to merge
+
+**Why a drop box rather than a credential.** The obvious design gives Mo a git credential — a
+GitHub App installation, a deploy key — so it can open its own pull requests. That would make
+Mo the one component whose compromise produces a plausible promotion pull request, and it
+contradicts the plain reading of [08](../wall-e/08-team-eve-mo.md) item 6, "never hold a
+credential"; so it is not built. Instead Mo writes one object to one bucket, and three
+properties follow: Mo cannot push, merge, approve, re-open, or even read back what it wrote
+([§3.1](#31-the-bundle-contract)); the blast radius of a compromised Mo is bounded by path
+before CI ever runs ([§3.2](#32-the-path-allowlist)); and the numbers in a bundle are recomputed
+by an identity Mo cannot reach ([§3.4](#34-what-the-validator-enforces)), so a forged promotion
+has to be **true** to pass. The cost is one bucket. The residual, carried in
+[06-failure-modes.md](06-failure-modes.md), is a truthful-but-tendentious argument that two
+tired humans rubber-stamp — [06](../wall-e/06-security-guardrails.md)'s accepted risk, narrowed
+from "any change" to "a change whose numbers are true".
 
 ```mermaid
 sequenceDiagram
@@ -403,13 +369,21 @@ sequenceDiagram
 
 ### 3.1 The bundle contract
 
-One object per bundle in `mo-proposals` (renamed 2026-09-13, §3.7), a bucket in `MO_PROJECT`, written by
+One object per bundle in `mo-proposals` (§3.7), a bucket in `MO_PROJECT`, written by
 `mo-analyst@${MO_PROJECT}` with `roles/storage.objectCreator` and nothing else. Verified 2026-09-12: that role "Allows users
 to create objects. Does not give permission to view, delete, or **overwrite** objects"
 ([IAM roles for Cloud Storage](https://docs.cloud.google.com/storage/docs/access-control/iam-roles)).
 So Mo cannot read back, replace or delete a bundle it has written, and a duplicate write
 **fails** rather than silently replacing — which is also how a double-triggered reporter run
 is caught.
+
+The bucket itself: location `EU` (`$BQ_LOCATION`), uniform bucket-level access, public access
+prevention, object versioning on, and a 90-day lifecycle that deletes both live and
+noncurrent objects at 90 days of age. Bundle writes must be attributable, and because the bucket is in `MO_PROJECT`
+nothing is inherited from Wall-E's project: `MO_PROJECT` enables Cloud Storage Data Access audit
+logs itself — `DATA_WRITE`, and `DATA_READ` so the CI bot's reads are attributable as well
+(`Assumption:` for the `DATA_READ` half). The commands are in
+[07-build-runbook.md](07-build-runbook.md) Phase Mo-9.
 
 | Field | Contents | Who reads it |
 |---|---|---|
@@ -435,7 +409,7 @@ empty field is a rejection at ingestion, not a warning.
 | `scorecard_sha256` | The SHA-256 of the scorecard row `mo-metrics@` published | A bundle citing a hash that was never published is rejected before the recompute even runs |
 | `snapshot_name` | The `${MO_PROJECT}.walle_metrics_archive.scorecard_YYYYMMDD` snapshot the claim points at, project-qualified | The dated, citable object an auditor replays against, rather than a mutable table |
 
-**For an Eve bundle (added 2026-09-13)** the same fields apply, with `metric` drawn from the
+**For an Eve bundle** the same fields apply, with `metric` drawn from the
 Eve quality pack, the SQL reading `eve_quality` and `walle_audit` fully qualified, and every
 cited value `evidence_eligible` under assertion A10; `Assumption:` the bundle additionally
 declares its target repository (`config` or `eve/config`), which ingestion checks against the
@@ -461,10 +435,10 @@ before a pull request exists**:
 | `config/catalogue/**` | Catalogue **additions**. Never the risk tiers — see [§7](#7-mo-may-not-propose-changes-to-its-own-gating-layer) |
 | `platform/wall-e/mo/**` | Mo's own artefacts |
 | `platform/wall-e/ladder-state.md` | The regenerated ladder-state page |
-| `platform/eve/mo/**` (added 2026-09-13) | The Eve artefacts of §1.6 and §1.7, and `eve_incident_note` |
-| `platform/<agent>/mo/art72-plan.md` (added 2026-09-13) | The Art. 72 plan of §1.8, one per high-risk system |
+| `platform/eve/mo/**` | The Eve artefacts of §1.6 and §1.7, and `eve_incident_note` |
+| `platform/<agent>/mo/art72-plan.md` | The Art. 72 plan of §1.8, one per high-risk system |
 
-**In Eve's repository, `eve/config` — added 2026-09-13** (platform HLD §13.3). Exactly two
+**In Eve's repository, `eve/config`** (platform HLD §13.3). Exactly two
 paths, and only through the Eve proposal types of §3.5:
 
 | Allowed path in `eve/config` | What Mo may change there |
@@ -501,11 +475,14 @@ holds a metadata-only read in `MO_PROJECT`: `Assumption:` `roles/bigquery.metada
 dataset level on `${MO_PROJECT}:walle_metrics_archive` (enough to see that
 `scorecard_YYYYMMDD` exists, not to read it) and on the published-hash register, plus
 bucket-level `roles/storage.objectViewer` on the drop box. The validator holds nothing in
-`MO_PROJECT`. The identity, its home and the exact roles are *tbd* with the git host
-([M-7 · 48](08-open-decisions.md)) and are recorded as [M-11 · 52](08-open-decisions.md) (c),
+`MO_PROJECT`. Its reader binding is the only principal on the bucket besides `mo-analyst@`'s
+`objectCreator`, and it is the bot's, never the validator's; a compromised bot reads bundles,
+which are proposals, not evidence. The identity, its home and the exact roles are *tbd* with the
+git host ([M-7](08-open-decisions.md)) — through a Workload Identity Federation pool in
+`MO_PROJECT` if the host federates — and are recorded as [M-11](08-open-decisions.md) (c),
 topology decision 50 ([`../project-topology.md`](../project-topology.md) §3 rows 19 and 20).
 
-The seed check is new, and it is there for the same reason as the `scorecard_sha256` check. Both
+The seed check is there for the same reason as the `scorecard_sha256` check. Both
 `scorecard_sha256` and `snapshot_name` are anchored to something published; the seed is the
 one input that decides **which items are evidence at all**, and without an anchor the
 validator's later re-draw compares a membership against a claim descending from the same
@@ -522,9 +499,14 @@ produces, at worst, an object in a bucket that fails a path check.
 The recompute check is a **required** check in the configuration repository, owned outside
 that repository, deployed **by image digest** rather than a mutable tag. It holds no binding
 of any kind in `MO_PROJECT` — so it never reads `walle_metrics` — never trusts a number Mo
-asserts, and never accepts prose as evidence. Its identity holds dataset-level `READER` on
-`${WALLE_PROJECT}:walle_audit` and `roles/bigquery.jobUser` in the custodian's own project
-([`../project-topology.md`](../project-topology.md) §3 row 21).
+asserts, and never accepts prose as evidence: a validator that read Mo's own output would be
+checking Mo against Mo, and that exclusion is denial test MD-9, with its IAM form MD-9b
+([07-build-runbook.md](07-build-runbook.md) Phase Mo-12). Its identity holds dataset-level
+`READER` on `${WALLE_PROJECT}:walle_audit`, made by Wall-E's owner, and — for Eve bundles, once
+it exists (P30, made by Eve's runbook) — on `${EVE_PROJECT}.eve_quality`, plus
+`roles/bigquery.jobUser` in the custodian's own project (*tbd*, decision 37); never a
+project-level role in `WALLE_PROJECT` or `EVE_PROJECT`, and it appears nowhere in `MO_PROJECT`'s
+IAM policy or dataset access lists ([`../project-topology.md`](../project-topology.md) §3 row 21).
 
 | Gate | Source | Refusal |
 |---|---|---|
@@ -532,7 +514,7 @@ asserts, and never accepts prose as evidence. Its identity holds dataset-level `
 | `seed` is the seed the per-week file records for `week(window_end)` | This design, C16 | Any other seed → rejected at ingestion, before the recompute |
 | Re-draw the blind sample from `seed` | This design, C16 | Sample membership differs → merge refused |
 | `double_grade_coverage` moved during the promotion window | This design, C17 | Refused: the evidence mixes two measurement processes in an unrecorded proportion |
-| `walle_metrics` watermark ≤ 24 hours old — reached **without a data read in `MO_PROJECT`**: the validator takes the watermark from the cited snapshot's own date in `snapshot_name` (a `scorecard_YYYYMMDD` older than 24 hours is stale by name) and, `Assumption:`, cross-checks it against the `custom.googleapis.com/mo/metrics_watermark_age_hours` metric that the ingestion identity, not the validator, reads in `MO_PROJECT`; decided 2026-09-13 as the provisional route, recorded in [M-11 · 52](08-open-decisions.md) (c) | This design | Stale Mo refuses **every** promotion — absence is restrictive |
+| `walle_metrics` watermark ≤ 24 hours old — reached **without a data read in `MO_PROJECT`**: the validator takes the watermark from the cited snapshot's own date in `snapshot_name` (a `scorecard_YYYYMMDD` older than 24 hours is stale by name) and, `Assumption:`, cross-checks it against the `custom.googleapis.com/mo/metrics_watermark_age_hours` metric that the ingestion identity, not the validator, reads in `MO_PROJECT` — the provisional route recorded in [M-11](08-open-decisions.md) (c) | This design | Stale Mo refuses **every** promotion — absence is restrictive |
 | A level went up without a link to an `accepted` decision file | [05](../wall-e/05-autonomy-ladder.md) §10 | Refused |
 | The level exceeds a ceiling | §10 | Refused |
 | A `WRITE_HIGH` promotion lacks a second named approver | §10 | Refused |
@@ -541,21 +523,20 @@ asserts, and never accepts prose as evidence. Its identity holds dataset-level `
 | The last kill-switch drill is older than 30 days | §10 | Refused |
 | **Two distinct authenticated approving reviewers**, neither of whom authored the pull request, matched against the `Approvers:` line | C17 | Refused |
 | A change to a playbook's pinned selection query, `uses` list or scope, **or to `config/prompts/**`**, for a playbook serving a cell above L2, without a linked decision record | C15 | Refused; the changed playbook re-runs the canary at its current level or lower |
-| `redesign_required` on the family — two demotions in 90 days, excluding reviewed false positives | This design, §8 error budgets | Refused until the redesign lands |
+| `redesign_required` on the family — two demotions in 90 days, excluding those a named human has marked `false_positive` with a `review_ref` | This design, §8 error budgets | Refused until the redesign lands |
 | One pull request touching more than one of `ladder.yaml`, `config/metrics/*.sql`, `config/metrics/fixtures/**`, `config/metrics/gates.yaml`, the ceiling module, the policy chain, the catalogue risk tiers, the validator | This design, change 13 | Refused |
 | The "Why worth it" line, for any L3→L4 `WRITE_HIGH` promotion | C34 | Refused if absent |
-| An Eve bundle other than `eve_incident_note` while the custodian holds no `READER` on `eve_quality` (added 2026-09-13) | Platform HLD §13.3, P30 | Refused: Eve bundles are advisory until the gate can re-derive them |
-| An Eve bundle citing a value that is not `evidence_eligible` under A10 (added 2026-09-13) | Platform HLD §13.3 | Refused: a number about Eve that only Eve vouches for is not evidence |
-| An `eve_threshold_loosen` for a cell within 30 days after a `promote` on the same cell — or a `promote` within 30 days after a merged `eve_threshold_loosen` on that cell (added 2026-09-13) | Platform HLD §13.3; §3.6 | Refused; the validator reads both repositories' merge history |
-| An `eve_threshold_loosen` without two distinct authenticated reviewers including the decision-37 security reviewer, a decision record, and five business days' cooling since the bundle was opened (added 2026-09-13) | Platform HLD §13.3; §3.6 | Refused |
-| An `eve_threshold_tighten` whose diff moves any row in the loosening direction (added 2026-09-13) | §3.6 | Refused: it is a loosening and needs that type |
+| An Eve bundle other than `eve_incident_note` while the custodian holds no `READER` on `eve_quality` | Platform HLD §13.3, P30 | Refused: Eve bundles are advisory until the gate can re-derive them. [07-build-runbook.md](07-build-runbook.md) Mo-9 places this refusal at ingestion; whether ingestion, the validator or both enforce it is unverified |
+| An Eve bundle citing a value that is not `evidence_eligible` under A10 | Platform HLD §13.3 | Refused: a number about Eve that only Eve vouches for is not evidence |
+| An `eve_threshold_loosen` for a cell within 30 days after a `promote` on the same cell — or a `promote` within 30 days after a merged `eve_threshold_loosen` on that cell | Platform HLD §13.3; §3.6 | Refused; the validator reads both repositories' merge history |
+| An `eve_threshold_loosen` without two distinct authenticated reviewers including the decision-37 security reviewer, a decision record, and five business days' cooling since the bundle was opened | Platform HLD §13.3; §3.6 | Refused |
+| An `eve_threshold_tighten` whose diff moves any row in the loosening direction | §3.6 | Refused: it is a loosening and needs that type |
 
-**Two of those rows changed shape, and each closes something specific.**
+**Two of those rows need their reasoning stated.**
 
-- **C15 now covers `config/prompts/**`.** Prompt text was outside the row that requires a
-  linked decision record and a canary re-run above L2, while `prompt_change` is one of the
-  eight proposal types in [§3.5](#35-the-closed-proposal-type-set) and a prompt edit bumps
-  `prompt_hash` and therefore the fingerprint. With the demotion denominator unscoped
+- **C15 covers `config/prompts/**`.** `prompt_change` is one of the eight proposal types in
+  [§3.5](#35-the-closed-proposal-type-set), and a prompt edit bumps `prompt_hash` and therefore
+  the fingerprint. With the demotion denominator unscoped
   ([03-metrics-contract.md](03-metrics-contract.md) §11.2) a fingerprint bump can no longer
   empty the demotion evidence; with this row, a fingerprint bump above L2 also costs a decision
   record and a canary at the current level or lower. Together they mean a fingerprint change
@@ -573,8 +554,10 @@ error, because it re-runs the same committed SQL and inherits the same defect �
 the golden fixtures, the assertion queries and the S2 back-test are for
 ([06-failure-modes.md](06-failure-modes.md)). And it cannot enforce the git host's
 admin-bypass setting: it reports the setting it observes, and a host where an administrator
-can bypass branch protection makes the two-reviewer rule decoration. The host and that
-setting are `tbd` (C17), carried as provisional decision 48.
+can bypass branch protection makes the two-reviewer rule decoration. The branch
+protection this design recommends, and Mo-9 configures, is two distinct authenticated
+reviewers, neither the author, with admin bypass **disabled and audited**. The host and that
+setting are `tbd` (C17), carried as [M-7](08-open-decisions.md).
 
 ### 3.5 The closed proposal type set
 
@@ -593,7 +576,7 @@ Mo's acceptance test.
 | `ladder_state_regen` | `platform/wall-e/ladder-state.md` | S2 | The regenerated page, as a pull request |
 | `incident_note` | A note under `platform/wall-e/mo/**` | S2 | How a finding Mo may not act on reaches a human — including the E35 breaker-false-positive route |
 
-**The Eve proposal types — a closed set of their own, added 2026-09-13** (platform HLD §13.3).
+**The Eve proposal types — a closed set of their own** (platform HLD §13.3).
 An Eve bundle declares exactly one of these and no other; a Wall-E type in an Eve bundle, or an
 Eve type in a Wall-E bundle, is rejected at ingestion.
 
@@ -612,7 +595,7 @@ evidence block. Mo has no template that emits a ceiling change at any stage, and
 
 ### 3.6 The Eve proposal path: reviewer rules and the 30-day cross rule
 
-Added 2026-09-13 (platform HLD §13.3; Mo change 20 in [08-open-decisions.md](08-open-decisions.md)).
+Platform HLD §13.3; Mo change 20 in [08-open-decisions.md](08-open-decisions.md).
 Mo improving Eve must not become Mo steering the component that checks Wall-E, so the Eve path
 is narrower than Wall-E's in four ways.
 
@@ -639,7 +622,7 @@ the platform approval surface.
 
 ### 3.7 Agent-neutral names
 
-Added 2026-09-13 (platform HLD §13.3): there is one Mo per platform, so nothing of Mo's is named
+There is one Mo per platform (platform HLD §13.3), so nothing of Mo's is named
 for one agent. Resources that do not exist yet take agent-neutral names **before Stage 0**.
 
 | Was | Is | State |
@@ -730,7 +713,7 @@ cannot be part of what it gates.
 
 Mo may not author a diff to `config/metrics/*.sql`, `config/metrics/fixtures/**`,
 `config/metrics/gates.yaml`, the ceiling module, the policy chain, the catalogue's risk tiers,
-or the validator — nor, since 2026-09-13, to Eve's `predicates/`, `ceilings.py`, `reasons.yaml`,
+or the validator — nor to Eve's `predicates/`, `ceilings.py`, `reasons.yaml`,
 `oncall.yaml` or `eve_authority`, which are the gating layer Eve applies to Wall-E. Those paths are
 outside the drop box allowlist, so the refusal happens at ingestion, before CI, before a pull
 request exists. And per change 13, one pull request may not touch more than one of them even
@@ -765,10 +748,10 @@ author the diff: Mo raises an `incident_note` bundle and a human opens the pull 
 | Canonical plan serialisation — RFC 8785 canonical JSON, SHA-256 — is specified before the approve endpoint is built | [08-open-decisions.md](08-open-decisions.md) change 8; C39. Without it the weekly plan-hash recomputation is dropped and Mo should hold no action-service access at all |
 | The `capability_gap` closed-enum intent class is defined | [08-open-decisions.md](08-open-decisions.md) change 7; C22 |
 | The approval surface, and therefore the grading surface, is chosen | [decision 14](../wall-e/09-open-decisions.md) |
-| Who may read `walle_metrics` and its artefacts, and the minimum cell size | [decision 35](../wall-e/09-open-decisions.md), provisional decision 44. Until it lands: `walle-operators@` and the ladder owner only, minimum cell size 5, and **no Mo artefact is synced to Drive** |
-| The git host and its admin-bypass setting | C17 records it `tbd`; provisional decision 48 |
-| The second grader, by S2 entry | Provisional decision 45 |
-| `eve_quality` exists with `mo-metrics@`'s dataset-level `READER`, made by Eve's runbook (added 2026-09-13) | Platform HLD §18 items 17 and 25; [08-open-decisions.md](08-open-decisions.md) change 20, M-11 (d) |
-| The validator custodian's `READER` on `eve_quality` (added 2026-09-13) | Platform decision P30. Until it lands, Eve bundles are `eve_incident_note` only |
-| `grades_eve`, written by the platform approval surface, and `eve.seeded_fault_runs` (added 2026-09-13) | Platform HLD §13.3, §18 item 17 |
-| The direction of every `thresholds.yaml` row, so `eve_threshold_tighten` can be checked (added 2026-09-13) | Eve's set, with E-18; *tbd* |
+| Who may read `walle_metrics` and its artefacts, and the minimum cell size | [decision 35](../wall-e/09-open-decisions.md), [M-3](08-open-decisions.md). Until it lands: `walle-operators@` and the ladder owner only, minimum cell size 5, and **no Mo artefact is synced to Drive** |
+| The git host and its admin-bypass setting | C17 records it `tbd`; [M-7](08-open-decisions.md) |
+| The second grader, by S2 entry | [M-4](08-open-decisions.md) |
+| `eve_quality` exists with `mo-metrics@`'s dataset-level `READER`, made by Eve's runbook | Platform HLD §18 items 17 and 25; [08-open-decisions.md](08-open-decisions.md) change 20, M-11 (d) |
+| The validator custodian's `READER` on `eve_quality` | Platform decision P30. Until it lands, Eve bundles are `eve_incident_note` only |
+| `grades_eve`, written by the platform approval surface, and `eve.seeded_fault_runs` | Platform HLD §13.3, §18 item 17 |
+| The direction of every `thresholds.yaml` row, so `eve_threshold_tighten` can be checked | Eve's set, with E-18; *tbd* |

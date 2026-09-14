@@ -2,26 +2,21 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
+- Last reviewed: 2026-09-14
 - Maturity: detailed design, written 2026-09-13. Nothing is built. Parent:
   [01-hld.md](01-hld.md) §5 (registry and governance), §12 (the autonomy contract), §1 demands
   D1, D4, D5, D6, D9, D11, §11.4 rows "capability ceiling", "re-qualification", "transitive
-  capability through peers", §15 boundary B6. Answers HLD brief items A4, A7 and A8 of
-  [00-objective-review.md](00-objective-review.md) §5 (corrected 2026-09-13; §6 is the compliance frames) and gaps PS-03, SCA-04, SCA-06 of its §4.
+  capability through peers", §15 boundary B6. Answers the registry, governance and scale findings of
+  [00-objective-review.md](00-objective-review.md).
 - Promotes [../wall-e/13-agent-interconnection.md](../wall-e/13-agent-interconnection.md) §2
   (the registry), §5.4 and §5.5 (the `agent` principal and taint on receipt) and §9 (the
   enforcement/detection grading) from Wall-E's chapter to platform rules. It references them
   and does not repeat their product research; where a fact was re-verified on 2026-09-13 the
   URL sits next to the claim in §11.
-- Standing constraints, unchanged and not re-argued: no domain-wide delegation; the language
-  model holds no credential and cannot approve; humans raise autonomy and machines lower it;
-  no model produces an Eve approval; Mo reaches production only through a merged pull request;
-  safety interlocks are plain authenticated REST; Wall-E holds Super Admin (P33); no secrets
-  and no company names in the wiki.
-- Conventions: `Assumption:` marks inferred facts; *tbd* marks values nobody has decided;
-  every control names its owner (a role), the resource it sits on, how it is verified and
-  what happens when it fails (§10). Decisions this page makes are numbered P71–P80,
-  final ids in [12-open-decisions.md](12-open-decisions.md). The two diagrams are in §6.3 and §7.1.
+- Standing constraints: as stated once in [01-hld.md § Status](01-hld.md#status).
+- Conventions: as stated once in [README.md § Status](README.md#status); this page's controls
+  are in §10. Decisions this page makes are numbered P71–P80; the rows of record are in
+  [12-open-decisions.md](12-open-decisions.md). The two diagrams are in §6.3 and §7.1.
 
 ---
 
@@ -32,20 +27,16 @@ is a git file, not a product (§5.1); the shared Agent Registry is the governed 
 daily against independent observation (§5.2); and the autonomy ladder becomes four platform
 artefacts every Tier W+ agent conforms to (§12). This page turns each sentence into a
 mechanism a security reviewer can test and a builder can build, and records the decisions the
-HLD left open:
+HLD left open. They are P71–P80; options, owners, gates and state are held once in
+[12-open-decisions.md](12-open-decisions.md#1-how-this-register-works). In digest:
 
-| Question the HLD left open | Decided here | Id |
+| Area | Decisions | Where |
 |---|---|---|
-| Shared registry versus per-agent registries; what happens to Google's automatic same-project registration | One shared registry in `CORE_PROJECT`, `europe-west1`; agent projects never enable `agentregistry.googleapis.com`, so no local registry exists to fragment the inventory; sharding per tier folder only if the per-project quota cannot be raised | P71 |
-| Where the mandatory card metadata lives, given that a registry entry has **no labels field** (verified §11) | The register row is the source; CI projects it into project labels and into a fixed-format first line of the registry entry's `description`; the HLD's "labels on every registry card" is corrected | P72 |
-| How "registered ⇒ feeding the SIEM" is enforced after admission, not only at it | A continuous invariant with a per-tier silence budget; breach sets the row `suspended`, removes the `gemini-egress` entry and, at Tier P, halts | P73, P74 |
-| What the reconciliation job reads, who runs it, how often, what it alerts | The drift job's principal, one more schedule: daily full set-difference over five sources plus a feed-driven check within 15 minutes; severities per tier; SCC AI Protection as the cross-check the platform does not build | P73 |
-| How the TISAX asset register and the EU AI Act registration derive from the register | Both are CI-generated exports of the register; a derogation-claiming row cannot reach `prod` without its Art. 49(2) registration id | P75 |
-| Contract versioning and the migration rule | `contract_version` semver on every artefact; the validator accepts N and N−1 for 90 days | P76 |
-| What "defaults an agent may only tighten" means mechanically | A monotone order per parameter, checked by the validator; the numbers are the Wall-E set's, now platform defaults | P77 |
-| The fleet-wide peer rule as code | Fixed `agent` ceiling column marked `code: true`; `iap.egressor` bindings generated from `peers[]` only; anything else refused by the validator and flagged by the drift job | P78 |
-| Tier W verifier: what the weakened "second implementation" property costs and what compensates | Accepted for Tier W with four mandatory compensations and one cap: L4 needs a seeded-fault record younger than 30 days; Tier P keeps a hand-written Eve | P79 |
-| Registry read audit | `ADMIN_READ` Data Access logs enabled on `agentregistry.googleapis.com` in `CORE_PROJECT` | P80 |
+| One shared Agent Registry in `CORE_PROJECT`, no local registries; card metadata carried by the register row, projected into labels and the description's first line | P71, P72 | §2, §3 |
+| Reconciliation against independent inventories, and "registered ⇒ feeding the SIEM" as a continuous invariant with the `suspended` status | P73, P74 | §5, §6 |
+| The TISAX and EU AI Act registers as CI exports; no `prod` for a derogation row without its Art. 49(2) registration id | P75 | §8 |
+| The autonomy contract: versioning, tighten-only defaults, the fleet peer rule, the Tier W verifier and its L4 cap | P76–P79 | §9 |
+| Registry read audit (`ADMIN_READ` in `CORE_PROJECT`; configuration in [08 §4.1](08-data-logging-retention-sovereignty.md#41-the-configuration)) | P80 | §4 |
 
 The rule under all of it, lifted from `wall-e/13` §2.5 and unchanged: **registration never
 authorises.** A card in the registry lets a peer *find* an agent; reaching it still needs the
@@ -74,6 +65,10 @@ without a register row fails CI. A registry entry without either is a shadow age
 | Fact | Consequence |
 |---|---|
 | IAM on Agent Registry is **project-level only**: `roles/agentregistry.admin`, `.editor`, `.viewer`, `.user`; no `getIamPolicy`/`setIamPolicy` on any entry; Google's roles page warns that admin and editor can change tool annotations such as `readOnlyHint` and `destructiveHint` with "unintended and destructive consequences" | A viewer of one registry sees every entry in it; an editor can redirect every consumer of it. The registry must therefore live where **no agent principal and no agent owner holds any role**: `CORE_PROJECT` |
+| `roles/agentregistry.viewer` is required to search; `roles/agentregistry.user` creates, updates and deletes skills and skill revisions (`wall-e/13` §2.2 [R5], read 2026-09-09) | Neither is granted to an agent principal (§2.2) |
+| What replaces per-entry IAM is a different product: IAM access policies (Unified Access Policies) bind `roles/iap.egressor`, permission `iap.googleapis.com/resources.egressViaIAP`, to an agent principal on a target that is a whole registry, one agent, one MCP server, one endpoint or one skill; allow and deny rules with CEL conditions, `DRY_RUN` and `ENFORCE` modes; enforced by Agent Gateway through IAP, so they govern **only traffic that traverses a gateway** (GA 2026-08-31 per `wall-e/13` [R6], launch stage not re-verified on 2026-09-13). The organisation-policy constraint `constraints/iam.managed.disableAccessPolicyBinding` (singular; "prevents binding V3 access policies to resources" — name re-verified 2026-09-14; `wall-e/13` §2.2 spells it with a trailing `s`) must not be enforced on a project before a binding is created there; `Assumption:` it is enforced by default in the organisation | The registry answers "what exists", the access policy answers "who may reach it": **registered is never authorised**. `iap.egressor` bindings are generated from `peers[]` only (§9.7) |
+| Discovery: `gcloud agent-registry agents search --search-string=…` (keyword, prefix and `skillId:` wildcards) or the `agents:search` API; semantic search documented for skills; `gcloud agent-registry agents describe` returns endpoint, skills and metadata. Resolution from ADK: `AgentRegistry(project_id, location).get_remote_a2a_agent(agent_name, auth_scheme=None, auth_credential=None, *, httpx_client=None, continue_uri=None)` builds the `AgentCard` from the stored card for an `A2A_AGENT_CARD` entry and synthesises one from the connection URI otherwise (`get_mcp_toolset`, `get_endpoint` for the other types); with `auth_scheme` omitted it resolves auth from registry bindings and applies default Google credentials only to Google API endpoints — "Calls to a remote A2A agent are not authenticated for you"; Google's guidance is to resolve once at startup (GA; ADK 2.8.0; `wall-e/13` §2.3 [R7] [R23], read 2026-09-09) | Consumers resolve through a committed value and compare against the registry once at startup (§2.2); a card obtained from the registry is treated by ADK as trusted configuration and skips the same-origin check (`wall-e/13` §2.5), which is why registry writes are treated like deploys |
+| The registry **stores** the card and serves it to registry consumers through the API and `get_remote_a2a_agent`; it does **not** host a public `/.well-known/agent-card.json` for the agent (GA, verified, `wall-e/13` §2.3 [R3], read 2026-09-09). The public well-known path exists only where the agent itself serves A2A (an ADK `to_a2a` app, [R20]); Agent Runtime serves no public card ([R17], rated likely) | The registry is the only place an Agent Runtime agent's card is published, and only to principals that can search the registry, never to the internet |
 | Manual registration is refused in the `eu` and `us` multi-regions; it needs `global` or a single region (`europe-west1` is listed) | The shared registry is regional, `europe-west1`, for residency; `global` is not used (HLD §5.2) |
 | Google's own guidance for a governance project: "you must manually register the remote agents in the central governance project's registry", and "automatic registration only discovers resources in the local project" | Cross-project manual registration is the documented pattern, which retires the HLD's `Assumption:` that the registry accepts an engine from another project. The card is a URL and a JSON document; the registry does not check the runtime's project |
 | Automatic registration exists for Agent Runtime, Cloud Run (`--functional-type=agent`), GKE (label `registry.gke.io/functional-type: "AGENT"`) and Google's built-in agents, **into the local project only** | Every agent project that has the API enabled would grow its own registry with an uncurated entry — exactly the fragmentation the HLD rejected. See P71 |
@@ -86,13 +81,13 @@ without a register row fails CI. A registry entry without either is a shadow age
 
 | Option | For | Against |
 |---|---|---|
-| **(a) One shared registry in `CORE_PROJECT`, `europe-west1`** (recommended by the platform-security and scale lenses; the HLD's choice) | One inventory, one viewer grant, one alert query, one Terraform state; the only project where "no agent principal exists" is already a folder rule (HLD §3.1); Google's documented "central governance project" pattern | Per-project quota of 100 per type; every consumer that resolves through the registry needs `roles/agentregistry.viewer` on `CORE_PROJECT` — a project-level role in a core project, which topology decision 48 tolerates only for platform principals |
+| **(a) One shared registry in `CORE_PROJECT`, `europe-west1`** (the HLD's choice) | One inventory, one viewer grant, one alert query, one Terraform state; the only project where "no agent principal exists" is already a folder rule (HLD §3.1); Google's documented "central governance project" pattern | Per-project quota of 100 per type; every consumer that resolves through the registry needs `roles/agentregistry.viewer` on `CORE_PROJECT` — a project-level role in a core project, which topology decision 48 tolerates only for platform principals |
 | (b) One registry per agent project (what `wall-e/13` §2 built for Wall-E) | Matches "no foreign project-level role"; automatic registration works | Hundreds of registries; no cross-project search; a viewer in one sees one; the inventory is a fan-in job over N projects; each agent owner is an editor of their own discovery record, which is the deploy-grant-by-another-name `wall-e/13` §2.5 warns about |
 | (c) One registry per tier folder, in a per-tier core project | Bounds the quota; keeps the "no agent principal" property per tier | Five registries to reconcile; the tenant app's `gemini-egress` policy reads five sources |
 
 **Decision P71.** Option (a). Two consequences the HLD did not state:
 
-1. **Agent projects never enable `agentregistry.googleapis.com`.** The tier folders' `gcp.restrictServiceUsage` allow-lists (HLD §3.1) exclude it, so no local registry can exist and automatic same-project registration has nowhere to land. `Assumption:` automatic registration requires the API enabled in the runtime's project — Google's page does not say either way. **Spike at the first factory run in nonprod**: deploy a throwaway engine with the API disabled and assert that no `Service` appears anywhere. If registration lands regardless, the fallback is to read those local entries as a sixth observation source in §6, never as a governed view, and to alert on any local entry that carries a card. **The same spike asserts two more things (added 2026-09-13):** (i) the throwaway engine starts, answers, writes its telemetry and passes through its bound egress gateway with no `498` while `agentregistry.googleapis.com` is disabled in its own project — the `agentregistry` hostnames on [06](06-gateways-model-armor-perimeter.md) §2.2's essential-endpoint list are egress destinations the SDK calls, and the spike proves that calling them does not require the API enabled in the caller's project; (ii) the agent project's egress gateway can evaluate its access policy against destinations registered in `CORE_PROJECT`'s registry. If either fails, P71's consequence 1 cannot be built as written: the fallback is the `GEMINI_PROJECT` pattern — a CI-generated working-set registry in each agent project, derived from the register and never an inventory, with `agentregistry` added to the tier allow-list by a dated row in [12](12-open-decisions.md) that overturns this consequence — and not a silent console enablement.
+1. **Agent projects never enable `agentregistry.googleapis.com`.** The tier folders' `gcp.restrictServiceUsage` allow-lists (HLD §3.1) exclude it, so no local registry can exist and automatic same-project registration has nowhere to land. `Assumption:` automatic registration requires the API enabled in the runtime's project — Google's page does not say either way. **Spike at the first factory run in nonprod**: deploy a throwaway engine with the API disabled and assert that no `Service` appears anywhere. If registration lands regardless, the fallback is to read those local entries as a sixth observation source in §6, never as a governed view, and to alert on any local entry that carries a card. **The same spike asserts two more things:** (i) the throwaway engine starts, answers, writes its telemetry and passes through its bound egress gateway with no `498` while `agentregistry.googleapis.com` is disabled in its own project — the `agentregistry` hostnames on [06](06-gateways-model-armor-perimeter.md) §2.2's essential-endpoint list are egress destinations the SDK calls, and the spike proves that calling them does not require the API enabled in the caller's project; (ii) the agent project's egress gateway can evaluate its access policy against destinations registered in `CORE_PROJECT`'s registry. If either fails, P71's consequence 1 cannot be built as written: the fallback is the `GEMINI_PROJECT` pattern — a CI-generated working-set registry in each agent project, derived from the register and never an inventory, with `agentregistry` added to the tier allow-list by a dated row in [12](12-open-decisions.md) that overturns this consequence — and not a silent console enablement.
 2. **Quota.** A quota increase for `agentregistry.googleapis.com` in `CORE_PROJECT` is requested when any type reaches 60 % of its limit; Google's quotas page says the allocation quotas "have default values, but you can typically request adjustments" through the console (re-verified 2026-09-13, §11), so the increase is a request, not a certainty. If an increase is refused, option (c) is the recorded fallback, applied per tier folder in the order the tiers fill, with the reconciliation job reading every registry and `gemini-egress`'s policy generated from the register rather than from any registry.
 
 Consumers of the registry: `platform-readers@` (humans), `eve-owners@`, the detection desk's
@@ -114,7 +109,7 @@ entry has no labels field (§2.1), so the rule is restated:
 | Carrier | What it carries | Who writes it | Who reads it |
 |---|---|---|---|
 | The register row | everything (§3.2) | owner via pull request | CI, the factory, the reconciliation job, the exports of §8 |
-| Project labels (`agent`, `owner`, `tier`, `env`, `risk_class`, `data_class`, `ai_act_class`, `autonomy_ceiling`, `model_pin`, `verifier`, `recovery_class`, `cost_centre`; `tisax_scope` at the folder) | the projection the HLD already requires; label values are ≤ 63 characters, lower-case, so `model_pin` is the pin's slug and `autonomy_ceiling` the highest cell as `family-trigger-level` | the factory | Cloud Asset Inventory search, billing export, SCC |
+| Project labels — the P38 key set and value alphabet of [02 §3.6](02-landing-zone-and-tiers.md#36-naming-and-the-label-taxonomy-p37-p38) | the projection the HLD already requires; this page writes the `autonomy_ceiling` label as the highest cell, `family-trigger-level` | the factory | Cloud Asset Inventory search, billing export, SCC |
 | The registry entry's `description`, **first line** | fixed format: `meta: agent_id=<id> tier=<tier> owner=<group> risk_class=<…> ai_act_class=<…> tisax_class=<…> status=<…> register_sha=<12 hex>` (tier one of `C R W P P-SA X`) — then a blank line, then the human description | the CI identity from the row; `register_sha` is the SHA-256 of the merged row, so "card ≠ row" is one string comparison | the reconciliation job; humans searching the console |
 | The A2A card (`agent_spec`, ≤ 10 KB) for agents that serve A2A | what the agent *does* and, in prose, what it does not do (`wall-e/13` §3.2); the exclusions paragraph repeats `ai_act_class` and the Art. 50 disclosure line where the class is `limited_art50` or above | the CI identity from `agent-card.json` in the agent's repository, reviewed like a ceiling | peers, the Gemini Enterprise app |
 
@@ -144,11 +139,11 @@ table; this page adds the per-tier column, the `suspended` status (P74), `peers`
 | `art_49_registration` | — | — | O | M if `annex_iii_adjacent` or `high_risk` | M | the EU database identifier, or `pending` — a row with `pending` cannot carry `status: prod` (P75, §8.2) |
 | `model_pin`, `framework_version`, `armor_template`, `gateway_id`, `principal` | `model_pin` only | M | M | M | M | `principal` is the `principal://agents.global.org-ORG_ID.system.id.goog/...` string (HLD §4.2); Tier C has no engine and no gateway |
 | `verifier` | `none` | `none` | `platform-verifier` | `eve` | M | Tier W may not name `eve`; Tier P may not name `platform-verifier` (P79) |
-| `verifier_owner` | — | — | M | M | M | a group (`eve-owners@` for Eve) whose owner is **outside the administration line of every agent the verifier verifies**; the admission gate refuses a row whose `verifier_owner` equals its `owner_group` or that group's owner (RP-1 of [07](07-monitoring-detection-incident-response.md) §8, P98; added 2026-09-13 on the reconcile pass) |
-| `capability_eval_ref` | — | O | O | O | M | a pointer to the model provider's capability-evaluation artefact for the pinned `model_pin` (FSF-derived report or model card); optional below Tier X, required for Tier X ([09](09-supply-chain-secrets-recovery.md) §5.3, P124; added 2026-09-13) |
-| `tisax_dp_scope` | O | O | O | O | O | boolean, default `false`; `true` when the row's `purpose` names a customer's or an OEM's data processed on that customer's behalf — the row then cannot reach `status: prod` without a dated DPO entry, and the Data Protection module becomes an assessment objective for that agent's scope ([11](11-tisax.md) §3, P134; added 2026-09-13) |
+| `verifier_owner` | — | — | M | M | M | a group (`eve-owners@` for Eve) whose owner is **outside the administration line of every agent the verifier verifies**; the admission gate refuses a row whose `verifier_owner` equals its `owner_group` or that group's owner (RP-1 of [07](07-monitoring-detection-incident-response.md) §8, P98) |
+| `capability_eval_ref` | — | O | O | O | M | a pointer to the model provider's capability-evaluation artefact for the pinned `model_pin` (FSF-derived report or model card); optional below Tier X, required for Tier X ([09](09-supply-chain-secrets-recovery.md) §5.3, P124) |
+| `tisax_dp_scope` | O | O | O | O | O | boolean, default `false`; `true` when the row's `purpose` names a customer's or an OEM's data processed on that customer's behalf — the row then cannot reach `status: prod` without a dated DPO entry, and the Data Protection module becomes an assessment objective for that agent's scope ([11](11-tisax.md) §3, P134) |
 | `metric_pack` | `light` | `light` | `full` | `full` + `eve-quality` | M | Mo's pack (HLD §13.3) |
-| `privilege` | `none` | `none` | `none` | M | `none` | `workspace_role:<name>` or `super_admin`; the `agents.md` `privilege` column; CI fails a second `super_admin` (WSA-12) |
+| `privilege` | `none` | `none` | `none` | M | `none` | `workspace_role:<name>` or `super_admin`; the `agents.md` `privilege` column; CI fails a second `super_admin` |
 | `supplier_rows[]` | M | M | M | M | M | ids in the supplier file (HLD §14.3); the model is always one row |
 | `publish_to_gemini`, `audience_groups[]` | M | M | M | M | `code: false` | drives the `gemini-egress` policy and sharing; above Tier C `audience_groups` may not contain the tenant-wide group |
 | `peers[]` | — | O | O | O | — | registry entry ids this agent may be bound to as an egressor (§9.7); the only source of `iap.egressor` bindings |
@@ -170,9 +165,9 @@ named in one line each, now with mechanism, owner and failure mode.
 
 | Policy | Rule | Mechanism | Owner | Verified by | On failure |
 |---|---|---|---|---|---|
-| **Only CI writes** | `roles/agentregistry.admin` on `CORE_PROJECT` is held by the routine factory identity `factory-apply@CICD_PROJECT` (WIF, no key; P142 — named 2026-09-13, this row said "the CI deploy identity") and by nobody else standing; the per-agent `<agent>-deployer@` accounts hold no registry role; `roles/agentregistry.editor` is granted to nobody, ever; `roles/agentregistry.user` (skills) to nobody — the platform registers no standalone skills (`wall-e/13` §8 position, unchanged; skills are Preview) | IAM in Terraform; PAM entitlement `roles/agentregistry.admin`, 1 h, security reviewer approves, for "registry repair" only (HLD §4.4) | platform owner | drift job asserts the binding set equals `{factory-apply@CICD_PROJECT}`; SHA custom module flags any other member | any other admin/editor member: severity 2, binding removed by the drift job's remediation PR, incident opened |
+| **Only CI writes** | `roles/agentregistry.admin` on `CORE_PROJECT` is held by the routine factory identity `factory-apply@CICD_PROJECT` (WIF, no key; P142) and by nobody else standing; the per-agent `<agent>-deployer@` accounts hold no registry role; `roles/agentregistry.editor` is granted to nobody, ever; `roles/agentregistry.user` (skills) to nobody — the platform registers no standalone skills (`wall-e/13` §8 position, unchanged; skills are Preview) | IAM in Terraform; PAM entitlement `roles/agentregistry.admin`, 1 h, security reviewer approves, for "registry repair" only (HLD §4.4) | platform owner | drift job asserts the binding set equals `{factory-apply@CICD_PROJECT}`; SHA custom module flags any other member | any other admin/editor member: severity 2, binding removed by the drift job's remediation PR, incident opened |
 | **Every write is seen** | a log-based alert on `protoPayload.serviceName="agentregistry.googleapis.com"` and `methodName` in the `ADMIN_WRITE` set, where the principal is not the CI identity **or** the request carries no `pipeline_run_id` in the CI identity's justification label | Cloud Logging alert in `LOGGING_PROJECT` on the aggregated sink, routed to the organisation channel and the SIEM; query committed in git | platform owner | monthly: a deliberate console edit in nonprod must page within 5 minutes | alert missing in the drill: severity 2 on the monitoring baseline, not on the agent |
-| **Reads are logged (P80)** | `ADMIN_READ` Data Access logs enabled for `agentregistry.googleapis.com` in `CORE_PROJECT` | folder Data Access audit config (HLD §7.1) gains the service | platform owner | the config is Terraform; drift job; the daily Data Access canary ([08](08-data-logging-retention-sovereignty.md) §4) reads the registry once and expects its `ADMIN_READ` row | config drift or a missing canary row: severity 3 to the platform owner, re-applied by the pipeline within one business day; the gap window is recorded in the evidence register as "registry reads unlogged" |
+| **Reads are logged (P80)** | `ADMIN_READ` Data Access logs for `agentregistry.googleapis.com`, scoped to `CORE_PROJECT` — documented on the product's audit-logging page though absent from Google's general audit-log services list, so unverified until the canary's first run | the `agentregistry` row of the Data Access configuration, [08 §4.1](08-data-logging-retention-sovereignty.md#41-the-configuration) | platform owner | Terraform; drift job; the daily Data Access canary ([08 §4.3](08-data-logging-retention-sovereignty.md#43-the-canary)) reads the registry once and expects its `ADMIN_READ` row | config drift or a missing canary row: severity 3 to the platform owner, re-applied by the pipeline within one business day; the gap window is recorded in the evidence register as "registry reads unlogged" |
 | **Cards are generated, never hand-written** | the `Service` content is rendered from the register row and, for A2A agents, from `agent-card.json` in the agent's repository; CI validates the card against the A2A schema and asserts that no skill id names a write, an approval or a control operation (`wall-e/13` §2.5) | CI check owned by the platform repository, not the agent's | platform owner; security reviewer on the check's code | a fixture card with a `suspend` skill must fail CI | a card that passes with a write skill: the check is wrong; block all registrations until fixed |
 | **Annotations are ceilings, not hints** | `readOnlyHint`, `destructiveHint` and any tool annotation in an MCP entry are rendered from the manifest's family `risk_tier`; a gateway CEL rule that reads them is redundant with the action service's ceiling, never a substitute | CI renders; the action service does not read the registry at all | platform owner | the action service's policy chain has no registry client (denial-suite row) | a registry client or an annotation read found in an action service: CI fails the deploy; in a running service it is severity 2, the agent's ladder is capped at L3 until a release removes it |
 | **Bindings** | registry auth `bindings` and IAM access-policy `iap.egressor` bindings are created only from `peers[]` (§9.7) by CI | Terraform; validator | platform owner | drift job compares live bindings to the union of every manifest's `peers[]` | extra binding: severity 2, removed |
@@ -183,36 +178,16 @@ named in one line each, now with mechanism, owner and failure mode.
 
 ## 5. The invariant: registered ⇒ feeding the SIEM
 
-The HLD stated it at the admission gate ("its first heartbeat has landed at the tier's
-detection desk"). A gate proves it once. The invariant must hold for as long as the row is
-`prod`, because the failure that matters — an agent that keeps acting while its evidence has
-stopped — happens after admission.
-
-**Statement (P73).** For every register row with `status ∈ {pilot, prod}` and `env = prod`:
-within the last *silence budget* of its tier, (a) the project's monitoring baseline heartbeat
-(HLD §7.2) has been received at the tier's detection desk, and (b) for Tier W and above, at
-least one row has landed in `<agent_id>_audit.runs` or the action service has written its
-idle heartbeat row (`decision = heartbeat`, one per hour, part of `audit.schema` §9.4).
-
-| Tier | Detection desk | Silence budget | On breach |
-|---|---|---|---|
-| C | SCC AI asset inventory + console Model Armor logs in `LOGGING_PROJECT` | 24 h (the console agent has no heartbeat; the check is that the app's `discoveryengine` Data Access log still names the agent) | row `suspended`; console unpublish requested from `ge-admins@`; severity 3 |
-| R | central logging | 24 h | row `suspended`; `gemini-egress` entry removed by CI; severity 3 |
-| W | central logging + SCC | 4 h | as R, plus `halt_all` on the action service over plain REST from the reconciliation job's principal (it holds `run.invoker` on `/v1/control/halt` only, listed in the manifest's invoker set); severity 2 |
-| P / P-SA | SIEM, 24x7 | 15 min (`Assumption:`, the same number as Eve's `log_pipeline_silent` halt) | Eve already halts on `log_pipeline_silent`; the reconciliation job's action is the row and the egress entry; severity 1 through the witness channel; the absence of the *reconciliation job's own* heartbeat at the witness is itself severity 1 |
-
-Mechanism: the reconciliation job (§6) evaluates the invariant on every run; the per-project
-absence policies (HLD §7.2) fire first and independently, so the invariant is the second
-observer, not the only one. Owner: platform owner; the SIEM content for Tier P is owned with
-the MDR partner (HLD §0.3). Verified: a monthly drill in nonprod breaks one agent's log sink
-and measures time-to-`suspended`; the times go to the evidence bucket. Fails: if the job cannot
-reach a source it reports `source_unavailable` for that source and does **not** suspend rows
-on missing data — suspension needs positive evidence of silence from at least one source
-that *is* reachable; a job that cannot reach any source pages severity 2 on itself.
-
-Leaving `suspended` is a human act: a pull request setting `status: prod` again, referencing
-the incident, merged under the tier's reviewer rule. Machines lower; humans raise — the same
-asymmetry as the ladder, applied to the inventory.
+Admission proves the feed once: step 9 of §7.1 refuses an agent whose first heartbeat has not
+reached the tier's detection desk within 30 minutes of the baseline apply. After admission the
+invariant is continuous (P74): a `pilot` or `prod` row whose heartbeat and, from Tier W, audit
+rows fall silent past its tier's silence budget is set `suspended` by the reconciliation job
+(§6), loses its share (the `gemini-egress` entry; a console unpublish at Tier C) and, from
+Tier W, is halted — and only a human pull
+request returns it to `prod`. The statement, the per-tier silence budgets, desks and
+severities, the absence policies that fire first, the `source_unavailable` rule and the drill
+are defined once in
+[07 §4](07-monitoring-detection-incident-response.md#4-registered--feeding-the-siem-the-monitoring-baseline-module-and-admission).
 
 ---
 
@@ -405,17 +380,14 @@ is the platform's, not the ISMS's.
 
 ### 8.2 EU AI Act registration (Art. 6(4), Art. 49, Art. 71) — P75
 
-Regulatory state, re-verified on 2026-09-13 (§11): Art. 49(2) obliges a provider that has
-concluded under Art. 6(3) that an Annex III system is not high-risk to register itself and
-the system in the EU database before placing it on the market or putting it into service;
-Art. 6(4) obliges that provider to document the assessment before doing so and to hand it to
-a competent authority on request, and makes any system that performs profiling of natural
-persons high-risk regardless; Art. 71's database is run by the Commission, public for Art. 49
-entries, and the site's timing reads it as applicable from 2026-08-02; Art. 49(3) deployer
-registration binds public authorities only (`Assumption:` private organisation, HLD §14.1
-Art. 27 row). The Digital Omnibus on AI, Regulation (EU) 2026/1744 (OJ 2026-07-24, in force
-2026-07-27), defers Annex III high-risk obligations to **2027-12-02** and leaves Art. 50 at
-2026-08-02. Whether the Omnibus changed the Art. 71 database timeline is *unverified*.
+The gate rests on two articles: a provider that concludes under Art. 6(3) that an Annex III
+system is not high-risk documents that assessment under Art. 6(4) (profiling of natural persons
+removes the derogation) and, under Art. 49(2), registers itself and the system in the
+Commission's Art. 71 EU database — public for Art. 49 entries — before putting it into service.
+Art. 49(3) deployer registration binds public authorities only (`Assumption:` private
+organisation, HLD §14.1 Art. 27 row). The dates, the Digital Omnibus deferral of Annex III
+obligations to 2027-12-02 and what remains unverified are held in
+[10 §1](10-eu-ai-act.md#1-the-regulatory-state-on-2026-09-13).
 
 The rule, enforced at step 8 of admission and by the reconciliation job afterwards:
 
@@ -431,10 +403,9 @@ Export `register/export/ai-act-register.md`: one row per agent with class, role,
 purpose and `purpose_sha256`, the Art. 6(3) condition relied on (`art_6_3_condition`),
 registration id, the log store designated as the Art. 12 log (`<agent_id>_audit`),
 the oversight owner (`owner_group`'s operator role) and the oversight level cap
-(`oversight_cap`), the Art. 50 position, the review date (columns aligned with
-[10-eu-ai-act.md](10-eu-ai-act.md) §8 item 10 on 2026-09-13).
-This is the "registry export listing every agent with its classification id" the eu-ai-act
-lens asked for (its evidence item 7). For Wall-E on 2026-09-13 the row reads
+(`oversight_cap`), the Art. 50 position, the review date — the columns
+[10-eu-ai-act.md](10-eu-ai-act.md) requires. This is the registry export listing every agent
+with its classification id. For Wall-E on 2026-09-13 the row reads
 `annex_iii_adjacent`, derogation claimed, `art_49_registration: pending`, which is why Wall-E
 cannot reach `prod` — and therefore cannot write — before the registration exists (HLD §14.1:
 "Art. 49(2) registration before first write"). Owner: legal for the classification, the
@@ -506,9 +477,8 @@ ceilings:                          # permanent maxima per (family, trigger) ; co
   F1: {T0: L5, T1: L5, T2: L5, T3: L5, agent: L5}
   F3: {T0: L4, T1: L4, T2: L3, T3: L2, agent: L0}   # each cell <= the platform default for the tier/reversibility
   # rows the schema fixes and the validator refuses to see edited (code: true):
-  #   any family with risk_tier SUPER:         every trigger L3, two-person, never in a playbook
-  #     corrected 2026-09-13 (review-findings pass) to the HLD's form (HLD §12.1, §13.1 item 9):
-  #     T0 (chat) L3 two-person, every other trigger L0, the agent column L0; never in a playbook
+  #   any family with risk_tier SUPER:         T0 (chat) L3 two-person, every other trigger L0,
+  #                                            the agent column L0; never in a playbook (HLD §12.1, §13.1 item 9)
   #   any family with risk_tier WRITE_GENERIC: T0 L3, every other trigger L0
   #   the agent column:                        L5 for READ families, L0 for every other family
 protected_principals:              # ids the agent may never target ; the platform appends its own
@@ -644,14 +614,14 @@ C18 for the interval gate):
 | Parameter | Platform default | Tighten means | Source |
 |---|---|---|---|
 | Ceilings by (risk tier, reversibility, trigger) | `wall-e/05` §4's table: READ L5 everywhere; WRITE_LOW reversible L5/L5/L4/L2; WRITE_LOW irreversible L5 templated or L3 free text / L4 templated / L4 templated / L2; WRITE_HIGH reversible L3/L4/L4/L0; WRITE_HIGH irreversible L3/L2/L2/L0; external recipients L3/L2/L2/L0 | lower | `wall-e/05` §4 |
-| Permanent statements | `WRITE_HIGH` never L5; T3 never produces a write; free-text outbound never autonomous; **`SUPER` permanently L3 with a two-person rule and never in a playbook** (on `chat` only; every other trigger L0 — stated 2026-09-13 to match HLD §13.1 item 9); `WRITE_GENERIC` chat L3, every other trigger L0 | — (code) | HLD §12.1 |
+| Permanent statements | `WRITE_HIGH` never L5; T3 never produces a write; free-text outbound never autonomous; `SUPER` L3 two-person on `chat`, L0 elsewhere, never in a playbook; `WRITE_GENERIC` L3 on `chat`, L0 elsewhere — the rows and statements of [wall-e/05 §4](../wall-e/05-autonomy-ladder.md#4-ceilings-that-are-code-not-config) | — (code) | HLD §12.1, §13.1 item 9 |
 | The `agent` column | READ L5, every write L0 | — (code) | `wall-e/13` §5.4, HLD §12.1 |
 | One notch, one family, on evidence; no skipping above L3 | R3 | — | `wall-e/05` §1 |
 | Dwell | L1→L2 2 weeks, L2→L3 2 weeks, L3→L4 4 weeks, L4→L5 6 weeks; the clock restarts after a demotion | longer | `wall-e/05` §6 |
 | Ratchet | after an automatic demotion: ≥ 5 business days at the lower level, a written root cause, a fresh decision record | longer / more | `wall-e/05` §6 |
-| Interval gate | promote when the Wilson 95 % lower bound of the graded-correct ratio ≥ 0.90 over ≥ 35 graded items per (family, trigger); demote one level when the 95 % upper bound < 0.95; `unsure` reported separately and excluded from the ratio | higher bound, larger n | `wall-e/09` decision 33; `wall-e/14` C18 |
+| Interval gate | default: promote at a Wilson 95 % lower bound ≥ 0.90 over ≥ 35 graded items per (family, trigger); demote one level at a 95 % upper bound < 0.95; `unsure` excluded from the ratio and reported separately. The gate's full form (blocks, conservative ratio, `unsure` cap) is [mo/03 §4](../mo/03-metrics-contract.md#4-the-gates) | higher bound, larger n | `wall-e/09` decision 33; `wall-e/14` C18; mo/03 §4 |
 | Blind sample | `max(10 %, 5/week)` per family; 20 % double-graded for `WRITE_HIGH`; grader ≠ playbook owner | larger | `wall-e/14` C16–C18; HLD §11.1 |
-| Severity table | `wall-e/05` §9: a wrong autonomous write is family → L0 (zero error budget); an overturned verifier approval is severity 2 and drops the verifier's authority for the family to advisory | more severe | `wall-e/05` §9; `wall-e/04` |
+| Severity table | the table of [wall-e/05 §9](../wall-e/05-autonomy-ladder.md#9-severity-and-automatic-response) (a wrong autonomous write: family → L0, zero error budget; an overturned verifier approval: severity 2, the verifier's authority for the family drops to advisory), with the platform's detection severities in [07 §6](07-monitoring-detection-incident-response.md#6-the-detection-catalogue) | more severe | `wall-e/05` §9; `wall-e/04`; 07 §6 |
 | Approval TTL (L3) | 4 business hours, then `skipped` | shorter | `wall-e/05` §2 |
 | L4 hold window | *tbd* minutes, ≥ the operator veto latency measured in the drill | longer | `wall-e/05` §2 |
 | Fingerprint change | every cell above L3 resets to L3 | lower reset level | HLD D9 |
@@ -751,9 +721,9 @@ and the cell is effectively L3 — a human. Tier P keeps the hand-written Eve, t
 stays rare (HLD §12.4); Tier X has no verifier at any level and every cell at L0.
 
 **Mo generalises without loss.** Mo reads `audit.schema`, so every conforming agent gets a
-scorecard keyed on `agent_id`: the light pack for Tier C/R (cost, reliability, Model Armor
-`MATCH_FOUND` rate, drift, freshness — no grading hour), the full pack with blind grading for
-W+, the Eve-quality pack for P. Mo's outputs stay proposals in a drop box, ingested by a CI
+scorecard keyed on `agent_id`, in the pack its tier names
+([mo/03 §7.1](../mo/03-metrics-contract.md#71-the-metric-pack-per-tier)): light for Tier C/R with
+no grading hour, full with blind grading for W+, plus the Eve-quality pack for P. Mo's outputs stay proposals in a drop box, ingested by a CI
 bot that is not Mo, validated by the custodian, merged by two humans. One `MO_PROJECT` per
 platform; per-agent metric packs; the Tier W cap by grading capacity (P25) is the only
 scaling limit this page adds nothing to.
@@ -833,32 +803,19 @@ flag's stage (Preview per HLD §4.1, not re-fetched).
 
 ## 12. Decisions recorded on this page (P71–P80 in [12-open-decisions.md](12-open-decisions.md))
 
-| Id | Decision | Options considered | Owner | Gate it blocks |
-|---|---|---|---|---|
-| P71 | One shared Agent Registry in `CORE_PROJECT`, `europe-west1`; `agentregistry.googleapis.com` excluded from every tier folder's `restrictServiceUsage` allow-list so no local registry exists; a nonprod spike confirms automatic registration has nowhere to land; quota increase at 60 % occupancy; per-tier-folder sharding as the recorded fallback | (a) shared, (b) per agent, (c) per tier | platform owner | Tier R (the registry is a Tier R gate item) |
-| P72 | Card metadata is carried by the register row, projected into project labels and a fixed-format first line of the registry `description` (`meta: … register_sha=…`); the HLD §3.4 "labels on every registry card" is corrected because the `Service` resource has no labels | description line vs A2A card metadata vs a sidecar file | platform owner | Tier R |
-| P73 | Reconciliation is a second schedule of the drift job under `platform-drift@CORE_PROJECT` (the exception of HLD §18 item 25 extended by the roles in §6.3); daily full run plus feed-driven incremental within 15 minutes; five sources, S4 as a human weekly cross-check until export is proven, S5 method *tbd*; severities per §6.2 | a separate principal; hourly full runs | platform owner; security reviewer for the exception | Tier R |
-| P74 | The register lifecycle gains `suspended`; "registered ⇒ feeding" is continuous with per-tier silence budgets (24 h C/R, 4 h W, 15 min P) and automatic actions (egress entry removed, W+ `halt_all`), leaving suspension is a human pull request | gate-only check; delete on silence | platform owner | Tier W |
-| P75 | A row claiming the Art. 6(3) derogation or classed `high_risk` cannot carry `status: prod` without an `art_49_registration` id and, for derogations, an `art_6_4_assessment`; the TISAX asset register and the AI Act register are CI exports of the register | manual registers kept by the ISMS / legal | legal, DPO, platform owner | first write of any such agent — Wall-E included |
-| P76 | `contract_version` semver on all four artefacts; validator and schema checks accept N and N−1 major for 90 days; additive-only audit columns | pinned single version; no window | platform owner, security reviewer | Tier W |
-| P77 | The Wall-E set's numbers (ceilings table, dwell, ratchet, Wilson ≥ 0.90 lower bound at n ≥ 35, severity table, TTL, two-human rule) are the platform defaults; "tighten only" is a monotone comparison per parameter in the validator; loosening a default is a platform decision signed by the security reviewer | per-agent negotiated numbers | security reviewer | Tier W |
-| P78 | The peer rule is schema (`agent` column `code: true`), action-service policy (taint at run open, `p:actor_not_authorised` for writes) and generated `iap.egressor` bindings from `peers[]` only, whole-registry targets refused, `DRY_RUN` 30 days then `ENFORCE`; drift-job assertion daily | bindings by hand with review | platform owner | Tier R (bindings), Tier W (writes) |
-| P79 | Tier W uses the platform verifier with the second-implementation weakening accepted and written down; four compensations (spec review signature, blind sample, monthly seeded faults, differential test) and the cap "L4 only with a seeded-fault record < 30 days"; Tier P keeps a hand-written Eve; Tier X has no verifier and every cell L0 | hand-written verifier per Tier W agent (six engineer-days each) | security reviewer; Mo owner | the second Tier W agent |
-| P80 | `ADMIN_READ` Data Access logs enabled for `agentregistry.googleapis.com` in `CORE_PROJECT` | off (cost) | platform owner | Tier R |
-
-Decisions in the agent sets this page dates: `wall-e/13` decision 43 (no viewer for Eve or
-Mo) stands for agent principals and is extended — `eve-owners@` (humans) hold viewer on the
-shared registry, `eve-controller@` does not; `wall-e/13` §2.4's *tbd* "whether Wall-E's
-registry lists Eve and Mo" closes as: Eve's control path and Mo's jobs are not registered
-(they are not agents a peer may reach; §1), `eve-advisor` is registered with a card that names
-no skill; `wall-e/09` decision 33's Wilson gate becomes P77.
+This page records P71–P80, each where its section decides it: P71 §2.2, P72 §3.1, P73 §6.3,
+P74 §5, P75 §8.2, P76 §9.1, P77 §9.5, P78 §9.7, P79 §9.8, P80 §4. Options considered, owners,
+gates and state are held once in the register,
+[12-open-decisions.md](12-open-decisions.md#1-how-this-register-works); the agent-set decisions
+these rows date or extend (`wall-e/13` decision 43 and §2.4, `wall-e/09` decision 33) are
+indexed in [12 §8](12-open-decisions.md#8-index-agent-set-decisions-and-the-platform-rows-that-touch-them).
 
 ---
 
 ## Related
 
 - [01-hld.md](01-hld.md) — the parent: §5, §12, §1 (D1, D5, D6, D9, D11, D12), §3.4 labels, §4.4 PAM, §4.7 drift job, §7 monitoring, §11.4 primitives, §13.2 Eve, §13.3 Mo, §14 compliance, §15 B6, §17 P25, P30, P31, P33.
-- [00-objective-review.md](00-objective-review.md) — gaps PS-03, SCA-04, SCA-06; brief items A4, A7, A8.
+- [00-objective-review.md](00-objective-review.md) — the review findings this page answers.
 - [../wall-e/13-agent-interconnection.md](../wall-e/13-agent-interconnection.md) — the seed: §2 registry facts and the four controls of §2.5, §5.4 the `agent` principal, §5.5 taint, §7 the gateway, §9 grading.
 - [../wall-e/05-autonomy-ladder.md](../wall-e/05-autonomy-ladder.md) — the eight rules, six levels, trigger classes, ceilings, dwell and ratchet that are now platform defaults.
 - [../wall-e/12-agent-identity.md](../wall-e/12-agent-identity.md) — the principal forms the register row and the peer rule use.

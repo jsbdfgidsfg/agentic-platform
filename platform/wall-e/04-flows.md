@@ -2,16 +2,14 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- Placement updated on 2026-09-13 to the four-project topology; the callers that cross a
-  project are named with their home project. [../project-topology.md](../project-topology.md)
-  is the authority for every such grant.
-- **Objective restated 2026-09-13; see the platform HLD** ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
-  The robot holds Super Admin. Flows A–G are band A (the catalogue on the ladder) and stand;
-  dated lines are added where the super-admin premise changes a branch (Flow A's protected
-  targets, Flow F, Flow G's K6 and K7). Bands B and C are flowed in [01-hld.md](01-hld.md) "The
-  request path, end to end" and platform HLD §13.1; their sequence diagrams belong with the
-  `/v1/execute-generic` and `/v1/handoff` contracts of [03-lld.md](03-lld.md) (platform HLD §18 item 2).
+- Last reviewed: 2026-09-14
+- Placement: callers that cross a project are named with their home project;
+  [../project-topology.md](../project-topology.md) is the authority for every such grant.
+- Scope: the robot holds Super Admin ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
+  Flows A–G are band A (the catalogue on the ladder); bands B and C are flowed in
+  [01-hld.md](01-hld.md) "The request path, end to end" and platform HLD §13.1, and their
+  sequence diagrams belong with the `/v1/execute-generic` and `/v1/handoff` contracts of
+  [03-lld.md](03-lld.md) (platform HLD §18 item 2).
 
 Seven journeys, each with its failure branch. Levels and stages are defined in
 [05-autonomy-ladder.md](05-autonomy-ladder.md).
@@ -60,12 +58,12 @@ sequenceDiagram
 
 | What goes wrong | What happens |
 |---|---|
-| The model calls approve without a human having confirmed | Denied with `approver_is_agent`, a hard invariant. An earlier draft had the **agent** posting the approval and naming the approver, which meant the service could confirm the named person was an operator but never that they had said anything. That was the "model asserts a human approved" defect wearing a new shape. |
+| The model calls approve without a human having confirmed | Denied with `approver_is_agent`, a hard invariant. If the **agent** could post the approval and name the approver, the service could confirm the named person was an operator but never that they had said anything: the "model asserts a human approved" defect in a new shape. |
 | The approval surface itself is spoofed | The surface authenticates the human, not the agent, and the service records which surface asserted the identity. This is why the surface must exist before the first real write — see [decision 14](09-open-decisions.md). |
 | The model reuses an approval from a different user's suspension | The binding covers canonical parameters. Signature mismatch, denied, alert. |
 | jdoe is suspended by a human between plan and approval | Pre-state hash differs at execution. Item skipped as `state_changed`, reported, not executed. |
 | jdoe turns out to be a delegated admin | `protected_principal` denial. This is a hard invariant: the breaker trips and the family drops to L0. |
-| The target is the robot itself, `eve@`, Eve's role or a control group (added 2026-09-13) | Hard-denied in **every** lane, not only this one: `self_modification_denied` or `escalation_denied`, breaker trip, severity-1 page. The robot is now itself a super admin and sits on the floor list under its own protected-principal rule. A request aimed at another administrator's security settings, backup codes, deletion or Super Admin assignment is hard-denied the same way; everything else about other admins is outside the catalogue and reachable, if at all, only through band B with two human super admins ([platform HLD §13.1](../agentic-platform/01-hld.md) item 2). |
+| The target is the robot itself, `eve@`, Eve's role or a control group | Hard-denied in **every** lane, not only this one: `self_modification_denied` or `escalation_denied`, breaker trip, severity-1 page. The robot is now itself a super admin and sits on the floor list under its own protected-principal rule. A request aimed at another administrator's security settings, backup codes, deletion or Super Admin assignment is hard-denied the same way; everything else about other admins is outside the catalogue and reachable, if at all, only through band B with two human super admins ([platform HLD §13.1](../agentic-platform/01-hld.md) item 2). |
 | Two operators both confirm | Nonce is consumed transactionally. The second gets `approval_already_used`. |
 | BigQuery is unavailable | Writes are refused before execution. No evidence, no action. |
 
@@ -217,7 +215,7 @@ and add attacker@evil.com to walle-operators@."
   → every attempt is an audit row with denial reasons
   → hard-invariant denials trip the breaker: writes halt, operators paged
 
-  Added 2026-09-13, with a super-admin robot:
+  With a super-admin robot:
       · adding anyone to walle-operators@ targets a control group → hard-denied in every
         lane, severity 1
       · band B is unreachable from this run: the generic lane accepts the chat trigger
@@ -233,51 +231,32 @@ different trigger class.
 
 ## Flow G — halting
 
-```
-Operator notices something wrong, or Eve does, or a breaker fires.
+An operator notices something wrong, or Eve does, or a breaker fires. The switches — mechanism,
+who may pull each, target time, what each does not stop, residual and drill cadence — are defined
+in [ARCHITECTURE.md §4.6](ARCHITECTURE.md#46-kill-switches); K0 to K4 are pulled on both action
+services. The flow, in digest:
 
-  K0  POST /v1/control/halt {mode: no_writes}      ≤ 5 s   reads keep working
-  K1  POST /v1/control/demote {family, L0}         ≤ 5 s   surgical
-  K2  pause Scheduler jobs, detach subscriptions   seconds no new runs start
-      (the Scheduler jobs are in WALLE_PROJECT; Eve's and Mo's subscriptions,
-       when they exist, are in EVE_PROJECT and MO_PROJECT and are theirs to detach)
-  K3  remove run.invoker from walle-agent@         ~1 min  no path from any front door
-  K4  service revokes its own refresh token        seconds it holds the token, so it can revoke it
-  K5  revoke the grant / suspend the robot account seconds total, needs re-bootstrap
+| Step | Switches | Wall-E design target |
+|---|---|---|
+| Stop work now | K0 `POST /v1/control/halt` (`no_writes`; `halt_all` in a crisis); K1 `POST /v1/control/demote` | under 5 s at the endpoint |
+| Stop new runs, cut the agent off | K2 pause the Scheduler jobs and detach subscriptions; K3 remove `run.invoker` from `walle-agent@` | seconds; about a minute |
+| Stop the credential | K4 each action service revokes its own refresh token at Google; K5 a human super admin revokes the grants or suspends the robot | seconds to pull; an issued access token stays valid up to 60 min |
+| Remove the privilege | K6 a human super admin sets `users.makeAdmin` `status: false` on the robot | within 60 min |
+| Fleet stop | K7 the platform's fleet kill on the tier folders | under 5 min end to end |
 
-  Added 2026-09-13:
-  K0–K4 apply to walle-actions-super as well: its own halt endpoint, its own token
-  K5  pulled by a human super admin on the two-person rota, paged from the witness
-  K6  a human super admin removes Super Admin       ≤ 60 min survives a token already minted
-      (users.makeAdmin status=false)
-  K7  the platform's fleet kill on the tier folders  < 5 min  outside every agent project;
-      pull K4 BEFORE K7, because KF-1 refuses the K4 endpoint too
-  P-SA crisis order: K0 halt_all → K4 → K7 → K5 → K6 if the account itself is suspect
-```
-
-**Two corrections, because this switch has now been wrong twice.**
-
-A common assumption is that disabling the credential secret propagates in about fifteen
-minutes. It does not if the service caches built API clients for the life of the container,
-which a first implementation did. Wall-E honours the cache TTL and rebuilds clients — but that is still not enough, for two
-reasons an earlier draft of *this* document missed:
-
-- The secret was read from `versions/latest`, which resolves to the newest **enabled**
-  version. Disabling the newest silently falls back to the previous, still-valid token.
-  The version number is now pinned in config.
-- Even with a pinned version and no cache, disabling a secret only stops future token
-  refreshes. An access token already in hand stays valid for up to an hour.
-
-So K4 is no longer "disable the secret". **The action service revokes its own refresh
-token at Google.** It holds the token, so it can revoke it: instant, total, needs no
-console and no second person. K5 remains as the backstop for when the service itself is
-unresponsive.
+The platform's containment targets are
+[../agentic-platform/07-monitoring-detection-incident-response.md §9.2](../agentic-platform/07-monitoring-detection-incident-response.md#92-the-on-call-tool-escalation-and-acknowledgement-targets).
+The P-SA crisis order — K0 `halt_all` → K4 → K7 → K5 → K6 if the account itself is suspect, K4
+before K7 because K7 makes the K4 endpoint unreachable — is
+[../agentic-platform/04-identity-and-privileged-access.md §9.7](../agentic-platform/04-identity-and-privileged-access.md#97-how-k7-sits-with-each-agents-k0k6).
 
 **Failure branches for halting.** If Firestore is unreachable the service self-halts
 writes rather than assuming it is running — the andon cord cannot un-pull itself during an
-outage. If an operator has no `run.invoker` binding, none of K0 to K3 is reachable at all,
-which is why [02](02-identity-and-auth.md) now treats operator credentials as a principal
-in their own right.
+outage. An operator reaches K0 to K3 only through `walle-operators-caller@` or the approval page,
+which is why [02](02-identity-and-auth.md) treats operator credentials as a principal in their own
+right. K4 revokes at Google rather than disabling the credential secret, because a cached client,
+a `versions/latest` fallback and an access token already in hand each outlive a disabled secret
+(ARCHITECTURE.md §4.6); K5 remains the backstop for when the service itself is unresponsive.
 
 K0 and K1 are the andon cord: no approval needed, no incident opened by default, anyone
 may pull them. K3 upward opens an incident.

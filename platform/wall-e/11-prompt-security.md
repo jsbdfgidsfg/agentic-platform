@@ -2,23 +2,16 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- 2026-09-13: placement only. `PROJECT_ID` and `PROJECT_NUMBER` below are `WALLE_PROJECT`'s;
-  Eve's and Mo's reads of Wall-E's datasets are named as cross-project grants per
-  [../project-topology.md](../project-topology.md). No screen, threshold or control changed.
-- **Objective restated 2026-09-13; see the platform HLD** ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
-- **Framing, 2026-09-13: this is a platform chapter seeded here.** It was written for Wall-E's
-  engine; the platform promotes its layer table, the tool-result finding, the template design and
-  the sanitize-log alerts to platform rules in
+- Last reviewed: 2026-09-14
+- Objective: see the platform HLD ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
+- Platform framing: the layer grades, the tool-result pattern, the template standard, the floors
+  and the sanitize-log alerts are platform rules on
   [../agentic-platform/06-gateways-model-armor-perimeter.md](../agentic-platform/06-gateways-model-armor-perimeter.md)
-  (§3, the template standard per tier) and platform HLD §6.2. The floors (organisation, folder,
-  tier, and the factory-generated project floor) and the sanitize-log sink are **platform
-  controls**, applied by the platform's Terraform, never by an agent's script; the templates stay
-  **per agent**, generated from the tier standard, and an agent owner may only tighten them.
-  Where this chapter and page 06 disagree on a platform control, page 06 wins; this chapter stays
-  the authority for Wall-E's injection surface and its own two templates. Wall-E is Tier P-SA, so
-  its response template carries the **hard-denied vocabulary detectors** (§4, §5 step 2b, added
-  2026-09-13).
+  (§2, §3), which wins on any platform control; this chapter stays the authority for Wall-E's
+  injection surface, its two templates (the P-SA response template carries the hard-denied
+  vocabulary detectors, §4) and its monitoring.
+- Placement: `PROJECT_ID` and `PROJECT_NUMBER` are `WALLE_PROJECT`'s; Eve's and Mo's reads of
+  Wall-E's datasets are cross-project grants of [../project-topology.md](../project-topology.md) §3.
 - Maturity: **design. Nothing is built and nothing is enabled.**
 - Product facts: verified on 2026-09-08 and 2026-09-09 against Google Cloud documentation
   and the `google-adk` 2.8.0 source. Each carries its launch stage. Where the research could
@@ -37,27 +30,12 @@ that a control which only works when the prompt works is not a control is in
 forces is argued in [12-agent-identity.md](12-agent-identity.md), and the gateway's egress
 allowlist, MCP and A2A are in [13-agent-interconnection.md](13-agent-interconnection.md).
 
-**Two terms, used precisely throughout.** A layer is **enforcement-grade** for Wall-E when
-three things hold: the request cannot proceed without a verdict, the verdict is produced
-outside Wall-E's own process, and a failure of the screen stops the request. A layer is
-**detection-grade** when it produces evidence but can be skipped by an error, removed by a
-code change, or bypassed by an unscreened path. Enforcement-grade describes placement and
-failure mode. It says nothing about whether the classifier is right. Every content screen
-below is probabilistic, by Google's own statement, so none of them is a trust boundary. The
-five boundaries stay where [ARCHITECTURE.md](ARCHITECTURE.md) section 6 puts them.
-
-## What this chapter changes in the earlier documents
-
-| Document | What it says | What is wrong or missing | Correction |
-|---|---|---|---|
-| [03-lld.md](03-lld.md), "The agent", the Model Armor bullet | "Note the fail-open caveat: on a Model Armor error the platform skips sanitisation and continues." Stated as a property of all three placements | True of the **floor-settings** path on `generateContent`. **False of the Agent Gateway path**, where Model Armor is attached through a Service Extensions authorization extension whose `failOpen` field defaults to `false` and is `false` in Google's own sample, so a timeout or error **stops the request**. GA | **Applied 2026-09-11** in 03 and SETUP. Section 2 below. The gateway path is fail-closed and enforcement-grade on the traffic it sees. The floor path is fail-open and detection-grade in every mode |
-| [SETUP.md](SETUP.md), "Model Armor goes on the platform" | The same sentence, ending "so it is a mitigation and never a boundary" | Same error. The conclusion "never a boundary" is still right, for the different reason given in the terms above | Same |
-| [07-build-runbook.md](07-build-runbook.md), Phase 6 | "Model Armor configured **in the agent code**" | Superseded by 03 and SETUP, which place it on the platform | **Applied 2026-09-11.** 07 now points at the ingress gateway plus floor settings. SETUP Phase 12c carries the commands |
-| [ARCHITECTURE.md](ARCHITECTURE.md) section 6, Model Armor row | Already carries the split: gateway fail-closed, floor fail-open | Nothing wrong. Recorded here so a reader knows which document is current | None |
-| [06-security-guardrails.md](06-security-guardrails.md), Monitoring table | Twelve signals, none from Model Armor, traces or the taint bit | The injection surface has no alert | Section 6 adds seven rows, each with a query or a log filter |
-| [03-lld.md](03-lld.md), audit schema and event list | `actions` has no trace id and no content-screen fields; `walle-events` has no content event | A Model Armor finding cannot be walked to the tool result that caused it | `runs` gains `trace_id`. `actions` gains `content_flags` and `screen_state`. Plan items carry `content_flags` to the approval surface. `walle-events` gains `content.flagged`, **applied 2026-09-11** in 03, 08 and ARCHITECTURE. Sections 3 and 6 |
-| [03-lld.md](03-lld.md), denial reasons | Closed vocabulary | Unchanged. This chapter adds **no** denial reason, deliberately. A content screen produces evidence and a taint, never a refusal. Section 3 says why | None |
-| [09-open-decisions.md](09-open-decisions.md), decision 19 | "Adopt Agent Identity now? Yes, unless the build finds it cannot satisfy the Cloud Run hop" | The decision has a deadline the document does not state | `identity_type` is immutable and is a hard prerequisite for Semantic Governance Policies. It must be decided before the first production engine is created. Section 7 |
+**Two terms, used precisely throughout.** **Enforcement-grade** and **detection-grade** are
+used exactly as the platform HLD defines them
+([§0.2](../agentic-platform/01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded)):
+the grade describes placement and failure mode, not whether the classifier is right, and every
+content screen below is probabilistic by Google's own statement, so none of them is a trust
+boundary. The five boundaries stay where [ARCHITECTURE.md](ARCHITECTURE.md) section 6 puts them.
 
 ## 1. The injection surface
 
@@ -80,7 +58,7 @@ rows and never replace one.
 | Upstream error text from Google | Anyone who set the field the failed request echoed | It does not. The action service returns `{error_class, audit_id}` from a closed enum. The full body goes to Cloud Logging | Attack A15. The closed enum is the whole defence and it is deterministic |
 | Other agents' replies | Eve or Mo, if either ever talks to Wall-E over A2A | `RemoteA2aAgent` replies and relayed sub-agent events | ADK 2.8.0 fences them with `quote_untrusted`. Not used in the pilot. Eve's control calls are plain REST, see [08-team-eve-mo.md](08-team-eve-mo.md) |
 | The operator's own prompt | A named operator in Gemini Enterprise, or a person who has taken over that operator's session, or an operator pasting a hostile document | The T0 message | Trusted by attribution, not by content. The T0 ceiling for `WRITE_HIGH` is L3 whatever the prompt says, and the approval surface shows the canonicalised plan and pre-state. This is the one channel the ingress gateway screens |
-| The session history | Every string above, from an earlier turn in the same managed session | Replayed by ADK on each turn | For a chat request the **run is the managed session**: one `run_id` per session id, minted by the action service on first contact and stored in Firestore `runs` keyed on the session, so `tainted` is looked up by session on every request regardless of what the agent sends. A hostile display name read in turn one still caps turn two. This is stated in [03](03-lld.md) as of 2026-09-11; the two-turn case in the regression suite is the check. Memory Bank is off, so nothing crosses sessions |
+| The session history | Every string above, from an earlier turn in the same managed session | Replayed by ADK on each turn | For a chat request the **run is the managed session**: one `run_id` per session id, minted by the action service on first contact and stored in Firestore `runs` keyed on the session, so `tainted` is looked up by session on every request regardless of what the agent sends. A hostile display name read in turn one still caps turn two. [03](03-lld.md) states it; the two-turn case in the regression suite is the check. Memory Bank is off, so nothing crosses sessions |
 | Tool descriptions | The catalogue endpoint, which CI controls | Generated from `/v1/operations` | Trusted. A change is a reviewed deploy of the action service |
 
 **What the design already does, in one paragraph.** Every attacker-writable field is
@@ -89,15 +67,15 @@ tainted run takes the inbox column, or L3 on chat. Every such string is canonica
 it reaches a model or an approval card: control characters, bidirectional overrides and
 zero-width characters stripped, whitespace collapsed, length capped, markdown escaped. Error
 text never comes back. Writes take explicit targets from a fixed catalogue, inside a pinned
-selection, inside a playbook allowlist. *Qualified 2026-09-13 (platform HLD
-[§13.1](../agentic-platform/01-hld.md)): that sentence now holds for band A only. Band B
+selection, inside a playbook allowlist. That sentence holds for band A only (platform HLD
+[§13.1](../agentic-platform/01-hld.md)). Band B
 (`/v1/execute-generic` on `walle-actions-super`) takes a generic request that is not from the
 catalogue; it is validated against the pinned Discovery document, accepted on the `chat` trigger
 only, and permanently L3 and two-person at tier `SUPER`. Both lanes refuse the same hard-denied
 list before anything reaches Google. Band B's request body is therefore an injection surface the
 catalogue does not narrow; the P-SA response template's hard-denied vocabulary detectors (below)
 do not see that body, so the controls on it stay in code: the hard-denied list, the Discovery
-validation and the two humans on every band-B card.* The agent cannot mint or post an approval. All of
+validation and the two humans on every band-B card. The agent cannot mint or post an approval. All of
 that is in [03-lld.md](03-lld.md) and it is what stops an injection from becoming an
 incident. It is deterministic and it does not care whether the injection was clever.
 
@@ -160,18 +138,17 @@ the agent crosses no Model Armor screen. It is inside the `generateContent` body
 settings inspect, but whether the floor inspects function responses is **unverified**.
 That gap is the subject of section 3.
 
-| Layer | Traffic screened | Traffic NOT screened | Failure mode | Launch stage | Grade for Wall-E |
-|---|---|---|---|---|---|
-| **`walle-actions` itself**: canonicalisation, closed error enum, taint, field projection, fencing | Every attacker-writable string, before it reaches a model or a card | Nothing. It sees every tool result because it produces them | Fail-closed by our own code. A canonicalisation error denies the read with `backend` | Our code | **This is the enforcement.** Everything below is added on top |
-| **Model Armor on Agent Gateway, Client-to-Agent (ingress)** | `reasoningEngines.streamQuery` requests and responses, for ADK agents on Agent Runtime only. So: the operator's prompt, the dispatcher's job envelope, the final visible answer | `query`, `asyncQuery`, every other ReasoningEngine payload, ReasoningEngine error responses, non-ADK payloads. Nothing between the agent and Gemini. Nothing between the agent and its tools | **Fail-closed.** Authorization extension `failOpen` defaults `false`, Google's sample sets `false` with a 1 s timeout. A Model Armor error or timeout stops the request | GA, 2026-06-24. Agent Gateway itself GA 2026-06-18 | **Enforcement-grade on the streamQuery channel**, provided `failOpen` stays `false` and every caller uses `streamQuery`. It adds no caller gate: IAP is not supported during ingress. Whether Gemini Enterprise uses `streamQuery` is **unverified**, so for the human front door the grade is unknown until measured |
-| **Model Armor on Agent Gateway, Agent-to-Anywhere (egress)** | MCP `tools/call` and `prompts/get` requests and responses, plus MCP tool execution errors. A2A v1 `SendMessage`, `AgentCard`, `GetExtendedAgentCard` over JSON-RPC and HTTP+JSON. OpenAI-format LLM calls, non-streaming | Plain HTTPS and REST, which is what Wall-E's tools are. MCP `tools/list`, `resources/*`, `notifications/*`, Streamable HTTP and SSE, MCP protocol errors. A2A `SendStreamingMessage`, tasks, gRPC, errors. Gemini `generateContent`, which is not OpenAI format. File uploads. "Payloads that aren't listed here are allowed without sanitization" | Fail-closed, same extension mechanism | GA, 2026-06-24 | **Screens nothing for Wall-E as designed.** The hostname allowlist the egress gateway brings is real and is [13](13-agent-interconnection.md)'s subject. Its Model Armor becomes enforcement-grade on tool results only if `walle-actions` presents MCP `tools/call` |
-| **Floor settings, project-level inline enforcement** on `VERTEX_AI` | `generateContent` calls to the project's Gemini endpoints, prompt and response. `europe-west1` is a listed location. Applies even when `modelArmorConfig` is omitted. ADK's default `streaming_mode` is `NONE`, so Wall-E's model calls are `generateContent` and fall under it | `streamGenerateContent` is not mentioned on the page: **unverified**. Whether the whole `contents` array is inspected, including history, function responses and the system instruction, or only the latest user text: **unverified** | **Fail-open.** When Model Armor is unavailable in the region, unreachable, or errors, the platform "skips the Model Armor sanitization step and continues processing". Google's page says this "can occasionally expose unscreened prompts or responses" | GA. Google MCP server inline enforcement is Preview | **Detection-grade in every mode**, including `INSPECT_AND_BLOCK`. It is the only platform screen positioned to see a tool result at all, if it inspects function responses, which is the open question in section 3 |
-| **Floor settings, conformance floor** at organisation or folder | No traffic. It rejects the creation or update of any template less restrictive than the floor | Not applicable | Not applicable. It is a create-time check | GA | **Enforcement-grade for one governance property**: nobody, including a deployer, can weaken Wall-E's templates below the floor. See section 4 for the interaction with the confidence-level decision |
-| **Per-request `model_armor_config`** on `generateContent` from the ADK agent definition | The `generateContent` request that carries it | Same unknowns as the floor. Mutually exclusive with `safety_settings` | The Vertex integration page's skip-and-continue note is written for the integration as a whole. The per-request form is not separately described: treat as fail-open | GA on Vertex, not the Gemini API | **Detection-grade**, and configured in Wall-E's own code, so weaker than the floor. Useful only to run a stricter template than the project floor |
-| **`google-adk` 2.8.0 `ModelArmorPlugin`**, module `google.adk.integrations.model_armor` | The text parts of the most recent user-role content before each model call. The model's visible output text after it | `function_call` arguments, `function_response` bodies, thoughts, inline and file data, the system instruction, earlier history. On a tool-result turn it re-screens the previous human text and never the tool result | **Fail-closed by default**: `block_on_screening_failure=True` blocks on any exception or non-success invocation | Open source, shipped in 2.8.0 on 2026-08-25. Not documented on adk.dev | **Detection-grade.** It is inside the process it protects. A code change removes it. Its fail-closed default makes it stricter than the floor and no more trustworthy |
-| **Semantic Governance Policies** | Proposed tool calls at the egress gateway, judged by an LLM against natural-language constraints with the prompt, history and tool manifest | Conversational reasoning. Anything that is not a tool call. It reads the same injected context that steered the model | Fail-closed: authorization extension `failOpen: false`, so an engine outage stops model calls | **Preview**, 2026-06-29. Metrics Preview, 2026-08-31 | **Detection-grade only.** Section 7 |
-| **ADK 2.8.0 `quote_untrusted` fencing** | Other agents' relayed events and `RemoteA2aAgent` replies, wrapped between markers with a "data, never instructions" preamble | The agent's own tool results, which are passed to the model unfenced | Not applicable | Open source, 2.8.0 | A courtesy, in the sense of [06](06-security-guardrails.md). Wall-E fences its own tool results itself, section 3 |
-| **Gemini Enterprise console Model Armor setting** | The Gemini Enterprise assistant, Agent Designer and Workflow Builder agents, Google-made agents, uploads to the assistant | "Interactions with custom agents from your organization, such as ADK, A2A, and Dialogflow, are not screened" | Configurable per app, allow or block on failure | GA, 2025-09-16 | **Does nothing for Wall-E.** Enable it for the assistant anyway. `Assumption:` your tenant's assistant app is not yet covered |
+Every layer's traffic, gaps, failure mode, launch stage and platform grade is the table of
+[06 §3.1](../agentic-platform/06-gateways-model-armor-perimeter.md#31-the-layers-and-their-grades-made-platform-wide).
+What differs for Wall-E, or is Wall-E's own, is this:
+
+| Layer | Grade for Wall-E, and why |
+|---|---|
+| **`walle-actions` itself**: canonicalisation, closed error enum, taint, field projection, fencing | **This is the enforcement.** It sees every attacker-writable string before it reaches a model or a card, because it produces every tool result, and it fails closed by our own code: a canonicalisation error denies the read with `backend`. Everything below is added on top |
+| **Model Armor on the ingress gateway** (Client-to-Agent) | **Enforcement-grade on the `streamQuery` channel** (the operator's prompt, the dispatcher's job envelope, the final visible answer), provided `failOpen` stays `false` and every caller uses `streamQuery`. It adds no caller gate. Whether Gemini Enterprise uses `streamQuery` is **unverified**, so for the human front door the grade is unknown until measured |
+| **Model Armor on the egress gateway** (Agent-to-Anywhere) | **Screens nothing for Wall-E as designed**, because Wall-E's tools are plain REST. The hostname allowlist the egress gateway brings is real and is [13](13-agent-interconnection.md)'s subject. Its Model Armor becomes enforcement-grade on tool results only if `walle-actions` presents MCP `tools/call` (section 3) |
+| **The `generateContent` hop**: project floor settings (inline), per-request `model_armor_config`, the ADK 2.8.0 `ModelArmorPlugin` | **Detection-grade.** The floor is fail-open in every mode, including `INSPECT_AND_BLOCK`, and is the only platform screen positioned to see a tool result at all, if it inspects function responses (section 3). The per-request form lives in Wall-E's own code, so it is weaker than the floor and useful only to run a stricter template. The plugin is fail-closed by default, which makes it stricter than the floor and no more trustworthy: it is inside the process it protects, and section 5 does not deploy it at S0. The conformance floor is enforcement-grade for one governance property only, that nobody can weaken Wall-E's templates below it (section 4) |
+| **Semantic Governance Policies**, **ADK `quote_untrusted` fencing**, **the Gemini Enterprise console Model Armor setting** | Semantic Governance: detection-grade only, section 7. ADK's fencing covers other agents' events and A2A replies, not Wall-E's own tool results, so it is a courtesy in the sense of [06](06-security-guardrails.md) and Wall-E fences its own results itself, section 3. The console setting **does nothing for Wall-E** (custom ADK agents are not screened); enable it for the assistant anyway. `Assumption:` your tenant's assistant app is not yet covered |
 
 Three consequences follow, and each is a rule.
 
@@ -179,8 +156,8 @@ Three consequences follow, and each is a rule.
 caller when Eve exists. A caller on `query` or `asyncQuery` removes the only
 enforcement-grade prompt screen silently. This is a CI rule on both callers, already stated
 for the dispatcher in [03-lld.md](03-lld.md) and extended here to Eve. Gemini Enterprise's
-method is outside our control and **unverified**: the first build task in section 5 is to
-read it from the Agent Runtime request logs.
+method is outside our control and **unverified**: reading it from the Agent Runtime request
+logs is a build task of [SETUP](SETUP.md) Phase 12c (step 6).
 
 **Model Armor availability is Wall-E availability on the gateway path.** That is the price
 of fail-closed and it is worth paying. A Wall-E that cannot run is an audit row; a Wall-E
@@ -194,16 +171,16 @@ level, an approval or a breaker depend on a floor-settings verdict. Its value is
 sanitize log, which is the only platform evidence of what the model was shown on the
 `generateContent` hop.
 
-Binding an ingress gateway to the engine also costs three things, recorded here because
-they belong to the security review, not the build notes: **SCC Agent Engine Threat
-Detection is unavailable** on a gateway-bound engine, **VPC Service Controls are not
-supported with Agent Gateway**, and **revisions** are not supported. All Agent Runtime
-engines in the same project and region must bind to the same ingress and the same egress
-gateway. `WALLE_PROJECT` holds only Wall-E's engine by construction — the four-project
-topology of 2026-09-13, [../project-topology.md](../project-topology.md) — so Eve's and
-Mo's engines, if they ever have one, bind their own gateways in `EVE_PROJECT` and
-`MO_PROJECT` and are not forced onto Wall-E's policy. The engine must have been created
-after 2026-04-29. All GA constraints, from the runtime deployment page.
+Binding the engine to a gateway has costs that belong to the security review: no SCC
+Agent Engine Threat Detection, no VPC Service Controls on the engine, no revisions, one
+ingress and one egress gateway shared by every engine in the project and region, and an
+engine created after 2026-04-29
+([06 §2.1](../agentic-platform/06-gateways-model-armor-perimeter.md#21-the-rule-as-the-factory-and-the-folder-enforce-it),
+[§2.4](../agentic-platform/06-gateways-model-armor-perimeter.md#24-gateway-versus-agent-platform-threat-detection-per-tier)).
+`WALLE_PROJECT` holds only Wall-E's engine by construction
+([../project-topology.md](../project-topology.md)), so Eve's and Mo's engines, if they ever
+have one, bind their own gateways in `EVE_PROJECT` and `MO_PROJECT` and are not forced onto
+Wall-E's policy.
 
 ## 3. Tool results are not screened by the gateway
 
@@ -237,9 +214,11 @@ legitimate, the content is hostile, and the design already knows what to do with
 content: taint the run and cap it. A refusal would hand an attacker a denial-of-service on
 directory questions by editing their own profile. So on `MATCH_FOUND` the action service
 returns the result fenced, sets `tainted` as it would have anyway, records
-`content_flags` on the audit row as a list of `filter:confidence` pairs, and publishes
+`content_flags` on the audit row as a list of `filter:confidence` pairs (the contract column
+`armor_findings` of [03](03-lld.md#bigquery-walleaudit-partitioned-by-ts-clustered-by-operation)),
+carries them on the plan item to the approval surface, and publishes
 `content.flagged` on `walle-events`. On a Model Armor error it records
-`screen_state=skipped`, still taints, and proceeds. The taint is the control. The screen is
+`screen_state=skipped` (Wall-E's extension column `a_screen_state`), still taints, and proceeds. The taint is the control. The screen is
 the evidence. No new reason enters the closed vocabulary in [03](03-lld.md).
 
 **Fencing, which Wall-E must do itself.** ADK 2.8.0's `quote_untrusted` applies only to
@@ -260,50 +239,39 @@ field has no legitimate need to carry a link.
 
 ## 4. Template design
 
-Two templates in `europe-west1`, one for prompts and one for responses, because Model Armor
-is regional and cross-region calls from the gateway are unsupported. Both live in the same
-repository as `ladder.yaml`, under the same two-reviewer rule, because flipping one from
-inspect to block is a change to what Wall-E refuses.
+Wall-E's two templates are the Tier P-SA instance of the platform's template standard:
+`walle-ingress-prompt` and `walle-ingress-response`, in `europe-west1` (Model Armor is regional
+and cross-region calls from the gateway are unsupported). The filters, the Sensitive Data
+Protection settings (basic on both; advanced with the fleet de-identify template on at P-SA, P85),
+image screening, `enforcementType`, the filter version, token limits, partial-failure handling,
+the custom error message and "logging only after the sink exists" are
+[06 §3.3](../agentic-platform/06-gateways-model-armor-perimeter.md#33-the-template-standard-per-tier);
+the floor hierarchy and the reason the organisation floor says "`HIGH` or stricter" are
+[§3.2](../agentic-platform/06-gateways-model-armor-perimeter.md#32-the-floor-hierarchy), and
+floor and template write alerts are
+[§3.4](../agentic-platform/06-gateways-model-armor-perimeter.md#34-alerting-on-floor-and-template-writes).
+Both templates live in the same repository as `ladder.yaml`, under the same two-reviewer rule,
+because flipping one from inspect to block is a change to what Wall-E refuses.
 
-| Filter | Prompt template | Response template | Why | Stage |
-|---|---|---|---|---|
-| Prompt injection and jailbreak | On, `MEDIUM_AND_ABOVE` at S0 | On, same | On the response side it catches the model echoing injected text, which is the visible symptom of a steered turn | GA |
-| Malicious URL | On | On | First 256 URLs. Exfiltration links in a prompt or an answer | GA |
-| Sensitive Data Protection, basic | On | On | Credit cards, government ids, financial accounts, and **Google Cloud credentials and API keys**. An operator pasting a token, or a group description carrying one, gets caught on the way in or out | GA |
-| Responsible AI: hate, harassment, dangerous, sexually explicit | On, `MEDIUM_AND_ABOVE` | On, same | An admin agent that narrates employee data has no business producing any of these. Google's default is medium and above | GA |
-| CSAM | Applied by default, cannot be turned off | Same | Not a decision | GA |
-| Image screening | Off | Off | Preview, US and EU multi-region only, and Wall-E takes no images | Preview |
-| Sensitive Data Protection, advanced, with a de-identify template | `tbd` | `tbd` | Would let the sanitize **log** copy carry masked names instead of raw ones. Worth deciding with the data-protection position in section 6. The inline enforcement path blocks rather than de-identifies in any case. **Decided 2026-09-13 for the fleet** (P85, [../agentic-platform/06-gateways-model-armor-perimeter.md](../agentic-platform/06-gateways-model-armor-perimeter.md) §3.3): on at Tier W and above with one fleet-wide de-identify template; Wall-E is Tier P-SA, so on | GA |
-| **Custom detectors for the hard-denied vocabulary** (added 2026-09-13, Tier P-SA only) | Off | **On**, through the advanced configuration's inspect template — see below | A second, Google-side screen on the reasoning layer's **output** for the exact strings the two lists of [platform HLD §13.1](../agentic-platform/01-hld.md) item 2 forbid. **Detection-grade**: the enforcement is the action service's hard-denied list | GA (Model Armor advanced SDP; SDP custom infoTypes) |
-
-**The P-SA response template: hard-denied vocabulary detectors.** Added 2026-09-13 ([platform HLD §6.2](../agentic-platform/01-hld.md), §3.1 row `fld-agents-p-sa`; page 06 §3.3, P85).
+**The P-SA response template: hard-denied vocabulary detectors** ([platform HLD §6.2](../agentic-platform/01-hld.md), §3.1 row `fld-agents-p-sa`; page 06 §3.3, P85).
 A super-admin credential sits behind the action service, so a steered turn that names
 `users.makeAdmin` or a control group is the most dangerous text the model can produce. The
 action service refuses it in every lane whatever the model says; this detector makes the same
 attempt visible at Google's end, on the ingress gateway's response path, before the answer
 reaches the human caller. It does **not** see the agent's tool call to the action service, which
 is REST egress the gateway's Model Armor does not screen ([13](13-agent-interconnection.md) §7.3),
-nor a band-B request body; that is why it is detection-grade and the refusal stays in code. Facts, read 2026-09-13:
-
-- Model Armor's Sensitive Data Protection setting is **either** basic **or** advanced — the two
-  are mutually exclusive fields of `SdpFilterSettings`
-  ([REST reference](https://docs.cloud.google.com/model-armor/reference/rest/v1/projects.locations.templates);
-  [overview](https://docs.cloud.google.com/model-armor/overview)). Advanced mode references a
-  Sensitive Data Protection inspect template, optionally a de-identify template
-  (`--advanced-config-inspect-template`, `--advanced-config-deidentify-template` on
-  [`gcloud beta model-armor templates create`](https://docs.cloud.google.com/sdk/gcloud/reference/beta/model-armor/templates/create)).
-  So on the P-SA response template the inspect template must **re-list the six infoTypes basic
-  mode covers** — `CREDIT_CARD_NUMBER`, `US_SOCIAL_SECURITY_NUMBER`, `FINANCIAL_ACCOUNT_NUMBER`,
-  `US_INDIVIDUAL_TAXPAYER_IDENTIFICATION_NUMBER`, `GCP_CREDENTIALS`, `GCP_API_KEY`
-  ([infoType reference](https://docs.cloud.google.com/sensitive-data-protection/docs/infotypes-reference))
-  — or switching on the detectors silently drops the credential screen. Every infoType in the
-  de-identify template must also be in the inspect template.
-- An inspect template carries `customInfoTypes`, each a `dictionary.wordList.words` list or a
-  `regex.pattern`; dictionary words match case-insensitively
-  ([custom dictionary detectors](https://docs.cloud.google.com/sensitive-data-protection/docs/creating-custom-infotypes-dictionary)).
-- If the SDP templates sit in another project, the Model Armor service agent needs
-  `roles/dlp.user` and `roles/dlp.reader` on that project
-  ([manage templates](https://docs.cloud.google.com/model-armor/manage-templates)).
+nor a band-B request body; that is why it is detection-grade and the refusal stays in code.
+The response template therefore uses advanced SDP (`--advanced-config-inspect-template`, and
+optionally `--advanced-config-deidentify-template`, on
+[`gcloud beta model-armor templates create`](https://docs.cloud.google.com/sdk/gcloud/reference/beta/model-armor/templates/create)),
+whose inspect template must re-list the six infoTypes basic mode covers, or the credential screen
+is silently dropped (06 §3.3). Sources for those two facts, read 2026-09-13: basic and advanced SDP
+are mutually exclusive fields of `SdpFilterSettings`
+([REST reference](https://docs.cloud.google.com/model-armor/reference/rest/v1/projects.locations.templates)),
+and the six basic-mode infoTypes are defined in the
+[infoType reference](https://docs.cloud.google.com/sensitive-data-protection/docs/infotypes-reference). An inspect template carries `customInfoTypes`, each a
+`dictionary.wordList.words` list or a `regex.pattern`; dictionary words match case-insensitively
+([custom dictionary detectors](https://docs.cloud.google.com/sensitive-data-protection/docs/creating-custom-infotypes-dictionary), read 2026-09-13).
 
 | Custom infoType | Kind | Content | Owner of the list |
 |---|---|---|---|
@@ -312,406 +280,75 @@ nor a band-B request body; that is why it is detection-grade and the refusal sta
 | `WALLE_CONTROL_GROUP` | dictionary plus regex | `walle-operators@`, `walle-protected@`, `eve-owners@`, `ge-admins@`, `platform-approvers@`, and the `mo-` group family | same |
 | `WALLE_OAUTH_CLIENT` | dictionary | the display names of the two OAuth clients (*tbd*, decision 2) | same |
 
-The infoType names in the first column are this chapter's proposal, *tbd* at build. What the
+The infoType names in the first column are proposals, *tbd* at build. What the
 detector costs: the model legitimately narrating a refusal ("I cannot call makeAdmin") matches
 too, so the template follows the same flip rule as every other filter — inspect-only until the
 benign corpus has been run through it, blocking only when the measured false-block rate is under
 the threshold. In either mode a match is a `MATCH_FOUND` finding in Security Command Center and
 the SIEM, and one regression-suite case per string proves each detector fires. It adds no
-denial reason (the table at the top of this chapter still holds): the refusal is the action
+denial reason (section 3 says why none is added): the refusal is the action
 service's.
 
-**Start in `INSPECT_ONLY` and measure before blocking.** The GA `gcloud` track creates
-`INSPECT_AND_BLOCK` templates only. `INSPECT_ONLY` needs `gcloud beta` or the REST field
-`templateMetadata.enforcementType`. S0 runs both templates inspect-only, the injection
-regression suite runs against them directly with `sanitizeUserPrompt`, and two numbers come
-out: the detection rate on the hostile corpus, and the false-block rate on a benign corpus of
-real operator prompts and real narrated answers from shadow runs. The flip to
-`INSPECT_AND_BLOCK` is the reviewed change in section 5, taken when the false-block rate is
-below a threshold the S1 decision record fixes. `Assumption:` below 1 per cent on the benign
-corpus, to be confirmed with data. A block that fires on "suspend jdoe, he left today" is a
-finding against the template, not against the operator.
+**Start in `INSPECT_ONLY` and measure before blocking.** S0 runs both templates inspect-only,
+the injection regression suite (section 6) runs against them directly with
+`sanitizeUserPrompt`, and two numbers come out: the detection rate on the hostile corpus, and
+the false-block rate on a benign corpus of real operator prompts and real narrated answers from
+shadow runs. The flip to `INSPECT_AND_BLOCK` is a reviewed change, taken when the false-block
+rate is below a threshold the S1 decision record fixes (the flip rule, 06 §3.3). `Assumption:`
+below 1 per cent on the benign corpus, to be confirmed with data. A block that fires on
+"suspend jdoe, he left today" is a finding against the template, not against the operator.
 
 **Confidence level is a measured decision, not a default.** `HIGH` blocks least and misses
 most. `LOW_AND_ABOVE` catches any indication and has the highest false-positive rate.
-`MEDIUM_AND_ABOVE` is the starting point. The S0 measurement chooses.
-
-**The conformance floor must not prejudge that decision.** A conformance floor rejects any
-template less restrictive than itself. On this chapter's reading of "at least as
-restrictive", `LOW_AND_ABOVE` is the most restrictive setting and `HIGH` the least, so a
-floor at `MEDIUM_AND_ABOVE` would forbid a later choice of `HIGH`. Therefore the S0 floor
-says only "the prompt-injection filter is enabled, at `HIGH` or stricter, and the malicious
-URL filter is enabled". That guarantees no deployer can disable either filter, without
-fixing the confidence level before it has been measured. Tighten the floor to the chosen
-level after S0. Confirm the ordering at build by attempting to create a `HIGH` template under
-a `MEDIUM_AND_ABOVE` floor in a sandbox project; it should be refused. Set the floor at
-`FOLDER_ID`, the folder holding all four projects, rather than at the organisation, unless
-the organisation wants that constraint everywhere: a folder floor also binds Eve's and
-Mo's templates, and Mo's `generateContent` calls at S4 inherit it. The folder exists — it
-is the config key `FOLDER_ID` ([../project-topology.md](../project-topology.md) §5).
+`MEDIUM_AND_ABOVE` is the starting point, and Google's default for the Responsible AI filters.
+Image screening stays off: Wall-E takes no images. The S0 measurement chooses, and the tier floor is
+tightened to the chosen level afterwards (06 §3.2).
 
 **The prompt-injection filter changes under you on a schedule.** It is the only versioned
 filter: v1, v2, v3, with aliases `FILTER_VERSION_ALIAS_STABLE` and
-`FILTER_VERSION_ALIAS_LATEST` set through `templateMetadata.filterVersionSelector`. **v3
-becomes Stable on or before 2026-09-25. v1 and v2 retire on 2026-11-29.** GA. Wall-E's
-detection behaviour will change on 2026-09-25 with no change in its own configuration. Do
-not pin v2 to avoid that: it retires nine weeks later. Keep `STABLE`, record
-`filterVersionConfig` from every sanitize response in the evidence, re-run the regression
-suite in the week of 2026-09-28 and again before 2026-11-29, and alert when the version in
-the sanitize logs differs from the one last recorded, section 6.
+`FILTER_VERSION_ALIAS_LATEST` set through `templateMetadata.filterVersionSelector`. v3 becomes
+Stable on or before 2026-09-25 and v1 and v2 retire on 2026-11-29, so Wall-E's detection
+behaviour will change with no change in its own configuration. Do not pin v2 to avoid that: it
+retires nine weeks later. Keep `STABLE`, record `filterVersionConfig` from every sanitize
+response in the evidence, re-run the regression suite in the week of 2026-09-28 and again
+before 2026-11-29, and alert when the version in the sanitize logs differs from the one last
+recorded, section 6.
 
-**Token limits, and the silent failure they produce.** Per filter: prompt injection and
-jailbreak 65,536 tokens, Responsible AI 65,536, CSAM 65,536, Sensitive Data Protection
-130,000. Input size limit 4 MB. Above a filter's limit the filter returns
-`EXECUTION_SKIPPED`, and nothing else tells you. Wall-E's prompts are short, its tool
-results are slimmed by the catalogue and its narrated answers are bounded, so the limits
-should never bind. That is a claim to verify, not to assume: the alert on
-`executionState != EXECUTION_SUCCESS` in section 6 is what turns a silent skip into a row.
-Leave `--template-metadata-ignore-partial-invocation-failures` at its default of `false`,
-so a partial failure surfaces as `invocationResult` `PARTIAL` rather than passing. Quotas
-are far above Wall-E's needs: 1,200 sanitize calls per minute per project, and 600
-`ExternalProcessor` calls per minute in the gateway project, against a read rate limit of
-120 per minute.
+**Token limits bind nowhere for Wall-E, and that is a claim to verify.** Wall-E's prompts are
+short, its tool results are slimmed by the catalogue and its narrated answers are bounded, so
+the per-filter limits of 06 §3.3 should never bind; the alert on
+`executionState != EXECUTION_SUCCESS` in section 6 is what turns a silent `EXECUTION_SKIPPED`
+into a row. The platform quotas (06 §2.5) are far above Wall-E's needs, against a read rate
+limit of 120 per minute.
 
-**Custom error messages.** Set the prompt and response safety error code to 400 and the
-message to a service-authored sentence with nothing interpolated, for the same reason the
-denial details in [03](03-lld.md) interpolate nothing. The dispatcher recognises that code
-as a gateway block and publishes `content.flagged` with `source: gateway`.
+**Gateway blocks become events.** The dispatcher recognises the templates' custom error code 400
+as a gateway block and publishes `content.flagged` with `source: gateway`. The message is a
+service-authored sentence with nothing interpolated, for the same reason the denial details in
+[03](03-lld.md) interpolate nothing.
 
 **Logging is on, and routed first.** `logSanitizeOperations` writes the full prompt or
 response text to Cloud Logging. Google's own page says these logs carry raw prompts and
 personal data and are "not recommended for production or sensitive data unless securely
-routed to an access-controlled sink". The sink in section 5 exists before the template does.
+routed to an access-controlled sink", so the `walle-content-logs` bucket and sink exist before
+either template does ([SETUP](SETUP.md) Phase 12c step 1).
 
 ## 5. Configuration steps
 
-Every step is from the research and carries its launch stage. Placeholders: `PROJECT_ID`,
-`PROJECT_NUMBER`, `ORG_ID`, `FOLDER_ID`, `ENGINE_ID`. Everything is `europe-west1`.
-`PROJECT_ID` and `PROJECT_NUMBER` are **`WALLE_PROJECT`'s**: the service agents in steps 5
-and 10 (`gcp-sa-aiplatform-re`, `gcp-sa-dep`, `gcp-sa-aiplatform`) are Wall-E's own
-project's agents and are built from `WALLE_PROJECT_NUMBER`. Do not confuse that number
-with `GEMINI_PROJECT_NUMBER`, which builds only the Discovery Engine service agent that
-queries the engine ([12](12-agent-identity.md) section 7).
-
-**Step 0. Enable APIs and grant the builder.** GA.
-
-```bash
-gcloud services enable modelarmor.googleapis.com networkservices.googleapis.com \
-  networksecurity.googleapis.com agentregistry.googleapis.com aiplatform.googleapis.com \
-  --project=PROJECT_ID
-# The builder needs roles/modelarmor.admin for templates and
-# roles/serviceusage.serviceUsageAdmin for the API enablement above.
-```
-
-**Step 1. Route the sanitize logs before anything produces them.** The log filter is the
-researched fact. The bucket, sink and exclusion commands are ordinary Cloud Logging and
-are not themselves research findings; the retention value is `Assumption:` 30 days pending
-the data-protection position.
-
-```bash
-FILTER='logName="projects/PROJECT_ID/logs/modelarmor.googleapis.com%2Fsanitize_operations"'
-gcloud logging buckets create walle-content-logs --location=europe-west1 \
-  --retention-days=30 --project=PROJECT_ID
-gcloud logging sinks create walle-content-sink \
-  logging.googleapis.com/projects/PROJECT_ID/locations/europe-west1/buckets/walle-content-logs \
-  --log-filter="$FILTER" --project=PROJECT_ID
-gcloud logging sinks update _Default \
-  --add-exclusion="name=walle-content,filter=$FILTER" --project=PROJECT_ID
-# Readers on walle-content-logs: the operators group and IT security, nobody else.
-```
-
-**Step 2. Create the two templates, inspect-only.** `gcloud beta` because the enforcement
-type flag is on the beta track. GA filters.
-
-```bash
-RAI='[{"filterType":"HATE_SPEECH","confidenceLevel":"MEDIUM_AND_ABOVE"},
-      {"filterType":"HARASSMENT","confidenceLevel":"MEDIUM_AND_ABOVE"},
-      {"filterType":"DANGEROUS","confidenceLevel":"MEDIUM_AND_ABOVE"},
-      {"filterType":"SEXUALLY_EXPLICIT","confidenceLevel":"MEDIUM_AND_ABOVE"}]'
-
-gcloud beta model-armor templates create walle-ingress-prompt \
-  --location=europe-west1 --project=PROJECT_ID \
-  --pi-and-jailbreak-filter-settings-enforcement=enabled \
-  --pi-and-jailbreak-filter-settings-confidence-level=medium-and-above \
-  --malicious-uri-filter-settings-enforcement=enabled \
-  --basic-config-filter-enforcement=enabled \
-  --rai-settings-filters="$RAI" \
-  --template-metadata-enforcement-type=inspect-only \
-  --template-metadata-log-sanitize-operations \
-  --template-metadata-custom-prompt-safety-error-code=400 \
-  --template-metadata-custom-prompt-safety-error-message='Request blocked by content policy'
-
-gcloud beta model-armor templates create walle-ingress-response \
-  --location=europe-west1 --project=PROJECT_ID \
-  --pi-and-jailbreak-filter-settings-enforcement=enabled \
-  --pi-and-jailbreak-filter-settings-confidence-level=medium-and-above \
-  --malicious-uri-filter-settings-enforcement=enabled \
-  --basic-config-filter-enforcement=enabled \
-  --rai-settings-filters="$RAI" \
-  --template-metadata-enforcement-type=inspect-only \
-  --template-metadata-log-sanitize-operations \
-  --template-metadata-custom-llm-response-safety-error-code=400 \
-  --template-metadata-custom-llm-response-safety-error-message='Response blocked by content policy'
-```
-
-**Step 2b. The P-SA response template with the hard-denied vocabulary detectors.** Added
-2026-09-13; GA surfaces, commands not yet run. The inspect template's home follows page 06 §3.3
-(the fleet's SDP templates in `CORE_PROJECT`, same location as the Model Armor template); if it
-lives outside `WALLE_PROJECT`, grant `roles/dlp.user` and `roles/dlp.reader` there to
-`WALLE_PROJECT`'s Model Armor service agent. `SDP_PROJECT`, the domain and the client display
-names are placeholders.
-
-```bash
-# 1. The inspect template: the six basic-mode infoTypes plus the custom vocabulary.
-curl -s -X POST \
-  "https://dlp.googleapis.com/v2/projects/SDP_PROJECT/locations/europe-west1/inspectTemplates" \
-  -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" \
-  -d '{"templateId":"walle-psa-response-inspect","inspectTemplate":{"inspectConfig":{
-        "infoTypes":[{"name":"CREDIT_CARD_NUMBER"},{"name":"US_SOCIAL_SECURITY_NUMBER"},
-                     {"name":"FINANCIAL_ACCOUNT_NUMBER"},{"name":"US_INDIVIDUAL_TAXPAYER_IDENTIFICATION_NUMBER"},
-                     {"name":"GCP_CREDENTIALS"},{"name":"GCP_API_KEY"}],
-        "customInfoTypes":[
-          {"infoType":{"name":"WALLE_HARD_DENIED_METHOD"},"dictionary":{"wordList":{"words":["makeAdmin","roleAssignments"]}}},
-          {"infoType":{"name":"WALLE_PROTECTED_IDENTITY"},"regex":{"pattern":"(walle|eve)@DOMAIN_REGEX"}},
-          {"infoType":{"name":"WALLE_CONTROL_GROUP"},"dictionary":{"wordList":{"words":["walle-operators","walle-protected","eve-owners","ge-admins","platform-approvers"]}}},
-          {"infoType":{"name":"WALLE_CONTROL_GROUP_MO"},"regex":{"pattern":"mo-[a-z0-9-]+@"}},
-          {"infoType":{"name":"WALLE_OAUTH_CLIENT"},"dictionary":{"wordList":{"words":["NARROW_CLIENT_DISPLAY_NAME","BROAD_CLIENT_DISPLAY_NAME"]}}}]}}}'
-# If the fleet de-identify template is attached, every infoType it names must also be listed above.
-
-# 2. The response template uses advanced SDP instead of basic (the two are mutually exclusive),
-#    inspect-only until the flip rule is met.
-gcloud beta model-armor templates create walle-ingress-response \
-  --location=europe-west1 --project=PROJECT_ID \
-  --pi-and-jailbreak-filter-settings-enforcement=enabled \
-  --pi-and-jailbreak-filter-settings-confidence-level=medium-and-above \
-  --malicious-uri-filter-settings-enforcement=enabled \
-  --advanced-config-inspect-template=projects/SDP_PROJECT/locations/europe-west1/inspectTemplates/walle-psa-response-inspect \
-  --rai-settings-filters="$RAI" \
-  --template-metadata-enforcement-type=inspect-only \
-  --template-metadata-log-sanitize-operations \
-  --template-metadata-custom-llm-response-safety-error-code=400 \
-  --template-metadata-custom-llm-response-safety-error-message='Response blocked by content policy'
-# This replaces the step 2 response template for Wall-E; the prompt template is unchanged.
-# Verify: one regression-suite case per string returns MATCH_FOUND on the sdp filter, and a
-# credential string still does.
-```
-
-**Step 3. Run the regression suite against the template directly.** GA. Record
-`filterVersionConfig` from each response.
-
-```bash
-curl -s -X POST \
-  "https://modelarmor.europe-west1.rep.googleapis.com/v1/projects/PROJECT_ID/locations/europe-west1/templates/walle-ingress-prompt:sanitizeUserPrompt" \
-  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-  -H "MA-Client-Correlation-Id: $(uuidgen)" \
-  -H "Content-Type: application/json" \
-  -d '{"userPromptData":{"text":"<one case from the suite>"}}'
-# Assert sanitizationResult.filterMatchState and filterResults.pi_and_jailbreak.matchState per case.
-```
-
-**Step 4. Create the ingress gateway.** GA.
-
-```bash
-cat > walle-ingress.yaml <<'EOF'
-name: walle-ingress
-protocols: [MCP]
-googleManaged:
-  governedAccessPath: CLIENT_TO_AGENT
-EOF
-gcloud network-services agent-gateways import walle-ingress \
-  --source=walle-ingress.yaml --location=europe-west1 --project=PROJECT_ID
-```
-
-The `protocols` field is a deprecated hint and harmless here, see
-[13](13-agent-interconnection.md).
-
-**Step 5. Grant the service agents.** GA. The configure page assigns ingress to the
-Reasoning Engine service agent. The delegate-authorization page and the ingress codelab also
-grant the Service Extensions agent. The pages do not agree, so grant both, test in step 9,
-remove whichever grant proves unnecessary, and record the result. None of these grants
-touches `walle-agent@` or `walle-actions@`.
-
-```bash
-RE_AGENT="serviceAccount:service-PROJECT_NUMBER@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
-DEP_AGENT="serviceAccount:service-PROJECT_NUMBER@gcp-sa-dep.iam.gserviceaccount.com"
-for ROLE in roles/modelarmor.calloutUser roles/modelarmor.user; do
-  gcloud projects add-iam-policy-binding PROJECT_ID --member="$RE_AGENT" --role="$ROLE"
-done
-for ROLE in roles/modelarmor.calloutUser roles/modelarmor.user roles/serviceusage.serviceUsageConsumer; do
-  gcloud projects add-iam-policy-binding PROJECT_ID --member="$DEP_AGENT" --role="$ROLE"
-done
-```
-
-**Step 6. The Model Armor authorization extension, fail-closed.** GA. This is the
-correction from the top of the chapter, as configuration.
-
-```bash
-cat > walle-ma-ext.yaml <<'EOF'
-name: walle-ma-content-authz-ext
-service: modelarmor.europe-west1.rep.googleapis.com
-metadata:
-  model_armor_settings: '[{"request_template_id":"projects/PROJECT_ID/locations/europe-west1/templates/walle-ingress-prompt","response_template_id":"projects/PROJECT_ID/locations/europe-west1/templates/walle-ingress-response"}]'
-failOpen: false
-timeout: 1s
-EOF
-gcloud service-extensions authz-extensions import walle-ma-content-authz-ext \
-  --source=walle-ma-ext.yaml --location=europe-west1 --project=PROJECT_ID
-```
-
-**Step 7. Bind the extension to the gateway with a `CONTENT_AUTHZ` policy.** GA. The
-Client-to-Agent form has no `httpRules`.
-
-```bash
-cat > walle-ma-policy.yaml <<'EOF'
-name: walle-ma-content-authz-policy
-target:
-  resources: ["projects/PROJECT_ID/locations/europe-west1/agentGateways/walle-ingress"]
-policyProfile: CONTENT_AUTHZ
-action: CUSTOM
-customProvider:
-  authzExtension:
-    resources: ["projects/PROJECT_ID/locations/europe-west1/authzExtensions/walle-ma-content-authz-ext"]
-EOF
-gcloud network-security authz-policies import walle-ma-content-authz-policy \
-  --source=walle-ma-policy.yaml --location=europe-west1 --project=PROJECT_ID
-```
-
-The set-up page recommends pairing a `CONTENT_AUTHZ` Model Armor policy with a
-`REQUEST_AUTHZ` policy delegating to IAP. The gateway overview says IAP is not supported
-during ingress, so whether that pairing is available on the Client-to-Agent gateway is
-**unverified**. Do not count it as a gate on who may call the engine. Caller gating stays
-`aiplatform.reasoningEngines.query` bound to three principals, [12](12-agent-identity.md).
-
-**Step 8. Bind the engine to the gateway.** GA. `identity_type` and, on the Semantic
-Governance page, `agent_gateway_config` are set at creation. The runtime deployment page
-also shows a `PATCH` of `agentGatewayConfig` on an existing engine; the two pages do not
-agree on whether the gateway binding is patchable, so treat both as create-time until a
-build test says otherwise. `identity_type` is documented as immutable on the gateway
-runtime-deploy page and the Semantic Governance page; the ReasoningEngine REST reference does
-not mark it so, and ADK 2.8.0's `adk deploy` sets it on an `update` after a bare `create`.
-Treat it as fixed at creation until the spike in [12](12-agent-identity.md) shows otherwise.
-
-```python
-client.agent_engines.create(
-    agent=local_agent,
-    config={
-        "display_name": "wall-e",
-        "identity_type": types.IdentityType.AGENT_IDENTITY,   # decision 19, section 7
-        "agent_gateway_config": {
-            "client_to_agent_config": {
-                "agent_gateway": "projects/PROJECT_ID/locations/europe-west1/agentGateways/walle-ingress"
-            }
-        },
-        "env_vars": {
-            "GOOGLE_CLOUD_AGENT_ENGINE_ENABLE_TELEMETRY": "true",
-            "OTEL_SEMCONV_STABILITY_OPT_IN": "gen_ai_latest_experimental",
-            "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT": "EVENT_ONLY",
-            "ADK_CAPTURE_MESSAGE_CONTENT_IN_SPANS": "false",
-        },
-    },
-)
-```
-
-**Step 9. Prove it, including the failure mode.** GA.
-
-```bash
-# 1. Send a known injection through streamQuery with a traceparent; expect HTTP 400 and the custom message
-#    once blocking is on, and a normal stream while inspect-only.
-# 2. Send a benign prompt; expect a normal stream.
-# 3. Logs Explorer:
-#    jsonPayload.@type="type.googleapis.com/google.cloud.modelarmor.logging.v1.SanitizeOperationLogEntry"
-#    labels."modelarmor.googleapis.com/client_name"="AGENT_GATEWAY" trace:TRACE_ID
-#    and confirm filterMatchState MATCH_FOUND.
-# 4. Point the extension at a wrong template name and confirm the caller gets an error.
-#    That is fail-closed, observed rather than believed. Restore.
-# 5. Read the Agent Runtime request logs for the Gemini Enterprise caller's method:
-#    query or streamQuery. Record the answer in SETUP.md with the date.
-```
-
-**Step 10. Floor settings.** GA. Conformance first, inline second, logging third.
-
-Superseded as a Wall-E step on 2026-09-13 ([platform HLD §6.2](../agentic-platform/01-hld.md), P84;
-page 06 §3.2): floors are owned by IT security and applied by the platform's Terraform — the
-organisation, folder and tier floors as template conformance, and inline enforcement through a
-factory-generated `Custom` project floor on `WALLE_PROJECT`, `INSPECT_AND_BLOCK` always at P-SA,
-written only under PAM; any other project floor write is severity-1 drift. `./walle armor` keeps
-only Wall-E's templates. The commands below stay as the record of what the platform applies.
-
-```bash
-# Floor administration needs roles/modelarmor.floorSettingsAdmin and this endpoint override.
-gcloud config set api_endpoint_overrides/modelarmor "https://modelarmor.googleapis.com/"
-
-# Conformance floor at the folder: filters cannot be disabled below Wall-E, confidence not yet fixed.
-gcloud model-armor floorsettings update \
-  --full-uri="folders/FOLDER_ID/locations/global/floorSetting" \
-  --pi-and-jailbreak-filter-settings-enforcement=ENABLED \
-  --pi-and-jailbreak-filter-settings-confidence-level=HIGH \
-  --malicious-uri-filter-settings-enforcement=ENABLED \
-  --enable-floor-setting-enforcement=true
-
-# Project-level inline enforcement on the agent's generateContent calls, INSPECT_ONLY by default.
-gcloud model-armor floorsettings update \
-  --full-uri="projects/PROJECT_ID/locations/global/floorSetting" \
-  --add-integrated-services=VERTEX_AI
-gcloud projects add-iam-policy-binding PROJECT_ID \
-  --member="serviceAccount:service-PROJECT_NUMBER@gcp-sa-aiplatform.iam.gserviceaccount.com" \
-  --role="roles/modelarmor.user"
-
-# Sanitize logs for the floor path. The sink from step 1 must already exist.
-gcloud model-armor floorsettings update \
-  --full-uri="projects/PROJECT_ID/locations/global/floorSetting" \
-  --enable-vertex-ai-cloud-logging
-
-# Test the open question: plant a hostile string in a sandbox account's display name,
-# run a shadow playbook that projects name.*, and look for a VERTEX_AI sanitize entry
-# that contains it. Presence means the floor inspects function responses. Absence means it does not.
-```
-
-**Step 11. The two reviewed flips, only after the S0 measurements.** GA.
-
-```bash
-# Templates to blocking, through the same pipeline as ladder.yaml.
-gcloud beta model-armor templates update walle-ingress-prompt --location=europe-west1 \
-  --project=PROJECT_ID --template-metadata-enforcement-type=inspect-and-block
-gcloud beta model-armor templates update walle-ingress-response --location=europe-west1 \
-  --project=PROJECT_ID --template-metadata-enforcement-type=inspect-and-block
-# Floor to blocking. Still fail-open, still detection-grade, and the decision record says so.
-gcloud model-armor floorsettings update \
-  --full-uri="projects/PROJECT_ID/locations/global/floorSetting" \
-  --vertex-ai-enforcement-type=INSPECT_AND_BLOCK
-# Rollback of the floor is a runbook step, not a kill switch. K0 in walle-actions is the halt.
-gcloud model-armor floorsettings update \
-  --full-uri="projects/PROJECT_ID/locations/global/floorSetting" \
-  --remove-integrated-services=VERTEX_AI
-```
-
-**Step 12. The in-process plugin, if used.** Open source. Pin `google-adk==2.8.0` with the
-`gcp` extra, which installs `google-cloud-modelarmor>=0.7,<1`. Cite the module path from
-source, because adk.dev does not yet document it. The runtime identity needs
-`roles/modelarmor.user` on the template project; that is an API grant, not a secret, so it
-does not breach "the agent reads no secret".
-
-```python
-from google.adk.integrations.model_armor import ModelArmorPlugin, ModelArmorConfig
-
-Runner(
-    plugins=[
-        ModelArmorPlugin(
-            config=ModelArmorConfig(
-                prompt_template_name="projects/PROJECT_ID/locations/europe-west1/templates/walle-ingress-prompt",
-                response_template_name="projects/PROJECT_ID/locations/europe-west1/templates/walle-ingress-response",
-                # block_on_screening_failure defaults to True
-            )
-        )
-    ],
-    ...
-)
-```
-
-Position: do not deploy it at S0. It adds a blocking network call per model turn, screens
-nothing the gateway does not already screen on the streamQuery path, and misses the tool
-results. It becomes worth having only if the Gemini Enterprise caller turns out to use
+The commands, with their launch stages, verify steps and rollback, are
+[SETUP](SETUP.md) Phase 12c: the sanitize-log sink first, the two inspect-only templates (and the
+P-SA response template with the vocabulary detectors), the regression suite against the template,
+the ingress gateway with its fail-closed `CONTENT_AUTHZ` extension and the service-agent grants
+(built from `WALLE_PROJECT`'s number, never `GEMINI_PROJECT_NUMBER`), the engine binding at
+creation, the proofs of the failure mode, and the later blocking flips. The ingress gateway is
+no caller gate: caller gating stays `aiplatform.reasoningEngines.query` bound to two principals
+([12](12-agent-identity.md#7-locking-aiplatformreasoningenginesquery)), and the in-process
+`ModelArmorPlugin` is not deployed at S0 unless the Gemini Enterprise caller turns out to use
 `query`, in which case it is the only screen on the human front door until that is fixed.
+Floor settings are not a Wall-E step since 2026-09-13 (P84): IT security owns them and the
+platform's Terraform applies them, including `WALLE_PROJECT`'s factory-generated `Custom` project
+floor, `INSPECT_AND_BLOCK` at P-SA
+([06 §3.2](../agentic-platform/06-gateways-model-armor-perimeter.md#32-the-floor-hierarchy)),
+while `./walle armor` keeps only Wall-E's templates.
 
 ## 6. Monitoring
 
@@ -824,13 +461,13 @@ These rows extend the table in [06-security-guardrails.md](06-security-guardrail
 Each has a mechanism. Log-based alerts use a `LogMatch` condition and are created with
 `gcloud monitoring policies create --policy-from-file=`, with the JSON kept in the
 repository. Default notification rate limit is five minutes, one condition per policy, and
-excluded logs are not evaluated, which is why the sink in step 1 keeps the sanitize logs in
+excluded logs are not evaluated, which is why the sink of SETUP Phase 12c step 1 keeps the sanitize logs in
 a bucket the alert can read.
 
 | Signal | Mechanism | Threshold and response |
 |---|---|---|
 | **A blocked or flagged prompt** | Log filter: `jsonPayload.@type="type.googleapis.com/google.cloud.modelarmor.logging.v1.SanitizeOperationLogEntry" AND jsonPayload.sanitizationResult.filterMatchState="MATCH_FOUND"`, scoped to the content bucket. The dispatcher publishes `content.flagged` with `source: gateway` on the custom error code, and `walle-actions` publishes it with `source: actions` on its own screen | Any one, to the operator channel, severity high. During S0 it is an input to the injection precision metric. It is **never** an automatic demotion: a probabilistic verdict does not move the ladder. Eve receives it through its subscription in `EVE_PROJECT` to `walle-events` in `WALLE_PROJECT`, not through the model |
-| **Silent non-coverage** | Log filter: `jsonPayload.sanitizationResult.invocationResult!="SUCCESS"`, and one clause per filter key such as `jsonPayload.sanitizationResult.filterResults.pi_and_jailbreak.executionState="EXECUTION_SKIPPED"`. Confirm the exact field path against a real entry in step 9 | Any one. A skipped filter on Wall-E's traffic means a limit was hit that the design says cannot be hit, so it is a finding against the slimming, not noise |
+| **Silent non-coverage** | Log filter: `jsonPayload.sanitizationResult.invocationResult!="SUCCESS"`, and one clause per filter key such as `jsonPayload.sanitizationResult.filterResults.pi_and_jailbreak.executionState="EXECUTION_SKIPPED"`. Confirm the exact field path against a real entry in the SETUP Phase 12c verify | Any one. A skipped filter on Wall-E's traffic means a limit was hit that the design says cannot be hit, so it is a finding against the slimming, not noise |
 | **Gateway extension or Model Armor errors** | Metric alert on `modelarmor.googleapis.com/template/request_count` error ratio, and on gateway extension failures. Also alert on approaching the 600 QPM `ExternalProcessor` and 1,200 QPM sanitize quotas, per Model Armor best practice | With `failOpen: false` these are Wall-E outages, not screening gaps. Page like any other outage of the request path |
 | **Taint on an untainted playbook** | BigQuery scheduled query, hourly, below. CI exports each playbook's `taints` declaration to a lookup table `walle_audit.playbook_declarations` from the playbook files | Any tainted run for a playbook declared untainted is a severity-3 finding: either the projection changed or a field nobody declared has started arriving, which is weakness 6 in ARCHITECTURE.md section 11 showing itself |
 | **Denial spike** | BigQuery scheduled query, hourly, below | Hard invariants already trip the breaker per row. This alert is for the ordinary reasons: a reason whose last-hour count is at least three times its seven-day hourly mean and at least ten. Something is probing, or a playbook regressed |
@@ -925,7 +562,9 @@ matches only `:generateContent` and `:streamGenerateContent` paths. `europe-west
 supported location. So enabling it later also needs an egress gateway with the essential-API
 allowlist from [13](13-agent-interconnection.md).
 
-**Position.** Detection-grade only, and not enabled for the pilot. Three reasons. It is
+**Position.** The platform rule is that Semantic Governance is never on an authority path
+([05 §4](../agentic-platform/05-registry-and-autonomy-contract.md#4-governance-policies)).
+For Wall-E it is detection-grade only, and not enabled for the pilot. Three reasons. It is
 Preview, and this design cites nothing Preview as a control. It puts a second LLM in the
 path of every model call with fail-closed semantics, so an engine outage stops Wall-E for a
 verdict the design does not act on. And it reads the same injected context that steered the
@@ -999,20 +638,20 @@ section 2, the change is stated.
 
 | Question | Why it matters | How it is closed |
 |---|---|---|
-| Which method Gemini Enterprise uses to invoke a registered ADK agent, `query` or `streamQuery` | If `query`, the ingress gateway never sees a human prompt and the human front door has no enforcement-grade screen. The in-process plugin then becomes the only one until fixed | Step 9, item 5: read the Agent Runtime request logs during the first operator session. Record in SETUP.md with the date |
-| Whether floor settings inspect the whole `contents` array, including function responses, or only the latest user text | Decides whether any platform screen sees a tool result while `walle-actions` is not an MCP server | Step 10, last block: plant a hostile display name in the sandbox and look for it in a `VERTEX_AI` sanitize entry |
+| Which method Gemini Enterprise uses to invoke a registered ADK agent, `query` or `streamQuery` | If `query`, the ingress gateway never sees a human prompt and the human front door has no enforcement-grade screen. The in-process plugin then becomes the only one until fixed | SETUP Phase 12c step 6: read the Agent Runtime request logs during the first operator session. Record in SETUP.md with the date |
+| Whether floor settings inspect the whole `contents` array, including function responses, or only the latest user text | Decides whether any platform screen sees a tool result while `walle-actions` is not an MCP server | SETUP Phase 12c verify: plant a hostile display name in the sandbox and look for it in a `VERTEX_AI` sanitize entry |
 | Whether `streamGenerateContent` is covered by the floor | Matters only if a caller sets `StreamingMode.SSE`. CI forbids it | CI rule, plus the same test with SSE forced once |
-| Whether the Service Extensions service agent is needed for an ingress `CONTENT_AUTHZ` extension, in addition to the Reasoning Engine service agent | IAM hygiene: an unneeded grant on a service agent | Step 5 grants both, step 9 tests, then remove one |
+| Whether the Service Extensions service agent is needed for an ingress `CONTENT_AUTHZ` extension, in addition to the Reasoning Engine service agent | IAM hygiene: an unneeded grant on a service agent | SETUP Phase 12c step 4 grants both, its verify tests, then remove one |
 | Whether a `REQUEST_AUTHZ` policy delegating to IAP can exist on a Client-to-Agent gateway at all, given "IAP isn't supported during ingress" | Decides whether the ingress gateway can ever be a second caller gate. Until then it is a Model Armor placement only | A build test on a throwaway gateway; caller gating stays on the engine's IAM |
 | Whether `agent_gateway_config` is patchable on an existing engine | Two Google pages disagree. If it is not, a gateway can be added only by recreating the engine, which changes its identity | Treat as create-time. Test the `PATCH` on a throwaway engine |
 | Whether an Agent Identity principal can present an ID token to `walle-actions` | Gates decision 19 and, through it, Semantic Governance | The spike in [12](12-agent-identity.md), before the production engine is created |
 | The launch stage of the direct streaming sanitize API | The release notes say GA on 2026-07-10; the API page still says Preview. Wall-E uses the gateway's streaming, not the direct API | Not used. Recorded so nobody cites the direct API as GA |
-| The ordering of confidence levels under a conformance floor | Decides whether the folder floor can be set before S0 chooses a level | Section 4: attempt a `HIGH` template under a `MEDIUM_AND_ABOVE` floor in a sandbox project |
+| The ordering of confidence levels under a conformance floor | Decides whether the folder floor can be set before S0 chooses a level | [06 §3.2](../agentic-platform/06-gateways-model-armor-perimeter.md#32-the-floor-hierarchy): attempt a `HIGH` template under a `MEDIUM_AND_ABOVE` floor in a nonprod project and record the result |
 | The retention, location and reader set of the content bucket, the trace store and the sanitize logs | Three copies of employee names and tenant content outside `walle_audit` | The data-protection assessment, ARCHITECTURE.md section 11, before S1. Every value is `tbd` until then |
 
 ## Sources
 
-Page dates are the dates shown on the pages when read on 2026-09-08 and 2026-09-09.
+Page dates are the dates shown on the pages when read on 2026-09-08 and 2026-09-09, unless the row says otherwise.
 
 | Fact group | Source | Page date |
 |---|---|---|
@@ -1020,6 +659,8 @@ Page dates are the dates shown on the pages when read on 2026-09-08 and 2026-09-
 | Token limits, quotas, `EXECUTION_SKIPPED` | https://docs.cloud.google.com/model-armor/quotas | 2026-08-27 |
 | Filter versions and retirement dates | https://docs.cloud.google.com/model-armor/set-filter-version | 2026-09-02 |
 | Template creation flags | https://docs.cloud.google.com/sdk/gcloud/reference/model-armor/templates/create and the beta reference | 2026-09-08 |
+| Basic and advanced SDP mutually exclusive (`SdpFilterSettings`) | https://docs.cloud.google.com/model-armor/reference/rest/v1/projects.locations.templates | read 2026-09-13 |
+| The six infoTypes basic SDP covers, which an advanced inspect template must re-list | https://docs.cloud.google.com/sensitive-data-protection/docs/infotypes-reference | read 2026-09-13 |
 | Regions | https://docs.cloud.google.com/model-armor/locations | 2026-08-27 |
 | Model Armor on Agent Gateway GA, Agent Gateway GA | https://docs.cloud.google.com/gemini-enterprise-agent-platform/release-notes and https://docs.cloud.google.com/model-armor/release-notes | entries 2026-06-18, 2026-06-24 |
 | Ingress scope, IAM grants, floor logging flag | https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/configure-model-armor | 2026-09-04 |

@@ -2,29 +2,22 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- Objective restated 2026-09-13; see the platform HLD
-  ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3, §18 item 19). Mo
-  improves **both Wall-E and Eve**, one Mo per platform keyed on `agent_id`; the Eve reads, the
-  Eve artefacts and the Eve proposal path below are dated where they were added.
+- Last reviewed: 2026-09-14
+- Objective restated 2026-09-13: Mo improves **both Wall-E and Eve**, one Mo per platform keyed
+  on `agent_id` ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3, §18 item 19).
 
 ## Thesis
 
 Mo is a body of committed SQL, one deterministic Cloud Run job, a bucket and — optionally,
 late, and never load-bearing — one model. It is built backwards from five artefacts a human
 reads, and its organising property is a single sentence: **every number and every selection
-Mo publishes is re-derivable from `walle_audit` alone, and the gate re-derives it rather
-than believing it.**
-
-Qualified 2026-09-13 (platform HLD §13.3): "from `walle_audit` alone" held while Mo measured
-Wall-E only. Mo now keys every number on `agent_id`, re-derivable from the measured agent's
-audit dataset — `walle_audit` for Wall-E — and, for numbers about Eve, from Eve's quality
-dataset `eve_quality` under the **source rule**: numbers about Eve come from `grades_eve`,
-`seeded_fault_runs`, golden-replay results and Wall-E's passive `eve_last_seen`, never from
-`eve.verdicts` alone, checked by an assertion query
-([03-metrics-contract.md](03-metrics-contract.md) §7.3). The gate re-derives Eve numbers only
-once the validator custodian holds `READER` on `eve_quality` (platform decision P30); until
-then Eve-targeting bundles are advisory `eve_incident_note` only, stated in their heading.
+Mo publishes is re-derivable from the measured agent's audit dataset — `walle_audit` for
+Wall-E — and the gate re-derives it rather than believing it.** Every number is keyed on
+`agent_id`. Numbers about Eve are re-derivable from Eve's quality dataset `eve_quality` under
+the **source rule** of [03-metrics-contract.md §7.3](03-metrics-contract.md#73-the-eve-quality-pack),
+never from Eve's own verdicts alone. The gate re-derives Eve numbers only once the validator
+custodian holds `READER` on `eve_quality` (platform decision P30); until then Eve-targeting
+bundles are advisory `eve_incident_note` only, stated in their heading.
 
 A promotion pull request carries a re-executable evidence block — the metric, the value, the
 exact SQL at a pinned commit, the window, the fingerprint, the sample size, the sample seed —
@@ -47,6 +40,21 @@ the team that could forge a plausible promotion does not exist. And Mo's absence
 strictly restrictive: a metrics watermark older than 24 hours makes the validator refuse
 every promotion, which is the mirror of Eve failing closed.
 
+**One Mo per platform, and a remit that includes Eve** (platform HLD
+[§13.3](../agentic-platform/01-hld.md#133-mo--improving-both-one-mo-per-platform-without-touching-eves-independence),
+§11.1; [../agentic-platform/05-registry-and-autonomy-contract.md](../agentic-platform/05-registry-and-autonomy-contract.md) §9.8):
+
+| Rule | What it means for Mo |
+|---|---|
+| Remit includes Eve | Mo measures Eve's detection quality and time-to-report, explains Eve regressions keyed on `eve_config_version`, proposes threshold and seeded-fault changes for a human to merge, and publishes the misbehaviour taxonomy and coverage map as the Eve-improvement backlog. **Eve can lower; Mo can only propose.** The closed Eve proposal set and its path are [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.5–§3.6 |
+| One Mo per platform | One `MO_PROJECT` for the whole platform, keyed on `agent_id` over the platform audit schema — not one Mo per agent. Every table, cell and artefact carries `agent_id` |
+| Metric pack per tier, one metrics contract | Each agent gets the pack its register `tier` names — a per-agent `gates.yaml` and committed metric SQL, validated by the one platform validator against golden fixtures per pack. Wall-E's ten metrics are the first pack, Eve's quality pack the second ([03-metrics-contract.md](03-metrics-contract.md) §7.1–§7.3) |
+| Agent-neutral names before Stage 0 | The drop box is `mo-proposals` (was `walle-mo-proposals`); the metric datasets take agent-neutral names before Stage 0 ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.7). This set still spells the Wall-E pack's datasets `walle_metrics*` until that rename lands |
+| The `eve_quality` data plane is Mo's input from Eve | Eve's Mo-readable tables — `findings`, `verdicts`, `attestations`, `pages`, `incidents` minus narrative, `seeded_fault_runs` — sit in their own dataset `eve_quality` in `EVE_PROJECT`, exposed through authorised views with no free-text column, with dataset-level `READER` to `mo-metrics@` made by **Eve's** runbook and no binding of any kind in `MO_PROJECT` in return. Never `grades_blind` or `review_queue_blind` |
+| Grades about Eve are human | `grades_eve` is written by the platform approval surface, not by `eve-console`, on a blind sample the approval surface draws; its dataset is `eve_grades` in `VALIDATOR_PROJECT` (proposed as [../eve/09-open-decisions.md](../eve/09-open-decisions.md) E-21; [../project-topology.md](../project-topology.md) rows 45–46). **Mo is never Eve's grader** |
+| The validator reads Eve's data, not Mo's | The validator custodian gets dataset-level `READER` on `eve_quality` (a topology row made by Eve's runbook, no binding in `MO_PROJECT` — platform decision P30), and golden fixtures exist for the Eve metrics; until both land, Eve-targeting bundles are advisory `eve_incident_note` only, stated in their heading |
+| Independence from Eve | **Eve reads nothing Mo writes.** Mo holds no credential, no invoker on Eve and no signer; no Mo output reaches Eve's control path except a pull request a human merges (two reviewers, one outside the owner line, platform HLD §9), carrying the agent-authored label |
+
 ## What Mo is not
 
 Four negatives carry more of this design than any of the positives.
@@ -59,47 +67,29 @@ Four negatives carry more of this design than any of the positives.
   sample or a gate input. Mo can neither raise nor lower a level. The raise path is a human
   merge of a pull request whose numbers a validator reproduced; the lower path belongs to
   Eve, to an operator and to the action service's own breakers, none of which read anything
-  Mo writes. Since Mo improves Eve (2026-09-13) the same holds for Eve's own configuration:
+  Mo writes. Because Mo improves Eve, the same holds for Eve's own configuration:
   **Eve reads nothing Mo writes**, Mo never sets or loosens an Eve threshold, and a change to
   Eve's `thresholds.yaml` reaches Eve only as a Mo bundle a human merges.
 - **Mo is not a credential holder.** No Workspace credential, no Secret Manager grant
   anywhere, no git credential, no key. Its three service accounts are workload identities in
-  `MO_PROJECT`, with dataset-level BigQuery reads — two of them cross-project into
-  `WALLE_PROJECT` and, since 2026-09-13, one into `EVE_PROJECT` (`eve_quality`, made by Eve's
-  runbook) — and, for one of them, object-create on one bucket in `MO_PROJECT`.
+  `MO_PROJECT`, with dataset-level BigQuery reads — cross-project into `WALLE_PROJECT`, into
+  `EVE_PROJECT` (`eve_quality`, made by Eve's runbook) and into the other projects
+  [02-identity-and-access.md](02-identity-and-access.md) §1.1 lists, each resource-level — and,
+  for one of them, object-create on one bucket in `MO_PROJECT`.
 - **Mo is not mostly a model.** A model appears in exactly one place, from S4, and writes
   prose about numbers it did not compute and inputs it cannot select. Building it is
   optional and it is legitimate never to build it.
 
 ## The five artefacts, built backwards
 
-The design starts from what a human reads and ends at the SQL, not the other way round. If
+The design starts from what a human reads and ends at the SQL, not the other way round: if
 an artefact would not change a decision someone actually takes, the pipeline behind it is
-not built.
-
-| Artefact | Path | Schedule and audience | What it carries | Exists from |
-|---|---|---|---|---|
-| Promotion-readiness scorecard | `platform/wall-e/mo/scorecard.md` | The view is per `as_of_hour`, the snapshot daily, the page regenerated on the weekly reporter run, to the ladder owner | The human face of `walle_metrics.scorecard`, per cell, aggregate only, minimum cell size 5 | S2 |
-| Weekly digest | `platform/wall-e/mo/digest-YYYY-Www.md` | Monday 08:00 Europe/Paris, to `walle-operators@` | What changed, what is frozen and why, the grading worklist, plan-hash recomputation results, and the standing footnote that Google's log proves the robot acted and never who asked | S2 |
-| Regression explanation | `platform/wall-e/mo/regression-<cell>-<date>.md` | On a change point, to the ladder owner | The fingerprint diff naming every field that moved, before/after values with the Newcombe 95 % difference interval, and prose beside them | S2 |
-| Cost report | `platform/wall-e/mo/cost-YYYY-MM.md` | Monthly, into decision 38's stop-or-continue review | Cost per operation and per playbook, infrastructure lines, **human operating hours**, approval burden in hours, the capability-gap demand ranking, and toil saved against operating cost | S1 |
-| Ladder state | `platform/wall-e/ladder-state.md` | *tbd* — read at the weekly review, by the ladder owner | Current matrix, active overrides, config version, last drill date, the freshness watermark and a per-cell readiness column. Regenerated **as a pull request**, never pushed | S2 |
-| Misbehaviour taxonomy and detector coverage map — **the first Eve artefact** (added 2026-09-13) | `platform/eve/mo/coverage-map.md` (`Assumption:` path) | First edition before Wall-E's Stage 1 (P143); regenerated on every `eve_config_version` change; to the Eve owner and the security reviewer | Every misbehaviour class of a super-admin Wall-E mapped to its detector — an Eve seeded fault, a Wall-E breaker, Eve's reconciliation of Google's streams, the SIEM detection set, or **none**; the uncovered classes are the Eve-improvement backlog | Before Wall-E's Stage 1 |
-| Eve scorecard — the Eve quality pack (added 2026-09-13) | `platform/eve/mo/scorecard.md` (`Assumption:` path) | Weekly reporter run, to the Eve owner | False-refusal Wilson bounds, wrong-accept count, agreement, pages versus budget, time-to-verdict, time-to-acknowledge, availability, `metric_divergence` ([03-metrics-contract.md](03-metrics-contract.md) §7.3) | When `eve_quality` exists |
-| Art. 72 post-market monitoring plan, per high-risk system (added 2026-09-13) | `platform/<agent>/mo/art72-plan.md` (`Assumption:` path) | On every stage decision; re-cut when the Commission's Art. 72(3) template is adopted; to the AI compliance owner | The paragraph naming the artefacts, cadence, reader and the two outside feeds (Art. 73 outcomes, Art. 86 requests) — [../agentic-platform/10-eu-ai-act.md](../agentic-platform/10-eu-ai-act.md) §4.4 | S2 for Wall-E |
-
-[05](../wall-e/05-autonomy-ladder.md) §10 already names `platform/wall-e/ladder-state.md`
-and says Mo owns regenerating it once Mo exists; until then it is a scheduled query pasted
-in weekly. Nothing in that sentence changes here except that the regeneration arrives as a
-pull request rather than a push.
-
-`Assumption:` the artefact paths above are the ones the drop box's path allowlist is written
-against and are kept verbatim from the skeleton. This design set itself lives at
-`platform/mo/`, beside Eve's, which is a different question from where Mo's generated pages
-are published.
-
-A sixth output is not an artefact but a contract: the **proposal bundle**, described field
-by field in [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md).
+not built. Wall-E's five — the scorecard, the weekly digest, the regression explanation, the
+cost report and the ladder state — plus the Eve coverage map, the Eve scorecard and the
+Art. 72 plan are each specified, with path, schedule, audience and contents, in
+[04-artefacts-and-proposals.md §1](04-artefacts-and-proposals.md#1-the-five-artefacts). A
+further output is not an artefact but a contract: the **proposal bundle**
+([§3.1](04-artefacts-and-proposals.md#31-the-bundle-contract)).
 
 ## The three tiers, and the seam between them
 
@@ -108,7 +98,7 @@ boundary, not a coding convention, which is the whole reason the boundary is wor
 
 | Tier | Identity | Sees | Carries a model | Can reach |
 |---|---|---|---|---|
-| **T0 — the metric queries** | `mo-metrics@${MO_PROJECT}.iam.gserviceaccount.com` | Raw `walle_audit` and `walle_workspace_logs` rows in `WALLE_PROJECT` (qualified 2026-09-13: the logs surface is now the view `platform_logs_views.walle_workspace_logs` in `LOGGING_PROJECT`, topology row 40), per person, read cross-project under a dataset-level `READER`; since 2026-09-13 also Eve's Mo-readable surfaces in `eve_quality` in `EVE_PROJECT`, through authorised views with no free-text column, under a dataset-level `READER` made by Eve's runbook | No | BigQuery only. No network egress at all |
+| **T0 — the metric queries** | `mo-metrics@${MO_PROJECT}.iam.gserviceaccount.com` | Raw `walle_audit` rows in `WALLE_PROJECT` and Google's admin events through the view `platform_logs_views.walle_workspace_logs` in `LOGGING_PROJECT` (topology row 40), per person, read cross-project under a dataset-level `READER`; also Eve's Mo-readable surfaces in `eve_quality` in `EVE_PROJECT`, through authorised views with no free-text column, under a dataset-level `READER` made by Eve's runbook | No | BigQuery only. No network egress at all |
 | **T1 — `mo-reporter`** | `mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com` | Computed aggregates in `walle_metrics` only — never `walle_audit` | No | BigQuery, two read endpoints on `walle-actions` in `WALLE_PROJECT`, one bucket in `MO_PROJECT` |
 | **T2 — `mo-narrator`**, optional | `mo-narrator@${MO_PROJECT}.iam.gserviceaccount.com` | The agent-facing authorised views in `walle_metrics_views` only — ids, hashes, closed enums, counts, timestamps, surrogate keys | Yes, a pinned model id | BigQuery views and the Vertex AI `generateContent` API. Nothing else |
 
@@ -125,16 +115,16 @@ applies), region `europe-west1`, BigQuery location `EU`. Nothing of Mo's is crea
 `WALLE_PROJECT`; what Mo needs from Wall-E's project arrives as resource-level grants, listed
 in [02-identity-and-access.md](02-identity-and-access.md) §2 and, authoritatively, in
 [`../project-topology.md`](../project-topology.md) §3 (rows 6, 7 and 8). Nothing of Mo's is
-created in `EVE_PROJECT` either; since 2026-09-13 its one read there is the `eve_quality`
-`READER` Eve's runbook makes (platform HLD §18 item 25's new topology row).
+created in `EVE_PROJECT` either; its one read there is the `eve_quality` `READER` Eve's
+runbook makes (topology §3 row 28).
 
 | Component | Runs on | Does | Never does | Exists from |
 |---|---|---|---|---|
-| **T0 — the metric queries** (`config/metrics/*.sql`) | ~12 BigQuery **scheduled queries** on the BigQuery Data Transfer Service, pinned to a service account with `--service_account_name`. Scheduled at **:07 past the hour**, never on the hour — Google warns that queries "running exactly on the hour (for example, 09:00) might trigger multiple times" ([scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries), verified 2026-09-12). Each is a `MERGE` keyed on `(as_of_hour, cell, fingerprint_sha)`, so a double fire is a no-op. The transfer configs live in `MO_PROJECT`; the destination dataset must be in the same project as the transfer config, so `walle_metrics` is in `MO_PROJECT`, and the query text references `${WALLE_PROJECT}.walle_audit.*` fully qualified — Google: "The destination dataset and table for a scheduled query must be in the same project as the scheduled query" and "Queries can reference tables from different projects and different datasets" ([scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries), verified 2026-09-13) | Computes every number and every selection: the ten [05](../wall-e/05-autonomy-ladder.md) §8 metrics, the Wilson bounds, the `unsure` rate, dwell, ratchet state, sample counts against the floor, double-grade coverage and agreement, the fingerprint register, the blind-sample draw, the capability-gap ranking, cost, and the `verdict` itself — a SQL `CASE` over those columns. Writes `walle_metrics` and the daily snapshot | Calls no model. Has no network egress — a scheduled query cannot be prompted. Touches no Firestore, no Workspace, no action service, no Secret Manager, no git. Selects no free-text column: `params_redacted`, `result_summary` and error text are excluded by the query text and by CI review | **S0** — this *is* the "Eve v0" step [05](../wall-e/05-autonomy-ladder.md) §8 forbids skipping, and there is no later handover because there is no later replacement. **Qualified 2026-09-13** (platform HLD §13.3): Eve's own v0 in `EVE_PROJECT` survives beside it as a differential check — an assertion query diffs the scorecard against `eve.findings` (read through `eve_quality`) and sets `metric_divergence` on the Eve scorecard. Since 2026-09-13 T0 also computes the Eve quality pack ([03-metrics-contract.md](03-metrics-contract.md) §7.3) |
+| **T0 — the metric queries** (`config/metrics/*.sql`) | ~12 BigQuery **scheduled queries** on the BigQuery Data Transfer Service, pinned to a service account with `--service_account_name`. Scheduled at **:07 past the hour**, never on the hour — Google warns that queries "running exactly on the hour (for example, 09:00) might trigger multiple times" ([scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries), verified 2026-09-12). Each is a `MERGE` keyed on `(as_of_hour, cell, fingerprint_sha)`, so a double fire is a no-op. The transfer configs live in `MO_PROJECT`; the destination dataset must be in the same project as the transfer config, so `walle_metrics` is in `MO_PROJECT`, and the query text references `${WALLE_PROJECT}.walle_audit.*` fully qualified — Google: "The destination dataset and table for a scheduled query must be in the same project as the scheduled query" and "Queries can reference tables from different projects and different datasets" ([scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries), verified 2026-09-13) | Computes every number and every selection: the ten [05](../wall-e/05-autonomy-ladder.md) §8 metrics, the Wilson bounds, the `unsure` rate, dwell, ratchet state, sample counts against the floor, double-grade coverage and agreement, the fingerprint register, the blind-sample draw, the capability-gap ranking, cost, and the `verdict` itself — a SQL `CASE` over those columns. Writes `walle_metrics` and the daily snapshot | Calls no model. Has no network egress — a scheduled query cannot be prompted. Touches no Firestore, no Workspace, no action service, no Secret Manager, no git. Selects no free-text column: `params_redacted`, `result_summary` and error text are excluded by the query text and by CI review | **S0** — this *is* the "Eve v0" step [05](../wall-e/05-autonomy-ladder.md) §8 forbids skipping, and there is no later handover because there is no later replacement. Eve's own v0 in `EVE_PROJECT` survives beside it as a differential check (platform HLD §13.3) — an assertion query diffs the scorecard against `eve.findings` (read through `eve_quality`) and sets `metric_divergence` on the Eve scorecard. T0 also computes the Eve quality pack ([03-metrics-contract.md](03-metrics-contract.md) §7.3) |
 | **The authorised-view layer** | BigQuery authorised views defined in their **own dataset**, `walle_metrics_views`, over `walle_metrics.scorecard`, and registered on `walle_metrics`'s access list — never on `walle_audit`'s. Google requires the view to sit in "a different dataset than the dataset used in the source query", and a view carries **its own** authorization, so a view authorized on `walle_audit` would be an escalation path rather than a boundary. Verified 2026-09-12: principals "can view the data you share and run queries on it, but they can't access the source dataset directly" ([authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views)). Both `walle_metrics_views` and `walle_metrics` are in `MO_PROJECT`, so Mo's authorised views stay **intra-project**. A view authorised on `walle_audit` would now also be a cross-project entry in `WALLE_PROJECT`'s dataset access list — the access entry names the view as `PROJECT_ID.DATASET_ID.VIEW_NAME` (same page, verified 2026-09-13) — which is one more reason it is never written | Exposes ids, hashes, closed enums, counts, timestamps and **surrogate keys** only. Every string it returns is drawn from a closed vocabulary defined in [03](../wall-e/03-lld.md) | Returns no `params_redacted`, no `result_summary`, no `content_flags` free text, no display name, no group name, no Google error string, no principal email. An attacker-writable string never reaches Mo's rendering or model layer at all | **S1**, when anything other than T0 reads the data |
 | **T1 — `mo-reporter`** | Cloud Run **job** in `MO_PROJECT`, `europe-west1` — a job, not a service: batch-shaped, and a service caps one request at 60 minutes while a job task runs to 168 hours. Triggered by Cloud Scheduler with an **OAuth** token against `run.googleapis.com/…/jobs:run`, a `*.googleapis.com` target. Idempotent on job name plus `X-CloudScheduler-ScheduleTime` | Renders the five artefacts from `walle_metrics`; calls `GET /v1/plans/{id}` and `GET /v1/runs/{id}` on `walle-actions` in `WALLE_PROJECT` — admitted by a cross-project `roles/run.invoker` on that service and by the in-app allowlist entry `mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com` — on a weekly sample to recompute `plan_hash` under RFC 8785 canonical JSON / SHA-256 and confirm the audit row agrees with the frozen plan; assembles proposal bundles and writes them to the drop box | Never merges, pushes, approves, halts, demotes, vetoes or writes config. Holds **no git credential**. Never calls `/v1/ladder`, `/v1/control/*`, `/approve` or `/veto` — no IAM, no allowlist entry, no code path. No Workspace credential, no Firestore, no Pub/Sub subscription, no `RemoteA2aAgent`, no `McpToolset` | **S1** for the cost report and the S1 stop-or-continue document; the full artefact set at **S2** |
-| **The proposal drop box** | Cloud Storage bucket `mo-proposals` in `MO_PROJECT` (renamed 2026-09-13 from `walle-mo-proposals`, agent-neutral before Stage 0, platform HLD §13.3), EU, object versioning on, 90-day lifecycle, uniform bucket-level access | Receives one bundle per object — `{diff, evidence_block, decision_record_draft, narrative}`. CI ingests it from outside `MO_PROJECT` and opens the pull request as a bot account that is not Mo; the CI ingestion identity therefore needs a read grant on this bucket (`Assumption:` `roles/storage.objectViewer`, bucket-level; identity and home *tbd* — [07-build-runbook.md](07-build-runbook.md) Mo-9, [M-11 · 52](08-open-decisions.md)) | Accepts no diff outside the path allowlist `config/ladder.yaml`, `config/playbooks/**`, `config/prompts/**`, `config/catalogue/**`, `platform/wall-e/mo/**`, `platform/wall-e/ladder-state.md` — and, since 2026-09-13, in Eve's repository `eve/config/thresholds.yaml` and `eve/config/seeded_faults/**` only ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.6). A bundle touching the ceiling module, the policy chain, the catalogue's risk tiers or the validator — or Eve's `predicates/`, `ceilings.py`, `reasons.yaml`, `oncall.yaml` or `eve_authority` — is rejected **at ingestion, before CI**, so [05](../wall-e/05-autonomy-ladder.md) §10's "the gate cannot be part of what it gates" is enforced twice | **S2 exit** |
-| **The validator's recompute check** | A required CI check in the configuration repository, owned outside it per [05](../wall-e/05-autonomy-ladder.md) §10, run by the validator custodian ([decision 37](../wall-e/09-open-decisions.md)), deployed **by image digest** | Re-executes the evidence block's SQL at its pinned commit against `${WALLE_PROJECT}.walle_audit` — and, for Eve bundles, against `eve_quality` once its dataset-level `READER` there exists (P30, made by Eve's runbook, added 2026-09-13) — as an identity holding dataset-level `READER` there and `roles/bigquery.jobUser` in the custodian's **own** project — never a project-level role in `WALLE_PROJECT` or `EVE_PROJECT`, never any binding in `MO_PROJECT` — and refuses the merge if any value differs; enforces the 30-day cross rule between a Wall-E promote and an Eve loosening on the same cell; re-draws the blind sample from the published seed and refuses if it differs; enforces every §10 gate, the two-distinct-authenticated-reviewer rule, and the ≤ 24 h watermark | Never trusts a number Mo asserts, holds no binding of any kind in `MO_PROJECT`, never accepts prose as evidence — the `narrative` field is **stripped before validation** | **S2 exit**. The §10 ladder gates themselves exist from S0 for Wall-E's own promotions |
+| **The proposal drop box** | Cloud Storage bucket `mo-proposals` in `MO_PROJECT` ([04-artefacts-and-proposals.md §3.1](04-artefacts-and-proposals.md#31-the-bundle-contract)) | Receives one bundle per object, which CI ingests from outside `MO_PROJECT` and turns into a pull request under a bot account that is not Mo ([§3](04-artefacts-and-proposals.md#3-from-bundle-to-merge)) | Accepts no diff outside the path allowlist; a bundle touching the gating layer is rejected at ingestion, before CI ([§3.2](04-artefacts-and-proposals.md#32-the-path-allowlist)) | **S2 exit** |
+| **The validator's recompute check** | A required CI check owned outside the configuration repository, run by the validator custodian ([decision 37](../wall-e/09-open-decisions.md)) | Re-executes the evidence SQL against the source datasets, re-draws the blind sample and enforces every merge gate ([04-artefacts-and-proposals.md §3.4](04-artefacts-and-proposals.md#34-what-the-validator-enforces)) | Never trusts a number Mo asserts, holds no binding of any kind in `MO_PROJECT`, never accepts prose as evidence | **S2 exit**. The §10 ladder gates themselves exist from S0 for Wall-E's own promotions |
 | **T2 — `mo-narrator`** (optional) | Cloud Run job in `MO_PROJECT` calling the Vertex AI `generateContent` API with a pinned model id in `europe-west1`; its `roles/aiplatform.user` is on `MO_PROJECT`, and `aiplatform.googleapis.com` is enabled there at S4 only. Deliberately **not** a reasoning engine | Writes the sentences around numbers it did not compute: the regression narrative, the digest's opening paragraph, the framing beside the computed "Why worth it" figure. Swapping the pinned model id is the whole of the model-family comparison [08](../wall-e/08-team-eve-mo.md) invites | Computes nothing, selects nothing, ranks nothing, grades nothing. Its output never enters the evidence block. It cannot see a free-text string, because the views do not carry one | **S4**, and it is legitimate never to build it |
 | **The freshness absence alert** | Cloud Monitoring policy in `MO_PROJECT`, with its notification channel, on the `walle_metrics` watermark, written as `EVALUATION_MISSING_DATA_ACTIVE`. It is no longer a resource Wall-E's Phase 16 creates; Phase 16 only records where it is (change 14 in [08-open-decisions.md](08-open-decisions.md)) | Pages when Mo stops producing. A threshold-only policy is silent exactly when the metric stops being written | Never depends on Mo publishing its own liveness signal. Never demotes anything | **S1** |
 | **`walle_metrics` / `walle_metrics_archive` / `walle_metrics_private` / `walle_metrics_views`** | BigQuery, EU, in `MO_PROJECT`. `walle_metrics` partitioned on `as_of`, expiry matched to the retention floor. `walle_metrics_private` holds the `principal_surrogates` mapping **alone**, with one WRITER and no reader, because dataset-level `READER` on `walle_metrics` would otherwise make every surrogate reversible; `walle_metrics_views` holds the agent-facing views and no tables. `walle_metrics_archive` holds one daily `CREATE SNAPSHOT TABLE … OPTIONS(expiration_timestamp=…)` per day — the citable object a promotion points at | Holds every computed number | Is read by **nothing in Wall-E's enforcement path** — not the action service, the dispatcher, the ladder deploy tool, Eve or the CI gate validator. Carries no email-shaped string and no group-by cell with a count of 1–4 | **S0** |
@@ -150,7 +140,7 @@ flowchart LR
         WLOG["BigQuery walle_workspace_logs<br/>Google-written admin events"]
     end
 
-    subgraph EVEQ["Evidence about Eve, in EVE_PROJECT (added 2026-09-13)"]
+    subgraph EVEQ["Evidence about Eve, in EVE_PROJECT"]
         EQ["BigQuery eve_quality<br/>authorised views, no free text:<br/>findings, verdicts, attestations, pages,<br/>incidents minus narrative, seeded_fault_runs"]
     end
 
@@ -194,12 +184,11 @@ flowchart LR
 ```
 
 The validator's edge runs to `walle_audit`, not to anything Mo wrote. That is the whole
-diagram in one line: Mo's numbers are reproduced from the source, never believed. The three
-edges that cross from `WALLE_PROJECT` into Mo's tiers and — since 2026-09-13 — the one from
-`EVE_PROJECT` are the only grants Mo holds outside its own project, and each is a binding on
-the resource — a dataset or a service — never a project-level role
-([`../project-topology.md`](../project-topology.md) §3, rows 6 and 8, plus the `eve_quality`
-row platform HLD §18 item 25 adds). No arrow runs from Mo to Eve.
+diagram in one line: Mo's numbers are reproduced from the source, never believed. The edges
+that cross from `WALLE_PROJECT` and `EVE_PROJECT` into Mo's tiers are grants Mo holds outside
+its own project, and each is a binding on the resource — a dataset or a service — never a
+project-level role; the complete list is [`../project-topology.md`](../project-topology.md)
+§3 (rows 6–8, 28, 40 and 46). No arrow runs from Mo to Eve.
 
 ### The edges that are deliberately absent
 
@@ -218,22 +207,21 @@ with a reason, not a weaker kind of arrow.
 | Anything → Mo | Mo exposes no endpoint, no topic, no agent card, no MCP server. Mo being down is an absence, not a signal Mo sends |
 | Wall-E's memory → Mo, or a question put to Wall-E about itself | E45/M50. Neither Eve nor Mo reads Wall-E's memory or asks Wall-E about itself |
 | Restricted content-log bucket `walle-content-logs`, in `WALLE_PROJECT` → Mo | Mo is not on [decision 25](../wall-e/09-open-decisions.md)'s reader list |
-| Anything Mo writes → Eve (added 2026-09-13) | Eve reads nothing Mo writes: no Eve identity holds a binding in `MO_PROJECT` (MD-9b), and no Mo output reaches Eve's control path except a pull request a human merges into `eve/config`. Mo holds no invoker on any Eve service, no signer and no grant on `eve-approval` |
-| `grades_blind`, `review_queue_blind`, `eve.incidents.narrative` → Mo (added 2026-09-13) | Never in `eve_quality`. Mo is not Eve's grader and reads no free text from Eve (platform HLD §13.3) |
-| `walle_metrics` → any enforcement identity | The containment assertion, tested as a denial-suite row: not the action service, the dispatcher, the ladder deploy tool, Eve, or the CI gate validator. Since 2026-09-13 it is also a project-IAM fact: `MO_PROJECT`'s IAM policy carries no principal from `WALLE_PROJECT`, `EVE_PROJECT` or `GEMINI_PROJECT` — in particular not `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com` — and no Mo dataset's access list names one ([`../project-topology.md`](../project-topology.md) §3 row 24) |
+| Anything Mo writes → Eve | Eve reads nothing Mo writes: no Eve identity holds a binding in `MO_PROJECT` (MD-9b), and no Mo output reaches Eve's control path except a pull request a human merges into `eve/config`. Mo holds no invoker on any Eve service, no signer and no grant on `eve-approval` |
+| `grades_blind`, `review_queue_blind`, `eve.incidents.narrative` → Mo | Never in `eve_quality`. Mo is not Eve's grader and reads no free text from Eve (platform HLD §13.3) |
+| `walle_metrics` → any enforcement identity | The containment assertion, tested as a denial-suite row: not the action service, the dispatcher, the ladder deploy tool, Eve, or the CI gate validator. It is also a project-IAM fact: `MO_PROJECT`'s IAM policy carries no principal from `WALLE_PROJECT`, `EVE_PROJECT` or `GEMINI_PROJECT` — in particular not `service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com` — and no Mo dataset's access list names one ([`../project-topology.md`](../project-topology.md) §3 row 24) |
 
 ## What Mo reads
 
 Every `walle_audit.*` and `walle_workspace_logs` surface below is in `WALLE_PROJECT`, read
 cross-project by `mo-metrics@${MO_PROJECT}` under a dataset-level `roles/bigquery.dataViewer`
-on each dataset, with the query job in `MO_PROJECT`. Since 2026-09-13 the `eve_quality` rows
+on each dataset, with the query job in `MO_PROJECT`. The `eve_quality` rows
 at the end of the table are in `EVE_PROJECT`, read the same way under one dataset-level
 `READER` Eve's runbook makes (platform HLD §13.3, §18 items 17 and 25); every row is keyed on
 `agent_id`, because there is one Mo per platform; the SQL names them
 `` `${WALLE_PROJECT}.walle_audit.<table>` `` and
 `` `${WALLE_PROJECT}.walle_workspace_logs.<table>` ``, fully qualified, because the job's
-default project is Mo's. *Qualified 2026-09-13 (review-findings pass; P104, P107, topology row 40):
-the logs surface moves to the authorised view
+default project is Mo's. *The logs surface (P104, P107, topology row 40) is the authorised view
 `` `${LOGGING_PROJECT}.platform_logs_views.walle_workspace_logs` `` in `LOGGING_PROJECT`, read
 under dataset-level `READER` on `platform_logs_views` made by the factory; the SQL qualifies it
 with `LOGGING_PROJECT`. `walle_audit` stays in `WALLE_PROJECT`.*
@@ -255,20 +243,20 @@ with `LOGGING_PROJECT`. `walle_audit` stays in `WALLE_PROJECT`.*
 | `GET /v1/plans/{id}`, `GET /v1/runs/{id}` on `walle-actions` in `WALLE_PROJECT`, as `mo-analyst@${MO_PROJECT}` | Weekly sample only: recompute `plan_hash` under RFC 8785 canonical JSON / SHA-256 and confirm the audit row agrees with the frozen plan | **The only two endpoints Mo may call**, and the only thing BigQuery cannot tell Mo. Admitted by a cross-project `roles/run.invoker` on the service and by the in-app allowlist row carrying the full cross-project email. No metric depends on them, so the endpoints being down degrades nothing |
 | git, read-only | `config/ladder.yaml`, `config/playbooks/**`, `config/prompts/**`, `config/metrics/**`, `wiki/decisions/**`, `platform/wall-e/incidents/**`, `config/metrics/toil_baseline.csv` | `ladder.yaml` is what the level *should* be |
 | Vertex AI `generateContent`, pinned model id | T2 only, prose only | |
-| `eve_quality.findings`, `verdicts`, `attestations` (added 2026-09-13) | Agreement between Eve's verdicts and human grades; time-to-verdict; `metric_divergence` against Mo's own scorecard | Through authorised views with no free-text column. **Never the sole source of a number about Eve** — the source rule, an assertion query in [03-metrics-contract.md](03-metrics-contract.md) §7.3 |
-| `eve_quality.pages`, `incidents` minus narrative (added 2026-09-13) | Pages versus budget; time-to-acknowledge | `Assumption:` the acknowledgement columns on `eve.pages` land with Eve's reporting contract (platform HLD §18 item 15); until they do, time-to-acknowledge is `not_computable` |
-| `eve_quality.seeded_fault_runs` (added 2026-09-13) | Seeded-fault catch rate per `eve_config_version`; the coverage map's "detector exists and fired" column | Monthly and on every `eve_config_version` change, written by Eve's harness |
-| `grades_eve` (added 2026-09-13) | False-refusal Wilson bounds; wrong-accept count | Written by the platform approval surface, not by `eve-console`; the blind sample drawn by the approval surface. Its dataset is fixed by Eve's set (platform HLD §18 item 17); `Assumption:` exposed to Mo through `eve_quality`. **Replaced 2026-09-13 (review-findings pass):** proposed in dataset `eve_grades` in `VALIDATOR_PROJECT`, not in `eve_quality`; `mo-metrics@` reads it under dataset-level `READER` made by the validator custodian ([../eve/09-open-decisions.md](../eve/09-open-decisions.md) E-21; [../project-topology.md](../project-topology.md) rows 45–46) |
-| `walle_audit` passive `eve_last_seen` (added 2026-09-13) | Eve availability, from Wall-E's stamp rather than Eve's own report | Wall-E's dataset, already read |
-| git, read-only: `eve/config/thresholds.yaml`, `eve/config/seeded_faults/**`, `eve_config_version` (added 2026-09-13) | What Eve's thresholds and fault suite *are*, so a proposal diffs against the merged state | Read only; Mo never holds a git credential |
+| `eve_quality.findings`, `verdicts`, `attestations` | Agreement between Eve's verdicts and human grades; time-to-verdict; `metric_divergence` against Mo's own scorecard | Through authorised views with no free-text column. **Never the sole source of a number about Eve** — the source rule, an assertion query in [03-metrics-contract.md](03-metrics-contract.md) §7.3 |
+| `eve_quality.pages`, `incidents` minus narrative | Pages versus budget; time-to-acknowledge | `Assumption:` the acknowledgement columns on `eve.pages` land with Eve's reporting contract (platform HLD §18 item 15); until they do, time-to-acknowledge is `not_computable` |
+| `eve_quality.seeded_fault_runs` | Seeded-fault catch rate per `eve_config_version`; the coverage map's "detector exists and fired" column | Monthly and on every `eve_config_version` change, written by Eve's harness |
+| `grades_eve` | False-refusal Wilson bounds; wrong-accept count | Written by the platform approval surface, not by `eve-console`; the blind sample drawn by the approval surface. Proposed in dataset `eve_grades` in `VALIDATOR_PROJECT`, not in `eve_quality`; `mo-metrics@` reads it under dataset-level `READER` made by the validator custodian ([../eve/09-open-decisions.md](../eve/09-open-decisions.md) E-21; [../project-topology.md](../project-topology.md) rows 45–46) |
+| `walle_audit` passive `eve_last_seen` | Eve availability, from Wall-E's stamp rather than Eve's own report | Wall-E's dataset, already read |
+| git, read-only: `eve/config/thresholds.yaml`, `eve/config/seeded_faults/**`, `eve_config_version` | What Eve's thresholds and fault suite *are*, so a proposal diffs against the merged state | Read only; Mo never holds a git credential |
 
 ## What Mo publishes, and the fact that none of it is callable
 
 The published surfaces are `walle_metrics.scorecard`, the daily
-`walle_metrics_archive.scorecard_YYYYMMDD` snapshot, sixteen supporting aggregates — each the
-sole source for one figure, ten of them for one of the ten
-[05](../wall-e/05-autonomy-ladder.md) §8 metrics —
-`walle_metrics.grading_worklist`, the five artefacts above, the
+`walle_metrics_archive.scorecard_YYYYMMDD` snapshot, the supporting `agg_*` aggregates — each
+the sole source for one figure ([03-metrics-contract.md](03-metrics-contract.md) §7.2, §7.3) —
+`walle_metrics.grading_worklist`, the artefacts of
+[04-artefacts-and-proposals.md §1](04-artefacts-and-proposals.md#1-the-five-artefacts), the
 proposal bundle contract, the published blind-sample draw algorithm, and
 `config/metrics/gates.yaml`. Each is specified in
 [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md), and the arithmetic behind
@@ -296,8 +284,10 @@ Six mechanisms hold that boundary, in descending order of how much they should b
 1. **The model cannot see the data.** `mo-narrator@` has `dataViewer` on the agent-facing
    views and nothing else. Only `mo-metrics@` — no model, no egress, no interactive caller —
    touches `walle_audit`, and it does so from another project: the only Mo principal named
-   anywhere in `WALLE_PROJECT` is `mo-metrics@${MO_PROJECT}` on two dataset access lists,
-   plus `mo-analyst@${MO_PROJECT}` on one Cloud Run service; and, since 2026-09-13, the only
+   anywhere in `WALLE_PROJECT` is `mo-metrics@${MO_PROJECT}` on the `walle_audit` access list,
+   and at S3 the linked Spans dataset's (the admin-event read is `READER` on `platform_logs_views` in `LOGGING_PROJECT`,
+   [topology](../project-topology.md#3-cross-project-grants) row 40), plus
+   `mo-analyst@${MO_PROJECT}` on one Cloud Run service; and the only
    Mo principal named anywhere in `EVE_PROJECT` is `mo-metrics@${MO_PROJECT}` on the
    `eve_quality` access list. A model cannot recompute a
    metric whose inputs it cannot select.
@@ -337,32 +327,14 @@ inside T1, not an IAM boundary.
 
 ## The drop box, and why Mo holds no credential
 
-The obvious design gives Mo a git credential — a GitHub App installation, a deploy key — so
-it can open its own pull requests. That is the one component whose compromise produces a
-plausible promotion pull request, and it contradicts the plain reading of
-[08](../wall-e/08-team-eve-mo.md) item 6, "never hold a credential". So it is not built.
-
-Instead `mo-analyst@` holds `roles/storage.objectCreator` on one bucket in `MO_PROJECT` and
-writes a bundle object. CI picks the object up, checks it against the path allowlist, strips `narrative`, and
-opens the pull request as a bot account that is not Mo. Three properties follow:
-
-- Mo cannot push, merge, approve or re-open. It cannot even read back what it wrote:
-  `roles/storage.objectCreator` "allows users to create objects" and "does not give
-  permission to view, delete, or overwrite objects" ([IAM roles for Cloud
-  Storage](https://docs.cloud.google.com/storage/docs/access-control/iam-roles), verified
-  2026-09-12). A duplicate write therefore **fails** rather than silently replacing a bundle.
-- The blast radius of a compromised Mo is bounded by path before CI ever runs: the ceiling
-  module, the policy chain, the catalogue's risk tiers and the validator — and Eve's
-  `predicates/`, `ceilings.py`, `reasons.yaml`, `oncall.yaml` and `eve_authority` — are
-  unreachable from the drop box, which is [05](../wall-e/05-autonomy-ladder.md) §10's "the gate cannot be part
-  of what it gates" enforced a second time, at ingestion.
-- The numbers in a bundle are recomputed by an identity Mo cannot reach, so a forged
-  promotion has to be **true** to pass.
-
-The cost of this is one bucket. The residual, stated here and again in
-[06-failure-modes.md](06-failure-modes.md), is a truthful-but-tendentious argument that two
-tired humans rubber-stamp — [06](../wall-e/06-security-guardrails.md)'s accepted risk,
-narrowed from "any change" to "a change whose numbers are true".
+A git credential in Mo would make it the one component whose compromise produces a plausible
+promotion pull request, and would contradict [08](../wall-e/08-team-eve-mo.md) item 6, "never
+hold a credential"; so `mo-analyst@` holds only `roles/storage.objectCreator` on one bucket,
+and CI opens the pull request as a bot account that is not Mo. Mo then cannot push, merge or
+even read back what it wrote, a compromised Mo is bounded by path before CI runs, and a forged
+promotion has to be **true** to pass, at the cost of one bucket. The argument, the bundle
+contract and the residual are in
+[04-artefacts-and-proposals.md §3](04-artefacts-and-proposals.md#3-from-bundle-to-merge).
 
 ## What was deliberately cut, and why
 
@@ -395,14 +367,15 @@ holding `roles/observability.editor` there, never by Mo, and a cross-project dat
 
 ## The separation rules, as they apply to Mo
 
-[08](../wall-e/08-team-eve-mo.md) states three rules for the team. Restated here in Mo's
-terms, because a rule that is not restated is a rule that is not tested.
+The three team rules are defined in
+[08 § The separation that makes a team worth having](../wall-e/08-team-eve-mo.md#the-separation-that-makes-a-team-worth-having);
+this table is only how each applies to Mo and which mechanism tests it.
 
 | Rule | What it means for Mo | The mechanism, not the promise |
 |---|---|---|
 | **No agent both decides and acts** | Mo proposes and does neither. It has no write path to Workspace, to Firestore, to configuration or to the ladder | No Workspace credential exists. No git credential exists. The action-service allowlist gives Mo two read endpoints and 403s everything else, tested per row — the allowlist row names the cross-project email `mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com`, and IAM admits the call through a cross-project `roles/run.invoker` on the `walle-actions` service in `WALLE_PROJECT` |
-| **No agent grades its own work** | Mo does not grade Wall-E's plans — humans do, blind, on a sample Mo cannot choose. Mo does not grade Mo either: the validator reproduces its numbers from a source Mo cannot write. Since 2026-09-13 Mo measures Eve and is **never Eve's grader**: Eve's verdicts are graded by humans into `grades_eve`, written by the platform approval surface | Sample membership is a hash over a seed CI publishes **after the week closes** into an append-only per-week file, and ingestion refuses a bundle citing any other seed. The validator reads `walle_audit`, never `walle_metrics` |
-| **Only humans loosen anything** | Mo cannot raise a level, and — unlike Eve — it cannot lower one either. Every raise is a human merge with a dated decision record and two named humans above L3. Re-asserted 2026-09-13 now that Mo proposes Eve threshold changes: **Eve can lower; Mo can only propose.** Eve reads nothing Mo writes; Eve's `thresholds.yaml` changes only via a Mo bundle and a human merge; a loosening needs two reviewers including the decision-37 security reviewer, a decision record and five business days' cooling, and never lands within 30 days of a Wall-E promote on the same cell | Mo emits an object in a bucket. Everything between that object and a deployed configuration is CI, a validator and humans |
+| **No agent grades its own work** | Mo does not grade Wall-E's plans — humans do, blind, on a sample Mo cannot choose. Mo does not grade Mo either: the validator reproduces its numbers from a source Mo cannot write. Mo measures Eve and is **never Eve's grader**: Eve's verdicts are graded by humans into `grades_eve`, written by the platform approval surface | Sample membership is a hash over a seed CI publishes **after the week closes** into an append-only per-week file, and ingestion refuses a bundle citing any other seed. The validator reads `walle_audit`, never `walle_metrics` |
+| **Only humans loosen anything** | Mo cannot raise a level, and — unlike Eve — it cannot lower one either. Every raise is a human merge with a dated decision record and two named humans above L3. For Eve: **Eve can lower; Mo can only propose.** Eve reads nothing Mo writes, and Eve's `thresholds.yaml` changes only via a Mo bundle and a human merge under the loosening and 30-day cross rules of [04-artefacts-and-proposals.md §3.6](04-artefacts-and-proposals.md#36-the-eve-proposal-path-reviewer-rules-and-the-30-day-cross-rule) | Mo emits an object in a bucket. Everything between that object and a deployed configuration is CI, a validator and humans |
 
 Two further constraints from the same document hold unchanged: Mo reads neither Wall-E's
 memory nor asks Wall-E questions about itself, and the safety interlocks between agents are
@@ -418,23 +391,12 @@ endpoints only** (C39/E24/M2, decided and not landed).
 
 ## Mo proposes; it neither decides nor acts
 
-Mo cannot raise a level. Mo cannot lower a level. It has no halt, no veto, no approval, no
-signature and no deploy. The strongest thing it can do is put an object in a bucket that
-argues, with reproducible numbers, that a human should change something — and the weakest
-thing that stops it is a single human declining to merge.
-
-This does not change with time. There is no version of Mo whose output is not a proposal,
-and no stage at which Mo's verdict becomes the gate: at S3 and S4 the thing that gates a
-promotion is the validator's recomputation, not Mo's `ready`. **Mo never accumulates
-authority with age.** That is deliberate, and it is the trade that pays for the model: the
-one agent that may use a model freely is the one whose ceiling never rises.
-
-The mirror of that is Mo's absence. Nothing rises when Mo is down — no bundle can be
-assembled, and the validator refuses every promotion whose watermark is older than 24 hours —
-and nothing degrades in the other direction, because every [05](../wall-e/05-autonomy-ladder.md)
-§8 breach that demotes or halts is enforced by the action service's breakers, by Eve and by
-CI, none of which read anything Mo writes. **Mo's absence is strictly more restrictive than
-its presence**, which is the same property Eve has, arrived at from the other side.
+Mo cannot raise or lower a level and has no halt, veto, approval, signature or deploy: the
+strongest thing it can do is put an object in a bucket that argues, with reproducible numbers,
+for a change. **Mo never accumulates authority with age**, which is the trade that pays for the
+model, and **Mo's absence is strictly more restrictive than its presence**. Both properties
+are stated in full in
+[05-staging.md § Trust does not grow with age](05-staging.md#trust-does-not-grow-with-age).
 
 ## Where the rest of this is written
 

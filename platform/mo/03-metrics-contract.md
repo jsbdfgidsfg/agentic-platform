@@ -2,19 +2,16 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
-- Objective restated 2026-09-13; see the platform HLD
+- Last reviewed: 2026-09-14
+- Objective restated 2026-09-13: Mo measures Eve as well as Wall-E
   ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3, §11.1, §18 item 21).
-  §7 now carries the **metric pack per tier** (§7.1), audit completeness as the **headline
-  Wall-E metric** with the uncatalogued-event count (§7.2), and the **Eve quality pack** with
-  its source rule as assertion A10 (§7.3). Wall-E's arithmetic below is unchanged.
 - Scope: the arithmetic Mo computes, in enough detail that the CI validator and an auditor
   read the same thing and get the same numbers. Everything on this page is computed by
   committed SQL in `config/metrics/*.sql`, parameterised by `config/metrics/gates.yaml`, and
   re-executable by anyone holding dataset-level read on `${WALLE_PROJECT}.walle_audit` and
   `bigquery.jobs.create` in a project of their own — never a project-level role in
   `WALLE_PROJECT`. Mo's own SQL runs in `MO_PROJECT` and names Wall-E's tables fully
-  qualified ([`../project-topology.md`](../project-topology.md)). Since 2026-09-13 the Eve
+  qualified ([`../project-topology.md`](../project-topology.md)). The Eve
   quality pack (§7.3) is re-executable by anyone holding dataset-level read on
   `${EVE_PROJECT}.eve_quality` as well — the validator custodian once P30 lands.
 - Companion pages: [README.md](README.md), [01-hld.md](01-hld.md),
@@ -34,21 +31,18 @@
 **Every number and every selection that can move a level is computed by committed SQL; a
 model may only read those numbers and write prose about them.**
 
-Code decides all of: the precision ratio and which grades are admissible; the Wilson lower
-and upper bounds; the sample floor; the dwell arithmetic; the ratchet clock; the drill
-freshness check; every [05](../wall-e/05-autonomy-ladder.md) §8 threshold; blind-sample
-membership; double-grade coverage and agreement; the fingerprint scoping; cost allocation;
-the capability-gap ranking; the suppression rule; and the `ready` / `not_ready` /
-`insufficient_data` verdict with its reason array. A model appears in exactly one place, from
-S4, and writes prose. That split is enforced as an IAM boundary, not a coding convention —
-see [02-identity-and-access.md](02-identity-and-access.md).
+Everything this page defines falls on the code side of that rule; the full list of what code
+decides, and the six mechanisms that enforce the split as an IAM boundary rather than a coding
+convention, are in
+[01-hld.md § The deterministic boundary](01-hld.md#the-deterministic-boundary-and-how-it-is-enforced)
+and [02-identity-and-access.md](02-identity-and-access.md).
 
-The organising property of the whole design applies to every figure defined below: **it is
-re-derivable from `walle_audit` alone, and the gate re-derives it rather than believing it.**
-Qualified 2026-09-13 (platform HLD §13.3): that holds for Wall-E's pack. A figure in the Eve
-quality pack is re-derivable from `eve_quality` and Wall-E's `walle_audit`, under the source
-rule of §7.3, and the gate re-derives it only once the custodian's `READER` on `eve_quality`
-exists (P30); until then it is reported, never cited as evidence.
+The organising property of the whole design applies to every figure defined below: **a figure
+in Wall-E's pack is re-derivable from `walle_audit` alone, and the gate re-derives it rather
+than believing it.** A figure in the Eve quality pack is re-derivable from `eve_quality` and
+Wall-E's `walle_audit`, under the source rule of §7.3, and the gate re-derives it only once
+the custodian's `READER` on `eve_quality` exists (P30); until then it is reported, never cited
+as evidence.
 A promotion pull request carries the metric, the value, the exact SQL at a pinned commit, the
 window, the fingerprint, the sample size and the sample seed; the validator runs that SQL
 itself and refuses the merge if one value differs. Mo's numbers are never trusted. They are
@@ -91,9 +85,9 @@ breath.
 
 Three things deliberately **not** in `gates.yaml`:
 
-- The **dwell durations and the ratchet length**. Their values are taken verbatim from
-  [05](../wall-e/05-autonomy-ladder.md) §6 and reproduced in
-  [§9](#9-dwell-the-ratchet-and-the-one-notch-rule). Whether they should live in `gates.yaml`
+- The **dwell durations and the ratchet length**. Their values are
+  [05](../wall-e/05-autonomy-ladder.md#6-who-may-raise-who-may-lower) §6's, and
+  [§9](#9-dwell-the-ratchet-and-the-one-notch-rule) says how they are computed. Whether they should live in `gates.yaml`
   or in `config/ladder.yaml` is *tbd*; this contract reads them from §6 and the scorecard
   names the file it read.
 - **T2's pinned model id**, which belongs to the narrator's deploy config beside
@@ -124,7 +118,7 @@ committed evidence SQL declares the two functions as `CREATE TEMP FUNCTION` from
 committed text** that Mo-3 installs as the persistent routines, and CI asserts the two texts
 are byte-identical. The persistent routines are a convenience for Mo's own scheduled queries;
 the temp declaration is what makes the evidence block self-contained across a project
-boundary. Decided 2026-09-13; the runbook's Mo-3 carries the same note.
+boundary (decided 2026-09-13; [07-build-runbook.md](07-build-runbook.md) Mo-3).
 
 ### 3.1 Wilson score interval
 
@@ -261,8 +255,7 @@ the difference.
 
 ## 5. Golden fixtures — the design document is the test oracle
 
-Hand-computed from the constants [14](../wall-e/14-hld-challenge.md) C18 published, and
-re-derived independently during the judging of this design. CI fails if any implementation
+Hand-computed from the constants [14](../wall-e/14-hld-challenge.md) C18 published. CI fails if any implementation
 value differs. This is the only control that bites on the failure the validator structurally
 cannot catch — the validator re-runs the same committed SQL and would inherit the same
 arithmetic defect.
@@ -288,7 +281,7 @@ groups is what makes the oracle an independent control rather than a restatement
 | 15/20, 5 wrong | upper | `0.8881` | drops to L1 |
 | 35/38 conservative | lower | `0.7921` | 35 accepts with 3 `unsure` does **not** clear the conservative gate |
 
-Two more, added because [06-failure-modes.md](06-failure-modes.md) §3.1 names them as the
+Two more, because [06-failure-modes.md](06-failure-modes.md) §3.1 names them as the
 residuals for which nobody has independent intuition, and a residual that is fixtured is no
 longer only carried:
 
@@ -337,21 +330,21 @@ the SQL share a misunderstanding.
 | A7 | No published row carries an email-shaped string | The suppression rule, [§14](#14-the-suppression-rule) |
 | A8 | No published group-by cell has a count between 1 and 4 | Re-identification by small cell |
 | A9 | No cell carries more than one `ladder_events` demotion row attributable to the same `decided_block_id` | A retired block firing a second demotion — [§4](#4-the-gates)'s `DM → RH → NR` loop |
-| A10 (added 2026-09-13) | **The source rule.** No published Eve-pack value marked `evidence_eligible` has a lineage that lacks every independent source — `grades_eve`, `seeded_fault_runs`, golden-replay results, Wall-E's `eve_last_seen` — and in particular none computed from `eve.verdicts` alone ([§7.3](#73-the-eve-quality-pack)) | A number about Eve that only Eve's own live process vouches for, cited as if independent |
-| A11 (added 2026-09-13) | **The differential check.** For each of the ten metrics and window, Mo's `scorecard` value is diffed against Eve v0's `eve.findings` (read through `eve_quality`); a difference sets `metric_divergence` on the Eve scorecard | Two independently pinned computations of the same metric disagreeing — the second implementation [01-hld.md](01-hld.md) declined to build, obtained from Eve's v0 (platform HLD §13.3) |
+| A10 | **The source rule.** No published Eve-pack value marked `evidence_eligible` has a lineage that lacks every independent source — `grades_eve`, `seeded_fault_runs`, golden-replay results, Wall-E's `eve_last_seen` — and in particular none computed from `eve.verdicts` alone ([§7.3](#73-the-eve-quality-pack)) | A number about Eve that only Eve's own live process vouches for, cited as if independent |
+| A11 | **The differential check.** For each of the ten metrics and window, Mo's `scorecard` value is diffed against Eve v0's `eve.findings` (read through `eve_quality`); a difference sets `metric_divergence` on the Eve scorecard | Two independently pinned computations of the same metric disagreeing — the second implementation [01-hld.md](01-hld.md) declined to build, obtained from Eve's v0 (platform HLD §13.3) |
 
 A1–A6, A9 and A10 are correctness assertions; A7 and A8 are disclosure assertions and are the
 mechanism behind [§14](#14-the-suppression-rule). All ten are failures of the run, not
 warnings — except A11, which is a reporting assertion: a divergence is an **Eve finding** and
 a flag on the Eve scorecard, never a failed run, because either side may be the one that is
-wrong: a metrics run that cannot assert its own output does not publish it, and the watermark then
-ages, which is itself restrictive — see [06-failure-modes.md](06-failure-modes.md).
+wrong. A metrics run that cannot assert its own output does not publish it, and the watermark
+then ages, which is itself restrictive — see [06-failure-modes.md](06-failure-modes.md).
 
 ---
 
 ## 7. The ten metrics the ladder is argued from
 
-Restructured 2026-09-13 (platform HLD §13.3, §11.1): the ten metrics below are **Wall-E's
+Per platform HLD §13.3 and §11.1, the ten metrics below are **Wall-E's
 pack**, the first instance of a per-agent metric pack. §7.1 says which pack each tier gets,
 §7.2 is Wall-E's pack with audit completeness as its headline, and §7.3 is the Eve quality
 pack. Every row of every pack is keyed on `agent_id`, because there is one Mo per platform.
@@ -380,7 +373,7 @@ agent to a lighter pack.
 
 ### 7.2 Wall-E's pack — the ten metrics, audit completeness first
 
-**Audit completeness is the headline Wall-E metric** (platform HLD §13.3, dated 2026-09-13).
+**Audit completeness is the headline Wall-E metric** (platform HLD §13.3).
 With Wall-E holding Super Admin the tenant no longer refuses an out-of-role call, enforcement
 sits in the action service alone, and the one number that sees an action outside the
 catalogue and outside band B is the join of Google's admin log to Wall-E's own rows. It is
@@ -390,8 +383,18 @@ The table keeps its numbering so every existing reference holds.
 
 Thirty-day rolling window, evaluated hourly, clamped to the retention floor. Definitions and
 thresholds are [05](../wall-e/05-autonomy-ladder.md) §8's, reproduced here with the exact
-form Mo computes and the aggregate view that is the sole source for each. Where this page
-says something §8 does not, it is called out in the last column.
+form Mo computes and the aggregate view that is the sole source for each — except metric 2,
+whose point thresholds in §8 (target ≥ 95 %; below 95 % over 20 graded one level down; below
+90 % to L1) are replaced by the interval gates of [§4](#4-the-gates). Where this page says
+something §8 does not, it is called out in the notes below the table.
+
+**Where the queries run.** Until Eve exists, these metrics are BigQuery scheduled queries —
+Eve v0, which is not skipped. They run as scheduled queries in `EVE_PROJECT` (Eve v0's
+transfer configs, run as `eve-v0@`) and, for Mo's scorecard, in `MO_PROJECT` over the
+`walle_metrics` datasets. Each reads `walle_audit` in `WALLE_PROJECT` through a
+**dataset-level** `roles/bigquery.dataViewer`, with the jobs run and billed in the reader's
+project — never as jobs in Wall-E's project
+([../project-topology.md](../project-topology.md) §3 rows 4 and 6).
 
 **Two exceptions to that window and that cadence, both on metric 2, both in
 [§4](#4-the-gates).** The *demote* predicate is evaluated over disjoint blocks of 20 decided
@@ -410,18 +413,19 @@ shape for all of them.
 | 6 | **Run reliability** | Runs reaching a terminal state within budget, from `runs` | ≥ 99 % | Below 97 %: `no_autonomous` for that playbook | `agg_reliability_playbook` |
 | 7 | **Eve post-hoc latency** | p99 time from an L5 write to Eve's independent verification | ≤ 60 min p99 | Breach: promotions frozen. Above 4 h: L5 cells drop to L4 | `agg_eve_latency` |
 | 8 | **Approval latency** | p50 human time-to-verdict, in **business hours** on the `Europe/Paris` calendar | p50 < 4 business hours | **Blocks stage exit.** Excluded from every promotion and demotion predicate | `agg_approval_latency` |
-| 9 | **Audit completeness — the headline** | Workspace admin-audit events by the robot, from `${WALLE_PROJECT}.walle_workspace_logs`, with a matching `${WALLE_PROJECT}.walle_audit` row — a cross-project join under two dataset-level `READER`s. *Qualified 2026-09-13 (P104, P107, topology row 40): the events side is the view `${LOGGING_PROJECT}.platform_logs_views.walle_workspace_logs`, read under `READER` on `platform_logs_views` made by the factory* | 100 % | Below 100 %: halt writes until reconciled | `agg_audit_completeness` |
-| 9b | **Uncatalogued robot admin events** (added 2026-09-13) | Count of admin-audit events whose actor is the robot account and which match **no** band-A catalogue `actions` row and **no** band-B `/v1/execute-generic` audit row (the band-B row carries both humans and the Discovery revision, platform HLD §13.1), across every admin event type — including `DELEGATED_ADMIN_SETTINGS` (for example `ASSIGN_ROLE`) and `SECURITY_SETTINGS` | **0** | Any one: **severity 1** — halted and paged by Eve's reconciler and the SIEM's super-admin detection set (platform HLD §13.2), never by Mo; Mo reports it first | `agg_uncatalogued_admin_events` ◇ |
+| 9 | **Audit completeness — the headline** | Workspace admin-audit events by the robot, from the view `${LOGGING_PROJECT}.platform_logs_views.walle_workspace_logs` (read under `READER` on `platform_logs_views` made by the factory; formerly `${WALLE_PROJECT}.walle_workspace_logs`, moved by P104, P107, topology row 40), with a matching `${WALLE_PROJECT}.walle_audit` row — a cross-project join under two dataset-level `READER`s | 100 % | Below 100 %: halt writes until reconciled | `agg_audit_completeness` |
+| 9b | **Uncatalogued robot admin events** | Count of admin-audit events whose actor is the robot account and which match **no** band-A catalogue `actions` row and **no** band-B `/v1/execute-generic` audit row (the band-B row carries both humans and the Discovery revision, platform HLD §13.1), across every admin event type — including `DELEGATED_ADMIN_SETTINGS` (for example `ASSIGN_ROLE`) and `SECURITY_SETTINGS` | **0** | Any one: **severity 1** — halted and paged by Eve's reconciler and the SIEM's super-admin detection set (platform HLD §13.2), never by Mo; Mo reports it first | `agg_uncatalogued_admin_events` ◇ |
 | 10 | **Drill freshness** | Days since the last kill-switch drill, from the write-ahead `drills` table | ≤ 30 days | Stale: CI refuses **every** promotion | `agg_drill_freshness` |
 
-Those ten `agg_*` views are ten of the **sixteen** supporting aggregates. The other six carry
+Those eleven `agg_*` views — the ten metrics and 9b — are eleven of Wall-E's pack's
+**seventeen** supporting aggregates. The other six carry
 figures that are reported but never gate, and each is likewise the sole source for one thing:
 `agg_sample_coverage` ([§13.3](#133-coverage-is-itself-a-metric)),
 `agg_regression_attribution` ([§11.3](#113-what-attribution-may-and-may-not-say)),
 `agg_cost_operation` and `agg_cost_playbook` (the cost report's two cost axes),
 `agg_value_toil` (toil saved against the committed baseline) and `agg_capability_gap` (the
 demand ranking, empty until the `capability_gap` enum lands — change 7). The twelve metric
-queries of [07-build-runbook.md](07-build-runbook.md) Phase Mo-4 populate these sixteen; the
+queries of [07-build-runbook.md](07-build-runbook.md) Phase Mo-4 populate these seventeen; the
 `scorecard` `MERGE` reads them and computes no aggregate of its own.
 
 Notes the implementation must carry, each of which is a place where a plain reading of §8
@@ -437,24 +441,37 @@ would produce the wrong number:
   [Security settings events](https://developers.google.com/workspace/admin/reports/v1/appendix/activity/admin-security-settings),
   both verified 2026-09-13). `Assumption:` `walle_workspace_logs` carries every admin event type
   for the robot actor; which streams Eve's sink and the evidence lake hold is Eve's set's and
-  the platform's (platform HLD §18 item 13). `agg_uncatalogued_admin_events` is a seventeenth
-  aggregate of Wall-E's pack; "sixteen" elsewhere in this set predates it.
+  the platform's (platform HLD §18 item 13).
 - **Metric 1's closed list is exactly ten codes** — `operation_not_allowed`,
   `protected_principal`, `protection_incomplete`, `bad_approval`, `approval_already_used`,
   `approver_is_agent`, `level_bypass`, `control_plane_unavailable`, `selection_not_declared`,
-  `ou_destination_not_allowed` — taken from [03](../wall-e/03-lld.md)'s denial vocabulary and
-  nowhere else. Qualified 2026-09-13: with a super-admin robot, `ou_destination_not_allowed` and
-  `protected_principal` are enforced by the action service's code, not by Google refusing an
-  out-of-role call (platform HLD "What this reverses"); the hard-denied-list and band-B codes
-  Wall-E's `03` gains (platform HLD §18 item 2) join this list when they land, by a
-  `gates.yaml`-class pull request. `protected_principal` from human chat is the control working correctly, is an
-  audit row and nothing else, and counting it would halt the programme for asking a question.
+  `ou_destination_not_allowed` — the first table of
+  [03 § Denial reasons](../wall-e/03-lld.md#denial-reasons), taken from that vocabulary and
+  nowhere else. Metric 1 and `agg_invariant_denials` count these ten. With a super-admin robot,
+  `ou_destination_not_allowed` and `protected_principal` are enforced by the action service's
+  code, not by Google refusing an out-of-role call (platform HLD "What this reverses"). The
+  hard-denied-list codes (`p:self_modification_denied`, `p:escalation_denied`,
+  `p:posture_change_denied`, `p:irreversible_denied`, `p:money_denied`) and the band-B code
+  `a:generic_trigger_not_chat` are already hard invariants in that section's second table
+  (platform HLD §18 item 2), but they are **not** in metric 1's list: each joins it only through a
+  `gates.yaml`-class pull request. `protected_principal` from a human chat
+  request is excluded, as `03` states: it is the control working correctly, and counting it would
+  halt the programme for asking a question.
 - **Metric 4 needs a column that does not exist.** [05](../wall-e/05-autonomy-ladder.md) §8
   says an operation whose desired state already held is a no-op, "recorded and excluded", and
   no column records it. Until `actions.noop BOOL NOT NULL` lands — change 4 in
   [08-open-decisions.md](08-open-decisions.md) — breaker-trip counts carry
   `noop_exclusion_unavailable` and are used in **no verdict**. `error_class` is the wrong home
-  for it: a no-op is not an error.
+  for it: a no-op is not an error. A no-op is an operation whose desired state already held —
+  removing an absent member, deleting an absent licence. The breaker counts **distinct**
+  `error_class` values, not consecutive failures, because counting consecutive failures let
+  anyone suspend and restore a test account twice to force a family off for a week, then
+  permanently.
+- **Metric 9 counts every stream Eve ingests, and band B matches.** The events side is the
+  robot's events in every stream Eve ingests, and an event is matched by a `walle_audit`
+  catalogue row **or** a band-B audit row (platform HLD §13.2, §13.3); only an event matching
+  neither is metric 9b. Whether `walle_workspace_logs` alone covers every stream Eve ingests is
+  the `Assumption:` under metric 9b above.
 - **Metric 7 is not computable before S4**, because Eve does not verify before then. It
   reports `not_applicable` in every earlier stage and is **never** reported as passing. A
   metric that reads green because its subject does not exist is worse than a blank.
@@ -475,8 +492,7 @@ would produce the wrong number:
 
 ### 7.3 The Eve quality pack
 
-Added 2026-09-13 (platform HLD §13.3; the gaps are in `.agent-work/review/mo-both-agents.md`,
-outside the wiki). The pack for Eve as Wall-E's Tier P verifier. Each row is keyed
+Per platform HLD §13.3, this is the pack for Eve as Wall-E's Tier P verifier. Each row is keyed
 `agent_id = eve` and, where it is per cell, on the Wall-E `(family, trigger)` cell the verdict
 was about — the cell the 30-day cross rule of
 [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.6 is written against
@@ -586,47 +602,34 @@ other source.
 
 ### 9.1 Dwell
 
-| Transition | Minimum dwell |
-|---|---|
-| L1 → L2 | 2 weeks |
-| L2 → L3 | 2 weeks |
-| L3 → L4 | 4 weeks |
-| L4 → L5 | 6 weeks |
+The minimum dwell per transition is
+[05 §6](../wall-e/05-autonomy-ladder.md#6-who-may-raise-who-may-lower)'s. The scorecard carries
+`dwell_elapsed`, `dwell_required` and `dwell_satisfied` per cell, computed from
+`ladder_events` ([§16](#16-the-scorecard-row)).
 
 ### 9.2 The stricter reading, and why
 
-[05](../wall-e/05-autonomy-ladder.md) §6 says the dwell clock restarts after any demotion **of
-that family**. [05](../wall-e/05-autonomy-ladder.md) §3 and R3 say each trigger class climbs
-**independently**. The two pull apart when a family is demoted on one trigger while another
-trigger's clock is running: §6 read literally restarts both, R3 read literally restarts
-neither but the demoted one.
-
-**This design takes the stricter reading: a demotion on any trigger restarts dwell for the
-family on every trigger**, and the scorecard names the `ladder_events` row that reset the
-clock, so the decision is visible rather than inferred. The reason is that the thing a
-demotion tells you about is the *playbook and its platform*, which the trigger classes share;
-the independence in R3 is about how autonomy is earned, not about how evidence of a defect is
-scoped. The cost of being wrong in this direction is a slower promotion. The cost of being
-wrong in the other is a cell that climbs on a trigger while the same code is failing on
-another.
+Mo computes the family-wide restart rule of
+[05 §6](../wall-e/05-autonomy-ladder.md#6-who-may-raise-who-may-lower) — a demotion on any
+trigger restarts dwell for the family on every trigger, which resolves §6's "of that family"
+against R3's independent trigger classes — and the scorecard names the `ladder_events` row
+that reset the clock (`dwell_reset_event`), so the reading is visible rather than inferred.
 
 ### 9.3 The ratchet
 
-After **any automatic demotion**, all three of the following before re-raising:
-
-1. **Five business days** at the lower level, on the `Europe/Paris` calendar in
-   `gates.yaml`.
-2. A **root-cause incident note that exists in git** at the path
-   `ladder_events.incident_ref` names — the validator checks the file is there, not that it is
-   good.
-3. A **fresh decision record**.
+The ratchet's three conditions before re-raising after any automatic demotion are
+[05 §6](../wall-e/05-autonomy-ladder.md#6-who-may-raise-who-may-lower)'s. Mo computes them from
+`ladder_events`: the five business days on the `Europe/Paris` calendar in `gates.yaml`; the
+root-cause incident note at the path `ladder_events.incident_ref` names, where the validator
+checks the file is there, not that it is good; and the fresh decision record. The scorecard
+carries the result as `ratchet_state`.
 
 **There is no false-positive exception.** A demotion later judged false does not shorten the
 hold and is not silently absorbed: it sets `review_verdict = false_positive` with a named
 reviewer and a `review_ref`, and Mo publishes a **breaker false-positive rate** from those
 rows. When that rate rises, the finding is about Eve or about the metric, and Mo's pull
 request targets the **metric definition** or opens an Eve finding — never the ladder.
-Qualified 2026-09-13: Mo may now also propose an Eve threshold change — an
+Mo may also propose an Eve threshold change — an
 `eve_threshold_tighten`, or an `eve_threshold_loosen` under its two-reviewer, cooling and
 30-day rules ([04-artefacts-and-proposals.md](04-artefacts-and-proposals.md) §3.6) — and it is
 still never a ladder change. That is
@@ -643,13 +646,11 @@ releases nothing early.
 
 ### 9.4 One notch
 
-- Above L3: **one notch at a time**, with minimum dwell at each level. No skipping.
-- At or below L3: a level may be skipped **only** when the scorecard cites the covering
-  evidence from another trigger class, by fingerprint and sample size. L1 and L2 never
-  execute, so skipping them risks nothing — but the citation is what makes that claim
-  checkable.
-- **A new operation enters at L0 whatever the stage.** "We are at S4, so the new thing is
-  autonomous" has no code path.
+The one-notch rule — no skipping above L3, a skip at or below L3 only on cited covering
+evidence, and a new operation entering at L0 whatever the stage — is R3 of
+[05 §1](../wall-e/05-autonomy-ladder.md#1-the-eight-rules). Mo computes it as
+`one_notch_eligible`, which carries the covering-evidence citation, by fingerprint and sample
+size, whenever a skip at or below L3 is claimed.
 
 ---
 
@@ -918,8 +919,7 @@ grades **at least 40 items a week, not about 20**: eight cells at the floor, plu
 those double-graded for `WRITE_HIGH`, plus adjudication.
 
 That is at least **two hours a week, indefinitely, from a named human who is not the playbook
-owner**, plus a second grader who does not yet exist — at least twice the "one hour a week"
-this design carried while the floor was read as a programme-wide number. It cannot be
+owner**, plus a second grader who does not yet exist. It cannot be
 automated, cannot be sampled more thinly without the cell going `not_ready`, and cannot be
 delegated to a model without destroying the thing it measures.
 
@@ -1025,8 +1025,8 @@ authenticated reviewers at L4 and L5.
 
 ## 16. The `scorecard` row
 
-One row per `(agent_id, family, trigger, fingerprint_sha, as_of_hour)` — `agent_id` added
-2026-09-13, one Mo per platform — in
+One row per `(agent_id, family, trigger, fingerprint_sha, as_of_hour)` — `agent_id` because
+there is one Mo per platform — in
 `${MO_PROJECT}.walle_metrics.scorecard`, snapshotted daily into
 `${MO_PROJECT}.walle_metrics_archive.scorecard_YYYYMMDD` — the dated, citable object a
 decision file points at and an auditor replays against. The citable object is
@@ -1041,7 +1041,7 @@ enum come from the design itself.
 |---|---|---|
 | `as_of` | `DATE` | **The partitioning column** of every table in `walle_metrics`, including this one. The day `as_of_hour` falls in |
 | `as_of_hour` | `TIMESTAMP` | The hour the row was computed for; the `MERGE` key with `cell` and `fingerprint_sha` |
-| `agent_id` | `STRING` | Added 2026-09-13. The register's immutable id (platform `audit.schema`); part of the `MERGE` key and of every cell, so two agents' packs never share a row |
+| `agent_id` | `STRING` | The register's immutable id (platform `audit.schema`); part of the `MERGE` key and of every cell, so two agents' packs never share a row |
 | `family`, `trigger` | `STRING` | The cell, per R1 |
 | `fingerprint_sha` | `STRING` | [§11.1](#111-the-fingerprint); `partial_fingerprint` flag if the four missing columns have not landed |
 | `current_level`, `target_level` | `STRING` | Deployed level from `ladder_events`; what `ladder.yaml` says it should be |
@@ -1109,7 +1109,7 @@ is a `gates.yaml`-class pull request.
 | `reliability_below_gate` ◇ | Run reliability below 97 % |
 | `eve_latency_breach` ◇ | Eve post-hoc latency above 60 min p99, from S4 only |
 | `audit_incomplete` ◇ | Audit completeness below 100 % |
-| `uncatalogued_admin_event_present` ◇ (added 2026-09-13) | Metric 9b above zero in the window |
+| `uncatalogued_admin_event_present` ◇ | Metric 9b above zero in the window |
 | `stale_evidence` | Any source outside its freshness bound |
 | `window_clamped` ◇ | The window was clamped to the retention floor |
 | `fingerprint_reset` ◇ | The sample reset because the fingerprint changed; carries old and new and the surviving `n` |
@@ -1126,16 +1126,9 @@ back, or pushed forward, by how long a human took to answer.
 
 ## 17. What this contract does not decide
 
-| Open | Where it bites | Provisional decision |
-|---|---|---|
-| The retention floor (decision 17) | Every window clamp in [§12](#12-freshness-bounds-and-window-clamping) | 46 |
-| Strict fingerprint scoping versus a material subset | [§11.2](#112-the-scoping-rule); may make L4 unreachable on the **promotion** side. The demotion denominator is unscoped either way | 43 |
-| The pilot OU account count (decision 5) | The floor of 35 against a per-cell blind rate of 5 decided items a week. At that rate the sample reaches the floor in **seven weeks**, so the promotion window must accumulate rather than expire — which makes decision 17's `retention_floor_days` and decision 31's off-project copy **hard prerequisites for L4**, not merely a clamp on it. The copy's project is not `MO_PROJECT`, and Mo's S4 read of it is one more cross-project dataset-level `READER`. Neither number is filled in here | 47, with 46 |
-| Who the second grader is, and when | [§10](#10-grading-rules); blocks `WRITE_HIGH` at L2 from S2 | 45 |
-| The `unsure` cap of `0.10` and the `Europe/Paris` business-day calendar | [§2](#2-configmetricsgatesyaml--the-full-parameter-list) | 51 |
-| Minimum reporting cell size 5, and who may read `walle_metrics` | [§14](#14-the-suppression-rule) | 44 |
-
-Numbering is **provisional**: [09-open-decisions.md](../wall-e/09-open-decisions.md) currently
-ends at decision 41, and 42–52 are claimed by [`../project-topology.md`](../project-topology.md)
-§8; platform decisions continue as P1.. (qualified 2026-09-13). See
-[08-open-decisions.md](08-open-decisions.md).
+The open decisions this contract depends on — the retention floor, strict fingerprint scoping,
+the pilot OU account count, the second grader, the `unsure` cap and business calendar, and the
+minimum reporting cell size — are rows M-2 to M-6 and M-10 of
+[08-open-decisions.md § The eleven open decisions](08-open-decisions.md#the-eleven-open-decisions),
+with their numbering explained in
+[§ Numbering](08-open-decisions.md#numbering-and-where-an-answer-is-recorded).

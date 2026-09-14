@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-13
+- Last reviewed: 2026-09-14
 - Maturity: review, complete 2026-09-13. Nothing is built. This page opens the
   `platform/agentic-platform/` document set for the secure agentic platform the objective of
   2026-09-13 describes. The three agent sets ([wall-e](../wall-e/README.md),
@@ -68,7 +68,8 @@ Standing constraints that the objective does not override and every lens confirm
 force: no domain-wide delegation; the language model holds no credential and cannot approve;
 the action service is the only credential holder; humans raise autonomy and machines lower it;
 no secrets in the wiki; inferred facts carry `Assumption:`; dates are absolute; unknowns are
-*tbd*.
+*tbd*. The platform's current statement of its standing constraints is
+[01-hld.md Status](01-hld.md#status).
 
 ---
 
@@ -209,43 +210,15 @@ limited to an organisational unit or subset by privilege.
   never-list enforced in code; the account's privilege is the fact most likely to be held
   against it.
 
-**What must compensate.** The lenses converge on one set, all of which become preconditions of
-the grant rather than "before S1" items:
+The platform's own statement of what the reversal costs is
+[01-hld.md "What this reverses and what it costs"](01-hld.md#what-this-reverses-and-what-it-costs).
 
-- **Lanes, not breadth.** Band A: the typed catalogue on the ladder, the only band that can ever
-  be autonomous. Band B: a generic Admin SDK lane validated against pinned Discovery documents,
-  T0 only, permanently L3 with a two-person rule for tier SUPER, pre-state by matching `get`,
-  treated as irreversible, never in a playbook. Band C: console-only work (DWD, 2SV enforcement,
-  session control, API controls, billing, data regions — all read-only in the Cloud Identity
-  Policy API) served by a handoff-and-verify lane, with an explicit prohibition on browser or
-  computer-use automation of the Admin console under the robot's session.
-- **Two lists.** Hard-denied in every lane: anything targeting the robot, `eve@`, Eve's role,
-  the control groups, the two OAuth clients, the activity rules, audit-log sharing, the
-  organisation sinks; `users.makeAdmin` and any Super Admin role assignment; deletion of admins;
-  DWD. Everything else on the old never-list reachable only through band B at tier SUPER with a
-  human super admin as requester and a different human super admin as approver.
-- **Two credentials.** A narrow OAuth client for the catalogue service (keeping a
-  Google-enforced ceiling for anything unattended) and a broad client readable only by a
-  separate band-B service — forcing decision 18 (control-plane split) to now. `cloud-platform`
-  never consented on either, checked in CI.
-- **Detection as the primary control.** Eve's reconciliation of every robot-attributed event
-  in every ingested stream against `walle_audit` at minute latency; a daily super-admin roster
-  check from Eve's own credential; an evidence-flow heartbeat; severity-1 detections hosted
-  outside Wall-E's project, owned by the SOC, on role changes, security-setting changes,
-  audit-sharing changes, any login, and any organisation-level `SetIamPolicy` by the robot.
-- **Account hygiene Google now decides for you.** Hardware-key-only 2SV (Google-enforced on
-  admins); super-admin self-recovery Off tenant-wide with a drift check; the robot never the
-  only or the recovery super admin; at least two human super admins; the robot on the committed
-  floor list; a K6 kill switch (a human super admin removes Super Admin from the robot).
-- **The deferred controls, no longer deferred.** A perimeter model for the agents folder
-  (decision 21 and E-19 re-opened as one decision); the second deploy reviewer (weakness 12);
-  Privileged Access Manager on the deploy grant; a second human outside the Wall-E administration
-  line as owner of `eve-owners@` and recipient of reports about the administrator.
-- **A permanent ceiling.** No super-admin-class operation is ever autonomous, stated in the
-  same sentence as the `WRITE_HIGH` ceiling.
-- **A signed record.** A dated decision "Wall-E holds Super Admin" superseding decision 26 for
-  Wall-E, re-ratifying decision 4 with the two lists, recording the new residual in the
-  accepted-risks table, and entered as row one of the TISAX risk register.
+**What must compensate.** The review found one converging set — lanes not breadth, two lists,
+two credentials, detection as the primary control, account hygiene, the deferred controls no
+longer deferred, a permanent ceiling and a signed record — all preconditions of the grant rather
+than "before S1" items; the set as the platform adopted it is
+[01-hld.md §13.1](01-hld.md#131-wall-e--the-super-admin-singleton-in-tier-p-sa), and the
+checklist the gate reads is [11-tisax.md §6.3](11-tisax.md#63-compensations-as-preconditions--the-checklist-the-gate-reads).
 
 ### 3.2 Other reversals the lenses found
 
@@ -389,376 +362,197 @@ gap the first decides and the others implement.
 
 Counts: 111 gaps — 24 blocking, 63 major, 24 minor. By lens: platform-security 17, walle-super-admin 12, eve-independence 11, mo-both-agents 8, scale-and-agi 11, eu-ai-act 13, tisax 16, monitoring 15, consistency 8.
 
+### 4.1 Where the blocking and major gaps are answered
+
+A trace kept beside the register, not a finding of this review. Each row is a blocking or major
+gap above that no page 02–11 cites by id, plus the monitoring gaps MON-06 to MON-11 that page
+07's Status cites, kept here for their owner and gate. It gives the section that answers the gap
+— the detailed page first where one owns the answer, then the HLD section that summarises it —
+and, where the answer is an agent-set edit, the owner and gate the propagation stage carries
+([12-open-decisions.md](12-open-decisions.md) P143). Every other gap cited by id on pages 02–11
+is traced on the citing page; the gaps whose substance the HLD answers without citing them are
+listed in
+[01-hld.md §0.6](01-hld.md#06-traceability-the-objectives-sixteen-requirements-and-the-register-ids-not-cited-elsewhere).
+
+| Gap | Severity | Answered in | Owner of what remains | Gate |
+|---|---|---|---|---|
+| WSA-01 | blocking | HLD §13.1; P33 (decided) and its decision file | agent owner (Wall-E), §18 items 1, 5, 7 (P143) | the super-admin grant |
+| WSA-02 | blocking | HLD §13.1, §7; [04](04-identity-and-privileged-access.md) §8.5 (two-person rule) | agent owner (Wall-E), §18 items 1, 4 (P143) | the super-admin grant |
+| WSA-03 | blocking | HLD §13.1 (bands A/B/C); [10](10-eu-ai-act.md) §3.1 (P125) | agent owner (Wall-E), §18 item 2 (P143) | the super-admin grant |
+| WSA-04 | blocking | HLD §13.1 compensation 2; P29 (two lists, open — owner signs) | agent owner (Wall-E), §18 item 2; owner signature P29 | the super-admin grant |
+| WSA-05 | major | HLD §13.1 compensation 3; [02](02-landing-zone-and-tiers.md) PSA3; [09](09-supply-chain-secrets-recovery.md) §2.4 class D | agent owner (Wall-E), §18 item 1 (P143) | the super-admin grant |
+| WSA-06 | major | HLD §13.1 compensation 6; [04](04-identity-and-privileged-access.md) §8.1–§8.2 (roster, session controls); [02](02-landing-zone-and-tiers.md) P2 | agent owner (Wall-E), §18 item 1 (P143) | the super-admin grant |
+| WSA-07 | major | HLD §13.1; [07](07-monitoring-detection-incident-response.md) §6.2, RB-02 | agent owner (Wall-E), §18 items 4, 5; topology §1.2 via item 25 | the super-admin grant |
+| WSA-08 | major | HLD §13.1 compensation 5; [04](04-identity-and-privileged-access.md) §8.1 (roster); Eve's verifier rows | Eve owner, §18 item 12 (P143) | the super-admin grant |
+| WSA-09 | major | HLD §13.1 | agent owner (Wall-E), §18 item 2 (P143) | the super-admin grant |
+| WSA-10 | major | HLD §12; [02](02-landing-zone-and-tiers.md) PSA5 | agent owner (Wall-E), §18 item 3 (P143) | the super-admin grant |
+| EVE-01 | blocking | HLD §13.2; P14 (witness organisation); [08](08-data-logging-retention-sovereignty.md) DL-7.6; [07](07-monitoring-detection-incident-response.md) §7 | Eve owner, §18 item 11 (P143); IT security for P14 | the super-admin grant |
+| EVE-02 | blocking | [08](08-data-logging-retention-sovereignty.md) §3, §5.3 (P104); [07](07-monitoring-detection-incident-response.md) §1.1 F2 (edition-conditional) | Eve owner, §18 item 13 (P143) | the super-admin grant |
+| EVE-03 | blocking | [07](07-monitoring-detection-incident-response.md) §6 (P96) | Eve owner, §18 item 14 (P143); IT security owns rule content | the super-admin grant |
+| EVE-04 | major | HLD §13.2; P34; [10](10-eu-ai-act.md) §3.2–§3.3 | Eve owner, §18 item 11 (P143) | the super-admin grant |
+| EVE-05 | major | [07](07-monitoring-detection-incident-response.md) §8 (P98) | Eve owner, §18 item 15 (P143) | the super-admin grant |
+| EVE-06 | major | HLD §0.3; [07](07-monitoring-detection-incident-response.md) §8 (P98) | Eve owner (P143); ISMS names the recipient | the super-admin grant |
+| EVE-07 | major | HLD §13.1 compensation 7; [04](04-identity-and-privileged-access.md) §7.2, §8 | agent owner (Wall-E) and Eve owner (P143) | the super-admin grant |
+| EVE-08 | major | HLD §13.2 | Eve owner, §18 item 16 (P143) | the super-admin grant |
+| EVE-09 | major | HLD §13.2 | Eve owner, §18 item 16 (P143) | the super-admin grant |
+| MO-01 | blocking | HLD §13.3 | Mo owner and agent owner (Wall-E), §18 item 6 (P143) | Wall-E's Stage 1 |
+| MO-02 | major | HLD §13.2–§13.3; P30 | Mo owner, §18 item 21 (P143) | Wall-E's Stage 1 |
+| MO-03 | major | HLD §13.3; P30 | Mo owner, §18 items 19–20; Eve owner for the grant (P143) | Wall-E's Stage 1 |
+| MO-04 | major | HLD §13.3 | Mo owner, §18 item 22 (P143) | Wall-E's Stage 1 |
+| MO-05 | major | HLD §12, §13.3; [10](10-eu-ai-act.md) §4.4 | Mo owner, §18 items 19, 21 (P143) | Wall-E's Stage 1 |
+| AIA-06 | major | [10](10-eu-ai-act.md) §4.7 (P128) | agent owner per agent; AI compliance owner | Wall-E's Stage 1 |
+| AIA-07 | major | [10](10-eu-ai-act.md) §4.10 (P129) | HR/communications, DPO, legal | Wall-E's Stage 1 |
+| AIA-09 | major | [10](10-eu-ai-act.md) §4.2 | agent owner; security reviewer signs | Wall-E's Stage 1 |
+| TIS-10 | major | [11](11-tisax.md) §3 (P134) | ISMS; DPO | the TISAX assessment order |
+| MON-06 | major | [07](07-monitoring-detection-incident-response.md) §3 (P94); summarised in HLD §7.1 | organisation IT security | Tier C |
+| MON-07 | major | [07](07-monitoring-detection-incident-response.md) §5 | platform owner | Tier R |
+| MON-08 | major | [07](07-monitoring-detection-incident-response.md) §6 (P96) | IT security (rule content); platform owner | Tier W |
+| MON-09 | major | [07](07-monitoring-detection-incident-response.md) §14 (P103) | detection desk; platform owner | Tier W |
+| MON-10 | major | [07](07-monitoring-detection-incident-response.md) §13 (P102) | IT security | the super-admin grant |
+| MON-11 | major | [10](10-eu-ai-act.md) §5; [08](08-data-logging-retention-sovereignty.md) §5.5; summarised in HLD §7.5, §14.3 | AI compliance owner; platform owner | Tier W |
+| CON-01 | blocking | HLD §13.1; [04](04-identity-and-privileged-access.md) §8 | agent owner (Wall-E), §18 item 1 (P143) | the super-admin grant |
+| CON-02 | blocking | HLD §13.1 (bands); P125 | agent owner (Wall-E), §18 item 2 (P143) | the super-admin grant |
+| CON-03 | major | HLD §13.2; P34; P19 | Eve owner, §18 item 11 (P143); legal for P19 | the `eve-advisor` build |
+| CON-04 | major | HLD §13.3; P30 | Mo owner, §18 item 21 (P143) | Wall-E's Stage 1 |
+| CON-05 | major | [02](02-landing-zone-and-tiers.md) §8 (P47); [04](04-identity-and-privileged-access.md), [06](06-gateways-model-armor-perimeter.md) §5 | platform owner, §18 items 8, 25 (P143) | the documentation reconciliation before the S1 tag (P47, P130) |
+| CON-07 | major | [12](12-open-decisions.md) §8; HLD §18 | the three agent owners (P143) | Wall-E's Stage 1 |
+| CON-08 | major | HLD §14 (both regimes named); [10](10-eu-ai-act.md) §8 (the agent-set places still to change) | AI compliance owner; agent owners, §18 items 5, 12 (P143) | Wall-E's Stage 1 |
+
 ---
 
 ## 5. What the platform HLD must decide
 
-The nine lenses' `hld_must_decide` lists, consolidated and deduplicated. Each item is a question
-the platform HLD answers, with the options the lenses put on the table; where a lens made a
-recommendation it is named as such, not as the answer. The lens ids in brackets point at the
-gap register.
+The nine lenses' `hld_must_decide` lists, consolidated and deduplicated into 82 questions. Each
+question's options and the lenses' recommendations are the fixes in the §4 rows it cites; the
+answers are the register rows of [12-open-decisions.md](12-open-decisions.md) (one screen in
+[§0](12-open-decisions.md#0-the-register-in-one-screen)), argued on the page each row names.
 
 ### A. Platform shape
 
-1. **Which tier model?** Options: T0 classical (Gemini Enterprise no-code and data-store
-   agents, user's own permissions, console Model Armor) / T1 read tools (Agent Runtime, Agent
-   Identity, default-deny gateway, no write path) / T2 write agents (action service, catalogue,
-   ladder, audit schema, verifier) / T3 privileged (Wall-E's full set plus a Workspace
-   credential), with the super-admin variant a singleton T3 sub-class in its own folder with its
-   own kill plane / TX AGI-class; or one template for every agent (rejected by scale-and-agi as
-   disproportionate for T0 and insufficient for TX). Per tier: which controls are
-   platform-enforced (org policy, PAB, deny, gateway) and which are agent code; which monitoring
-   baseline tier; and the rule that a super-admin-holding agent sits in the highest tier with no
-   deferred controls. [SCA-07, PS-17, MON-12]
-2. **What is the landing zone?** Folder tree (shared-services, agents-prod, agents-nonprod, tier
-   folders); one agent per project as the default (Google-forced by the project-wide Discovery
-   Engine service agent and one gateway per project-region); factory tooling (Cloud Foundation
-   Fabric FAST project factory, bespoke Terraform modules `agent-project` /
-   `verifier-project` / `improver-project`, or Config Controller — *tbd*); the CI identity via
-   Workload Identity Federation; the nonprod environment split; naming and labelling standard;
-   budgets per tier. [PS-01, SCA-02]
-3. **What lives in `platform-core` / shared-services and what stays per agent?** Shared
-   candidates: inventory of record, evidence lake with a versioned platform audit schema, one
-   folder-scoped aggregated sink per log family, shared Model Armor template pipeline, one shared
-   IAP approval surface, validator custodian, ladder-state page, central logging project, CI and
-   Artifact Registry. Per agent: engine, gateway binding, action service, secrets, Firestore
-   control plane, verifier keys. [SCA-03, PS-16]
-4. **Registry topology and the inventory of record.** Shared registry project versus per-agent
-   registries (project-level-only IAM makes the shared form the inventory-shaped one; the
-   topology's "no foreign project-level role" prefers per-project); mandatory card metadata
-   (owner, tier, risk class, data class, autonomy ceiling, model pin, verifier, EU AI Act class,
-   TISAX asset class, gateway id, principal) with a CI schema check; SCC AI Protection's asset
-   inventory and Cloud Asset Inventory as the independent cross-check with a daily reconciliation
-   job; the TISAX agent register from which registry entries are generated; the EU AI Act
-   publication gate (no agent reaches Gemini Enterprise without a classification entry). Keep
-   "registration never authorises". [PS-03, SCA-04, TIS-05, AIA-10]
-5. **Which organisation policies at the folder, and which custom constraints are enforceable?**
-   Baseline list (resource locations EU, SA-key constraints, default-SA grants off, allowed
-   policy member domains, uniform bucket access, Cloud Run ingress and VPC egress, Binary
-   Authorization) plus custom constraints: gateway required and allow-listed on every
-   `ReasoningEngine` (CEL verified), `identityType` if constrainable (verify), `AuthProvider`
-   creation denied outside a named tier, `binaryAuthorization` on Cloud Run. A spike records which
-   resource types support which. [PS-05, SCA-05]
-6. **What the Gemini Enterprise security baseline page carries.** App location and conversation
-   retention; identity provider and SSO; who may create agents (IAM gating of Agent Designer,
-   Workflow Builder, custom registration); connector and action allow-lists; data-store
-   residency; console Model Armor on; **whether the tenant app itself is bound to an egress
-   Agent Gateway** (the largest single deferred decision for "secure all agents through it");
-   the app project under the platform folder; the publishing model for agents from other
-   projects (decision 42 generalised); app audit logs into the central logging project.
-   [PS-04, PS-06, SCA-03]
-7. **The platform autonomy contract.** An `agent-manifest.yaml` per agent (families, risk tier,
-   reversibility, inverse, predicate type, taint fields, trigger classes, ceilings);
-   contract-versioned `ladder.schema` and `audit.schema` implemented by every action service; one
-   platform validator custodian; ratchet, dwell, Wilson gates and severity table as platform
-   defaults agents may only tighten; Eve and Mo generalised to the contract, with the weakening
-   of Eve's "second implementation" property written down. [SCA-06, MO-05]
-8. **The fleet-wide peer rule.** Any caller over an agent protocol is principal type `agent`, L0
-   for every write, tainted on receipt; `iap.egressor` bindings limited to manifest-named
-   registry entries. [SCA-09]
-9. **Which of chapters 11, 12 and 13 are promoted to platform pages**, and what
-   `project-topology.md` becomes (a template keyed on `<agent>_PROJECT`, one owner group, one
-   budget, the §3 grant shapes) so decision 52 reads "per agent". [CON-05, SCA-01]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 1 | Which tier model? | SCA-07, PS-17, MON-12 | P1, P43; HLD §0.4, §11 |
+| 2 | What is the landing zone? | PS-01, SCA-02 | P2 (closed by P35), P35–P40 |
+| 3 | What lives in `platform-core` and what stays per agent? | SCA-03, PS-16 | P45; the shared IAP approval surface refused by P46 |
+| 4 | Registry topology and the inventory of record | PS-03, SCA-04, TIS-05, AIA-10 | P71–P75 |
+| 5 | Which organisation policies at the folder, and which custom constraints are enforceable? | PS-05, SCA-05 | P4, P41, P42, P44 |
+| 6 | What the Gemini Enterprise security baseline page carries | PS-04, PS-06, SCA-03 | P6, P48–P59 |
+| 7 | The platform autonomy contract | SCA-06, MO-05 | P76, P77, P79 |
+| 8 | The fleet-wide peer rule | SCA-09 | P78 |
+| 9 | Which of chapters 11, 12 and 13 are promoted, and what `project-topology.md` becomes | CON-05, SCA-01 | P47 |
 
 ### B. Wall-E as a super admin
 
-10. **Which super-admin actions may Wall-E reach at all?** The two-list split: hard-denied in
-    every lane (self, Eve, escalation, audit-silencing rows) versus tier-SUPER two-person rows.
-    Signed by the owner as decision 4 re-ratified. [WSA-04, CON-02]
-11. **What does "any super-admin action" mean mechanically?** Options: a typed catalogue that
-    grows; a generic Discovery-validated Admin SDK lane behind the same policy chain (band B,
-    re-arguing 14 C35); a handoff-and-verify lane for console-only work (band C). Recommended by
-    walle-super-admin: all three as bands. Whether "any" is read literally for band C, and an
-    explicit prohibition on browser or computer-use automation of the Admin console under the
-    robot's session. [WSA-03, CON-02]
-12. **One credential or two?** A narrow catalogue OAuth client plus a broad band-B client on the
-    same account, read by two separate services — which forces decision 18 (control-plane split)
-    to now. `cloud-platform` never consented, checked in CI. [WSA-05]
-13. **The requester rule for the super-admin lane.** Requester must be a human super admin,
-    approver a different human super admin, checked live and fail-closed (closes decision 28 for
-    that lane; band A unchanged). [WSA-09]
-14. **May any super-admin-class operation ever be autonomous?** Recommended: never, stated as a
-    permanent ceiling beside the `WRITE_HIGH` one; SUPER and WRITE-generic rows added to the
-    ceilings table; CI asserts band B is never in `playbook.uses`. [WSA-10]
-15. **What replaces the lost Workspace-side gate?** Scopes as the only Google-enforced ceiling
-    plus a Google-written detective control: Eve's minute-latency reconciliation, daily roster
-    check, evidence heartbeat, and SOC-hosted severity-1 detections outside Wall-E's project.
-    A plain statement that "Google refuses at its end" is no longer a Stage-0 property.
-    [WSA-02, WSA-08, MON-02, CON-01]
-16. **The robot's place on the super-admin roster.** Never the only one, never a recovery super
-    admin, at least two human super admins, self-recovery Off tenant-wide with a drift check,
-    named custodians for the two hardware keys, K6 (a human removes Super Admin from the
-    robot). [WSA-06, WSA-11]
-17. **Acceptance of the new residual.** A leaked token or an interactive login is a tenant
-    compromise and a path to the GCP organisation; the perimeter is custody plus detection;
-    recorded in the accepted-risks table with the owner's signature, as a TISAX deviation record
-    signed by the security reviewer, and as row one of the risk register. `walle@` never holds an
-    organisation-level IAM role, drift-checked. [WSA-07, TIS-02, MON-02]
-18. **Decision 26's fate.** Superseded for Wall-E (a service account cannot be super admin);
-    still open for Eve as E-16, where a service account holding the read-only role would remove
-    Eve's password, key and consent. [WSA-01, CON-07]
-19. **Is the catalogue the declared intended purpose (EU AI Act)?** Recommended by eu-ai-act:
-    yes — Super Admin is a credential fact, and "Never in the catalogue" is the Art. 6(3)
-    boundary enforced in code with CI ownership outside the agent repo. The alternative is to
-    declare "any admin action" as the purpose and plan full Chapter III compliance by
-    2027-12-02. [AIA-02]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 10 | Which super-admin actions may Wall-E reach at all? | WSA-04, CON-02 | P29, P33 |
+| 11 | What does "any super-admin action" mean mechanically? | WSA-03, CON-02 | P28, P125; HLD §13.1 (bands A/B/C) |
+| 12 | One credential or two? | WSA-05 | HLD §13.1 item 3 |
+| 13 | The requester rule for the super-admin lane | WSA-09 | HLD §13.1 item 4 |
+| 14 | May any super-admin-class operation ever be autonomous? | WSA-10 | HLD §13.1 item 9; P77 |
+| 15 | What replaces the lost Workspace-side gate? | WSA-02, WSA-08, MON-02, CON-01 | HLD §13.1 items 5 and 10; P96 |
+| 16 | The robot's place on the super-admin roster | WSA-06, WSA-11 | P66, P68, P69; HLD §13.1 items 6–7 (self-recovery set Off at the top OU) |
+| 17 | Acceptance of the new residual | WSA-07, TIS-02, MON-02 | P33, P136, P140 |
+| 18 | Decision 26's fate | WSA-01, CON-07 | P33 (E-16 stays open for Eve) |
+| 19 | Is the catalogue the declared intended purpose (EU AI Act)? | AIA-02 | P28, P125 |
 
 ### C. Eve
 
-20. **Where does Eve's trust root sit** relative to the Cloud Identity tenant Wall-E
-    super-administers? Options: the same organisation with independence recorded as detective
-    only; or a resource the tenant's super admins cannot reach (a separate organisation under a
-    separate Cloud Identity, or a non-tenant Org Admin identity via workforce federation). Verify
-    the super admin's standing recovery rights on the GCP organisation (`Assumption:` today).
-    Reopen E-2 and decision 52 as blocking for the grant. [EVE-01]
-21. **Is Eve split into a deterministic control path and a model-permitted reporting path?**
-    Decision 34 kept for approve, halt, demote, veto; `eve-advisor` built in a fifth project with
-    no signer, no invoker, no secret access, one-directional (can only raise a refusal); its
-    write set (`eve.incidents`, `eve.advice`); whether and at which severity it may page
-    (recommended: sev 2 only). Recorded as a dated decision reopening the settled row.
-    [EVE-04, CON-03]
-22. **Eve's evidence perimeter.** All six Cloud Logging Workspace streams; Reports API polling by
-    actor across applications; the Workspace BigQuery export into Eve's trust root; an absence
-    alarm on Google's feed to Eve; the declared list of super-admin actions no stream records.
-    [EVE-02]
-23. **The detection catalogue.** A versioned, human-merged rule set over all ingested streams
-    (privilege/role/DWD/2SV/audit-setting changes, out-of-family writes, baselines,
-    prompt-to-action divergence), deterministic, in the reconciler limb; plus the misbehaviour
-    taxonomy for a super-admin Wall-E and its detector coverage map, published by Mo as the
-    Eve-improvement backlog. [EVE-03, MO-02]
-24. **The reporting contract.** Out-of-band channels for severity 1 and 2 (from Eve's trust
-    root: SMS, mobile app, PagerDuty/webhook), severity-to-channel mapping, acknowledgement and
-    escalation timeouts, an Eve-owned incident record (`eve.incidents`) with evidence pointers
-    and narrative, `eve.pages` extended with delivery and acknowledgement, `oncall.yaml`
-    extended with a secondary outside the Wall-E line. Recorded against decision 14. [EVE-05]
-25. **A second human outside the Wall-E administration line** as a prerequisite to the
-    super-admin grant: owner of `eve-owners@`, required reviewer on `eve/config`, parallel
-    recipient of every sev 1/2 page, sole recipient of reports about the administrator's own
-    actions; Eve reports on human prompts as well as robot actions. [EVE-06, TIS-03]
-26. **The break-glass path to stop the account (K5)** when the action service is bypassed.
-    Options: human-only with a two-person rota and paged runbook; or a separate single-privilege
-    kill-switch holder (not Eve, not a model) in Eve's trust root, invoked by sev-1 rules; and
-    regardless, context-aware access binding the robot account to the action service's egress.
-    Who can pull K5 out of hours. [EVE-07, MON-03]
-27. **The staging re-cut.** Eve's observe-and-report layer live and drilled before Super Admin
-    is granted (the grant becomes a gate with its own checklist); the signing gate layer
-    unchanged at S3/S4. [EVE-09]
-28. **Eve's complete Workspace read privilege and scope set**, fixed before the irreversible
-    one-sitting consent (E-16), covering domain and customer settings, security and API-controls
-    state, and the Reports API applications a super admin acts in; no content scopes. [EVE-08]
-29. **Eve's model-free property on the authority path as a compliance invariant** (outside the
-    AI-system definition, usable as an Art. 14 oversight measure). [AIA-11]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 20 | Where does Eve's trust root sit? | EVE-01 | P14, P15; HLD §13.2 |
+| 21 | Is Eve split into a deterministic control path and a model-permitted reporting path? | EVE-04, CON-03 | P34, P19, P123 |
+| 22 | Eve's evidence perimeter | EVE-02 | P17, P104; HLD §13.2 |
+| 23 | The detection catalogue | EVE-03, MO-02 | P96, P21 |
+| 24 | The reporting contract | EVE-05 | P98, P99, P100 |
+| 25 | A second human outside the Wall-E administration line | EVE-06, TIS-03 | P98, P137; HLD §13.2 |
+| 26 | The break-glass path to stop the account (K5) | EVE-07, MON-03 | P16, P7; HLD §13.1 item 7 |
+| 27 | The staging re-cut | EVE-09 | P136; HLD §13.2; [11](11-tisax.md) §6.3 |
+| 28 | Eve's complete Workspace read privilege and scope set | EVE-08 | [../eve/02-identity-and-auth.md "Eve's Workspace robot"](../eve/02-identity-and-auth.md#eves-workspace-robot); [../eve/03-lld.md §13](../eve/03-lld.md#13-the-evidence-perimeter-for-a-super-admin-wall-e); E-16 (register §8) |
+| 29 | Eve's model-free property on the authority path as a compliance invariant | AIA-11 | P132; [10](10-eu-ai-act.md) §3.2 |
 
 ### D. Mo
 
-30. **Does Mo's remit formally include Eve?** Amend `wall-e/08`'s responsibility table and
-    "What Mo must do" before Mo's Stage 0; reconcile changes 9 and 10 and rule 3 ("Eve can
-    lower; Mo can only propose") in the same edit. [MO-01, MO-07, CON-04]
-31. **Which Eve tables Mo reads, in which Eve dataset, from which stage**, and the topology rows
-    for dataset-level `READER` grants from `EVE_PROJECT` to `mo-metrics@` made by Eve's runbook;
-    never `grades_blind` or `review_queue_blind`. [MO-01, CON-04]
-32. **Where human grades live.** `walle_audit.grades` for Wall-E's plans and a separate
-    `grades_eve` for Eve's verdicts written by the approval surface rather than `eve-console`;
-    who draws the blind sample (`mo/08` reopen row (b)). [MO-02]
-33. **Who computes Eve's quality metrics** (false-refusal rate, page budget, time-to-report):
-    Mo, Eve, or both with a published divergence; whether Eve's automatic drop to advisory keeps
-    reading its own number. [MO-02]
-34. **Does the validator custodian get a dataset-level `READER` on Eve's quality dataset** so
-    Eve-targeting evidence blocks are recomputable? Until then, Eve proposals are advisory
-    `incident_note` only. [MO-03]
-35. **The closed Eve proposal type set and Eve path allowlist.** Tighten free (one reviewer);
-    loosen gated (full evidence, two reviewers including the decision-37 security reviewer,
-    decision record, five-business-day cooling); seeded-fault additions; never `predicates/`,
-    `ceilings.py`, `reasons.yaml`, `oncall.yaml` or `eve_authority`; a validator-enforced 30-day
-    rule between a Wall-E promote and an Eve loosening on the same cell; the source rule per
-    subject; Eve's second reviewer neither the ladder owner nor Mo's CI operator. [MO-04, EVE-11]
-36. **New Eve tables.** `eve.seeded_fault_runs` on a schedule and on every `eve_config_version`
-    change; acknowledgement columns on `eve.pages`. [MO-02]
-37. **Does the metrics contract become a platform schema keyed on `agent_id`** with per-agent
-    metric packs and agent tiers (autonomous with grading, classical without), and one Mo per
-    platform rather than per agent, with agent-neutral dataset and bucket names before Stage 0?
-    [MO-05, SCA-08]
-38. **The per-tier human cost of measurement at hundreds of agents**, stated as a number, and
-    the EU AI Act Art. 72 post-market monitoring plan as a Mo artefact per high-risk system.
-    [MO-05, MON-11]
-39. **Do Eve v0 and Mo's T0 both survive as a differential check** rather than one being cut?
-    [MO-06]
-40. **Whether Mo produces Wall-E-scoped SOC metrics**, and who produces the platform-wide ones.
-    [MON-09]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 30 | Does Mo's remit formally include Eve? | MO-01, MO-07, CON-04 | HLD §13.3; P143 |
+| 31 | Which Eve tables Mo reads, in which dataset, from which stage | MO-01, CON-04 | P30; HLD §13.3 |
+| 32 | Where human grades live | MO-02 | [../mo/03-metrics-contract.md §7.3](../mo/03-metrics-contract.md#73-the-eve-quality-pack); `grades_eve` in [../eve/03-lld.md §8](../eve/03-lld.md#8-the-data-plane); HLD §13.3 |
+| 33 | Who computes Eve's quality metrics | MO-02 | HLD §13.3 |
+| 34 | Does the validator custodian get `READER` on Eve's quality dataset? | MO-03 | P30 |
+| 35 | The closed Eve proposal type set and Eve path allowlist | MO-04, EVE-11 | HLD §13.3 |
+| 36 | New Eve tables | MO-02 | [../eve/03-lld.md §8–§9](../eve/03-lld.md#8-the-data-plane) (`eve_quality`, `grades_eve`, `seeded_fault_runs`); [../mo/03-metrics-contract.md §7.3](../mo/03-metrics-contract.md#73-the-eve-quality-pack) |
+| 37 | Does the metrics contract become a platform schema keyed on `agent_id`, with one Mo per platform? | MO-05, SCA-08 | P25; HLD §12, §13.3 |
+| 38 | The per-tier human cost of measurement, and the Art. 72 plan as a Mo artefact | MO-05, MON-11 | P25; [10](10-eu-ai-act.md) §4.4 |
+| 39 | Do Eve v0 and Mo's T0 both survive as a differential check? | MO-06 | [../mo/01-hld.md "Components"](../mo/01-hld.md#components) (T0 row, `metric_divergence`); [../mo/03-metrics-contract.md §6](../mo/03-metrics-contract.md#6-assertion-queries) A11 and [§7.3](../mo/03-metrics-contract.md#73-the-eve-quality-pack) |
+| 40 | Whether Mo produces Wall-E-scoped SOC metrics, and who produces the platform-wide ones | MON-09 | P103 |
 
 ### E. Gateway, Model Armor, perimeter
 
-41. **The gateway rule.** Every engine bound to an egress gateway at creation; ingress with
-    fail-closed Model Armor for machine-called engines; the gateway-versus-Agent-Platform-Threat-
-    Detection trade-off per risk tier (mutually exclusive on a bound engine) and the default for
-    ordinary agents; the gateway plus Model Armor as a platform availability domain with an SLO.
-    [PS-06, SCA-05, MON-06]
-42. **Model Armor.** An organisation-level floor owned by IT security, per-tier folder floors, a
-    committed template standard per tier including Sensitive Data Protection (which floors do
-    not check), alert on floor and template writes, console setting on tenant-wide. [PS-07]
-43. **The perimeter model for the agents folder.** Options: VPC Service Controls over the
-    folder's projects with post-2026-09-08 connectivity-template gateways (losing Unified Access
-    Policies; hostname control moves to VPC firewall/DNS); or gateway access policies plus
-    `run.allowedIngress` internal-and-cloud-load-balancing behind an internal load balancer via
-    PSC for every credential holder. "Credential holders are never internet-reachable" as a
-    folder org policy. Decision 21 and E-19 re-opened as one decision, now a precondition of the
-    super-admin grant, after a spike that resolves the contradiction between Google's own pages.
-    [PS-09, SCA-11, TIS-15]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 41 | The gateway rule | PS-06, SCA-05, MON-06 | P81, P82, P83 |
+| 42 | Model Armor floors and templates | PS-07 | P84–P87 |
+| 43 | The perimeter model for the agents folder | PS-09, SCA-11, TIS-15 | P3, P89, P90, P91 |
 
 ### F. Monitoring, SIEM, SCC, incident response
 
-44. **Which SIEM?** An own Google SecOps instance (EU multi-region or `europe-west3`, retention
-    raised from the 12-month default to the evidence horizon) versus the organisation's existing
-    SIEM; who owns detection content; the four organisation-owned feeds (Admin-console native
-    SecOps export, folder-level aggregated Cloud Audit Logs sink, SCC findings, agent-layer
-    metadata via Pub/Sub); "registered ⇒ feeding the SIEM" as a platform invariant.
-    [MON-01, PS-08]
-45. **SCC Premium at organisation level** (the Enterprise tier is deprecated as of 2026-05-21),
-    owned and funded by whom; which services are on for the agents folder (ETD incl. Workspace
-    detectors, SHA, AI Protection, Sensitive Actions, Agent Platform Threat Detection where not
-    gateway-bound); the Model Armor → SCC finding integration; Audit Manager assessments.
-    [MON-06, PS-08]
-46. **The super-admin detection set** (Workspace and GCP organisation), owned by the SOC and
-    hosted outside Wall-E's project; pipeline-integrity heartbeats and the `log_pipeline_silent`
-    halt reason; the rule that with super admin detection is the primary control. [MON-02]
-47. **Incident response.** Roles (incident commander from IT security, on-duty super admin,
-    Wall-E owner, DPO, communications), the on-call tool and escalation policy, acknowledgement
-    targets (tbd; `Assumption:` 15 min business hours, 60 outside), per-scenario runbooks, one
-    incident record system carrying the correlation keys, the EU AI Act serious-incident
-    taxonomy with owner and deadlines, the GDPR 72-hour breach path, evidence preservation,
-    post-incident review, one crisis scenario (abused super-admin robot credential) with a
-    tabletop date, and the staffed human recipient of Eve's reports with an acknowledgement
-    SLA. [MON-03, TIS-09, AIA-08]
-48. **The correlation contract** every agent's audit row must carry (`invocation_id`, `run_id`,
-    `trace_id`, human `sub` from the Gemini `StreamAssist` log, Workspace `insertId`), the log
-    scope over the four projects, and the SIEM rule that alerts on an admin event by `walle@`
-    without a matching audit row. [MON-07]
-49. **The mandatory monitoring baseline module** for every agent project and its tie to Agent
-    Registry admission; the detection catalogue with SOC ownership, detection-as-code, CI tests
-    per detection, quarterly review, coverage against a public agent-threat taxonomy (tbd
-    which). [MON-12, MON-08]
-50. **Tabletop cadence and participants** (IT security, DPO, second super admin, employee
-    representatives where required), first one before S1, evidence in the locked bucket.
-    [MON-10]
-51. **The evidence register and post-market monitoring plan as named pages**, and Audit Manager
-    for the GCP-side evidence. [MON-11, AIA-05]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 44 | Which SIEM? | MON-01, PS-08 | P10, P92, P74; the instance region superseded by P93 |
+| 45 | SCC Premium at organisation level | MON-06, PS-08 | P11, P94 |
+| 46 | The super-admin detection set | MON-02 | P96, P97; SOC ownership superseded by P99 |
+| 47 | Incident response | MON-03, TIS-09, AIA-08 | P99, P100, P101, P102 |
+| 48 | The correlation contract | MON-07 | P100; [07](07-monitoring-detection-incident-response.md) §5 |
+| 49 | The mandatory monitoring baseline module and the detection catalogue | MON-12, MON-08 | P95, P96, P21 |
+| 50 | Tabletop cadence and participants | MON-10 | P102 |
+| 51 | The evidence register and post-market monitoring plan as named pages | MON-11, AIA-05 | P130; [10](10-eu-ai-act.md) §4.4, §5 |
 
 ### G. Logging, retention, data
 
-52. **The retention schedule per store**: floor (EU AI Act six months, organisation standard),
-    ceiling (DPO, decision 8), which stores are locked, log-integrity protection per store; the
-    login/token/saml organisation logs routed to a locked regional bucket; daily JSONL export of
-    `walle_audit`, `eve.findings`, `eve.verdicts` into the locked evidence bucket (closes
-    decision 31); `walle_audit` plus the frozen plan designated as the Art. 12 log.
-    [MON-04, TIS-06, AIA-04]
-53. **Organisation- or folder-level Data Access audit logging** for the agent projects and the
-    Gemini project (`secretmanager`, `iap`, `cloudkms`, `firestore`, `aiplatform`,
-    `discoveryengine`, `sts`, `storage` on evidence buckets), and its cost owner.
-    [MON-05, TIS-06, PS-16]
-54. **A central logging project** with one organisation-level aggregated sink, log views per
-    agent, folder-level Data Access logs, retention defaults per data class; existing agent
-    sinks become views, except Eve's independent copy. [PS-16, SCA-03]
-55. **Sensitive Data Protection discovery** at the folder over BigQuery and Cloud Storage, a
-    de-identify standard for logs decided once, content-bucket access generated by the factory.
-    [PS-12]
-56. **Data classification of every platform store** against the organisation's scheme, and
-    asset owners per project. [TIS-05]
-57. **Assured Workloads EU Data Boundary for the agents folder — yes or no?** If yes, the Agent
-    Gateway and Agent Registry coverage gap and the "affected features" of BigQuery, Cloud Run
-    and Discovery Engine; if no, the compensating set (org-level `resourceLocations`, Access
-    Transparency, Access Approval). Confirm Access Transparency for tenant and organisation
-    (edition-dependent, tbd); Access Approval on `WALLE_PROJECT` and `EVE_PROJECT`.
-    [PS-13, MON-15]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 52 | The retention schedule per store | MON-04, TIS-06, AIA-04 | P13, P106, P107 |
+| 53 | Organisation- or folder-level Data Access audit logging | MON-05, TIS-06, PS-16 | P105, P80 |
+| 54 | A central logging project | PS-16, SCA-03 | P104 (two aggregated sinks, not one), P114 |
+| 55 | Sensitive Data Protection discovery | PS-12 | P108 |
+| 56 | Data classification of every platform store | TIS-05 | P109 |
+| 57 | Assured Workloads EU Data Boundary for the agents folder — yes or no? | PS-13, MON-15 | P110, P12; Access Approval scope in P111 |
 
 ### H. Supply chain, secrets, backup, privileged and human access
 
-58. **Supply chain.** Binary Authorization with Cloud Build SLSA-L3 provenance for Cloud Run,
-    continuous validation, vulnerability gating in the factory pipeline, a shared Artifact
-    Registry with remote repositories, the bundle-hash substitute for Agent Runtime; a
-    pre-production project or sandbox tenant (decision 29) before S1; a hash-pinned lockfile;
-    git admin bypass disabled and audited; a release and emergency-change procedure.
-    [PS-10, TIS-07]
-59. **Secrets and keys conventions.** Regional only, naming and rotation labels, folder-level
-    Data Access logs and alerts on `versions.access` by non-attached identities, the
-    CMEK/Autokey stance with the Agent Runtime exception recorded once, HSM (and Key Access
-    Justifications if Assured Workloads) for approval-authority keys; one consolidated
-    cryptography table and the CMEK position decided with the TISAX label. [PS-11, TIS-13]
-60. **Privileged Access Manager entitlements** for every standing-dangerous role (`roles/owner`,
-    `run.developer`/`run.admin` on credential holders, `secretAccessor`, `iam.denyAdmin`,
-    `orgpolicy.policyAdmin`, `modelarmor.floorSettingsAdmin`, `agentregistry.admin`), with
-    justification, second approver, maximum duration, grants logged to the SIEM; no standing
-    `roles/owner` on any agent project. [PS-14]
-61. **Recovery classes per tier** (RPO/RTO/region), Firestore PITR and scheduled backups
-    mandated by the factory, evidence mirroring generalised, a restore drill in the promotion
-    gate, one recorded restore exercise before S1, `halt_all` on restore, a one-page continuity
-    statement and BIA with provider SLAs referenced. [PS-15, TIS-08]
-62. **Human access.** All human access to agent control surfaces through IAP with a
-    Context-Aware Access level (managed device, security key); factory-created group naming per
-    agent; one workforce pool if non-Google operators exist. [PS-17]
-63. **A fleet kill switch outside any agent project**: folder/organisation deny policy plus a
-    Principal Access Boundary on `principalSet://agents.global.org-ORG/*`, permission names
-    verified against the deny-supported list, drilled monthly like K0. [SCA-09, PS-02]
-64. **The code-execution tier.** GKE Agent Sandbox (gVisor) in `europe-west1` with its launch
-    stage recorded as *tbd*, or no code execution in the EU; Agent Runtime Code Execution stays
-    off fleet-wide (by org constraint if one exists — verify). [SCA-09]
-65. **What the platform does not claim.** Capability evaluations and deception-robust monitoring
-    are research-grade and provider-side; the platform's AI-control primitive is a model-free
-    monitor with halt authority; every new model pin re-qualifies every cell (C15); the halt
-    path never contains a model; no agent principal holds any write on repositories, Artifact
-    Registry or deploy identities; agent-authored pull requests are labelled and reviewed.
-    [SCA-09]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 58 | Supply chain | PS-10, TIS-07 | P115 (continuous validation is GKE-only), P116, P117, P22, P40 |
+| 59 | Secrets and keys conventions | PS-11, TIS-13 | P112, P118, P119 |
+| 60 | Privileged Access Manager entitlements | PS-14 | P62 (`roles/owner` cannot be a PAM entitlement, [04](04-identity-and-privileged-access.md) §5.1), P49 |
+| 61 | Recovery classes per tier | PS-15, TIS-08 | P120; [09](09-supply-chain-secrets-recovery.md) §3 |
+| 62 | Human access | PS-17 | P63, P64, P24, P65 |
+| 63 | A fleet kill switch outside any agent project | SCA-09, PS-02 | P60, P61 and P8 (principal-set form, [04](04-identity-and-privileged-access.md) §2.1), P9, P67, P70 |
+| 64 | The code-execution tier | SCA-09 | P27, P121, P122 (GKE Agent Sandbox GA) |
+| 65 | What the platform does not claim | SCA-09 | P123, P124; HLD §16 |
 
 ### I. Compliance
 
-66. **Wall-E's Art. 6 classification.** Claim the Art. 6(3) derogation with Art. 6(4)
-    documentation and Art. 49(2) registration before first write, or declare high-risk and run
-    the Annex VI internal-control conformity path by 2027-12-02. [AIA-01, AIA-02]
-67. **Is inactivity-based licence reclaim (F7) profiling of natural persons**, which removes the
-    Art. 6(3) derogation? Until answered, F7 stays human-approved (L3). [AIA-01]
-68. **Which legal entity is provider and deployer** for Wall-E and Mo, and deployer only for
-    the Gemini Enterprise app and the Gemini models. [AIA-01]
-69. **The per-family maximum autonomy level compatible with Art. 14** for Annex III-relevant
-    families (F5, F7), given that Eve is not a natural person; named human overseers, their
-    competence and training record (Art. 26(2)); the Art. 4 literacy measure; operator
-    training per role (TISAX 2.1.3, 9.7.2). [AIA-03, AIA-12, TIS-14]
-70. **Art. 50 disclosure** on every free-text outbound message, injected by the action service,
-    and the AI-system statement in the agent description. [AIA-06]
-71. **Timing of worker information and consultation** (before Stage 1, not Stage 3, under both
-    GDPR and the AI Act) and the Art. 86 explanation path. [AIA-07]
-72. **A one-line GPAI policy**: the platform hosts third-party models and never trains or
-    substantially modifies them; any change reopens Chapter V and Art. 25. [AIA-10]
-73. **When the documentation is reconciled and frozen per stage** so Art. 11 documentation
-    describes the system actually put into service; the Annex IV crosswalk; instructions for
-    use; ten-year retention of decision records and compliance snapshots. [AIA-05, CON-06]
-74. **The TISAX target.** Label (Confidential versus Strictly confidential), whether any
-    availability label is sought (recommended: no), assessment level (AL2 working level), which
-    location's ISMS scope the platform enters; mapping against ISA2027 with ISA 6.0.3
-    cross-reference. [TIS-01]
-75. **Data Protection module scope.** State that the platform is a controller-side internal
-    platform not built for the Data label; rule in or out hosted agents that would process
-    customer or OEM data as a processor; state that Prototype Protection does not apply.
-    [TIS-01, TIS-10]
-76. **A platform RACI** with minimum staffing per stage and separation of duties (owner,
-    security reviewer, deployer, operator, approver, grader, DPO contact, Eve owner, Mo owner,
-    incident manager); the ISMS supplies names. [TIS-03, EVE-06]
-77. **The shared-responsibility split with Google per ISA control**, the supplier file (ENX
-    result share for scope SYN0NK, DPAs, sub-processors, SLAs, exit and deletion), explicit
-    confirmation or *tbd* for services not individually covered by Google's per-region label,
-    the model as a separate supplier item. [TIS-04]
-78. **The supplier onboarding rule and exit/return-and-removal procedure** for any future
-    third-party agent, MCP server or Marketplace app (ISA2027 raises the bar to a TISAX label or
-    equivalent at very high protection need). [TIS-04]
-79. **Penetration test scope before S1**, an annual internal-audit slot, a management review
-    of the ladder state page; the risk register with the super-admin deviation as row one.
-    [TIS-12, TIS-11]
-80. **The legal and contractual register** (GDPR, EU AI Act, works-council rules, Google
-    contract terms, NIS2 applicability *tbd*). [TIS-16]
-81. **DPIA, records of processing per agent, the data-subject-request path across all stores,
-    the employee notice and the works-council track**, started now as the longest lead-time
-    item. [TIS-10, AIA-07]
-82. **Where EU AI Act classification and TISAX scope are recorded** in the existing sets
-    (decision 8 widened, `06` Compliance, `overview.md` Constraints) and the label taxonomy and
-    per-tier mapping enforced at project creation. [CON-08, SCA-04]
+| Item | Question | Gaps | Answered by |
+|---|---|---|---|
+| 66 | Wall-E's Art. 6 classification | AIA-01, AIA-02 | P28, P125, P75 |
+| 67 | Is inactivity-based licence reclaim (F7) profiling of natural persons? | AIA-01 | P18, P126 |
+| 68 | Which legal entity is provider and deployer | AIA-01 | P23 |
+| 69 | The per-family maximum autonomy level compatible with Art. 14, overseers and literacy | AIA-03, AIA-12, TIS-14 | P127, P131 |
+| 70 | Art. 50 disclosure | AIA-06 | P128 |
+| 71 | Timing of worker information and consultation, and the Art. 86 path | AIA-07 | P129 |
+| 72 | A one-line GPAI policy | AIA-10 | P132; [10](10-eu-ai-act.md) §3.5 |
+| 73 | When the documentation is reconciled and frozen per stage | AIA-05, CON-06 | P130, P47 |
+| 74 | The TISAX target | TIS-01 | P20, P133 |
+| 75 | Data Protection module scope | TIS-01, TIS-10 | P134 |
+| 76 | A platform RACI with minimum staffing and separation of duties | TIS-03, EVE-06 | P137, P131; HLD §0.3 |
+| 77 | The shared-responsibility split with Google and the supplier file | TIS-04 | P135, P32 |
+| 78 | The supplier onboarding rule and exit procedure | TIS-04 | P138 |
+| 79 | Penetration test, internal audit, management review, risk register | TIS-12, TIS-11 | P139, P140 |
+| 80 | The legal and contractual register | TIS-16 | P141 |
+| 81 | DPIA, records of processing, data-subject requests, employee notice, works council | TIS-10, AIA-07 | P129, P141; [08](08-data-logging-retention-sovereignty.md) §5.1 |
+| 82 | Where EU AI Act classification and TISAX scope are recorded | CON-08, SCA-04 | P75, P38 |
 
 ---
 
@@ -766,44 +560,26 @@ gap register.
 
 ### 6.1 EU AI Act
 
-Full mapping: `eu-ai-act.md` (lens file), especially its §3 obligation crosswalk and §4 "where
-bulletproof cannot be promised". Regulatory state on 2026-09-13 as the lens verified it:
-Regulation (EU) 2024/1689 in force since 2024-08-01; Art. 4 (AI literacy, rewritten by the
-Omnibus) and Art. 5 (prohibitions) since 2025-02-02; GPAI obligations since 2025-08-02; Art. 50
-transparency since 2026-08-02; the Digital Omnibus on AI (Regulation (EU) 2026/1744, in force
-2026-07-27) defers Annex III high-risk obligations to **2027-12-02**; the Commission's
-classification guidelines are **draft** (consultation closed 2026-07-23, final expected end
-2026); no harmonised standard exists.
+The EU AI Act frame the review drew from the `eu-ai-act.md` lens file (regulatory state on
+2026-09-13, classification, applicable obligations, and where "bulletproof" can and cannot be
+promised) is carried by [10-eu-ai-act.md](10-eu-ai-act.md):
+[§1](10-eu-ai-act.md#1-the-regulatory-state-on-2026-09-13),
+[§3](10-eu-ai-act.md#3-classification-per-system),
+[§4](10-eu-ai-act.md#4-obligation-crosswalk--every-obligation-its-owner-its-evidence-its-mechanism)
+and [§6](10-eu-ai-act.md#6-what-bulletproof-can-and-cannot-mean). What the review concluded on
+2026-09-13 is kept below as its finding.
 
-**Classification.** Classification is per AI system and follows the intended purpose the
-provider declares, not the privileges an account holds. The organisation develops Wall-E and Mo
-and puts them into service for its own use, so it is provider and deployer of both
-(`Assumption:` the employing entity; a group-level entity if the platform serves several
-subsidiaries); for the Gemini Enterprise app and the Gemini models Google is the provider and the
-organisation the deployer. Eve, as designed (deterministic SQL, no model client), is outside the
-Art. 3(1) definition of an AI system and can serve as an oversight measure — the cheapest
-compliance property in the design, to be recorded as an invariant. Wall-E touches Annex III
-4(b) twice: F5 suspend/leaver playbooks execute a termination decision made elsewhere (the
-Art. 6(3)(b) derogation is plausible), and F7 licence reclaim by inactivity is automated
-evaluation of behaviour that may be profiling, which would remove the derogation. The best
-defensible position for the design as documented is an Annex III-4(b)-adjacent system with a
-documented Art. 6(4) assessment, Art. 49(2) registration before first write, and Art. 9–15
-adopted voluntarily as the engineering baseline.
-
-**Applicable obligations.** Biting now: Art. 4, Art. 5, Art. 50. From 2027-12-02 if
-high-risk: Art. 9–15 (risk management, data governance, technical documentation per Annex IV,
-record-keeping, transparency and instructions for use, human oversight, accuracy, robustness,
-cybersecurity), Art. 17 QMS, Art. 43/47/48 conformity, Art. 49 registration, Art. 72 post-market
-monitoring, Art. 73 serious incidents; deployer duties under Art. 26 (use per instructions,
-assigned overseers, log retention of at least six months, worker information, Art. 86
-explanation). The engineering substance often exceeds what Art. 9–15 ask (the ladder as
-oversight, the write-ahead audit at 400 days, the independent verifier, the adversarial reviews,
-Mo as a de facto Art. 72 loop); the legal layer is entirely absent.
+**Applicable obligations.** Biting on 2026-09-13: Art. 4, Art. 5 and Art. 50; from 2027-12-02, if
+high-risk, Art. 9–15, Art. 17, Art. 43/47/48, Art. 49, Art. 72, Art. 73 and the deployer duties of
+Art. 26 (the obligation-by-obligation list is 10 §4). The review's verdict: the engineering
+substance often exceeds what Art. 9–15 ask (the ladder as oversight, the write-ahead audit at 400
+days, the independent verifier, the adversarial reviews, Mo as a de facto Art. 72 loop); the legal
+layer is entirely absent.
 
 **Where "bulletproof" can and cannot be promised.** It can be promised that the documentation
 set, once reconciled and organised as Annex IV, exceeds the Act's engineering expectations for
-the pilot. It cannot be promised today that (1) an Art. 6(3) claim survives guidelines that are
-still draft; (2) any presumption of conformity exists, since no harmonised standard is
+the pilot. It cannot be promised on 2026-09-13 that (1) an Art. 6(3) claim survives guidelines
+that are still draft; (2) any presumption of conformity exists, since no harmonised standard is
 published; (3) an authority will read licence reclaim by inactivity as anything other than
 monitoring of workers before enforcement practice exists; (4) the Super Admin grant will not be
 held against the narrow-task reading unless the catalogue is declared as the intended purpose
@@ -814,28 +590,15 @@ requires a classification per agent.
 
 ### 6.2 TISAX
 
-Full mapping: `tisax.md` (lens file), especially its §3 applicability map, §5 documentation-
-versus-missing-control split and §6 evidence list. Catalogue state on 2026-09-13: VDA ISA
-6.0.3 in force; ISA2027 published 2026-07-01 and applicable to assessments ordered from
-2027-01-01, so the mapping is written against ISA2027 with a 6.0.3 cross-reference. Pass
-criterion is maturity level 3 on every applicable control; scope is site-based, so the platform
-enters whichever location's ISMS operates it and everything processed outside that scope is an
-external IT service.
+The TISAX frame the review drew from the `tisax.md` lens file (catalogue state on 2026-09-13,
+classification, applicable controls, and where "compatible" can and cannot be promised) is
+carried by [11-tisax.md](11-tisax.md): [§1](11-tisax.md#1-tisax-on-2026-09-13-verified),
+[§2](11-tisax.md#2-the-target--label-level-scope-catalogue-p133) and
+[§5](11-tisax.md#5-control-by-control-mapping). What the review concluded on 2026-09-13 is kept
+below as its finding.
 
-**Classification.** "TISAX compatible" has no meaning until the HLD names a label (Confidential,
-or Strictly confidential if `walle_audit`, the content logs or conversation history are secret
-under the organisation's scheme), decides against an availability label (Wall-E's own design says
-it is not business-critical), sets AL2 as the working level and names the scope location
-(*tbd*, ISMS). The Information Security module applies. The Data Protection module (9.x) does not
-apply as an assessment objective — the organisation is controller, not processor — unless a
-hosted agent later processes customer or OEM data on a customer's behalf, in which case 9.x
-becomes an assessment objective for that agent's scope; its list is still the right DPO
-checklist. Prototype Protection does not apply. Google is a TISAX participant (scope SYN0NK,
-assessments ATTRRN-1/2; `europe-west1` and Workspace data regions carry the highest labels), but
-the page is per region and names no individual service.
-
-**Applicable controls and where the platform stands.** Strong today, at maturity 3 or better
-once built: 5.2.4 administrator-activity logging, 4.1–4.2 keyless identity and enumerated
+**Applicable controls and where the platform stands.** Strong on 2026-09-13, at maturity 3 or
+better once built: 5.2.4 administrator-activity logging, 4.1–4.2 keyless identity and enumerated
 least-privilege grants, 5.2.1/5.3.1 change control with the gate separated from what it gates,
 5.1 cryptographic proof of approval, 5.2.6 technical self-audit; and the habit of arguing every
 rejected alternative in place already meets ISA2027's rule that "aspects considered" need a
