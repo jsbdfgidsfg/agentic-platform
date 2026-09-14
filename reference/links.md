@@ -8,7 +8,7 @@
 | https://console.cloud.google.com/iam-admin | IAM |
 | https://console.cloud.google.com/billing | Billing |
 
-## the organisation internal
+## Internal
 | Link | What |
 |---|---|
 | *tbd* | |

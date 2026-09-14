@@ -71,7 +71,7 @@ Alert on, at minimum:
 Weekly review of every WRITE_HIGH row is a five-minute habit worth keeping for the first
 few months.
 
-## Compliance notes for the organisation
+## Compliance notes
 
 - **Works council / GDPR:** the agent reads employee mailbox content (the robot's own)
   and Directory data, and its audit log records who asked for what. Confirm whether this
@@ -79,4 +79,4 @@ few months.
   lead-time item in the whole project — start it in parallel with Phase 1.
 - **Data residency:** pin the project, Agent Engine, Cloud Run and BigQuery to an EU
   region and confirm the Gemini Enterprise data region matches.
-- **Retention:** set a table expiry on `edge_audit.actions` consistent with the organisation policy.
+- **Retention:** set a table expiry on `edge_audit.actions` consistent with organisation policy.

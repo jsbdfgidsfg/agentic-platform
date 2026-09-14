@@ -8,8 +8,8 @@
 
 | Resource | Name (proposed) | Notes |
 |---|---|---|
-| Project | `org-edge-ai-v2` | Dedicated. Do not share with other workloads. |
-| Region | `europe-west1` | Confirm against the organisation data-residency policy and Agent Engine availability. |
+| Project | `edge-ai-v2` | Dedicated. Do not share with other workloads. |
+| Region | `europe-west1` | Confirm against the organisation's data-residency policy and Agent Engine availability. |
 | Service account (agent) | `edge-agent@<proj>.iam.gserviceaccount.com` | Runs the Agent Engine agent. Only identity granted `run.invoker`. |
 | Service account (action svc) | `edge-actions@<proj>.iam.gserviceaccount.com` | Runs Cloud Run. Only identity granted access to the secrets. |
 | Cloud Run service | `workspace-actions` | Ingress: internal only. Auth: required. |
@@ -43,7 +43,7 @@ the policy gate is structurally impossible to bypass.
 {
   "operation": "gmail.send",         // must exist in the catalogue
   "params": { "to": ["a@b.com"], "subject": "…", "body": "…" },
-  "actor": "owner@example.com",    // propagated end user
+  "actor": "operator@example.com",    // propagated end user
   "session_id": "ge-abc123",         // for correlation
   "dry_run": false,
   "confirmation_token": null          // required for HIGH-risk operations
@@ -164,5 +164,5 @@ If you want outbound mail confirmed, flip it in `policy.py`; it is one line.
 | `latency_ms` | INT64 | |
 | `error` | STRING | nullable |
 
-Retain per the organisation policy; 400 days is a reasonable default. This table is the answer to
+Retain per organisation policy; 400 days is a reasonable default. This table is the answer to
 "what has the robot done", and it is the first thing an auditor will ask for.

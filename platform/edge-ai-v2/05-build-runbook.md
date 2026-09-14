@@ -49,7 +49,7 @@ cp env.example .env    # fill in PROJECT_ID, REGION, WORKSPACE_DOMAIN, ROBOT_USE
 ```
 
 ```bash
-gcloud projects create org-edge-ai-v2 --name="the organisation Edge AI v2"
+gcloud projects create edge-ai-v2 --name="Edge AI v2"
 ```
 
 Link billing, then:

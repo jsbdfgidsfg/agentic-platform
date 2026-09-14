@@ -17,7 +17,7 @@ sequenceDiagram
     participant BQ as audit
 
     U->>GE: "mail the DWP team about Friday maintenance"
-    GE->>AG: prompt + actor=owner@example.com
+    GE->>AG: prompt + actor=operator@example.com
     AG->>AG: draft subject/body, choose gmail.send
     AG->>CR: execute{gmail.send, dry_run=true}
     CR->>CR: allowlist ok, actor in operators, recipients internal

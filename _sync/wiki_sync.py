@@ -63,6 +63,8 @@ EXCLUDE_FILES = {"CLAUDE.md"}   # maintenance instructions for Claude, not team 
 
 DOC_MIME = "application/vnd.google-apps.document"
 FOLDER_MIME = "application/vnd.google-apps.folder"
+# The root folder is found by its id in the manifest, never by name, so renaming it in
+# Drive is safe. This name is used only when the folder has to be created.
 ROOT_FOLDER_NAME = "Digital Workplace Wiki"
 
 

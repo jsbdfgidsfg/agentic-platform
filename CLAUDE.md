@@ -1,6 +1,6 @@
 # Maintaining this wiki
 
-This is the platform owner's working wiki — Digital Workplace manager at the organisation,
+This is the platform owner's working wiki — Digital Workplace manager,
 building an agentic platform on GCP + Google Workspace. He is Workspace super admin
 and Gemini Enterprise admin, and owns several GCP projects.
 
@@ -25,7 +25,7 @@ and Gemini Enterprise admin, and owns several GCP projects.
 - **No secrets.** No API keys, tokens, passwords, service-account JSON, no personal
   data about employees beyond name/team/remit. Record *where* a secret lives, not what
   it is.
-- Nothing the organisation-confidential that the platform owner hasn't explicitly said to write down.
+- Nothing company-confidential that the platform owner hasn't explicitly said to write down.
 - Don't state facts about the organisation's environment that you haven't been told. If you infer
   something, mark it clearly as an assumption.
 

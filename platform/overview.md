@@ -10,7 +10,7 @@
 
 ## What this is
 
-The the organisation agentic platform: internal AI agents for employees, built on Google Cloud
+The agentic platform: internal AI agents for employees, built on Google Cloud
 and integrated into Google Workspace, with Gemini Enterprise as the primary
 end-user surface.
 
