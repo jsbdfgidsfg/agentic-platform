@@ -31,6 +31,8 @@ Scope: agentic platform on **GCP** + **Google Workspace**, Gemini Enterprise adm
 - **Wall-E, Eve & Mo (agentic Workspace ops)** → [platform/wall-e/](platform/wall-e/README.md)
 - **Edge AI v2** (superseded by Wall-E) → [platform/edge-ai-v2/](platform/edge-ai-v2/README.md)
 - **Open questions / backlog** → [backlog.md](backlog.md)
+- **Agentic platform: design set** → [platform/agentic-platform/README.md](platform/agentic-platform/README.md)
+- **Agentic platform: architecture brief** → [platform/agentic-platform/brief/README.md](platform/agentic-platform/brief/README.md)
 
 ## Conventions
 

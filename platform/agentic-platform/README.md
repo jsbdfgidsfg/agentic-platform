@@ -51,6 +51,8 @@ AI Act or TISAX outcomes, only the mechanisms and the evidence; the full list is
 
 ## Documents
 
+**Start here if you want the intent rather than the specification:** the architecture brief, [brief/README.md](brief/README.md), explains in about 200 A4 pages why the platform and its three agents are designed the way they are, and links to the pages below for every definition.
+
 | Page | What it is | Decisions |
 |---|---|---|
 | [00-objective-review.md](00-objective-review.md) | The objective verbatim, the verdict on the documentation that existed before it, the gap register (111 gaps, 24 blocking), the 82-item brief the HLD had to answer (indexed to the register rows that answer it), and pointers to the two compliance frames | — |
