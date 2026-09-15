@@ -779,7 +779,7 @@ hours (240 outside), and when Eve's token returns `invalid_grant`, which only a 
 re-bootstrap restores; on H-4, a missing `eve_last_seen` stamp for 15 minutes follows runbook
 RB-03 and a missing daily witness push for 26 hours pages severity 1. The windows, where each
 alarm lives and why the witness holds it are canonical in
-[../agentic-platform/07-monitoring-detection-incident-response.md §7](../agentic-platform/07-monitoring-detection-incident-response.md#7-pipeline-heartbeats-and-the-logpipelinesilent-halt).
+[../agentic-platform/07-monitoring-detection-incident-response.md §7](../agentic-platform/07-monitoring-detection-incident-response.md#7-pipeline-heartbeats-and-the-log_pipeline_silent-halt).
 
 ## 15. The reporting contract
 

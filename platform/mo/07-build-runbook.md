@@ -62,7 +62,7 @@ shared data plane [08-team-eve-mo.md](../wall-e/08-team-eve-mo.md) promises is s
 `MO_PRINCIPAL` resolves to `serviceAccount:mo-analyst@${MO_PROJECT}.iam.gserviceaccount.com`,
 and Phase 13b's project-level registry grant to it is removed (topology decision 43) — the
 resolution and its consequences are
-[02-identity-and-access.md](02-identity-and-access.md#6-moprincipal-resolved) §6.
+[02-identity-and-access.md](02-identity-and-access.md#6-mo_principal-resolved) §6.
 
 > **Every Mo-side IAM grant, dataset, table, view, job, bucket and alert in this document is
 > new.** Where a phase adds one, it is marked **NEW**. The cross-project grants Wall-E's and
@@ -1009,7 +1009,7 @@ gcloud run services add-iam-policy-binding walle-actions \
 
 `roles/agentregistry.viewer` is **dropped**, reversing on 2026-09-13 the 2026-09-12 outcome
 that kept it granted-and-unused (topology decision 43;
-[02-identity-and-access.md](02-identity-and-access.md#6-moprincipal-resolved) §6): it binds at
+[02-identity-and-access.md](02-identity-and-access.md#6-mo_principal-resolved) §6): it binds at
 project level on `WALLE_PROJECT` for a `MO_PROJECT` principal, and comes back only if a
 resource-level binding is verified — [M-11](08-open-decisions.md) (a), not verified as of
 2026-09-13.

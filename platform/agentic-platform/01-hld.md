@@ -786,7 +786,7 @@ Recovery classes — R-A evidence, R-B control plane, R-C agent compute, R-D sha
 keys and secrets, R-W Workspace state — each carry an RPO, an RTO, a mechanism and a drill
 ([09 §3.1](09-supply-chain-secrets-recovery.md#31-classes-per-tier)). A Firestore restore boots at
 `halt_all` by construction (posture `RESTORED_UNCLEARED` until a human clears it, P120,
-[09 §3.2](09-supply-chain-secrets-recovery.md#32-r-b-in-detail-firestore-and-why-a-restore-boots-at-haltall)),
+[09 §3.2](09-supply-chain-secrets-recovery.md#32-r-b-in-detail-firestore-and-why-a-restore-boots-at-halt_all)),
 keys are disabled and never destroyed inside the evidence horizon, and the platform never backs up
 Workspace: rollback per family and Google's own recovery are the continuity plan. Single region
 (`europe-west1`) is accepted for every tier because agents are not critical IT services (the
@@ -902,10 +902,10 @@ Every action service writes `<agent>_audit` on the contract-versioned `audit.sch
 write-ahead, insert-only, carrying the correlation keys, the decision, the platform denial
 vocabulary `p:<reason>` with agent extensions `a:<reason>`, the fingerprint tuple and the Workspace
 `insertId`s — with dataset-level `READER` to Mo's T0 and the validator custodian recorded by the
-factory ([05 §9.4](05-registry-and-autonomy-contract.md#94-auditschema-keyed-on-agentid)). The
+factory ([05 §9.4](05-registry-and-autonomy-contract.md#94-auditschema-keyed-on-agent_id)). The
 ladder config `ladder.yaml` is on `ladder.schema`, and CI validates that every cell respects the
 manifest ceiling and the platform defaults
-([05 §9.3](05-registry-and-autonomy-contract.md#93-ladderschema-keyed-on-agentid)).
+([05 §9.3](05-registry-and-autonomy-contract.md#93-ladderschema-keyed-on-agent_id)).
 
 ### 12.4 The validator and the platform verifier
 

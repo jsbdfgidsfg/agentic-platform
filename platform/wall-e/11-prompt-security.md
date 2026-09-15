@@ -215,7 +215,7 @@ content: taint the run and cap it. A refusal would hand an attacker a denial-of-
 directory questions by editing their own profile. So on `MATCH_FOUND` the action service
 returns the result fenced, sets `tainted` as it would have anyway, records
 `content_flags` on the audit row as a list of `filter:confidence` pairs (the contract column
-`armor_findings` of [03](03-lld.md#bigquery-walleaudit-partitioned-by-ts-clustered-by-operation)),
+`armor_findings` of [03](03-lld.md#bigquery-walle_audit-partitioned-by-ts-clustered-by-operation)),
 carries them on the plan item to the approval surface, and publishes
 `content.flagged` on `walle-events`. On a Model Armor error it records
 `screen_state=skipped` (Wall-E's extension column `a_screen_state`), still taints, and proceeds. The taint is the control. The screen is
