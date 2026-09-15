@@ -7,8 +7,8 @@
     },
     "backlog.md": {
       "file_id": "1QfRnrCWrp0TOoH635DNpyzislk_QQbgjdouDl3UUR94",
-      "local_hash": "849ee8c1c6845d2af906e1c1cab58046cb782d9a20bdb827d778341c440b51ed",
-      "remote_modified": "2026-09-13T20:50:10.614Z"
+      "local_hash": "c9db34b3bd89ee751a9da6995efdaa8afbdd5a85595facbd8e3d13382393da97",
+      "remote_modified": "2026-09-15T09:51:10.934Z"
     },
     "decisions/2026-09-13-eve-reporting-path-may-reason.md": {
       "file_id": "1C1WNCiO25sIx8q7GoNeNQeDR-wNOe6pks-SwP0VwYGI",
@@ -115,10 +115,15 @@
       "local_hash": "8c7bb5530866916bf819457f203696207923fc9f6295b20e5a0cac3b2f4c7f93",
       "remote_modified": "2026-09-14T22:14:03.758Z"
     },
+    "platform/agentic-platform/13-setup-procedure-review.md": {
+      "file_id": "1iVEBGCdCAfjbS1VSbC-61uBIB2gKGBNvHpRXE_Pw1CE",
+      "local_hash": "b3abe822c66aaa3674ab5a1ee2d7b7e8aad702c5861506666801223d961f0ab3",
+      "remote_modified": "2026-09-15T09:51:12.959Z"
+    },
     "platform/agentic-platform/README.md": {
       "file_id": "1vrxnoz3WpLNjz5b3i0ulNk-ivIZ9GeESJxvz9VPwVm4",
-      "local_hash": "f7a8e76422ea6199f290df4bafc2d8e1355b314b4b0c40bd9b9043d1e08a053c",
-      "remote_modified": "2026-09-15T00:43:54.603Z"
+      "local_hash": "2b7f2856a05bea9ea7e11522786234c15b2fa8a890c8c89459bbd474dbbf66c9",
+      "remote_modified": "2026-09-15T09:51:18.038Z"
     },
     "platform/agentic-platform/brief/00-front-matter.md": {
       "file_id": "1utr9B71xiZpszcLscfyVwJEhrwd5j3ars8t5jFz7U-M",
