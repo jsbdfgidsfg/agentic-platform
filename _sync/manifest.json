@@ -2,8 +2,8 @@
   "files": {
     "README.md": {
       "file_id": "1IxmBIqkvTw37e5OqRfuJEmb823-vdz27gBPwYAeGsLE",
-      "local_hash": "8b72506cb778a3c3eaa8949f20056a2657ada95f22793a47da363850c6cb0a60",
-      "remote_modified": "2026-09-13T19:40:41.885Z"
+      "local_hash": "9d00a777fcf7e07de51cd8dda56af25899013322fcb5ad63f4ca3b8550bade8c",
+      "remote_modified": "2026-09-15T00:43:36.751Z"
     },
     "backlog.md": {
       "file_id": "1QfRnrCWrp0TOoH635DNpyzislk_QQbgjdouDl3UUR94",
@@ -57,8 +57,8 @@
     },
     "platform/agentic-platform/01-hld.md": {
       "file_id": "1SyY49d9u-joa73VBSFAHXpiRg_itQMdo3P1VWVeCGnA",
-      "local_hash": "2e955273442a2d994a355c862c152700f3c1c9d9ada7adc0b365de877f66fe6d",
-      "remote_modified": "2026-09-14T22:13:05.944Z"
+      "local_hash": "94b043b7065353332c883b2df6af6c220f0936429fc830dd88dcb5352ef08efd",
+      "remote_modified": "2026-09-15T00:43:41.514Z"
     },
     "platform/agentic-platform/02-landing-zone-and-tiers.md": {
       "file_id": "1qM9ek_TjRhDnGTG7FeK6qU3F2tmwEJ3t3qDWIZ4GKmY",
@@ -92,13 +92,13 @@
     },
     "platform/agentic-platform/08-data-logging-retention-sovereignty.md": {
       "file_id": "1qxKbd5LZL0MgrEPc7-_HVayQwnPgJjHEnHwX8gLNNgA",
-      "local_hash": "723f2ce68ce4609efae6d6378d264b4c46a675444de6d00c8cf5ff4b1f7a2ef6",
-      "remote_modified": "2026-09-14T22:13:41.653Z"
+      "local_hash": "35dbe7d1e611ce2c8196f73195ac4871b67f04e5af1e9e0ef3ac1d739d107543",
+      "remote_modified": "2026-09-15T00:43:46.341Z"
     },
     "platform/agentic-platform/09-supply-chain-secrets-recovery.md": {
       "file_id": "1Mx8CXcA66HtUnqs93L7RxiOXEAde5dsAUSocTheG-ms",
-      "local_hash": "996607c6868ea728de86dd2f5e0b2854e965b204f5685c2499db9c090c13744a",
-      "remote_modified": "2026-09-14T22:13:46.792Z"
+      "local_hash": "e5a375cc90c079208fd98423bb6d75af93250fecd33333af6c1d355e1d4fdc6e",
+      "remote_modified": "2026-09-15T00:43:51.500Z"
     },
     "platform/agentic-platform/10-eu-ai-act.md": {
       "file_id": "17QF1WwFuIYxVzsSX-VusmZv9EWbCjtvkVAtXF05aGKY",
@@ -117,8 +117,178 @@
     },
     "platform/agentic-platform/README.md": {
       "file_id": "1vrxnoz3WpLNjz5b3i0ulNk-ivIZ9GeESJxvz9VPwVm4",
-      "local_hash": "37209026149b1cd208610cae2f5d40a3dad27027b8d544a405eb84aec9a96ea7",
-      "remote_modified": "2026-09-14T22:14:06.801Z"
+      "local_hash": "f7a8e76422ea6199f290df4bafc2d8e1355b314b4b0c40bd9b9043d1e08a053c",
+      "remote_modified": "2026-09-15T00:43:54.603Z"
+    },
+    "platform/agentic-platform/brief/00-front-matter.md": {
+      "file_id": "1utr9B71xiZpszcLscfyVwJEhrwd5j3ars8t5jFz7U-M",
+      "local_hash": "0abe98be320bcb5326347e9847e4886fa1c000d382d4f4784c2bd6530da4d429",
+      "remote_modified": "2026-09-15T00:43:57.418Z"
+    },
+    "platform/agentic-platform/brief/01-part-i.md": {
+      "file_id": "1CFUJ4xkUgzevZNsgl4A3BP_dUHtSZmMou71SvqhRruI",
+      "local_hash": "ed1abd44d6516ab7fc077f89c2efdb62d6b7ebeba305d4c96f9fb9d657c8d121",
+      "remote_modified": "2026-09-15T00:43:59.574Z"
+    },
+    "platform/agentic-platform/brief/02-executive-summary.md": {
+      "file_id": "1axagyqQmtyKITwPjLV9SP_V_ZbtT4Wdv5BbpJRN6IEA",
+      "local_hash": "fd17ab08efaf67543269d1d58832c50bc5d8ebccd8f1a13a00fde0b9e565a07a",
+      "remote_modified": "2026-09-15T00:44:01.653Z"
+    },
+    "platform/agentic-platform/brief/03-objective.md": {
+      "file_id": "1hAPnN366QS4O_NK-bBVecn7iut2sUkfh_tRxUGrLgLU",
+      "local_hash": "336e387a4e2ec15d55f1ff0c0109bf7f8017eeb29f978e9a5a7df2014510758e",
+      "remote_modified": "2026-09-15T00:44:04.254Z"
+    },
+    "platform/agentic-platform/brief/04-problem-and-risks.md": {
+      "file_id": "1itsQUerroc0AY4hiPCdCndAhkKoCCcKr6Xbll5JEgmk",
+      "local_hash": "e4acaad04eaabcd67ed4c5fa0a136d7935299ab8ed6d4f2c62d1bfd94e847ac6",
+      "remote_modified": "2026-09-15T00:44:06.890Z"
+    },
+    "platform/agentic-platform/brief/05-principles.md": {
+      "file_id": "1Fz0emFTvTVX7x1iZsTUCh4Bd_VyAVRFYGs8RYrRbbJg",
+      "local_hash": "890ac4fa837d6168a6438ff9caef984245595db9cfe4d37b374f329bbf5acfd7",
+      "remote_modified": "2026-09-15T00:44:09.369Z"
+    },
+    "platform/agentic-platform/brief/06-part-ii.md": {
+      "file_id": "14SvyPmgRcPyN0nR7ECLubtrYBunVFVBYX7CtVhDGtMQ",
+      "local_hash": "4ff7bfb90240a476e6dc3cdf09db71ff75c992a9fb5006e98dfa1a0939ae4df1",
+      "remote_modified": "2026-09-15T00:44:11.566Z"
+    },
+    "platform/agentic-platform/brief/07-architecture-overview.md": {
+      "file_id": "1xq_34tB9zFjNAjQ0C7rz5DVgp_yzec_Z7sTrFbkx-m8",
+      "local_hash": "757b37a4f735cabfbc694d82199866848d001b72ace8548434273f9802b20d06",
+      "remote_modified": "2026-09-15T00:44:14.330Z"
+    },
+    "platform/agentic-platform/brief/08-gemini-enterprise-environment.md": {
+      "file_id": "1GUL8gTgBBAH8Zp0OWNhDEFZPt6ONj_MNJrHbv33keHQ",
+      "local_hash": "3660679ade077acca920f1427a06802c1465796e96465cb393f8282610be85ee",
+      "remote_modified": "2026-09-15T00:44:16.546Z"
+    },
+    "platform/agentic-platform/brief/09-landing-zone-and-tiers.md": {
+      "file_id": "1UuO6fXuXwauDMH8cY3GUtrWv3cDkEIuj21r8zC_nvM8",
+      "local_hash": "0f6721f667c86b8fc4953f87dbbd24381273936a640a4ddf5f0cd3a657248590",
+      "remote_modified": "2026-09-15T00:44:19.075Z"
+    },
+    "platform/agentic-platform/brief/10-identity-and-privileged-access.md": {
+      "file_id": "13QDKU_qsG__sL7FvV6VxVUVMTHgOyDxMnzvl_z2F85E",
+      "local_hash": "16f24a6f9bf857696e71d842fdd4d9739e24d8c38488455c93f6524799b24d8b",
+      "remote_modified": "2026-09-15T00:44:21.736Z"
+    },
+    "platform/agentic-platform/brief/11-registry-and-autonomy-contract.md": {
+      "file_id": "18reSPaeogEELbG7BZ7tDH5btMmmgZME78lBWvtGAx9Y",
+      "local_hash": "0ea726a84887738c4ab26fc0a3ee0f293cf4a53f60c97b034740a72aa3680dee",
+      "remote_modified": "2026-09-15T00:44:24.157Z"
+    },
+    "platform/agentic-platform/brief/12-gateways-model-armor-perimeter.md": {
+      "file_id": "1853BRuG-mHX75ml4UOQWi8YiGJ_4jMIwas8EUmhBNC8",
+      "local_hash": "25f82a20f0e4967319a4e30e7df0764266818015a7acc36fd7e3bb766a48a1f2",
+      "remote_modified": "2026-09-15T00:44:26.957Z"
+    },
+    "platform/agentic-platform/brief/13-monitoring-detection-incident-response.md": {
+      "file_id": "1kXI8y1vIcHylMs7vXgBlcF3kHUiRXm6K3F2soaQ1Wc4",
+      "local_hash": "0b34eabd88d0fbcc5c75ba447f043a27fc35a098e7243d1c047eeb0f0013fe8d",
+      "remote_modified": "2026-09-15T00:44:29.289Z"
+    },
+    "platform/agentic-platform/brief/14-data-logging-retention-sovereignty.md": {
+      "file_id": "1lmNPwMrLobv2egMi3oTsD1omd_YAlXwiE0cQ6qxkTH0",
+      "local_hash": "e3ac7716a91679013118d807794ac4215cab518e473f315fc3b131a78cae5fa8",
+      "remote_modified": "2026-09-15T00:44:31.410Z"
+    },
+    "platform/agentic-platform/brief/15-supply-chain-keys-recovery.md": {
+      "file_id": "1zUBek_bczZejkhCoXF6Jnkzh1RKfi7-Qx8nloesvBYs",
+      "local_hash": "2cfdcbb1306b019b7ffe146c826e251bb69cc92855db879c4010c7bcba90c103",
+      "remote_modified": "2026-09-15T00:44:33.761Z"
+    },
+    "platform/agentic-platform/brief/16-scale-and-agi-readiness.md": {
+      "file_id": "1v6jUsfTBwIJWr6xEBnqaJ7kki7pAat0QSbqrDTeYQWc",
+      "local_hash": "b962d796a3cdf38c39cfef9c9c6643c8b5001feeed1dd3f6885dddc3f007f300",
+      "remote_modified": "2026-09-15T00:44:36.165Z"
+    },
+    "platform/agentic-platform/brief/17-part-iii.md": {
+      "file_id": "1VeWXPMjVM3Ex8QANPaOV9R79txtMNNmhjFTQizlVYgw",
+      "local_hash": "f2a2e4f21529b6528ec428d0616c3daa194cbbbf3cfeb333a68188ea0caa8c15",
+      "remote_modified": "2026-09-15T00:44:38.258Z"
+    },
+    "platform/agentic-platform/brief/18-wall-e.md": {
+      "file_id": "1a10YwSSKVEVFjbtelwr61MXhhJ7OO_C3JHE2x6ArkMQ",
+      "local_hash": "a044ad2277b55f8162f713895eb58352278de7fcbaed765dea24e2200b25d2d1",
+      "remote_modified": "2026-09-15T00:44:40.747Z"
+    },
+    "platform/agentic-platform/brief/19-eve.md": {
+      "file_id": "1dVitQcF5iENTV6KIh6JYuoChsEhFRkpydaZtLwMFCX4",
+      "local_hash": "b2894f1594a90aafe42fbac238483d2934d489a437185f01756691450c50fd99",
+      "remote_modified": "2026-09-15T00:44:43.124Z"
+    },
+    "platform/agentic-platform/brief/20-mo.md": {
+      "file_id": "1_bMVkbTdTxBEODDgEyBX-bmoN7Chl_qxJ_Q_gVzNSek",
+      "local_hash": "02239f34e1ad0c28ae7d4724e327321cd087dd6ee887019a5b93b488dfb3833c",
+      "remote_modified": "2026-09-15T00:44:45.648Z"
+    },
+    "platform/agentic-platform/brief/21-three-agents-together.md": {
+      "file_id": "1q7dlALMj8K71tOwV52-4sGgLYbkoUAIyahP1NZXvx5U",
+      "local_hash": "7c68eb8565cceeceef0ed9c23d55d93975465251cb9aef9af6a00065234466f4",
+      "remote_modified": "2026-09-15T00:44:48.375Z"
+    },
+    "platform/agentic-platform/brief/22-part-iv.md": {
+      "file_id": "1MmEqgOO_XwQ7ieAjkArixXydrHjO4Db4OnLGxdKyrzQ",
+      "local_hash": "8d6a452bf1d19474ec0a4168c40a2153aedc681753604d75d99b9b92dcd46c68",
+      "remote_modified": "2026-09-15T00:44:50.791Z"
+    },
+    "platform/agentic-platform/brief/23-threat-model-and-residual-risk.md": {
+      "file_id": "1382XcbgS-3oGMZdStF8UD8spjNTPHiIp5fXnR9bHiJU",
+      "local_hash": "71db40391179a35673aaa1a683ae4f2e6591d2f6abd1d9a2c0980e80e80142dd",
+      "remote_modified": "2026-09-15T00:44:53.016Z"
+    },
+    "platform/agentic-platform/brief/24-eu-ai-act.md": {
+      "file_id": "1uu-yxjGh454WyB6uXjpxnY0iT_5sDWwgo5BjKebmW0Q",
+      "local_hash": "942144c9f4c47108d1df75e1639cbffca2f023214b1ae886a24c67f15773bfda",
+      "remote_modified": "2026-09-15T00:44:55.649Z"
+    },
+    "platform/agentic-platform/brief/25-tisax.md": {
+      "file_id": "1DHlXe0Sc6V2JSoFMK5nN3NiZv6F_BGPAMF9DJjH5SKc",
+      "local_hash": "2c606af0dc0157abd7c28c34e469b1d5321ce63a1c84b751f1d576e893889abe",
+      "remote_modified": "2026-09-15T00:44:58.192Z"
+    },
+    "platform/agentic-platform/brief/26-personal-data-and-employees.md": {
+      "file_id": "1gT_Qvt7fTIMb7Zr3Ns2hKexj38mWSsBpB4ukPRGg-bQ",
+      "local_hash": "8c778d2aacc034d111a65fe41d07c1e2667b448a4770729dd166d97abe241f89",
+      "remote_modified": "2026-09-15T00:45:00.684Z"
+    },
+    "platform/agentic-platform/brief/27-part-v.md": {
+      "file_id": "1-CHleGDM_tSbPZvCNycvn9gHwlbPJJbhSvhI52NYXrI",
+      "local_hash": "118c13a31313717965242f0eedf456922f7c0dcaae87b8f08bbb7bdfc9daa836",
+      "remote_modified": "2026-09-15T00:45:02.924Z"
+    },
+    "platform/agentic-platform/brief/28-operating-model.md": {
+      "file_id": "1a0o5BqRLAjp_DI1iS036wi9Tft7s-45IKVUpBI_8JCw",
+      "local_hash": "e3f31db0d6d13b8482413d028b342b2fb0c03a03a1b8b57fbe71a7b6ec3a6dcc",
+      "remote_modified": "2026-09-15T00:45:05.562Z"
+    },
+    "platform/agentic-platform/brief/29-roadmap-and-cost.md": {
+      "file_id": "1X1dwuD4E9I7FaIq3wEb9WEnUb3PQAOo4HWisRAYl13E",
+      "local_hash": "a3efd5a55abc46d0b3b82abf04940197a065e8b34c41f185d6a53c041c9b1b87",
+      "remote_modified": "2026-09-15T00:45:08.495Z"
+    },
+    "platform/agentic-platform/brief/30-decisions-awaiting-owner.md": {
+      "file_id": "1su7IimG6D6MLLV3nwqW1FVDwbW8TszTkH1Zv00gYdCI",
+      "local_hash": "0507421b1cf4ac57640e5612e44de95f85f5ff4a3e06f66ea6f0b538c82f2906",
+      "remote_modified": "2026-09-15T00:45:11.070Z"
+    },
+    "platform/agentic-platform/brief/31-glossary.md": {
+      "file_id": "1rabllL1v0c0Bq3lPDwppD55pPnjBXCnBDBs0ButqpHQ",
+      "local_hash": "df4c682c99c5a2c7eb39506eae69d78d9607a8d63a4d812096dc09d040426555",
+      "remote_modified": "2026-09-15T00:45:13.389Z"
+    },
+    "platform/agentic-platform/brief/32-document-map.md": {
+      "file_id": "1Udx-Gy2K7ubol4jIF_KlcJeXumoHveNgAZUhsHmLT8o",
+      "local_hash": "cf08db5f0b4f7cc22fb5a843e7dcc3561cecc8d3ae6d1ee2b544f4915da56a84",
+      "remote_modified": "2026-09-15T00:45:16.291Z"
+    },
+    "platform/agentic-platform/brief/README.md": {
+      "file_id": "1SaVccTEW9VPudFDDd28J3pivFrhqCmGodfJIJaQa5Dw",
+      "local_hash": "8d65db03462a1349a4bb316676a177b045dd80715c24f84148432ccf901df010",
+      "remote_modified": "2026-09-15T00:45:18.581Z"
     },
     "platform/agents.md": {
       "file_id": "1nR2mBKLjQHIksJWWjbAWv4f5S95ddhTsjLp7yQLdBE8",
@@ -177,8 +347,8 @@
     },
     "platform/eve/03-lld.md": {
       "file_id": "16niJxvwICpn82ZA8gV8LWOPp20oxYChYlE8NJnLUDcI",
-      "local_hash": "4d0a292780f8fb093f2bdee5bb934c43df8fcee078fed996afa83479c3e67e88",
-      "remote_modified": "2026-09-14T22:14:35.006Z"
+      "local_hash": "b9079c4c7c226a7e68551e0778ffb0d5c3a9313573968c849b7638a41a0d30f5",
+      "remote_modified": "2026-09-15T00:45:21.704Z"
     },
     "platform/eve/04-flows.md": {
       "file_id": "14j-jHXsPtwTd-uVQ47ftJyeOFelGeT2vMhuK0EYZbU0",
@@ -262,8 +432,8 @@
     },
     "platform/mo/07-build-runbook.md": {
       "file_id": "1P4n54ShFzTIZ1rgIqbqHHFjMirlhX3bGXLcRm774BVg",
-      "local_hash": "928446bd03f8f7e2bd99845a225c81aa4e44c1ff04caa7ca6987b47eb5deabb5",
-      "remote_modified": "2026-09-14T22:15:39.704Z"
+      "local_hash": "6eb89fd9b6235bb6cc3b8dee59dffc33a3fb89f37bd553fff7e91828550f8dc6",
+      "remote_modified": "2026-09-15T00:45:26.194Z"
     },
     "platform/mo/08-open-decisions.md": {
       "file_id": "1te-aGU9kGXzj-4X3Rh7dZ7o9BBhBYbUmy6zfE2qjvMs",
@@ -337,8 +507,8 @@
     },
     "platform/wall-e/11-prompt-security.md": {
       "file_id": "1rX4G0MmpO8aX2e7ZbgwBQG0hX1uPJH1hiSTxvjY5QzI",
-      "local_hash": "56d71775d82b94bd4bb47e97da59e9b3dcb36eb2a4c41bf3da93a690223fb3f3",
-      "remote_modified": "2026-09-14T22:16:34.889Z"
+      "local_hash": "d43ef2ffef9c367e0eb87b9e8ea85cc782474854f43b9b4e017ce3ae3444bf94",
+      "remote_modified": "2026-09-15T00:45:30.005Z"
     },
     "platform/wall-e/12-agent-identity.md": {
       "file_id": "1OoO4bOxs4mrjer9XatngyhIJ3ptyjOOEDLqyU0yWghA",
@@ -372,8 +542,8 @@
     },
     "platform/wall-e/SETUP.md": {
       "file_id": "1lRSiD57up5qabwsps7-z86Xmu2ZcWOkAT7uzghpnBx8",
-      "local_hash": "b5918c7f5e5b675c0c8cc83cdef07387123f456837c992d5faf2e8bf8d333f1e",
-      "remote_modified": "2026-09-14T22:17:10.604Z"
+      "local_hash": "7b0f8b367c9d1b4dd58dbc627ba3ec3ecdaae35409ff7c7c05d0048d5bac1541",
+      "remote_modified": "2026-09-15T00:45:36.530Z"
     },
     "platform/wall-e/setup/README.md": {
       "file_id": "1oq9K-swUaE0x1Q9U8fao8otnC0u27aLS_qTtyjp0idw",
@@ -413,6 +583,7 @@
     "people": "1j7eE-g1TDSSXUTRnTzeDeRLhlTvv3God",
     "platform": "10Tug5CiVs9mi5A2IZ444xmRy2N8bFOl4",
     "platform/agentic-platform": "1tuJJr0jSxIaq3zZGr9FgsluinmAMPVU7",
+    "platform/agentic-platform/brief": "17SunY7PXieJukddTg5x7puIDGkd_MxHr",
     "platform/edge-ai-v2": "1Rxc6xAd39RI3NTfnzwC6wI1uaxqQlHkb",
     "platform/eve": "1SSQ3sTBYOSzznTjx4pyR7mXbFA5gdDQc",
     "platform/mo": "1aUKqrilzhb6A_GGFBX4mZc6hNGbSdRDz",
