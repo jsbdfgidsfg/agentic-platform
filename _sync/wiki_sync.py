@@ -24,6 +24,8 @@ radius for a sync tool.
 from __future__ import annotations
 
 import argparse
+import collections
+import functools
 import hashlib
 import io
 import json
@@ -190,11 +192,25 @@ def _prettify(stem: str) -> str:
                     for w in words)
 
 
+@functools.lru_cache(maxsize=1)
+def _ambiguous_sections() -> frozenset:
+    """Folder names that more than one page folder shares. A section made of the
+    folder name alone is not unique for them: agentic-platform/setup/README.md and
+    wall-e/setup/README.md were both 'Setup — Overview' (selftest, 2026-09-16)."""
+    parents = {p.parent for p in local_pages() if p.parent != WIKI_ROOT}
+    names = collections.Counter(p.name for p in parents)
+    return frozenset(n for n, c in names.items() if c > 1)
+
+
 def doc_title(rel: Path) -> str:
     """Drive search is flat, so every page is prefixed with its section. Without that,
-    wall-e/01-hld.md and edge-ai-v2/01-hld.md were both plain '01. HLD'."""
+    wall-e/01-hld.md and edge-ai-v2/01-hld.md were both plain '01. HLD'. A folder
+    whose name another page folder shares is prefixed with its parent as well."""
     stem = rel.stem.lstrip("_")
     section = _prettify(rel.parent.name) if rel.parent != Path(".") else ""
+    if (section and rel.parent.name in _ambiguous_sections()
+            and rel.parent.parent not in (Path("."), Path(""))):
+        section = f"{_prettify(rel.parent.parent.name)} {_prettify(rel.parent.name)}"
     if stem.upper() == "README":
         return "Wiki — Home" if not section else f"{section} — Overview"
     if stem.lower() == "template" and section:
@@ -557,6 +573,11 @@ def cmd_push(args) -> int:
         changed += 1
         written.append(rel)
         print(f"pushed   {rel}")
+        # Save per page, as pass 1 and `pull` do. Saving once after the loop meant
+        # a push killed mid-way (a session limit, 2026-09-16) forgot every page it
+        # had already uploaded; the next push then read its own uploads as edits
+        # made in Drive and refused 35 pages as conflicts.
+        save_manifest(manifest)
 
     save_manifest(manifest)
     if written:
