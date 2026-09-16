@@ -3,11 +3,11 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-15
 - Objective: 2026-09-13 — `$ROBOT` holds **Super Admin** (P33), not a narrow custom role ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) "What this reverses and what it costs", §0.4, §13.1).
 - Topology: 2026-09-13 — four GCP projects, all beneath `$FOLDER_ID`. `$PROJECT` on this page is Wall-E's own project (`WALLE_PROJECT` elsewhere); `$GEMINI_PROJECT`, `$EVE_PROJECT` and `$MO_PROJECT` are the other three. [../project-topology.md](../project-topology.md) is the authority for placement and for every cross-project grant.
 - Applies to: [SETUP.md](SETUP.md) (Phases 1 to 18), [setup/README.md](setup/README.md) and [setup/walle.env.example](setup/walle.env.example)
-- Last executed: never. Nothing in the Wall-E stack is built yet.
+- Last executed: never. Nothing in the Wall-E stack is built yet. **Superseded on 2026-09-15; do not work from this page.** Start at [../agentic-platform/setup/README.md](../agentic-platform/setup/README.md); its files 01, 03 and 04 carry what is salvaged from here.
 
 Read this page before you open [SETUP.md](SETUP.md). It lists everything that must already be true, decided, granted, bought or installed before the first command, plus the long-lead items that block later stages. It does not repeat the runbook's steps. Where the runbook and this page disagree, [SETUP.md](SETUP.md) wins, and the disagreement is listed under [Gaps this page found](#10-gaps-this-page-found) so the runbook can be fixed.
 

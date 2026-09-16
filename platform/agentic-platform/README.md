@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-15
 - Maturity: **design — nothing built.** No folder, no factory run, no project made by the
   factory, no gateway, no registry entry, no sink, no SIEM, no witness organisation, no robot
   account with Super Admin. The four projects of [../project-topology.md](../project-topology.md)
@@ -134,10 +134,10 @@ The builder's question is "what do I create first, and what does the factory ref
 10. [12-open-decisions.md](12-open-decisions.md) §2 — every decision the folder and the first
     factory run depend on; anything `open` there is a factory input that does not exist yet.
 
-The Wall-E, Eve and Mo runbooks (`../wall-e/SETUP.md`, `../eve/07-build-runbook.md`,
-`../mo/07-build-runbook.md`) are per-agent and come after the platform; the propagation stage
-(HLD §18) rewrites the phases the platform now performs (the factory call, folder-level deny
-policy, the log view instead of an organisation sink).
+To build rather than read, start at [setup/README.md](setup/README.md) (2026-09-15): the one
+entry point to the human-executed setup procedures for the platform, Mo, Eve and Wall-E. It
+supersedes the per-agent runbooks (`../wall-e/SETUP.md`, `../wall-e/PREREQUISITES.md`,
+`../eve/07-build-runbook.md`, `../mo/07-build-runbook.md`), which are kept for reference only.
 
 ## Maturity: what exists on 2026-09-13
 

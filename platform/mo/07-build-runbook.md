@@ -2,8 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
-- Last executed: **never**
+- Last reviewed: 2026-09-15
+- Last executed: **never**. **Superseded on 2026-09-15; do not execute.** Start at [../agentic-platform/setup/README.md](../agentic-platform/setup/README.md); its files 02, 22, 29, 36 and 40 carry what is salvaged from this page.
 - Objective restated 2026-09-13 (platform HLD
   [../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.3): the build includes
   Mo's Eve reads, tables, assertions, allowlist paths and denial test MD-15.

@@ -2,8 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
-- Last executed: **never**
+- Last reviewed: 2026-09-15
+- Last executed: **never**. **Superseded on 2026-09-15; do not execute.** Start at [../agentic-platform/setup/README.md](../agentic-platform/setup/README.md); its files 23 to 29, 36 and 41 carry what is salvaged from this page.
 - **Objective restated 2026-09-13; see the platform HLD**
   ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2–§13.3): this runbook
   carries §18 items 13, 14, 15 and 17 (owner the Eve owner; gates the super-admin grant and

@@ -8,16 +8,16 @@
 |---|---|
 | Owner | the platform owner |
 | Written | 2026-09-08 |
-| Last reviewed | 2026-09-14 |
+| Last reviewed | 2026-09-15 |
 | Objective | Restated 2026-09-13 in the platform HLD ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) "What this reverses and what it costs", §13.1): `$ROBOT` holds **Super Admin** (P33), so the action services plus detection are the containment. Four GCP projects per [../project-topology.md](../project-topology.md); `PROJECT` here is `WALLE_PROJECT` |
 | Last executed | never |
 | Applies to | [platform/wall-e](README.md) design set, documents 01 to 10 |
 | Architecture | [ARCHITECTURE.md](ARCHITECTURE.md), the standalone service view |
 | Produces | Stage 0 of the [autonomy ladder](05-autonomy-ladder.md) |
 
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-15
 
-This document is standalone. You can execute it without having read the design set. Every step that exists for a non-obvious reason says why, and links to the document that argues it properly. If a statement here and a statement in documents 01 to 10 disagree, [10-adversarial-review.md](10-adversarial-review.md) is the tie-breaker.
+**Superseded on 2026-09-15; do not execute.** This document is not standalone: the setup review ([../agentic-platform/13-setup-procedure-review.md](../agentic-platform/13-setup-procedure-review.md), S066) found it depends on the platform bootstrap, Eve, Mo, the witness and the sandbox twin, and contains blocking defects. Start at [../agentic-platform/setup/README.md](../agentic-platform/setup/README.md), the one entry point; its files 30 to 39 carry what is salvaged from this page. It is kept for reference only.
 
 ---
 
