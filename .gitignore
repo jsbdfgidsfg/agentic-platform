@@ -1,1 +1,5 @@
 .DS_Store
+# Intermediates written by .agent-work/scripts/build_brief.py; only the
+# named PDF below is tracked.
+platform/agentic-platform/brief/dist/brief.html
+platform/agentic-platform/brief/dist/brief.pdf

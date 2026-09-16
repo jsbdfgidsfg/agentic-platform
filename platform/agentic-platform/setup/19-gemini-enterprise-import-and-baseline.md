@@ -78,7 +78,7 @@ flowchart TD
 
 | Role | Who | Does | Present when |
 |---|---|---|---|
-| Platform owner | the platform owner, signed in as `sa-1-admin@` in its own browser profile | every step; requests every PAM grant | throughout |
+| Platform owner | The platform owner, signed in as `sa-1-admin@` in its own browser profile | every step; requests every PAM grant | throughout |
 | Approver of `ent-platform-policy`, `ent-project-move` | the approvers named on the entitlements in file 12 (the security reviewer, or the second human until the security reviewer is appointed); never the requester, because PAM refuses self-approval | approves GE-3.3, GE-3.5, GE-3.10, GE-4.2, GE-4.3, GE-4.7 grants | on call during those steps |
 | Witness at the screen (`GE_WITNESS`) | the security reviewer, or the second human until the security reviewer is appointed; never the operator | reads the resource name and the value aloud from the console before an irreversible or user-visible click, and confirms it against the record | GE-4.1 (each Delete), GE-6.6 (before **Save and publish**), GE-6.7 if it ever runs |
 | Rollback operator (`GE_ROLLBACK_OPERATOR`) | a second `ge-admins@` member, named in the checkpoint | reachable for the hour after a user-visible publish, and reverses it on the owner's word | GE-6.6, GE-6.7 |

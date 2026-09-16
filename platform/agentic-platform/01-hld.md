@@ -133,7 +133,7 @@ per stage is [§7.2](11-tisax.md#72-the-minimum-per-stage).
 
 | Role | Duty on the platform | Minimum for C–R | Added for W | Added for P / P-SA | Added for X |
 |---|---|---|---|---|---|
-| Platform owner | Folder, factory, register, floors, baseline modules, this page | the platform owner | — | — | — |
+| Platform owner | Folder, factory, register, floors, baseline modules, this page | The platform owner | — | — | — |
 | AI compliance owner (P131; [10-eu-ai-act.md](10-eu-ai-act.md) §4.1) | Signs classifications, files Art. 49 registrations, answers an authority, owns the Art. 73 clock and the Art. 4 briefing content | consulted (legal's designate) | consulted | **engaged**, with a named deputy | — |
 | Agent owner | One per agent: manifest, playbooks, register row, budget | the builder | — | — | — |
 | Operator / approver | Approves L3 requests, pulls K0/K1, grades | agent owner may double | **second named operator**, not the agent owner (≈2 h/week) | band B approver must be a **human super admin ≠ requester** | — |

@@ -146,7 +146,7 @@ and dates are recorded in `03-decisions-and-people.md`, never here.
 
 | Role | Held by | What the role does in this set | Must never also be |
 |---|---|---|---|
-| Platform owner (PO) | the platform owner; `sa-1-admin@` from 06 | Builds; performs or requests most steps; Mo owner until 03 names another; monitored by Eve-H | IT security lead; security reviewer; AI compliance owner; Eve owner; second human; incident commander (from 15); witness administrator; billing administrator; approver of his own grants; approver of any elevation on `EVE_PROJECT` (SD-12); administrator or responder on `PAGER_SUBJECT_SERVICE_NAME` (SD-12); recipient of reports about himself; custodian of `eve@`'s keys |
+| Platform owner (PO) | `OWNER_DAILY_ACCOUNT`, then `sa-1-admin@` from 06 | Builds; performs or requests most steps; Mo owner until 03 names another; monitored by Eve-H | IT security lead; security reviewer; AI compliance owner; Eve owner; second human; incident commander (from 15); witness administrator; billing administrator; approver of his own grants; approver of any elevation on `EVE_PROJECT` (SD-12); administrator or responder on `PAGER_SUBJECT_SERVICE_NAME` (SD-12); recipient of reports about himself; custodian of `eve@`'s keys |
 | Second human (SA2, Eve owner) | An IT security person; `sa-2-admin@` from 06 | Owner of `eve-owners@`; required reviewer on the roster, control groups, `eve/`, `oncall.yaml` and the ladder; approver of Eve's PAM elevations and of `ENT_ORG_SINK`; key custodian (§3.2); manager of the interim evidence location; performs `eve@`'s consent; leads the independent proof of Eve (28); approves the grant (38); holds a non-administrator witness account as owner of record (08) | In the Wall-E administration line (member of any `walle-*` group); second operator; witness administrator (SD-04); platform owner; Mo's blind grader for Wall-E |
 | Security reviewer (SR) | IT security; *tbd* until 03 | Reviews CI rules, deny, floor and ladder changes; signs the super-admin deviation; recipient of reports about the second human (SD-10); `eve@` key custodian; second approver on P-SA production singletons | Platform owner; Mo's CI operator; the second human, unless the ISMS records a dated exception (§2.3) |
 | Second operator (OP2) | A Workspace admin in the operations line; *tbd* until 03 | Member of `walle-operators@`; reviews the toil and Mo input commits; confirms alert receipt | Requester of what it approves; the Wall-E owner; the second human; witness administrator (SD-04) |
@@ -415,8 +415,8 @@ git init -b main "$PLATFORM_REPO_DIR"
 git init -b main "$BUILD_LOG_DIR"
 git -C "$PLATFORM_REPO_DIR" config user.email "<the platform owner's email>"
 git -C "$BUILD_LOG_DIR" config user.email "$(git -C "$PLATFORM_REPO_DIR" config user.email)"
-git -C "$PLATFORM_REPO_DIR" config user.name "the platform owner"
-git -C "$BUILD_LOG_DIR" config user.name "the platform owner"
+git -C "$PLATFORM_REPO_DIR" config user.name "<the platform owner's name>"
+git -C "$BUILD_LOG_DIR" config user.name "<the platform owner's name>"
 mkdir -p "$PLATFORM_REPO_DIR/env" "$PLATFORM_REPO_DIR/decisions" "$BUILD_LOG_DIR/registers" "$BUILD_LOG_DIR/records"
 mv "$HOME/platform/tmp-records/tools.txt" "$BUILD_LOG_DIR/records/" && rmdir "$HOME/platform/tmp-records"
 ```

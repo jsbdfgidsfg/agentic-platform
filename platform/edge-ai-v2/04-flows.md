@@ -8,7 +8,7 @@
 
 ```mermaid
 sequenceDiagram
-    participant U as the platform owner
+    participant U as Platform owner
     participant GE as Gemini Enterprise
     participant AG as ADK agent
     participant CR as workspace-actions
@@ -43,7 +43,7 @@ during bootstrap) — this is supported and does not require delegation.
 
 ```mermaid
 sequenceDiagram
-    participant U as the platform owner
+    participant U as Platform owner
     participant AG as ADK agent
     participant CR as workspace-actions
     participant AD as Admin SDK

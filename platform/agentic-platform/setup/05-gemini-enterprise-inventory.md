@@ -70,7 +70,7 @@ flowchart LR
 
 | Role | Who | Does | Present when |
 |---|---|---|---|
-| Platform owner, as today's Gemini Enterprise admin | the platform owner, signed in with the account that holds the role today (`OWNER_DAILY_ACCOUNT` until file 06 moves admin work to `sa-1-admin@`) | every step | throughout |
+| Platform owner, as today's Gemini Enterprise admin | The platform owner, signed in with the account that holds the role today (`OWNER_DAILY_ACCOUNT` until file 06 moves admin work to `sa-1-admin@`) | every step | throughout |
 | Nobody else | — | — | — |
 
 Hands-on about 3 hours in one sitting, plus 15 minutes on or after 2026-09-23 for GI-9.4.

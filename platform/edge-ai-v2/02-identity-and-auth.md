@@ -25,7 +25,7 @@ to mint short-lived access tokens forever after.
 
 ```mermaid
 sequenceDiagram
-    participant G as the platform owner (one time only)
+    participant G as Platform owner (one time only)
     participant B as Browser (robot account session)
     participant O as Google OAuth
     participant S as Secret Manager
@@ -69,7 +69,7 @@ alternatives (DWD, a Marketplace app installed domain-wide) are the thing you ru
 
 Practical shape of that one event:
 
-1. the platform owner sets a password on `agent-edge@domain`, in a password manager.
+1. The platform owner sets a password on `agent-edge@domain`, in a password manager.
 2. Signs in **in a clean browser profile** (not his own session) and completes consent.
 3. Immediately afterwards, the account is locked down (below) and never signed into again.
 

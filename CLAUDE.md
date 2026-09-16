@@ -1,8 +1,11 @@
 # Maintaining this wiki
 
 This is the platform owner's working wiki — Digital Workplace manager,
-building an agentic platform on GCP + Google Workspace. He is Workspace super admin
-and Gemini Enterprise admin, and owns several GCP projects.
+building an agentic platform on GCP + Google Workspace. The owner is Workspace super
+admin and Gemini Enterprise admin, and owns several GCP projects.
+
+No page in this wiki names the owner. Roles are named; people are not. Keep it that way:
+write "the platform owner", "the second human", "the security reviewer", never a person.
 
 ## How to update it
 
@@ -25,7 +28,7 @@ and Gemini Enterprise admin, and owns several GCP projects.
 - **No secrets.** No API keys, tokens, passwords, service-account JSON, no personal
   data about employees beyond name/team/remit. Record *where* a secret lives, not what
   it is.
-- Nothing company-confidential that the platform owner hasn't explicitly said to write down.
+- Nothing company-confidential that the owner hasn't explicitly said to write down.
 - Don't state facts about the organisation's environment that you haven't been told. If you infer
   something, mark it clearly as an assumption.
 
@@ -36,10 +39,10 @@ Markdown here is the authoring surface; Drive is the reading and sharing surface
 
 - After editing pages, run `_sync/wiki push` yourself via Bash. It is
   non-interactive and safe to run unattended. If it reports it is not authorised,
-  ask the platform owner to run `cd _sync && ./wiki auth` once — that is the only step
-  that needs him.
-- If he says he edited something in Google Docs, run `pull` **before** editing that
-  page locally, or his changes will be flagged as a conflict. `pull` reverses
+  ask the owner to run `cd _sync && ./wiki auth` once — that is the only step
+  that needs them.
+- If they say they edited something in Google Docs, run `pull` **before** editing that
+  page locally, or their changes will be flagged as a conflict. `pull` reverses
   everything `push` rewrote, and refuses to overwrite a page it cannot fully reverse
   (it leaves a `.pulled.md` sidecar to merge by hand instead).
 - After changing `wiki_sync.py`, run `_sync/wiki selftest`. It checks offline that

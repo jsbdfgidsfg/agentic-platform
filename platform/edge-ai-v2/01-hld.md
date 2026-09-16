@@ -18,7 +18,7 @@
 ```mermaid
 flowchart TB
     subgraph Human["Human surface"]
-        U["the platform owner / allowlisted admins"]
+        U["Platform owner / allowlisted admins"]
         GE["Gemini Enterprise app<br/>(chat surface)"]
     end
 

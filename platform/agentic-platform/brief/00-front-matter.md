@@ -59,7 +59,7 @@ The brief carries the design's conventions unchanged ([design set status](../REA
 - `Assumption:` marks a fact the design inferred rather than verified; the brief keeps every one, including all cost figures.
 - *tbd* marks a value nobody has decided.
 - Every Google product, launch stage, role, constraint, regulatory article and date was verified against its source on 2026-09-13, or is listed under "Unverified" on its design page and stays *tbd*; the brief never upgrades an unverified fact.
-- Dates are absolute. Roles are named, never people, except the owner, the platform owner.
+- Dates are absolute. Roles are named, never people.
 - No company other than Google is named; no secret appears.
 
 ### Decision identifiers and states

@@ -5,7 +5,7 @@
   The TISAX deviation this record also is (P136) is **not yet signed**: the security reviewer's
   and the ISMS's signatures are pending, and the grant itself stays blocked until every
   precondition below is green. Nothing is built.
-- **Deciders:** the platform owner, platform owner (decides). Signs the deviation: the security
+- **Deciders:** the platform owner (decides). Signs the deviation: the security
   reviewer (decision 37 role; a person who is not the platform owner). Enters it in the risk
   register: the ISMS.
 - **Date:** 2026-09-13
@@ -195,7 +195,7 @@ bucket path is fixed when the evidence register exists, platform HLD §14.3).
 
 | Role | Duty | Signed |
 |---|---|---|
-| Platform owner — the platform owner | decides | decided 2026-09-13 |
+| Platform owner | decides | decided 2026-09-13 |
 | Security reviewer (decision 37; not the platform owner) | signs the deviation and accepts R-01 | *tbd* — the role is not yet filled by a second person |
 | ISMS | enters the deviation in the site's risk register | *tbd* — register id *tbd* |
 | Legal (for item 13 only, P28 / P125) | signs the intended-purpose statement | *tbd* |
