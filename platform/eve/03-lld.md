@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-15
+- 2026-09-15: §14 gains the super-admin and self-integrity detections the setup procedures
+  configure, and [§14.1](#141-scope-from-the-first-run-the-human-super-admins-2026-09-15) the
+  scope from the first run (P153–P155).
 - 2026-09-13: objective restated for a super-admin Wall-E (P33) — see the platform HLD
   ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2, §18 items 12–15; owners
   and gates P143).
@@ -755,6 +758,8 @@ and one action:
 | Tenant integrity | the SIEM's `SA-01`…`SA-09` of [../agentic-platform/07-monitoring-detection-incident-response.md §6.2](../agentic-platform/07-monitoring-detection-incident-response.md#62-the-super-admin-set-workspace-side--siem-hosted-severity-1-owned-by-it-security), mirrored so that the desk's evaluator and the verifier's are independent and their firing is compared; Eve's copy also targets `eve@` and Eve's role | 1 | `halt_all` on the P-SA lanes, page (§15); K5/K6 stay human |
 | Writes outside the catalogue's families | any write by `walle@` in a stream or application no catalogue family or band-B method covers (SA-08's shape) | 1 | as above |
 | Posture change by any actor, interactive robot login | SA-03 and SA-04 mirrored; they fill Eve's paging conditions 5 and 6 ([06-failure-modes.md](06-failure-modes.md)) | 1 | as above |
+| Tenant integrity over the human super admins (from the first run, 2026-09-15) | `SA-01`…`SA-09` with the actor widened from `walle@` to **any watched human** — the committed roster, delegated administrators, break-glass accounts and live admin-role holders; `SA-03` and `SA-09` on any actor, an unrostered one included — plus `SA-10`, a watched human in a data-export application (a Vault or search export, a Takeout of another person's data, a Drive ownership transfer or bulk download, a Data Studio or `user_accounts` export, a `gcp` administrative action). `SA-01` reads a committed admin-method allow-list with a `never_allowlisted` set no merge can widen; every severity-1 rule carries two sources, the sink and the poll, because the sink dies with the sharing switch (§14.1; committed form [setup 25 EH-2.3](../agentic-platform/setup/25-eve-human-super-admin-detections.md#eh-23-the-detection-catalogue-sa-01sa-10-with-actor--any-roster-human-and-si-01si-13)) | 1 (`SA-10`: 1 for `vault` and `takeout`, 2 for the rest) | finding and page under §15 with the actor as subject; `halt_all` where a halt target exists, `halt_target_pending` before one does |
+| Self-integrity (2026-09-15) | `SI-01`…`SI-13`, what a monitored administrator would have to touch to silence Eve: any change to `eve@` (password, 2SV, suspension, deletion, token, role); `EVE_SINK` updated or deleted, or its writer identity changed; `SetIamPolicy` or a dataset access change on `EVE_PROJECT`; any Cloud Run job or Cloud Scheduler write, or an image digest off the recorded one; a dataset, table, bucket, retention or lock change on Eve's stores; a key state change on either Eve key ring; DML `DELETE`, `UPDATE`, `MERGE` or `TRUNCATE` against Eve's tables (P186); "Share data with Google Cloud services" turned off or a domain-wide delegation client added — read from the poll, the route that survives the switch; multi-party approval or self-recovery settings changed, or an approval by a service identity (P191); a Secret Manager write on either Eve secret; a lien removal, delete or update on `EVE_PROJECT`; a notification-channel or alert-policy edit in `EVE_PROJECT`; the poll throttled (`quotaExceeded`, HTTP 429) | 1 | as above; a rule whose source is `platform_logs_views.eve_self_integrity` is parsed, fixture-tested and reported as blocked until that view exists, never evaluated silently |
 | Baselines | volume, time-of-day and target-population per family | 2–3 | page or ticket; calibrated at S2 (E-18) |
 | Prompt-to-action divergence | the action executed against the signed human assertion of [decision 14](../wall-e/09-open-decisions.md) — Eve reports on **human prompts** as well as robot actions, because under Super Admin the operator prompting is the escalation | 2 (1 when a tenant-integrity target is involved) | page |
 
@@ -777,9 +782,49 @@ of silence is a halt, not an alert about it (P97). Eve's reconciler raises `log_
 administrator (§15) — when H-1 finds no `eve_workspace_logs` rows for 60 minutes in business
 hours (240 outside), and when Eve's token returns `invalid_grant`, which only a human
 re-bootstrap restores; on H-4, a missing `eve_last_seen` stamp for 15 minutes follows runbook
-RB-03 and a missing daily witness push for 26 hours pages severity 1. The windows, where each
+RB-03 and a missing daily witness push for 26 hours pages severity 1 (the push cadence and the
+windows are superseded by P150, §14.1). The windows, where each
 alarm lives and why the witness holds it are canonical in
 [../agentic-platform/07-monitoring-detection-incident-response.md §7](../agentic-platform/07-monitoring-detection-incident-response.md#7-pipeline-heartbeats-and-the-log_pipeline_silent-halt).
+
+### 14.1 Scope from the first run: the human super admins (2026-09-15)
+
+On 2026-09-15 the owner asked that Eve watch every human super admin from its first run, before
+Wall-E exists. Nothing in §13–§15 changes shape; the actor set does. From the first run the poll
+retrieves every application with `userKey=all`, the roster check and the catalogue's actor sets
+cover the committed roster, delegated administrators, break-glass accounts, live admin-role
+holders and unrostered accounts, and `walle@` joins the robot set only when it exists. Three
+consequences the procedures fix:
+
+- **No halt target.** Before `walle-actions` exists there is nothing to halt, so a halting rule
+  pages severity 1 and records `halt_target_pending` in `eve.incidents`; the halt call joins at
+  [setup 36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md). The roster check runs hourly
+  ([setup 25 EH-5.2](../agentic-platform/setup/25-eve-human-super-admin-detections.md#eh-52-create-the-five-schedules-with-the-selftest-argument--blocked)),
+  daily being the floor above.
+- **The heartbeat and the export.** `eve-export@` writes an hourly heartbeat row to the witness
+  carrying the last hour's row counts and cumulative per-table counts, plus an export every 6
+  hours (`Assumption:`); the witness holds a heartbeat absence policy of about 90 minutes and an
+  export absence policy of at most 23.5 hours, replacing the 26-hour window above (P150;
+  [setup 27 WG-3.5](../agentic-platform/setup/27-witness-grants-and-alarms.md#wg-35-the-heartbeat-absence-policy-about-90-minutes)).
+- **Severity 1 in minutes.** Route 1 is the organisation-owned paging service with the second
+  human as a parallel recipient; route 2 is an incident-mode push to the witness and a policy
+  there paging the second human and both witness administrators (P151); §15's "witness
+  channels" reads as these two routes. A report whose subject is a human with authority over the
+  platform, the platform owner included, goes to the second human only (the sole-recipient rule);
+  who receives a report about the second human is decided before the routing is merged
+  ([setup 26 ER-0.2](../agentic-platform/setup/26-eve-reporting-and-witness-export.md#er-02-the-b-12-gate-who-receives-a-report-about-the-second-human)).
+
+Because the monitored administrator installs Eve, the second human proves the detection
+independently on a seeded super-admin action before `EVE_H_LIVE_RECORD` is signed, and the
+monitored administrator cannot pause it unnoticed: `eve-owners@` is owned by the second human,
+`eve/config` requires their review, the platform owner holds no standing role that can edit Eve,
+a configuration change that pauses a detection is itself reported, and the witness copy and the
+absence alarms live outside the tenant (P155;
+[setup 28](../agentic-platform/setup/28-eve-independent-proof-and-sandbox-drills.md) §2, §3 and §5). The jobs stay
+BLOCKED until the DPO record for monitoring administrator accounts is signed (P154;
+[setup 25 EH-0.2](../agentic-platform/setup/25-eve-human-super-admin-detections.md#eh-02-the-sd-11-gate-the-dpo-record-for-monitoring-named-administrators)).
+The build is [setup 23–28](../agentic-platform/setup/README.md#3-the-order); the decisions are P153–P155 in
+[../agentic-platform/12-open-decisions.md §6a](../agentic-platform/12-open-decisions.md#6a-proposed-by-the-setup-procedures-p144p191).
 
 ## 15. The reporting contract
 

@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-15
 - Maturity: platform HLD, 2026-09-13. Nothing is built. This is the page every other page of the
   `platform/agentic-platform/` set and the three agent sets point at.
 - Inputs: the objective of 2026-09-13 and the review of the documentation against it
@@ -1090,6 +1090,15 @@ administrator's own actions — a platform role, not a favour
 tenant-integrity rules, witness mirror and paging, `eve.incidents`) is live and drilled
 **before** Super Admin is granted; the grant is a gate with its own checklist (§0.4). The gate
 layer keeps S3/S4 and the seeded-fault exit.
+
+**Scope from the first run (2026-09-15).** At the owner's request the observe-and-report layer
+watches every human super admin from Eve's first run, before Wall-E exists — the committed roster
+and every live admin-role holder as the catalogue's actor set, findings to the second human
+outside the administration line with a copy in the witness, and the second human's independent
+proof on a seeded super-admin action before `EVE_H_LIVE_RECORD` — built by
+[setup 23–28](setup/README.md#3-the-order) and recorded in
+[../eve/03-lld.md §14.1](../eve/03-lld.md#141-scope-from-the-first-run-the-human-super-admins-2026-09-15)
+(P153–P155, [12 §6a](12-open-decisions.md#6a-proposed-by-the-setup-procedures-p144p191)).
 
 ### 13.3 Mo — improving both, one Mo per platform, without touching Eve's independence
 

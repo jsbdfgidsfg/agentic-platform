@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-15
+- 2026-09-15: scope widened at the owner's request — Eve monitors every human super admin from
+  its first run, before Wall-E exists ([below](#scope-from-the-first-run-the-human-super-admins-2026-09-15);
+  P153–P155).
 - 2026-09-13: objective restated for a super-admin Wall-E (P33) — see the platform HLD
   ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) §13.2, §18 items 11–15 and 17;
   owners and gates P143).
@@ -54,6 +57,55 @@ paging and the witness mirror — is a precondition of Wall-E's super-admin gran
 §0.4 P line, §13.2) and is built and drilled before it, whatever the ladder stage; see
 [05-stages.md](05-stages.md). "Before S3 entry nothing else exists — no robot account, no
 token" above is therefore true only of a Wall-E that has not been granted Super Admin.
+
+## Scope from the first run: the human super admins (2026-09-15)
+
+On 2026-09-15 the owner asked that Eve monitor every human super admin from the day it runs,
+before Wall-E exists. That widens the observe-and-report layer's subject, not its shape: the
+six-stream sink, the Reports API poll by actor, the roster check, the detection catalogue and
+the reporting contract are the ones above; the actor they watch is **every account on the
+committed super-admin roster and every live admin-role holder**, the platform owner who installs
+Eve included, and `walle@` joins that set only when it exists. From the first run:
+
+- **Subjects.** The poll retrieves every application with `userKey=all`; the catalogue's actor
+  sets are the roster, delegated administrators, break-glass accounts, live admin-role holders
+  and unrostered accounts, so a freshly created admin is matched, not missed.
+- **Detections.** The tenant-integrity rules `SA-01`…`SA-10` with the actor widened from
+  `walle@` to any watched human, and the self-integrity rules `SI-01`…`SI-13`, which are what a
+  monitored administrator would have to touch to silence Eve. Their canonical home is
+  [03-lld.md §14](03-lld.md#14-the-detection-catalogue-the-roster-check-and-the-evidence-heartbeat);
+  the committed form is [setup 25 EH-2.3](../agentic-platform/setup/25-eve-human-super-admin-detections.md#eh-23-the-detection-catalogue-sa-01sa-10-with-actor--any-roster-human-and-si-01si-13).
+- **No halt target yet.** Before Wall-E's action services exist there is nothing to halt, so
+  every halting rule pages severity 1 and records `halt_target_pending`
+  ([setup 25 EH-4.6](../agentic-platform/setup/25-eve-human-super-admin-detections.md#eh-46-record-that-no-halt-target-exists-yet));
+  the halt call joins at [setup 36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md).
+- **Reports leave the administration line.** A finding whose subject is a human with authority
+  over the platform goes to the second human only — the sole-recipient rule of
+  [03-lld.md §15](03-lld.md#15-the-reporting-contract) — in minutes by the organisation-owned
+  paging service and, as a backstop, by an incident-mode push to the witness organisation, where
+  a copy of every finding and page and the hourly heartbeat land and the absence alarms live
+  ([setup 26](../agentic-platform/setup/26-eve-reporting-and-witness-export.md), [setup 27](../agentic-platform/setup/27-witness-grants-and-alarms.md);
+  P150, P151). Who receives a report about the second human is decided before the routing is
+  merged ([setup 26 ER-0.2](../agentic-platform/setup/26-eve-reporting-and-witness-export.md#er-02-the-b-12-gate-who-receives-a-report-about-the-second-human)).
+- **The monitored administrator installs Eve**, so Eve's independence from him is proven, not
+  assumed: `eve-owners@` is owned by the second human; `EVE_PROJECT` and every later elevation
+  on it are approved by the second human, never the platform owner; `eve/config` requires the
+  second human's review; the platform owner holds no standing role that can edit Eve; and the
+  second human **independently proves detection on a seeded super-admin action** — the page on
+  their own device, the `eve_workspace_logs`, `eve_workspace_reports`, `eve.incidents` and
+  `eve.pages` rows and the witness copy — before `EVE_H_LIVE_RECORD` is signed
+  ([setup 28](../agentic-platform/setup/28-eve-independent-proof-and-sandbox-drills.md) §2–§3; P155). A configuration
+  change that pauses a detection is itself reported (the anti-silencing drill, setup 28 §5).
+- **It is employee monitoring.** The reconciler and poll jobs stay BLOCKED until a DPO record
+  covers monitoring of administrator accounts and works-council information is given where
+  required ([setup 25 EH-0.2](../agentic-platform/setup/25-eve-human-super-admin-detections.md#eh-02-the-sd-11-gate-the-dpo-record-for-monitoring-named-administrators); P154).
+
+The build order is Eve-H ([setup 23–28](../agentic-platform/setup/README.md#3-the-order)), then Wall-E, so the "before
+S3 entry nothing else exists" line of the thesis is true only of the gate layer. Two corrections
+the procedures made to the components table: the evidence bucket is in `europe-west1`, not the
+EU multi-region (P166), and the ladder artefact is published by `walle-deployer@` in
+`CICD_PROJECT`, not by a `WALLE_PROJECT` CI identity (P177). The decisions are P153–P155 in
+[../agentic-platform/12-open-decisions.md §6a](../agentic-platform/12-open-decisions.md#6a-proposed-by-the-setup-procedures-p144p191).
 
 ## What Eve is not
 
@@ -232,7 +284,7 @@ administrators on witness resources.
 | **Eve's Workspace robot** | `eve@<domain>`, custom admin role `Eve — Verifier`, read privileges only. | Its own consented refresh token from a separate Trusted Desktop OAuth client; no domain-wide delegation. | Eve's independent, read-only view of the tenant; the role, its hardening, the ten-scope set and the dropped `apps.licensing` are in [02-identity-and-auth.md](02-identity-and-auth.md#eves-workspace-robot). | Write anything to Workspace. Be impersonated. Be a super admin, ever. | In one sitting with the observe-and-report layer, **before the super-admin grant**, with the widened read set fixed first (E-16). |
 | **Eve's secrets** | Secret Manager, regional (europe-west1), **in Eve's project**: `eve-oauth-client`, `eve-refresh-token`. Version pinned by `EVE_TOKEN_VERSION`, never `versions/latest`. | `roles/secretmanager.secretAccessor` to `eve-controller@` and `eve-verifier@` only. | Holds Eve's Workspace credential where `walle-actions@` cannot be granted access even by mistake, because it has no principal in that project. Values never recorded in the wiki. | Be readable by any Wall-E principal. Sit in Wall-E's project. | **S3 entry.** |
 | **`eve-approval` KMS key and the PEM archive** | Cloud KMS key `eve-approval`, `EC_SIGN_P256_SHA256`, HSM, in `EVE_PROJECT`. | `roles/cloudkms.signer` to `eve-controller@` only. | Produces the only signature that can authorise an L4 execution; its properties, the PEM archive and the manual rotation are in [02-identity-and-auth.md](02-identity-and-auth.md#the-signing-key). | Live in Wall-E's project. Rotate automatically. Be destroyed inside the 400-day evidence horizon. | **S4 entry.** |
-| **Evidence bucket** | `gs://<eve-project>-eve-evidence`, EU, **locked** retention policy of 400 days. A locked policy cannot be removed or shortened and objects cannot be deleted or replaced before expiry even by a project owner; locking applies a lien preventing project deletion. | `eve-verifier@` holds `roles/storage.objectCreator` — create only, no delete, no overwrite. | Attestation bundles, daily reconciliation extracts, archived PEMs, CI-published ladder artefacts, and the daily newline-JSON export with SHA-256 manifests under `exports/`, written by `eve-export@` (P107). | Have its retention shortened. Be the destination of a sink Wall-E's project owners control. | **S3 entry.** |
+| **Evidence bucket** | `gs://<eve-project>-eve-evidence`, `europe-west1` (P166, corrected 2026-09-15), **locked** retention policy of 400 days. A locked policy cannot be removed or shortened and objects cannot be deleted or replaced before expiry even by a project owner; locking applies a lien preventing project deletion. | `eve-verifier@` holds `roles/storage.objectCreator` — create only, no delete, no overwrite. | Attestation bundles, daily reconciliation extracts, archived PEMs, CI-published ladder artefacts, and the daily newline-JSON export with SHA-256 manifests under `exports/`, written by `eve-export@` (P107). | Have its retention shortened. Be the destination of a sink Wall-E's project owners control. | **S3 entry.** |
 | **`eve/config`** | Eve's own git repository, separate from Wall-E's: thresholds, the closed reason vocabulary, the second predicate implementation, the compiled ceiling table, `oncall.yaml`, the seeded faults, the detection catalogue and the super-admin roster, as listed in [07-build-runbook.md Phase 10](07-build-runbook.md#phase-10--eveconfig-eve-reconciler-eve-console-and-the-fixtures) and [Phase 10b](07-build-runbook.md#phase-10b--the-observe-and-report-layer-before-the-super-admin-grant). | Human-merged only. Neither Eve identity has a write path. | Every halt, demote, veto and refuse is a named threshold with a reason code, and `eve_config_version` is stamped on every verdict row, control call and attestation. | Live in Wall-E's repository, where one pull request could widen Wall-E and loosen Eve together. Be merged by one human at S4+. | **S3 entry**; a stub schema and the CI assertions exist from Eve's first commit, and `thresholds.yaml`'s numbers are stubbed at S0 so v0 and the controller read the same values. |
 | **CI-published ladder artefact** | `gs://<eve-project>-eve-evidence/ladder/<config_version>.yaml` plus its git sha, written append-only by Wall-E's CI identity (`CI_DEPLOYER` of `WALLE_PROJECT`, `objectCreator` under an IAM Condition on the `ladder/` prefix — a bucket-level, cross-project grant made by Eve's owner) into Eve's locked bucket. | Wall-E's CI identity, create-only. | Replaces "Eve reads `ladder.yaml` in git": Eve needs no git credential, and the config it compares against — and re-derives effective levels from — cannot be rewritten by Wall-E's deployers. | Be writable by `walle-actions@` or by a deployer. | **S3 entry.** |
 | **Two sweepers and one stamp in `walle-actions`** (Wall-E's side of this design) | Deterministic code in the action service, no Eve involvement. | `walle-actions@`. | `eve_silence`, `eve_evidence_stale` and the passive `eve_last_seen` stamp lower autonomy on Eve's absence; conditions, thresholds and properties are in [08-contract-changes.md §3](08-contract-changes.md#3-wall-es-side-of-this-design). | Raise anything, ever, on Eve's return. Read the content of a verdict. | Code from the **first commit**; the `verdict_receipts` read is wired at **S4 entry**. |
