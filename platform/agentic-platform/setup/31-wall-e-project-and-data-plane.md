@@ -3,17 +3,19 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-16
 - Last executed: never
 - Stage: review §2 stage 22 (Wall-E's register row and the FM-AGENT run) and stage 23 (Phases 7 and 8 of the superseded Wall-E runbook). Runs after [30](README.md) (the Workspace side), which itself runs only on `EVE_H_LIVE_RECORD`. It is ordered **after the security reviewer and the second human are appointed**, because the production P-SA singleton entitlement needs two named approvers and neither may be the requester (SD-42, S011).
-- Step prefix: `WD`. Steps: 38. BLOCKED steps: WD-4.5 (the nine `walle_audit` table schemas, README B-22, opened by this file). Steps that record `PENDING` rather than `BLOCKED`: WD-5.2 and WD-5.4 (`run.invoker` for `walle-tasks@`, re-run in 33), WD-6.3 (the five secret versions, added in 32), WD-8.2 and WD-8.3 (foreign readers that do not exist yet), WD-9.2 (the pinned PEM files, which arrive at S4).
+- Step prefix: `WD`. Steps: 40. BLOCKED steps: WD-4.5 (the nine `walle_audit` table schemas, README B-22, opened by this file). Steps that record `PENDING` rather than `BLOCKED`: WD-5.2 and WD-5.4 (`run.invoker` for `walle-tasks@`, re-run in 33), WD-6.3 (the five secret versions, added in 32), WD-8.2 and WD-8.3 (foreign readers that do not exist yet), WD-9.2 (the pinned PEM files, which arrive at S4).
+- Ordering inside the file: WD-10.1 (the audit-destruction guard, a repository commit that touches nothing in Google Cloud) is a **prerequisite of WD-4.4**, because WD-4.4's and WD-4.5's rollbacks invoke it; it is numbered 10 because it is the rollback tool, not because it runs last. WD-4.2 checks it is present before the dataset is created.
+- Revised 2026-09-16 against the second-round review of this file: the guard's dataset mode no longer exits under `set -e`, and its export, decision and typed-confirmation checks are unconditional; `WALLE_LOCAL_DIR` is set in WD-0.4 rather than inside the BLOCKED WD-4.5; WD-2.2 is split into a grant request and the policy work; WD-11.1 lists and revokes grants per scope; WD-7.3 is gated on every secret having no version; the custom-role deletion window is stated as Google documents it; WD-5.2 tolerates a service that does not implement the service-identity API; WD-8.2 cannot drop a reader; WD-4.4's and WD-4.5's rollbacks go through the guard.
 - Replaces: Phase 6's manual fallback, Phase 7 and Phase 8 of [../../wall-e/SETUP.md](../../wall-e/SETUP.md). That page is not executed.
 - Salvaged: Phase 7's Firestore, dataset, table, topic and queue shapes and their verifies; Phase 7's dataset-`READER` mechanic (the access array is read, appended and written back, because `bq add-iam-policy-binding` does not act on datasets) and its anti-grant of authorised views; Phase 8's regional-secret reasoning, the version-pinning rule, the `walleAuditWriter` permission set, the PEM pin directory and the "no KMS role here" assertions; `walle_setup.py`'s `AUDIT_TABLES` once corrected to the nine names of Phase 7's own prose (S093).
 - Not copied: the Phase 6 manual fallback and its `--folder="$FOLDER_ID"` (S019); `gcloud config set project` and every later command without `--project` (S071); the standing creator Owner (S018); six audit tables (S093); one writer entry on `walle_audit` (S109); `DELETE ... WHERE FALSE` run as the operator as proof of the insert-only control (S108); three secrets instead of five (S020); the Workspace API list without `iam`, `groupssettings`, `chromepolicy` and `cloudidentity` (S110); `bq rm -r -f -d` on a dataset holding rows (S089); `gcloud iam roles delete` with no undelete path (S183); the advice to run Phase 8 before Phase 7 (S114); `walle_workspace_logs` as a dataset in this project (retired by P104).
 - Applies decisions (signed in 03 before the step that needs them): SD-01, SD-02, SD-37, SD-41, SD-42, SD-43, SD-44, SD-46, NAMES, P13, D11, decision 3, decision 48.
 - Closes: S008 (with 16 and 38), S011 (with 12), S018 (for `WALLE_PROJECT`, with 17), S019, S020 (the creation half; the values are 32's), S054, S055 (the `walle_audit` half), S070, S071, S089, S093, S107, S108, S109, S110, S114, S183, S186 (the read-back half). Defers none without an owner (§14).
 - Consumes: FM-AGENT and FM-COMMON (17); `ENT_FACTORY_SINGLETON_PSA_PROD`, `ENT_PROJECT_REPAIR_TEMPLATE`, `ENT_DEPLOY_CREDENTIAL_HOLDER_TEMPLATE`, `ENT_PLATFORM_POLICY`, `ENT_FOLDER_ADMIN` (12); `SA_MO_METRICS` (22); `SA_EVE_EXPORT` (26); `SA_VALIDATOR_CUSTODIAN` (11); `REGION`, `BQ_LOCATION` (01); `REGISTER_PATH`, `MANIFEST_SCHEMA_PATH` (16); `FLD_AGENTS_P_SA_PROD`, `PAB_AGENTS` inputs (09, 13); `WALLE_REPO_REMOTE`, `ROBOT` (30).
-- Produces: `WALLE_PROJECT`, `WALLE_PROJECT_NUMBER`, `WALLE_AUDIT_DS`, `SA_ACTIONS`, `SA_ACTIONS_SUPER`, `SA_AGENT`, `SA_DISPATCH`, `SA_OPS_CALLER`, `SA_TASKS`, `WALLE_SECRET_NAMES`, `SINK_TO_TRIGGERS_WALLE`, `ENT_PROJECT_REPAIR_WALLE`, `ENT_DEPLOY_CREDENTIAL_HOLDER_WALLE`, `PAB_AGENTS_P_SA`.
+- Produces: `WALLE_PROJECT`, `WALLE_PROJECT_NUMBER`, `WALLE_AUDIT_DS`, `WALLE_LOCAL_DIR`, `SA_ACTIONS`, `SA_ACTIONS_SUPER`, `SA_AGENT`, `SA_DISPATCH`, `SA_OPS_CALLER`, `SA_TASKS`, `WALLE_SECRET_NAMES`, `SINK_TO_TRIGGERS_WALLE`, `ENT_PROJECT_REPAIR_WALLE`, `ENT_DEPLOY_CREDENTIAL_HOLDER_WALLE`, `PAB_AGENTS_P_SA`, `ROLE_WALLE_AUDIT_WRITER`.
 - Commands checked against Google's documentation on 2026-09-15 (§16). What could not be settled that day is listed in §15.
 
 ## What this part builds
@@ -45,28 +47,29 @@ What the old text got wrong, and must not come back:
 | Three secrets created, five needed (S020) | The broad client's two secrets are missing in the middle of the one irreversible consent sitting | WD-6.1 creates five; WD-6.2 binds three to one reader and two to the other and proves the cross-reads absent |
 | Workspace APIs without `iam`, `groupssettings`, `chromepolicy`, `cloudidentity` (S110) | Band-B calls on those surfaces fail `SERVICE_DISABLED` after the irreversible consent, and `gcloud iam service-accounts create` prompts on a fresh project | WD-2.1 puts them in the spec; WD-2.4 compares `services list --enabled` with the spec exactly |
 | `bq rm -r -f -d "${PROJECT}:walle_audit"` as rollback (S089) | One command destroys the only Wall-E-side record of what a super-admin credential was asked to do | WD-10.1 commits a guard that refuses while rows exist unless the exports are confirmed and a decision record is given, and prints `IRREVERSIBLE: destroys audit evidence` |
-| `gcloud iam roles delete walleAuditWriter` with no undelete (S183) | A deleted custom role blocks its own id for 44 days, so the re-run fails `ALREADY_EXISTS` | WD-7.1 reads `deleted` first and undeletes; WD-10.1's rollback disables rather than deletes |
+| `gcloud iam roles delete walleAuditWriter` with no undelete (S183) | A deleted custom role can be undeleted for 7 days; after that it enters a permanent-deletion process of up to 30 days during which its id cannot be reused (up to 37 days in all), so the re-run fails `ALREADY_EXISTS` | WD-7.1 reads `deleted` first and undeletes; WD-10.1's rollback disables rather than deletes |
 | "run phases 1 to 6 and 8 anyway" (S114) | Phase 8.4 rewrites the access array of a dataset Phase 7 creates | §4 creates the dataset before §6 and §7; only the **tables** wait on the schemas |
 | `walle_workspace_logs` as a dataset here | Retired by P104: the reconciliation copy is the authorised view `platform_logs_views.walle_workspace_logs` in `LOGGING_PROJECT` (14) | WD-4.4 asserts the dataset is absent and names row 40 as its replacement |
 
 ```mermaid
 flowchart TD
-  A["WD-0 Sitting, approvers, Access Approval prerequisite"] --> B["WD-1 Schema amendment, walle-owners@, row and manifest merged"]
+  A["WD-0 Sitting, approvers, Access Approval prerequisite, local clone"] --> B["WD-1 Schema amendment, walle-owners@, row and manifest merged"]
   B --> C["WD-2.1 Allow-list check and run spec"]
-  C --> D["WD-2.2 pab-agents-p-sa created"]
+  C --> D["WD-2.2 Policy grant requested; WD-2.2b pab-agents-p-sa created"]
   D --> E["WD-2.3 FM-AGENT run: WALLE_PROJECT, no standing Owner"]
   E --> F["WD-2.4 to WD-2.6 Placement, identities, trigger sink"]
   F --> G["WD-3.1 Access Approval enrolment (G9)"]
   F --> H["WD-4.1 Repair grant"]
   H --> I["WD-4.3 Firestore (default) europe-west1"]
-  H --> J["WD-4.4 Dataset walle_audit EU"]
+  A --> Q["WD-10.1 Guarded destruction tool (before the dataset exists)"]
+  Q --> J["WD-4.4 Dataset walle_audit EU"]
+  H --> J
   J --> K["WD-4.5 Nine tables (BLOCKED on schemas)"]
   H --> L["WD-5 Topics, walle-tasks@, queue"]
   H --> M["WD-6 Five empty regional secrets"]
   J --> N["WD-7 walleAuditWriter, two writer entries, probes"]
   N --> O["WD-8 Cross-project readers and PENDING lines"]
-  B --> P["WD-9 PEM pin directory"]
-  N --> Q["WD-10 Guarded destruction tool"]
+  A --> P["WD-9 PEM pin directory"]
   K --> R["WD-11 Close: checker, deviation rows, grants ended"]
   L --> R
   M --> R
@@ -97,8 +100,8 @@ flowchart TD
 | Role | Does | Present at |
 |---|---|---|
 | Platform owner (as `sa-1-admin@`) | Writes the row, manifest and run spec; requests every grant; performs every shell step | every step |
-| Security reviewer (`SECURITY_REVIEWER_EMAIL`) | **First named approver** of `ENT_FACTORY_SINGLETON_PSA_PROD`; code owner review of the register row, the manifest and the schema amendment; approver of `ENT_PLATFORM_POLICY` for the PAB policy | WD-0.2, WD-1.1, WD-1.3, WD-2.2, WD-2.3 |
-| Second human (`SECOND_HUMAN_EMAIL`) | **Second named approver** of the same entitlement; approver of `ENT_PROJECT_REPAIR_WALLE` grants; signs the RG-3.6 manual parse of the P-SA row | WD-0.2, WD-1.3, WD-2.3, WD-4.1 |
+| Security reviewer (`SECURITY_REVIEWER_EMAIL`) | **First named approver** of `ENT_FACTORY_SINGLETON_PSA_PROD`; code owner review of the register row, the manifest and the schema amendment; first approver of `ENT_PLATFORM_POLICY` for the PAB policy (the grant is requested in WD-2.2 and used in WD-2.2b) | WD-0.2, WD-1.1, WD-1.3, WD-2.2, WD-2.3 |
+| Second human (`SECOND_HUMAN_EMAIL`) | **Second named approver** of the same entitlement; second approver of `ENT_PLATFORM_POLICY`; approver of `ENT_PROJECT_REPAIR_WALLE` grants; signs the RG-3.6 manual parse of the P-SA row; present when the audit guard is ever run | WD-0.2, WD-1.3, WD-2.2, WD-2.3, WD-4.1, WD-10.1 |
 | Second operator (`SECOND_OPERATOR_EMAIL`) | Reviews the schema-file commit list and the guard tool; second reviewer where the security reviewer authored | WD-4.5, WD-10.1 |
 | Billing administrator | FM-2.5 and FM-2.10 only if `BOOTSTRAP_BILLING_EXPIRY` has passed | WD-2.3 |
 | Mo owner | Confirms `SA_MO_METRICS` before WD-8.1 grants it; closes the MO-10.2 re-run line afterwards | WD-8.1 |
@@ -173,6 +176,27 @@ gcloud access-approval settings get --project="$CORE_PROJECT" --format=json 2>&1
 - **VERIFY:** A dated record exists stating whether Access Approval is available to this organisation and under which support subscription; the settings read is copied into the build log with its exact error text if it fails.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-0.3-access-approval-prereq-v1.txt`. E-06. TISAX 6.1.
+
+### WD-0.4 Clone Wall-E's repository and record `WALLE_LOCAL_DIR`
+
+- **WHO:** Platform owner.
+- **WHERE:** Shell.
+- **ACTION:** Three steps of this file write into Wall-E's own repository (`WALLE_REPO_REMOTE`, created in 30): WD-9.1 and WD-9.2 (the PEM pin directory, which must exist years before the first key) and WD-4.5 (the schema files, BLOCKED). The clone's path is therefore a plan variable set here, where nothing is blocked, not a sitting value invented inside WD-4.5 — the second-round review found `need WALLE_LOCAL_DIR` in §9 failing for exactly that reason.
+
+```bash
+need WALLE_REPO_REMOTE PLATFORM_REPO_DIR
+WD_CLONE="$(dirname "$PLATFORM_REPO_DIR")/wall-e"
+test -d "$WD_CLONE/.git" || git clone "$WALLE_REPO_REMOTE" "$WD_CLONE"
+git -C "$WD_CLONE" remote get-url origin
+git -C "$WD_CLONE" fetch --prune origin && git -C "$WD_CLONE" switch main && git -C "$WD_CLONE" pull --ff-only
+penv_set WALLE_LOCAL_DIR "$WD_CLONE"
+need WALLE_LOCAL_DIR
+git -C "$WALLE_LOCAL_DIR" status --short --branch | head -n 1
+```
+
+- **VERIFY:** `remote get-url` prints exactly `WALLE_REPO_REMOTE`; the status line reads `## main...origin/main` with nothing behind or ahead; `grep -c '^WALLE_LOCAL_DIR=' ~/.platform-env` prints `1`.
+- **ROLLBACK:** `penv_set --force WALLE_LOCAL_DIR` to another path; the clone itself is disposable.
+- **EVIDENCE:** The remote URL and the status line as `${R}-0.4-walle-clone-v1.txt`. E-05. TISAX 5.2.1.
 
 ## 1. The register row and the manifest
 
@@ -451,14 +475,15 @@ python3.12 -m json.tool "$RUN_SPEC" > /dev/null && echo JSON-OK
 - **ROLLBACK:** Close the pull request; nothing exists in Google Cloud.
 - **EVIDENCE:** The allow-list comparison and the inputs report as `${R}-2.1-run-spec-v1`, `evidence_add WD-2.1 run-spec E-05 1.3.1 ...`. TISAX 1.3.1, 5.2.1. Closes S110's spec half.
 
-### WD-2.2 Create `pab-agents-p-sa`
+### WD-2.2 Write the rules file and request the policy grant
 
-- **WHO:** Platform owner under `ENT_PLATFORM_POLICY` (approvers as 12 configured: the security reviewer, with the second human as the second approver).
-- **WHERE:** Shell; `PLATFORM_REPO_DIR/policies/pab/`.
-- **ACTION:** 13 OP-7.8 created `pab-agents` with the whole platform folder as its resource and handed this file the stricter twin (04 §4.3: "the `-p-sa` singleton binds a stricter twin `pab-agents-p-sa` whose only resource is `WALLE_PROJECT` and the approval surface"). Both the action services and the two approval surfaces live in `WALLE_PROJECT` (P46), so the rule has one resource. The policy is created before the run because FM-2.16 binds it.
+- **WHO:** Platform owner writes and requests; **approvers** of `ENT_PLATFORM_POLICY` as 12 configured: the security reviewer, with the second human as the second approver. Neither is the requester.
+- **WHERE:** Shell; `PLATFORM_REPO_DIR/policies/pab/`; the approvers' console **Security > Privileged Access Manager > Approve grants** (organisation selected).
+- **ACTION:** 13 OP-7.8 created `pab-agents` with the whole platform folder as its resource and handed this file the stricter twin (04 §4.3: "the `-p-sa` singleton binds a stricter twin `pab-agents-p-sa` whose only resource is `WALLE_PROJECT` and the approval surface"). Both the action services and the two approval surfaces live in `WALLE_PROJECT` (P46), so the rule has one resource. The policy is created before the run because FM-2.16 binds it. This step stops at the grant request: the entitlement has approvers, so the grant is not active when the request returns, and the policy work is WD-2.2b, which begins only once the grant reads `ACTIVE` — the same request-then-work shape as WD-4.1 and §4.
 
 ```bash
 need ORG_ID ENT_PLATFORM_POLICY CICD_PROJECT PLATFORM_REPO_DIR W_ID
+mkdir -p "$PLATFORM_REPO_DIR/policies/pab"
 cat > "$PLATFORM_REPO_DIR/policies/pab/pab-agents-p-sa.rules.json" <<EOF
 [
   {
@@ -469,18 +494,39 @@ cat > "$PLATFORM_REPO_DIR/policies/pab/pab-agents-p-sa.rules.json" <<EOF
 ]
 EOF
 python3.12 -m json.tool "$PLATFORM_REPO_DIR/policies/pab/pab-agents-p-sa.rules.json" > /dev/null && echo JSON-OK
-gcloud pam grants create --entitlement="$ENT_PLATFORM_POLICY" --requested-duration=3600s --justification="31 WD-2.2: create pab-agents-p-sa (04 4.3, 13 OP-9.2 hand-off)" --location=global --billing-project="$CICD_PROJECT"
+git -C "$PLATFORM_REPO_DIR" add policies/pab/pab-agents-p-sa.rules.json
+git -C "$PLATFORM_REPO_DIR" commit -m "policies: pab-agents-p-sa rules, one resource (setup 31 WD-2.2, 04 4.3)"
+git -C "$PLATFORM_REPO_DIR" push
+gcloud pam grants create --entitlement="$ENT_PLATFORM_POLICY" --requested-duration=3600s --justification="31 WD-2.2b: create pab-agents-p-sa (04 4.3, 13 OP-9.2 hand-off)" --location=global --organization="$ORG_ID" --billing-project="$CICD_PROJECT"
+```
+
+  The rules file goes into the `fm-spec-walle-prod` branch of WD-2.1 and is merged by the same pull request, reviewed by the security reviewer. The grant is requested against the **organisation**, because `ENT_PLATFORM_POLICY` is organisation-scoped (12); a request scoped to a project would not find it.
+- **VERIFY:** `JSON-OK`; the pull request carries the rules file; then, after the approvers have acted, `gcloud pam grants list --entitlement="$ENT_PLATFORM_POLICY" --organization="$ORG_ID" --location=global --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name,requester)"` prints **one** grant whose requester is `sa-1-admin@`. Nothing in WD-2.2b is typed before that line prints.
+- **ROLLBACK:** Close the pull request; `gcloud pam grants revoke <GRANT_NAME> --reason="not needed" --location=global --organization="$ORG_ID" --billing-project="$CICD_PROJECT"` if the grant was approved but the work is postponed. Nothing exists in Google Cloud.
+- **EVIDENCE:** The rules file's commit and the grant name in the build log; the `ApproveGrant` audit entry in the aggregated sink. E-08. TISAX 4.1.3.
+
+### WD-2.2b Create `pab-agents-p-sa`
+
+- **WHO:** Platform owner, inside WD-2.2's grant.
+- **WHERE:** Shell.
+- **ACTION:** The enforcement version is pinned to a number, never `latest`, for the reason 13 OP-7.8 recorded for `pab-agents` (04 §4.3): Google's concept page says `latest` "might cause principals to lose access to resources unexpectedly", and a policy whose meaning changes without a pull request is not a control. The number itself is **read on the day** from Google's enforcement-version reference (§16), which lists what each version blocks; on 2026-09-15 the highest documented version was `4`. Both policies must be on the same version, so the value used here is the one 13 OP-7.8 recorded for `pab-agents`, read from that step's record, and the fallback below keeps them aligned if the create rejects it.
+
+```bash
+need ORG_ID PAB_AGENTS PLATFORM_REPO_DIR
+PAB_VERSION="$(gcloud iam principal-access-boundary-policies describe "$PAB_AGENTS" --format="value(details.enforcementVersion)")"
+need PAB_VERSION
+echo "pab-agents is on enforcement version ${PAB_VERSION}; pab-agents-p-sa will use the same"
 cd "$PLATFORM_REPO_DIR"
-gcloud iam principal-access-boundary-policies create pab-agents-p-sa --organization="$ORG_ID" --location=global --display-name="pab-agents-p-sa" --details-rules=policies/pab/pab-agents-p-sa.rules.json --details-enforcement-version=4
-gcloud iam principal-access-boundary-policies describe pab-agents-p-sa --organization="$ORG_ID" --location=global --format=json | tee "${R}-2.2-pab-agents-p-sa-v1.json" | jq '{version: .details.enforcementVersion, rules: [.details.rules[].resources[]]}'
+gcloud iam principal-access-boundary-policies create pab-agents-p-sa --organization="$ORG_ID" --location=global --display-name="pab-agents-p-sa" --details-rules=policies/pab/pab-agents-p-sa.rules.json --details-enforcement-version="$PAB_VERSION"
+gcloud iam principal-access-boundary-policies describe pab-agents-p-sa --organization="$ORG_ID" --location=global --format=json | tee "${R}-2.2b-pab-agents-p-sa-v1.json" | jq '{version: .details.enforcementVersion, rules: [.details.rules[].resources[]]}'
 penv_set PAB_AGENTS_P_SA "organizations/${ORG_ID}/locations/global/principalAccessBoundaryPolicies/pab-agents-p-sa"
 gcloud iam principal-access-boundary-policies search-policy-bindings pab-agents-p-sa --organization="$ORG_ID" --location=global --format="value(name)"
 ```
 
-  The rules file is merged by pull request in the same branch as the spec, reviewed by the security reviewer. Enforcement version is pinned to `4`, never `latest`, as 13 OP-7.8 fixed for `pab-agents` (04 §4.3). K7's KF-4 replaces this policy's rules with an empty set to make every bound agent principal ineligible (04 §9.3); `k7-executor@` is outside every boundary for exactly that reason, and 18's K7 drill reads this policy name from the variables file.
-- **VERIFY:** `JSON-OK`; the describe prints `enforcementVersion 4` and one resource, the `WALLE_PROJECT` id; the binding search prints nothing (FM-2.16 makes the only binding, in WD-2.3). If 33 puts an approval surface in another project, its resource is added here by a superseding pull request — recorded as a re-run line for 33.
-- **ROLLBACK:** `gcloud iam principal-access-boundary-policies delete pab-agents-p-sa --organization="$ORG_ID" --location=global` while no binding exists; after FM-2.16 the binding is deleted first.
-- **EVIDENCE:** The describe JSON, `evidence_add WD-2.2 pab-agents-p-sa E-05 4.2.1 ...`. TISAX 4.2.1.
+  **Fallback:** if the create rejects the version (`INVALID_ARGUMENT` naming `enforcementVersion`), do not retry with `latest`. Read the enforcement-version reference, record in the build log which version was current and what the rejected number would have blocked beyond it, create with the highest accepted number, and raise a re-run line against 13 OP-7.8 so that `pab-agents` is brought to the same version by pull request — the two policies never stay on different versions. K7's KF-4 replaces this policy's rules with an empty set to make every bound agent principal ineligible (04 §9.3); `k7-executor@` is outside every boundary for exactly that reason, and 18's K7 drill reads this policy name from the variables file.
+- **VERIFY:** The describe prints `enforcementVersion` equal to `PAB_VERSION` (and equal to `pab-agents`'s) and one resource, the `WALLE_PROJECT` id; the binding search prints nothing (FM-2.16 makes the only binding, in WD-2.3). If 33 puts an approval surface in another project, its resource is added here by a superseding pull request — recorded as a re-run line for 33.
+- **ROLLBACK:** `gcloud iam principal-access-boundary-policies delete pab-agents-p-sa --organization="$ORG_ID" --location=global` while no binding exists; after FM-2.16 the binding is deleted first. Revoke WD-2.2's grant when the step ends: `gcloud pam grants revoke <GRANT_NAME> --reason="31 WD-2.2b complete" --location=global --organization="$ORG_ID" --billing-project="$CICD_PROJECT"`.
+- **EVIDENCE:** The describe JSON and the version line, `evidence_add WD-2.2b pab-agents-p-sa E-05 4.2.1 ...`. TISAX 4.2.1.
 
 ### WD-2.3 Run FM-AGENT for `walle-prod`
 
@@ -628,7 +674,7 @@ gcloud access-approval settings get --project="$WALLE_PROJECT" --format=json | t
 
   The approvers are deliberately **not** the platform owner: a Google support access request to the project that holds the super-admin credential is approved by the two people who also approve its privileged grants, so that the person who operates Wall-E cannot alone let a third party in. If WD-0.3 recorded Access Approval as unavailable: run nothing, write `N/A` with a pointer to that record, and write the residual into the gate checklist's G9 line as a named, dated exception the security reviewer signs — Access Transparency still logs Google personnel access, but nothing gates it.
 - **VERIFY:** The settings read shows `all` enrolled and the two addresses; the console shows the project enrolled. The two approver bindings appear in `gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten="bindings[].members" --filter="bindings.role=roles/accessapproval.approver"` — these are the only standing human bindings the project carries, and WD-2.4's "empty table" check is re-run afterwards and now expects exactly these two rows, recorded as such.
-- **ROLLBACK:** `gcloud access-approval settings delete --project="$WALLE_PROJECT"` (*Assumption:* the delete subcommand, as 08 WO-2.15 recorded; confirm with `gcloud access-approval settings --help` on the day) and remove the two bindings.
+- **ROLLBACK:** `gcloud access-approval settings delete --project="$WALLE_PROJECT"` (the settings group has `delete`, `get` and `update`, and `update` takes `--enrolled_services` and `--notification_emails` with underscores — reference read on 2026-09-16, §16; 08 WO-2.15 carries the same subcommand as an assumption and is corrected by §13's row for 08) and remove the two bindings.
 - **EVIDENCE:** The settings JSON or the N/A pointer as `${R}-3.1-access-approval-v1`, `evidence_add WD-3.1 access-approval E-06 6.1 ...`. E-06. TISAX 6.1. Fills gate line G9 (38 records it).
 
 ## 4. The control plane and the audit store
@@ -662,9 +708,11 @@ bq --project_id="$WALLE_PROJECT" show "${WALLE_PROJECT}:walle_workspace_logs" >/
 bq show --format=prettyjson "${LOGGING_PROJECT}:${PLATFORM_LOGS_VIEWS_DS}" | jq -r '[.location, ([.access[] | select(.view) | .view.tableId] | join(","))] | @tsv'
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES P13
 "$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 EVIDENCE_RETENTION_DAYS
+git -C "$PLATFORM_REPO_DIR" fetch -q origin && git -C "$PLATFORM_REPO_DIR" ls-tree --name-only origin/main -- tools/walle-audit-guard.sh walle/AUDIT_TABLES
+grep -E $'\tWD-10\\.1\tDONE' "$BUILD_LOG_DIR/checkpoints.tsv" | tail -n 1 || echo "STOP: WD-10.1 is not DONE; the guard must be merged before the dataset exists (its rollback is the guard)"
 ```
 
-- **VERIFY:** The Firestore list is empty (or shows `(default)` in `europe-west1` from a cut sitting, whose WD-4.3 checkpoint has `START` without `DONE`: run WD-4.3's VERIFY for it, never the create); `free walle_audit`; `walle_workspace_logs absent`; `platform_logs_views` is `EU` and holds the authorised view `walle_workspace_logs` (row 40, made in 14 — this is the replacement, and Mo and Eve read it there, not here); `SIGNED` twice; `EVIDENCE_RETENTION_DAYS` is a plain integer, expected `400` (08 R13).
+- **VERIFY:** The Firestore list is empty (or shows `(default)` in `europe-west1` from a cut sitting, whose WD-4.3 checkpoint has `START` without `DONE`: run WD-4.3's VERIFY for it, never the create); `free walle_audit`; `walle_workspace_logs absent`; `platform_logs_views` is `EU` and holds the authorised view `walle_workspace_logs` (row 40, made in 14 — this is the replacement, and Mo and Eve read it there, not here); `SIGNED` twice; `EVIDENCE_RETENTION_DAYS` is a plain integer, expected `400` (08 R13); `ls-tree` prints both `tools/walle-audit-guard.sh` and `walle/AUDIT_TABLES` on `origin/main` and the WD-10.1 checkpoint line reads `DONE`. Without the guard, WD-4.4 does not run: its only sanctioned rollback would not exist.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** Output as `${R}-4.2-precheck-v1.txt`. E-05. TISAX 7.1.2 (data location).
 
@@ -705,7 +753,7 @@ bq --project_id="$WALLE_PROJECT" show --format=prettyjson "${WALLE_PROJECT}:${WA
   > **IRREVERSIBLE** as a name and a location: a BigQuery dataset cannot be renamed or moved (03 §7). Confirm before running: `WALLE_AUDIT_DS` is `walle_audit` and equals `decision-value.sh NAMES WALLE_AUDIT_DS`; `BQ_LOCATION` is `EU`; WD-4.2 printed `free walle_audit`. Gate: the signed NAMES record (03 DC-5.1) and WD-4.2's `DONE` line.
 
 - **VERIFY:** One line: `walle_audit`, `EU`, `no-default-expiry`, `evidence`. The dataset exists **before** §6 and §7 run, which is the ordering the review asked for (S114).
-- **ROLLBACK:** While the dataset is empty and no grant has been made on it: `bq --project_id="$WALLE_PROJECT" rm -d "${WALLE_PROJECT}:${WALLE_AUDIT_DS}"` (without `-r`, so a dataset holding a table is refused). Once a table holds rows, the only path is WD-10.1's guard.
+- **ROLLBACK:** Only through the guard, which is the reason WD-10.1 precedes this step: `"$PLATFORM_REPO_DIR/tools/walle-audit-guard.sh" "$WALLE_PROJECT" "$WALLE_AUDIT_DS" dataset --decision decisions/<date>-walle-audit-rollback.md --exports-verified`, run by the platform owner with the second human present to type the confirmation. The guard refuses without the decision record and the export flag whatever the row count says, so an empty dataset created minutes ago still needs a dated record — that is deliberate: a one-line record costs nothing, and no unguarded `bq rm` exists anywhere in this file (S089). No literal `bq rm` is written here on purpose.
 - **EVIDENCE:** The line and the full `show` output as `${R}-4.4-dataset-v1.json`, `evidence_add WD-4.4 audit-dataset E-07 1.3.1 ...`. TISAX 1.3.1, 7.1.2.
 
 ### WD-4.5 Create the nine audit tables — **BLOCKED**
@@ -717,28 +765,34 @@ bq --project_id="$WALLE_PROJECT" show --format=prettyjson "${WALLE_PROJECT}:${WA
   The review found the script creating six tables while the prose listed nine, and the check counting the same six, so the build reported green while the first write to `ladder_events`, `grades` or `generic_requests` would fail — and an audit-write failure is a hard invariant, so every demote and every band-B request would be denied (S093). The nine names are therefore written once, here, in a committed list that the step and its verify both read.
 
 ```bash
-need WALLE_PROJECT WALLE_AUDIT_DS WALLE_REPO_REMOTE PLATFORM_REPO_DIR
+need WALLE_PROJECT WALLE_AUDIT_DS WALLE_LOCAL_DIR PLATFORM_REPO_DIR
 EXP_DAYS="$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 EVIDENCE_RETENTION_DAYS)"
 case "$EXP_DAYS" in ''|*[!0-9]*) echo "STOP: EVIDENCE_RETENTION_DAYS is not a plain integer: '${EXP_DAYS}'"; unset EXP_DAYS;; esac
 need EXP_DAYS
-WALLE_LOCAL_DIR="${WALLE_LOCAL_DIR:-$(dirname "$PLATFORM_REPO_DIR")/wall-e}"   # local clone of WALLE_REPO_REMOTE; a sitting value, not a plan variable
+git -C "$WALLE_LOCAL_DIR" fetch -q --prune origin
 WALLE_SCHEMAS_COMMIT="$(git -C "$WALLE_LOCAL_DIR" rev-parse origin/main)"      # recorded in the build log under WD-4.5
-need WALLE_LOCAL_DIR WALLE_SCHEMAS_COMMIT
-T="$(mktemp -d)"; git -C "$WALLE_LOCAL_DIR" archive "$WALLE_SCHEMAS_COMMIT" schemas | tar -x -C "$T"
-printf '%s\n' actions runs plans approvals verifications config_versions ladder_events grades generic_requests > "$T/AUDIT_TABLES"
-test "$(ls "$T/schemas"/*.json | wc -l | tr -d ' ')" = 9 || { echo "STOP: expected nine schema files, found $(ls "$T/schemas"/*.json | wc -l)"; false; }
-while read -r TB; do test -f "$T/schemas/${TB}.json" || { echo "STOP: schemas/${TB}.json missing"; break; }; done < "$T/AUDIT_TABLES"
-bq --project_id="$WALLE_PROJECT" mk --table --time_partitioning_field=ts --time_partitioning_type=DAY --time_partitioning_expiration="$(( EXP_DAYS * 86400 ))" --clustering_fields=operation --label=agent:walle --description="Wall-E actions (schemas ${WALLE_SCHEMAS_COMMIT})" "${WALLE_PROJECT}:${WALLE_AUDIT_DS}.actions" "$T/schemas/actions.json"
-for TB in runs plans approvals verifications config_versions ladder_events grades generic_requests; do
-  bq --project_id="$WALLE_PROJECT" mk --table --time_partitioning_field=ts --time_partitioning_type=DAY --time_partitioning_expiration="$(( EXP_DAYS * 86400 ))" --label=agent:walle --description="Wall-E ${TB} (schemas ${WALLE_SCHEMAS_COMMIT})" "${WALLE_PROJECT}:${WALLE_AUDIT_DS}.${TB}" "$T/schemas/${TB}.json" || { echo "STOP at ${TB}: read the error before re-running"; break; }
-done
-cp "$T/AUDIT_TABLES" "$PLATFORM_REPO_DIR/walle/AUDIT_TABLES"
-rm -rf "$T"
+need WALLE_SCHEMAS_COMMIT
+wd45_create_tables() {   # every guard returns from this function, so no bq mk runs after a STOP
+  local T; T="$(mktemp -d)" || return 1
+  git -C "$WALLE_LOCAL_DIR" archive "$WALLE_SCHEMAS_COMMIT" schemas | tar -x -C "$T" || { echo "STOP: schemas/ is not in ${WALLE_SCHEMAS_COMMIT}"; rm -rf "$T"; return 1; }
+  local LIST="$PLATFORM_REPO_DIR/walle/AUDIT_TABLES"     # the nine names, committed by WD-10.1
+  test "$(wc -l < "$LIST" | tr -d ' ')" = 9 || { echo "STOP: ${LIST} does not hold nine names"; rm -rf "$T"; return 1; }
+  test "$(ls "$T/schemas"/*.json 2>/dev/null | wc -l | tr -d ' ')" = 9 || { echo "STOP: expected nine schema files, found $(ls "$T/schemas"/*.json 2>/dev/null | wc -l | tr -d ' ')"; rm -rf "$T"; return 1; }
+  local BAD=0 TB
+  while read -r TB; do test -f "$T/schemas/${TB}.json" || { echo "STOP: schemas/${TB}.json missing"; BAD=1; }; done < "$LIST"
+  [ "$BAD" = 0 ] || { echo "STOP: the schema set does not match walle/AUDIT_TABLES; nothing created"; rm -rf "$T"; return 1; }
+  bq --project_id="$WALLE_PROJECT" mk --table --time_partitioning_field=ts --time_partitioning_type=DAY --time_partitioning_expiration="$(( EXP_DAYS * 86400 ))" --clustering_fields=operation --label=agent:walle --description="Wall-E actions (schemas ${WALLE_SCHEMAS_COMMIT})" "${WALLE_PROJECT}:${WALLE_AUDIT_DS}.actions" "$T/schemas/actions.json" || { echo "STOP at actions: read the error before re-running"; rm -rf "$T"; return 1; }
+  for TB in $(grep -vx actions "$LIST"); do
+    bq --project_id="$WALLE_PROJECT" mk --table --time_partitioning_field=ts --time_partitioning_type=DAY --time_partitioning_expiration="$(( EXP_DAYS * 86400 ))" --label=agent:walle --description="Wall-E ${TB} (schemas ${WALLE_SCHEMAS_COMMIT})" "${WALLE_PROJECT}:${WALLE_AUDIT_DS}.${TB}" "$T/schemas/${TB}.json" || { echo "STOP at ${TB}: read the error before re-running"; rm -rf "$T"; return 1; }
+  done
+  rm -rf "$T"
+}
+wd45_create_tables && echo "nine tables created at ${WALLE_SCHEMAS_COMMIT}"
 ```
 
-  Only `actions` carries an `operation` column, so only `actions` is clustered on it; `bq mk` refuses a clustering field absent from the supplied schema, which is why the loop is split (Phase 7's own reasoning, kept). `--time_partitioning_expiration` is in seconds (bq reference); 400 days is 34,560,000 s. Partitioning is not cosmetic: every ladder metric is a 30-day rolling window over `actions`. If `runs` and `plans` carry `run_id` — the column Eve and Mo join on — add it as a clustering field on those two in the same commit; the schema files decide, not this page. `walle/AUDIT_TABLES` is committed to the platform repository in the same pull request as WD-10.1's guard, so that the guard, Eve's S0 queries (36) and Mo's pack read one list.
+  Only `actions` carries an `operation` column, so only `actions` is clustered on it; `bq mk` refuses a clustering field absent from the supplied schema, which is why the loop is split (Phase 7's own reasoning, kept). `--time_partitioning_expiration` is in seconds (bq reference); 400 days is 34,560,000 s. Partitioning is not cosmetic: every ladder metric is a 30-day rolling window over `actions`. If `runs` and `plans` carry `run_id` — the column Eve and Mo join on — add it as a clustering field on those two in the same commit; the schema files decide, not this page. `walle/AUDIT_TABLES` is the list WD-10.1 committed to the platform repository with the guard, so that this step, the guard, Eve's S0 queries (36) and Mo's pack read one list. Both presence guards are terminal: they `return` from the function before the first `bq mk`, so a tree with nine files under the wrong names creates nothing (the earlier form printed STOP and then built anyway — the opposite of S093's fail-fast).
 - **VERIFY:** `bq --project_id="$WALLE_PROJECT" ls --format=json "${WALLE_PROJECT}:${WALLE_AUDIT_DS}" | jq '[.[] | select(.type=="TABLE")] | length'` prints `9`; `comm -3 <(bq --project_id="$WALLE_PROJECT" ls --format=json "${WALLE_PROJECT}:${WALLE_AUDIT_DS}" | jq -r '.[].tableReference.tableId' | sort) <(sort "$PLATFORM_REPO_DIR/walle/AUDIT_TABLES")` prints nothing; `bq show --format=prettyjson "${WALLE_PROJECT}:${WALLE_AUDIT_DS}.actions" | jq '{p: .timePartitioning, c: .clustering}'` shows `DAY` on `ts`, `expirationMs` equal to `EXP_DAYS × 86,400,000`, and clustering on `operation`; the same read on `generic_requests` shows the partitioning and no clustering.
-- **ROLLBACK:** `bq --project_id="$WALLE_PROJECT" rm -f -t "${WALLE_PROJECT}:${WALLE_AUDIT_DS}.<table>"` **only while the table is empty**, and only through WD-10.1's guard, which refuses otherwise.
+- **ROLLBACK:** Only through the guard: `"$PLATFORM_REPO_DIR/tools/walle-audit-guard.sh" "$WALLE_PROJECT" "$WALLE_AUDIT_DS" table <name> --decision decisions/<date>-walle-audit-rollback.md --exports-verified`, one table per invocation, the second human present to type the confirmation. The guard's refusals — no decision record, no export flag, no typed name — apply whatever the row count reads, so "while the table is empty" is enforced by the tool and not by this sentence. No literal `bq rm` is written here on purpose.
 - **EVIDENCE:** The listing and the two partition reads as `<date>-WD-4.5-audit-tables-v1`, `evidence_add WD-4.5 audit-tables E-07 1.3.1 ...`. E-07. TISAX 1.3.1, 5.2.6. Closes S093.
 
 ## 5. Topics, the queue and `walle-tasks@`
@@ -772,18 +826,25 @@ for T in walle-events walle-triggers walle-inbox walle-dead-letter; do printf '%
   Google's page is explicit about which principal needs what: "To allow Cloud Tasks to create authentication tokens using the service account you just created, you must grant the Service Account User (`roles/iam.serviceAccountUser`) role to the Cloud Tasks primary service agent on the service account you just created" (`service-<PROJECT_NUMBER>@gcp-sa-cloudtasks.iam.gserviceaccount.com`), and the token's service account needs Cloud Run Invoker on the handler.
 
 ```bash
-need WALLE_PROJECT WALLE_PROJECT_NUMBER SA_TASKS SA_ACTIONS
-gcloud beta services identity create --service=cloudtasks.googleapis.com --project="$WALLE_PROJECT"
+need WALLE_PROJECT WALLE_PROJECT_NUMBER REGION SA_TASKS SA_ACTIONS
 CT_AGENT="service-${WALLE_PROJECT_NUMBER}@gcp-sa-cloudtasks.iam.gserviceaccount.com"
-gcloud iam service-accounts add-iam-policy-binding "$SA_TASKS" --member="serviceAccount:${CT_AGENT}" --role=roles/iam.serviceAccountUser --project="$WALLE_PROJECT"
+if gcloud beta services identity create --service=cloudtasks.googleapis.com --project="$WALLE_PROJECT" 2> "${R}-5.2-identity-create-v1.err"; then
+  echo "agent produced by: services identity create" | tee "${R}-5.2-agent-mechanism-v1.txt"
+else
+  echo "services identity create declined for cloudtasks.googleapis.com (error text recorded); provoking first use of the API"
+  gcloud tasks queues create walle-tasks-agent-probe --location="$REGION" --project="$WALLE_PROJECT" >/dev/null 2>&1 || true
+  gcloud tasks queues delete walle-tasks-agent-probe --location="$REGION" --project="$WALLE_PROJECT" --quiet >/dev/null 2>&1 || true
+  echo "agent produced by: first use (probe queue)" | tee "${R}-5.2-agent-mechanism-v1.txt"
+fi
+gcloud iam service-accounts add-iam-policy-binding "$SA_TASKS" --member="serviceAccount:${CT_AGENT}" --role=roles/iam.serviceAccountUser --project="$WALLE_PROJECT" 2> "${R}-5.2-bind-agent-v1.err" || { echo "STOP: binding refused — read ${R}-5.2-bind-agent-v1.err; if it says the member ${CT_AGENT} does not exist, the Cloud Tasks service agent is not there yet: wait a minute after the probe queue and re-run this block, nothing has been bound"; false; }
 gcloud iam service-accounts add-iam-policy-binding "$SA_TASKS" --member="serviceAccount:${SA_ACTIONS}" --role=roles/iam.serviceAccountUser --project="$WALLE_PROJECT"
 gcloud iam service-accounts get-iam-policy "$SA_TASKS" --project="$WALLE_PROJECT" --format="yaml(bindings)" | tee "${R}-5.2-walle-tasks-policy-v1.yaml"
 gcloud iam service-accounts get-iam-policy "$SA_ACTIONS" --project="$WALLE_PROJECT" --format="yaml(bindings)"
 exists_or_pending --pending "serviceAccount:${SA_TASKS}" WD-5.2 "33: roles/run.invoker for walle-tasks@ on the service walle-actions, service-level, once the service exists"
 ```
 
-  `gcloud beta services identity create` forces the service agent into existence before the binding names it, as 11 and 17 do for other agents. `walle-actions@` needs the second binding because it is the principal that creates tasks carrying that token.
-- **VERIFY:** `walle-tasks@`'s policy holds exactly two `roles/iam.serviceAccountUser` members, the Cloud Tasks service agent and `walle-actions@`, and no other role; `walle-actions@`'s own policy holds **no** `roles/iam.serviceAccountUser` member (the self-impersonation of the old text is gone); the PENDING line for 33 is in `rerun-index.tsv`.
+  `gcloud beta services identity create` is documented only as "creates a service identity for a consumer", with no list of the services that implement it (§15, §16), and the Cloud Tasks agent `service-<number>@gcp-sa-cloudtasks.iam.gserviceaccount.com` is normally created on first use of the API. The block therefore tolerates a refusal: it records the error text, provokes first use with a throwaway queue (a queue name is blocked for about seven days after deletion, so the probe name is one this file never reuses), and then relies on the binding itself as the existence proof — IAM refuses `add-iam-policy-binding` with a named error when the service-account member does not exist, and a Google-managed agent cannot be `describe`d from the customer project. The error file is read before anything is retried; if the STOP prints, nothing has been bound and the block is re-run as a whole. Record on the day which of the two mechanisms produced the agent. `walle-actions@` needs the second binding because it is the principal that creates tasks carrying that token.
+- **VERIFY:** `walle-tasks@`'s policy holds exactly two `roles/iam.serviceAccountUser` members, the Cloud Tasks service agent and `walle-actions@`, and no other role; `walle-actions@`'s own policy holds **no** `roles/iam.serviceAccountUser` member (the self-impersonation of the old text is gone); `gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:${CT_AGENT}" --format="value(bindings.role)"` prints nothing (the agent holds nothing at project level); `gcloud tasks queues list --location="$REGION" --project="$WALLE_PROJECT" --format="value(name)"` does not show `walle-tasks-agent-probe` as `RUNNING`; the build log names the mechanism (`identity create` or first use); the PENDING line for 33 is in `rerun-index.tsv`.
 - **ROLLBACK:** `gcloud iam service-accounts remove-iam-policy-binding "$SA_TASKS" --member=... --role=roles/iam.serviceAccountUser --project="$WALLE_PROJECT"` for each.
 - **EVIDENCE:** Both policies as `${R}-5.2-walle-tasks-v1`, `evidence_add WD-5.2 walle-tasks E-08 4.1.1 ...`. TISAX 4.1.1, 4.2.1.
 
@@ -905,7 +966,7 @@ checkpoint WD-6.3 DONE - - "five empty regional secrets; versions are 32's; no v
 - **WHERE:** Shell.
 - **ACTION:** BigQuery has **no insert-only permission**: `bigquery.tables.updateData`, which the Storage Write API and load jobs both need, also permits DML `DELETE` and `UPDATE` (SD-43, and 11 KV-8.4 says the same for the grader role). So the role is append-**capable** and delete-**incapable**: it holds `updateData` and the two metadata reads a writer needs, and deliberately not `bigquery.tables.delete`, `bigquery.tables.update`, `bigquery.tables.setIamPolicy`, `bigquery.datasets.update`, `bigquery.datasets.delete` or `bigquery.tables.getData`. Leaving out `getData` and granting no `bigquery.jobs.create` at project level means the service cannot run DML at all: a DML statement needs a query job, and a `DELETE` needs to read the rows it deletes. Row tampering is therefore made **detectable** as well: BigQuery `DATA_WRITE` audit entries for DML against these tables are a severity-1 rule (15), and Eve's witness heartbeat alarms on any decrease in the cumulative per-table row counts (26, 27).
 
-  A custom role that has been deleted can be undeleted for seven days and its id cannot be reused until the deletion completes, so the create is guarded by a `deleted` read rather than failing `ALREADY_EXISTS` on a re-run (S183).
+  A deleted custom role has two phases, as Google documents them (§16): **7 days** in which `gcloud iam roles undelete` restores it, then a permanent-deletion process that can take up to **30 days**, during which the id cannot be reused — so an id can be unavailable for up to 37 days after the delete. The create is therefore guarded by a `deleted` read rather than failing `ALREADY_EXISTS` on a re-run (S183); the guard is correct whatever the exact figure is, and the figure is re-read from the custom-roles page on the day a delete is ever contemplated.
 
 ```bash
 need WALLE_PROJECT
@@ -919,7 +980,7 @@ gcloud iam roles describe walleAuditWriter --project="$WALLE_PROJECT" --format=j
 ```
 
 - **VERIFY:** The `jq -e` line exits 0: three permissions, exactly those, stage `GA`, not deleted. If the service turns out to write with **load jobs** rather than the Storage Write API, it needs `bigquery.jobs.create` at project level: grant that as a second, separate custom role limited to that one permission, record the change as a deviation, and re-run WD-7.3's probe — never reach for `roles/bigquery.jobUser` or `roles/bigquery.dataEditor`, both of which carry far more.
-- **ROLLBACK:** Do **not** delete the role (the id is then unusable for 44 days and the re-run fails). Remove its entries from the dataset access array instead (WD-7.2's rollback); if the role itself must go, `gcloud iam roles delete walleAuditWriter --project="$WALLE_PROJECT"` and record that the id is blocked, with `gcloud iam roles undelete` as the seven-day recovery.
+- **ROLLBACK:** Do **not** delete the role: the id is then blocked for up to 37 days (7 days of undelete, then up to 30 days of permanent deletion) and the re-run fails. Remove its entries from the dataset access array instead (WD-7.2's rollback); if the role itself must go, `gcloud iam roles delete walleAuditWriter --project="$WALLE_PROJECT"`, record the date and that the id is blocked, and note `gcloud iam roles undelete walleAuditWriter --project="$WALLE_PROJECT"` as the recovery available for 7 days only.
 - **EVIDENCE:** The role JSON as `${R}-7.1-role-v1.json`, `evidence_add WD-7.1 audit-writer-role E-08 4.2.1 ...`. TISAX 4.2.1, 5.2.6. Closes S183's role half.
 
 ### WD-7.2 Set the dataset access array: exactly two writer entries
@@ -967,8 +1028,15 @@ bq --project_id="$WALLE_PROJECT" show --format=prettyjson "${WALLE_PROJECT}:${WA
 - **WHERE:** Shell.
 - **ACTION:** The old check ran `DELETE FROM ... WHERE FALSE` **as the operator**, who was a project Owner on the manual path: it succeeded, and the builder was told the insert-only control did not exist; run by someone with no BigQuery rights it failed for the wrong reason and "proved" the control (S108). The right question is what each service account may do to a table, and the right instrument is `tables.testIamPermissions`, which answers for the caller.
 
+  **Gate:** this step mints tokens as `walle-actions@` and `walle-actions-super@`, the two accounts that hold `secretAccessor` on the robot's refresh tokens (WD-6.2). While the impersonation binding exists, the human operator could read `walle-super-refresh-token` — the broad, super-admin credential — through the impersonated account. The step may therefore run **only while every one of the five secrets has no enabled version**, which is the state 31 leaves them in; the first command below proves it and stops otherwise. After 32 has added versions, this block is never re-run as written: see the re-run rule below the block, which 32 WC-7.3 states from its side.
+
 ```bash
-need WALLE_PROJECT WALLE_AUDIT_DS SA_ACTIONS SA_ACTIONS_SUPER SA_AGENT SA_1_ADMIN
+need WALLE_PROJECT WALLE_AUDIT_DS REGION WALLE_SECRET_NAMES SA_ACTIONS SA_ACTIONS_SUPER SA_AGENT SA_1_ADMIN
+for S in $(printf '%s' "$WALLE_SECRET_NAMES" | tr ',' ' '); do
+  V="$(gcloud secrets versions list "$S" --location="$REGION" --project="$WALLE_PROJECT" --filter="state=ENABLED" --format="value(name)" | wc -l | tr -d ' ')"
+  [ "$V" = 0 ] || { echo "STOP: ${S} has ${V} enabled version(s); WD-7.3 may not mint tokens as a secret-holding account (see the re-run rule)"; false; }
+done | tee "${R}-7.3-secrets-empty-v1.txt"
+grep -q STOP "${R}-7.3-secrets-empty-v1.txt" && { echo "STOP: not all secrets are empty"; false; } || echo "all five secrets empty: WD-7.3 may run"
 for SA in "$SA_ACTIONS" "$SA_ACTIONS_SUPER" "$SA_AGENT"; do
   gcloud iam service-accounts add-iam-policy-binding "$SA" --member="user:${SA_1_ADMIN}" --role=roles/iam.serviceAccountTokenCreator --project="$WALLE_PROJECT"
 done
@@ -987,7 +1055,9 @@ gcloud iam service-accounts get-iam-policy "$SA_ACTIONS" --project="$WALLE_PROJE
 ```
 
   The access token appears in a request header only: it is never echoed, never written to a file and never stored, and the ability to mint it is withdrawn in the same block. If the sitting is interrupted between the grants and the removals, the removals are the first thing the next sitting runs — the checkpoint records it. The probe runs against a table, so it needs WD-4.5; while that step is BLOCKED, run the same probe against the **dataset** endpoint (`.../datasets/${WALLE_AUDIT_DS}:testIamPermissions` is not offered by the v2 API, so instead read the access array of WD-7.2 and record the probe as PENDING on WD-4.5).
-- **VERIFY:** For `walle-actions@` and `walle-actions-super@` the response echoes `bigquery.tables.updateData` and `bigquery.tables.get` and **nothing else** — no `getData`, no `delete`, no `update`, no `setIamPolicy`. For `walle-agent@` the response is an empty object (`{}`): the model's identity may do nothing at all to the audit tables. `walle-actions-super@` echoes the same two on `generic_requests`, which is the entry the old text left ungranted. The final policy read shows no `serviceAccountTokenCreator` member on any of the three accounts.
+
+  **Re-run rule (after 32):** once any secret holds a version, the probe is never run by impersonating `walle-actions@` or `walle-actions-super@` — that would make 32 WC-7.3's claim ("the operator cannot read the robot's tokens") false for the duration of the binding. If WD-7.1's VERIFY calls for a re-probe (a second role for load jobs), or 36 or 37 needs the same evidence, use one of two paths and record which: (a) `gcloud policy-troubleshoot iam` for each service account against `bigquery.tables.delete`, `bigquery.tables.getData` and `bigquery.tables.updateData` on the table resource, which answers without minting anything; or (b) the same `testIamPermissions` probe run from a **throwaway principal** that holds the `walleAuditWriter` entry on a scratch dataset and no secret access. Either is recorded as a deviation from this step's method. 32 WC-7.3 states the same rule from its side, so the two files agree.
+- **VERIFY:** `all five secrets empty: WD-7.3 may run` printed before any binding was made. For `walle-actions@` and `walle-actions-super@` the response echoes `bigquery.tables.updateData` and `bigquery.tables.get` and **nothing else** — no `getData`, no `delete`, no `update`, no `setIamPolicy`. For `walle-agent@` the response is an empty object (`{}`): the model's identity may do nothing at all to the audit tables. `walle-actions-super@` echoes the same two on `generic_requests`, which is the entry the old text left ungranted. The final policy read shows no `serviceAccountTokenCreator` member on any of the three accounts.
 - **ROLLBACK:** The impersonation grants are removed inside the step; if the block stopped early, remove them by hand and record the window in the build log as a dated exception.
 - **EVIDENCE:** The probe output as `${R}-7.3-probe-v1.txt`, `evidence_add WD-7.3 audit-probe E-09 4.2.1 ...`. E-09. TISAX 4.2.1, 1.5.1. Closes S108.
 
@@ -1051,16 +1121,19 @@ exists_or_pending --pending "serviceAccount:${SA_MO_METRICS}" WD-8.1 "36: verify
 - **ACTION:** Row 34 is the identity that makes the daily newline-JSON export of `walle_audit.*` with SHA-256 manifests into Eve's locked bucket — the Art. 12 immutable copy and the witness push. Row 21 is the validator custodian, which re-executes the evidence SQL at its pinned commit; without it every promotion citing Mo is waved through unchecked. The review found both named in the design and made by nobody (S054, S055). Both are granted here if their identity exists, and recorded for 36 if it does not.
 
 ```bash
-need WALLE_PROJECT WALLE_AUDIT_DS
-READERS="$SA_MO_METRICS"
+need WALLE_PROJECT WALLE_AUDIT_DS SA_MO_METRICS
+BEFORE_READERS="$(bq --project_id="$WALLE_PROJECT" show --format=prettyjson "${WALLE_PROJECT}:${WALLE_AUDIT_DS}" | jq -r '[.access[] | select(.role == "READER") | .userByEmail] | sort | join(" ")')"
+READERS="$BEFORE_READERS"
 if exists_or_pending "serviceAccount:${SA_EVE_EXPORT:-none@none.iam.gserviceaccount.com}" WD-8.2 "36: dataset READER on walle_audit for eve-export@ (row 34), gate Wall-E Stage 1"; then READERS="$READERS $SA_EVE_EXPORT"; fi
 if exists_or_pending "serviceAccount:${SA_VALIDATOR_CUSTODIAN:-none@none.iam.gserviceaccount.com}" WD-8.2 "36: dataset READER on walle_audit for the validator custodian (row 21), gate Wall-E Stage 1"; then READERS="$READERS $SA_VALIDATOR_CUSTODIAN"; fi
 walle_audit_access $READERS
+AFTER_READERS="$(bq --project_id="$WALLE_PROJECT" show --format=prettyjson "${WALLE_PROJECT}:${WALLE_AUDIT_DS}" | jq -r '[.access[] | select(.role == "READER") | .userByEmail] | sort | join(" ")')"
+comm -23 <(tr ' ' '\n' <<< "$BEFORE_READERS" | sort) <(tr ' ' '\n' <<< "$AFTER_READERS" | sort) | grep . && echo "STOP: a READER was removed by this step" || echo "no reader removed"
 ```
 
-  The placeholder address makes `exists_or_pending` take its not-found branch and record a PENDING line when the variable is unset, instead of the loop erroring on an empty member — which is what the old bash did (S070). `READERS` is unquoted on purpose in the call, so that each address becomes its own argument; every address is a service-account email with no spaces.
-- **VERIFY:** `ACCESS MATCHES`; the array holds two writers plus one `READER` per identity that exists; each identity that does not exist has exactly one line in `rerun-index.tsv` naming 36. Neither identity holds any other role in this project: `gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:(${SA_EVE_EXPORT:-none} OR ${SA_VALIDATOR_CUSTODIAN:-none})" --format="value(bindings.role)"` prints nothing.
-- **ROLLBACK:** `walle_audit_access "$SA_MO_METRICS"`.
+  `walle_audit_access` sets the array to a computed desired state, so a `READERS` list built from scratch would silently drop the `mo-metrics@` entry WD-8.1 made if `SA_MO_METRICS` were unset in a resumed sitting. `READERS` therefore starts from the **current** `READER` entries and only adds; `SA_MO_METRICS` is in the `need` list so that WD-8.1's STOP branch cannot be skipped past; and the last line refuses a net removal. The placeholder address makes `exists_or_pending` take its not-found branch and record a PENDING line when the variable is unset, instead of the loop erroring on an empty member — which is what the old bash did (S070). `READERS` is unquoted on purpose in the call, so that each address becomes its own argument; every address is a service-account email with no spaces.
+- **VERIFY:** `ACCESS MATCHES`; `no reader removed`; the array holds two writers plus one `READER` per identity that exists, `mo-metrics@` still among them; each identity that does not exist has exactly one line in `rerun-index.tsv` naming 36. Neither identity holds any other role in this project: `gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:(${SA_EVE_EXPORT:-none} OR ${SA_VALIDATOR_CUSTODIAN:-none})" --format="value(bindings.role)"` prints nothing.
+- **ROLLBACK:** `walle_audit_access $BEFORE_READERS` (the reader set recorded before the step), inside the grant.
 - **EVIDENCE:** The read-back and the index lines as `${R}-8.2-rows-34-21-v1`, `evidence_add WD-8.2 rows-34-21 E-09 4.2.1 ...`. TISAX 4.2.1. Closes S054 and S055's `walle_audit` half.
 
 ### WD-8.3 Record `eve-v0@` as PENDING and the S3 principals as out of scope
@@ -1105,7 +1178,7 @@ jq -r '.[] | select(.role == "READER") | .userByEmail' "${R}-8.4-final-access-v1
 ### WD-9.1 Create the pin directory, empty on purpose
 
 - **WHO:** Platform owner; the Eve owner (the second human) is told the path and the rule.
-- **WHERE:** The local clone of `WALLE_REPO_REMOTE`.
+- **WHERE:** The local clone of `WALLE_REPO_REMOTE` at `WALLE_LOCAL_DIR` (WD-0.4).
 - **ACTION:** Eve approves plans at level L4 with a Cloud KMS asymmetric key (`EC_SIGN_P256_SHA256`, key `eve-approval` on ring `eve`, **in `EVE_PROJECT`**); the action service verifies locally against a pinned public key in Wall-E's repository, so it can verify Eve's signature and can never produce one. The interface is fixed now, years before the key exists: the algorithm, the directory, the file naming and the failure mode.
 
 ```bash
@@ -1160,22 +1233,32 @@ exists_or_pending --pending "serviceAccount:${SA_ACTIONS}" WD-9.2 "41 (Eve S4): 
 ### WD-10.1 Commit the audit-destruction guard
 
 - **WHO:** Platform owner writes; the second operator is first reviewer; the second human approves, because this tool is the only sanctioned path to remove audit rows.
-- **WHERE:** `PLATFORM_REPO_DIR`, branch `wd-10-audit-guard`.
-- **ACTION:** Once 33 has run, `walle_audit` holds the only Wall-E-side record of what a super-admin credential was asked to do — kept for 400 days, cited by the EU AI Act technical documentation and by TISAX. The old rollback destroyed it with one unguarded command, with no gate and no second person (S089). The factory's own retirement path deletes a project only after the evidence export confirms; this guard is the same rule for a table or a dataset.
+- **WHERE:** `PLATFORM_REPO_DIR`, branch `wd-10-audit-guard`. **Runs before WD-4.4** (WD-4.2 checks it is merged): the guard is the rollback of WD-4.4 and WD-4.5, so it must exist before the dataset does.
+- **ACTION:** Once 33 has run, `walle_audit` holds the only Wall-E-side record of what a super-admin credential was asked to do — kept for 400 days, cited by the EU AI Act technical documentation and by TISAX. The old rollback destroyed it with one unguarded command, with no gate and no second person (S089). The factory's own retirement path deletes a project only after the evidence export confirms; this guard is the same rule for a table or a dataset. The same commit carries `walle/AUDIT_TABLES`, the one list of nine names that WD-4.5, the guard's callers, Eve's S0 queries (36) and Mo's pack read.
+
+  The second-round review found two defects in the first draft of this script, both fixed below and both covered by the VERIFY: under `set -e`, the line `[ "$MODE" = "table" ] && TABLES="$TBL"` terminated the script in dataset mode before any check ran; and every refusal sat inside `if [ "$ROWS" -gt 0 ]`, so a zero count — reachable because `numRows` lags streaming inserts and because `bq ls` returns 50 tables by default — fell straight through to the delete with no export check, no decision record and no confirmation.
 
 ```bash
+need PLATFORM_REPO_DIR
 git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
 git -C "$PLATFORM_REPO_DIR" switch -c wd-10-audit-guard
-mkdir -p "$PLATFORM_REPO_DIR/tools"
+mkdir -p "$PLATFORM_REPO_DIR/tools" "$PLATFORM_REPO_DIR/walle"
+printf '%s\n' actions runs plans approvals verifications config_versions ladder_events grades generic_requests > "$PLATFORM_REPO_DIR/walle/AUDIT_TABLES"
 cat > "$PLATFORM_REPO_DIR/tools/walle-audit-guard.sh" <<'SH'
 #!/usr/bin/env bash
-# walle-audit-guard.sh PROJECT DATASET {table <name> | dataset} [--decision PATH] [--exports-verified]
-# Refuses to delete anything holding rows unless (a) every partition has a confirmed export and
-# (b) a dated decision record path is supplied. Exit 0 only when the delete actually ran.
+# walle-audit-guard.sh PROJECT DATASET {table <name> | dataset} --decision PATH --exports-verified
+# The only sanctioned path to remove Wall-E audit rows. It ALWAYS requires (a) --exports-verified,
+# (b) a dated decision record that names the dataset, and (c) the dataset name typed back, whatever
+# the row count reads: numRows is metadata that lags streaming inserts, so a zero is "no rows
+# recorded", never proof of emptiness. Exit 0 only when the delete actually ran.
 set -euo pipefail
 P="${1:?project}"; DS="${2:?dataset}"; MODE="${3:?table|dataset}"; shift 3
 TBL=""; DEC=""; EXPORTS=0
-if [ "$MODE" = "table" ]; then TBL="${1:?table name}"; shift; fi
+case "$MODE" in
+  table) TBL="${1:?table name}"; shift;;
+  dataset) ;;
+  *) echo "unknown mode: ${MODE} (expected table <name> or dataset)" >&2; exit 2;;
+esac
 while [ $# -gt 0 ]; do
   case "$1" in
     --decision) DEC="${2:?path}"; shift 2;;
@@ -1183,22 +1266,31 @@ while [ $# -gt 0 ]; do
     *) echo "unknown argument: $1" >&2; exit 2;;
   esac
 done
-TABLES="$(bq --project_id="$P" ls --format=json "${P}:${DS}" | jq -r '.[] | select(.type=="TABLE") | .tableReference.tableId')"
-[ "$MODE" = "table" ] && TABLES="$TBL"
-ROWS=0
-for T in $TABLES; do
-  N="$(bq --project_id="$P" show --format=prettyjson "${P}:${DS}.${T}" | jq -r '.numRows // "0"')"
-  echo "rows ${T} ${N}"
-  ROWS=$(( ROWS + N ))
-done
-if [ "$ROWS" -gt 0 ]; then
-  echo "IRREVERSIBLE: destroys audit evidence (${ROWS} rows); irreversible after time travel, which is seven days and is not a backup"
-  [ "$EXPORTS" -eq 1 ] || { echo "REFUSED: exports not confirmed. Confirm every partition is present in Eve's locked bucket (exports/) with a matching SHA-256 manifest, or in platform-evidence, then pass --exports-verified" >&2; exit 3; }
-  [ -n "$DEC" ] && [ -s "$DEC" ] || { echo "REFUSED: no dated decision record. Pass --decision decisions/YYYY-MM-DD-*.md, signed by the security reviewer and the second human" >&2; exit 4; }
-  grep -qiE 'walle_audit|audit evidence' "$DEC" || { echo "REFUSED: the decision record does not mention this dataset" >&2; exit 5; }
-  printf 'Type the dataset name to confirm: '; read -r CONFIRM
-  [ "$CONFIRM" = "$DS" ] || { echo "REFUSED: confirmation did not match" >&2; exit 6; }
+# Complete table list: bq ls returns 50 entries by default, so ask for the documented maximum and refuse a page that is full.
+LISTING="$(bq --project_id="$P" ls --max_results=1000 --format=json "${P}:${DS}")"
+COUNT="$(printf '%s' "$LISTING" | jq 'length')"
+[ "$COUNT" -lt 1000 ] || { echo "REFUSED: ${DS} lists ${COUNT} objects and the listing may be truncated; page it by hand before deleting anything" >&2; exit 7; }
+if [ "$MODE" = "table" ]; then
+  TABLES="$TBL"
+else
+  TABLES="$(printf '%s' "$LISTING" | jq -r '.[] | select(.type=="TABLE") | .tableReference.tableId')"
 fi
+ROWS=0; UNKNOWN=0
+for T in $TABLES; do
+  N="$(bq --project_id="$P" show --format=prettyjson "${P}:${DS}.${T}" | jq -r '.numRows // "unknown"')"
+  case "$N" in
+    ''|unknown|null|0) echo "rows ${T} unknown-or-zero (metadata; not proof of emptiness)"; UNKNOWN=$(( UNKNOWN + 1 ));;
+    *[!0-9]*) echo "rows ${T} unparseable (${N})"; UNKNOWN=$(( UNKNOWN + 1 ));;
+    *) echo "rows ${T} ${N}"; ROWS=$(( ROWS + N ));;
+  esac
+done
+echo "IRREVERSIBLE: destroys audit evidence (${ROWS} rows recorded, ${UNKNOWN} table(s) with no recorded count); irreversible after time travel, which is seven days and is not a backup"
+# The three refusals and the typed confirmation are UNCONDITIONAL: a zero count never skips them.
+[ "$EXPORTS" -eq 1 ] || { echo "REFUSED: exports not confirmed. Confirm every partition is present in Eve's locked bucket (exports/) with a matching SHA-256 manifest, or in platform-evidence, then pass --exports-verified" >&2; exit 3; }
+[ -n "$DEC" ] && [ -s "$DEC" ] || { echo "REFUSED: no dated decision record. Pass --decision decisions/YYYY-MM-DD-*.md, signed by the security reviewer and the second human" >&2; exit 4; }
+grep -qiE 'walle_audit|audit evidence' "$DEC" || { echo "REFUSED: the decision record does not mention this dataset" >&2; exit 5; }
+printf 'Type the dataset name to confirm: '; read -r CONFIRM
+[ "$CONFIRM" = "$DS" ] || { echo "REFUSED: confirmation did not match" >&2; exit 6; }
 if [ "$MODE" = "table" ]; then
   bq --project_id="$P" rm -f -t "${P}:${DS}.${TBL}"
 else
@@ -1208,15 +1300,21 @@ echo "deleted ${MODE} ${DS}${TBL:+.$TBL}"
 SH
 chmod +x "$PLATFORM_REPO_DIR/tools/walle-audit-guard.sh"
 bash -n "$PLATFORM_REPO_DIR/tools/walle-audit-guard.sh" && echo "syntax ok"
+grep -c 'REFUSED' "$PLATFORM_REPO_DIR/tools/walle-audit-guard.sh"
 git -C "$PLATFORM_REPO_DIR" add tools/walle-audit-guard.sh walle/AUDIT_TABLES
-git -C "$PLATFORM_REPO_DIR" commit -m "tools: walle-audit-guard refuses to destroy audit evidence (setup 31 WD-10.1, S089)"
+git -C "$PLATFORM_REPO_DIR" commit -m "tools: walle-audit-guard refuses to destroy audit evidence; walle/AUDIT_TABLES nine names (setup 31 WD-10.1, S089, S093)"
 git -C "$PLATFORM_REPO_DIR" push -u origin wd-10-audit-guard
 ```
 
-  The guard is deliberately not clever: it counts rows, it prints the sentence the review asked for, and it refuses on three separate grounds before asking a human to type the dataset name. `numRows` is metadata and can lag a streaming write by minutes, so a zero count is treated as "no rows recorded", never as proof of emptiness: the tool still refuses if either the export or the decision flag is missing when the caller passes both. Time travel keeps deleted data for seven days and is not a backup; after that window nothing recovers the rows.
+  The guard is deliberately not clever: it lists every table (asking for the documented maximum of 1,000 and refusing a full page), counts what `numRows` records, prints the sentence the review asked for with the count of tables whose count is unknown, and then refuses on three separate grounds and asks a human to type the dataset name — **whether or not** the count is zero. Time travel keeps deleted data for seven days and is not a backup; after that window nothing recovers the rows. The cost of the unconditional checks is that deleting a genuinely empty dataset needs a one-line dated decision record; that is the intended price.
 
   The same rule applies to the project: FM-REVOKE (17 §7) deletes a project only after the evidence export confirms, and this file's WD-2.3 rollback points there rather than at `gcloud projects delete`.
-- **VERIFY:** `syntax ok`; the pull request is merged with the second operator's review and the second human's approval; a dry run against an **empty** dataset in the sandbox (37 repeats it on the twin) deletes it and exits 0, and a run against a dataset with one seeded row exits 3 without deleting anything. Record both.
+- **VERIFY:** `syntax ok`; the `grep -c` prints `5` (one REFUSED line per refusal: truncated listing, exports, decision record, record content, typed name); the pull request is merged with the second operator's review and the second human's approval. Then four proofs in the sandbox, against a scratch dataset in the twin's project (37 repeats them on the twin), each output recorded:
+  1. **Dataset mode runs at all:** against an empty scratch dataset with `--exports-verified --decision <a one-line test record naming walle_audit>`, the tool prints `rows` lines (or none), prints the `IRREVERSIBLE` sentence, asks for the name, deletes on the typed name and exits `0`. This is the case the first draft could not pass.
+  2. **Zero count does not bypass:** against an empty scratch dataset with **no** `--exports-verified`, the tool exits `3` and deletes nothing — `bq show` on the dataset still succeeds afterwards.
+  3. **Rows refuse without a record:** against a dataset with one seeded row, with `--exports-verified` but no `--decision`, exit `4`, nothing deleted.
+  4. **Unknown mode:** `… bogus` exits `2` before any listing.
+- **ROLLBACK:** Revert the commit; the guard removed, no delete path remains except a reviewed emergency, which is the safer failure. Before this step is DONE, no rollback of WD-4.4 or WD-4.5 exists, which is why WD-4.2 refuses to proceed without it.
 - **ROLLBACK:** Revert the commit; the guard removed, no delete path remains except a reviewed emergency, which is the safer failure.
 - **EVIDENCE:** The merge commit and the two test outputs as `<date>-WD-10.1-audit-guard-v1`, `evidence_add WD-10.1 audit-guard E-07 5.2.6 ...`. E-07. TISAX 5.2.6, 8.1.1. Closes S089.
 
@@ -1237,14 +1335,19 @@ printf '| BD-31-3 | %s | 31 WD-4 to WD-9 | DEV | agent-project data plane (hand,
   "$(jq -r '[.[] | select(.role == "READER") | .userByEmail] | join("+")' "${R}-8.4-final-access-v1.json")" \
   "$(basename "${R}-11.1-live-v1.json")" "$(date -u +%F)" "ENT_PROJECT_REPAIR_WALLE" >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-31-3 Wall-E data plane (setup 31 WD-11.1)"
-for E in "$ENT_PROJECT_REPAIR_WALLE" "$ENT_PLATFORM_POLICY" "$ENT_FOLDER_ADMIN"; do
-  gcloud pam grants list --entitlement="$E" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" 2>/dev/null | while read -r G; do gcloud pam grants revoke "$G" --reason="31 sitting complete" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT"; done
-done
+need ORG_ID ENT_PLATFORM_POLICY ENT_FOLDER_ADMIN FLD_AGENTS_P_SA_PROD
+# One list and one revoke per scope: a project-scoped list cannot see an organisation- or folder-scoped entitlement.
+gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_WALLE" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | while read -r G; do gcloud pam grants revoke "$G" --reason="31 sitting complete" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT"; done
+gcloud pam grants list --entitlement="$ENT_PLATFORM_POLICY" --location=global --organization="$ORG_ID" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | while read -r G; do gcloud pam grants revoke "$G" --reason="31 sitting complete" --location=global --organization="$ORG_ID" --billing-project="$CICD_PROJECT"; done
+gcloud pam grants list --entitlement="$ENT_FOLDER_ADMIN" --location=global --folder="$FLD_AGENTS_P_SA_PROD" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | while read -r G; do gcloud pam grants revoke "$G" --reason="31 sitting complete" --location=global --folder="$FLD_AGENTS_P_SA_PROD" --billing-project="$CICD_PROJECT"; done
+printf 'repair\t';  gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_WALLE" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | wc -l | tr -d ' '
+printf 'policy\t';  gcloud pam grants list --entitlement="$ENT_PLATFORM_POLICY" --location=global --organization="$ORG_ID" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | wc -l | tr -d ' '
+printf 'folder\t';  gcloud pam grants list --entitlement="$ENT_FOLDER_ADMIN" --location=global --folder="$FLD_AGENTS_P_SA_PROD" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | wc -l | tr -d ' '
 gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:user:" --format="table(bindings.role,bindings.members)"
 ```
 
-  `ENT_PLATFORM_POLICY` and `ENT_FOLDER_ADMIN` are organisation- or folder-scoped, so their grants are listed without `--project` in 12's own pattern; the loop above is harmless either way and its output is read, not assumed.
-- **VERIFY:** `exit=0` with no non-`PASS` line other than pending entries this file recorded with an owner and a re-run file; `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-31-3` with a table count of `9` (or `0` while WD-4.5 is BLOCKED, and then the row is superseded when the tables land); no grant is `ACTIVE`; the final IAM table shows only the two `roles/accessapproval.approver` bindings of WD-3.1 and nothing else.
+  `gcloud pam grants list` resolves the entitlement through exactly one of `--project`, `--folder` or `--organization` (§16), so each entitlement is listed and revoked at its own scope: `ENT_PROJECT_REPAIR_WALLE` on the project, `ENT_PLATFORM_POLICY` on the organisation, `ENT_FOLDER_ADMIN` on the folder 12 attached it to (`FLD_AGENTS_P_SA_PROD` as recorded there; if 12 attached it higher, use that folder and record the difference). The first draft listed all three through `--project`, which returns nothing for the other two scopes, and then asserted "no grant is `ACTIVE`" from a query that never looked — an organisation-scoped policy-administration grant left live overnight is the standing privilege 12 exists to remove.
+- **VERIFY:** `exit=0` with no non-`PASS` line other than pending entries this file recorded with an owner and a re-run file; `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-31-3` with a table count of `9` (or `0` while WD-4.5 is BLOCKED, and then the row is superseded when the tables land); the three count lines print `repair 0`, `policy 0` and `folder 0`, each read at its own scope; the final IAM table shows only the two `roles/accessapproval.approver` bindings of WD-3.1 and nothing else.
 - **ROLLBACK:** Append-only register; a revoked grant is not restored.
 - **EVIDENCE:** The report and the commit, `evidence_add WD-11.1 zero-diff E-05 5.2.4 ...`. TISAX 5.2.4, 1.4.1.
 
@@ -1257,11 +1360,12 @@ gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten="bindings[].members" -
 ```bash
 awk -F'\t' '$2 ~ /^WD-/ {s[$2]=$3} END {for (k in s) print k"\t"s[k]}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -V
 grep -E $'\tWD-(5\\.2|5\\.4|6\\.3|8\\.2|8\\.3|9\\.2)\t' "$BUILD_LOG_DIR/rerun-index.tsv" | cut -f2,4
-checkpoint WD-11.2 DONE - - "31 handover: WALLE_PROJECT, walle_audit, five empty secrets, no standing Owner, gate line G9 filled"
+need WALLE_PROJECT WALLE_PROJECT_NUMBER WALLE_AUDIT_DS WALLE_LOCAL_DIR SA_ACTIONS SA_ACTIONS_SUPER SA_AGENT SA_DISPATCH SA_OPS_CALLER SA_TASKS WALLE_SECRET_NAMES SINK_TO_TRIGGERS_WALLE ENT_PROJECT_REPAIR_WALLE ENT_DEPLOY_CREDENTIAL_HOLDER_WALLE PAB_AGENTS_P_SA ROLE_WALLE_AUDIT_WRITER
+checkpoint WD-11.2 DONE - - "31 handover: WALLE_PROJECT, walle_audit, five empty secrets, no standing Owner, gate line G9 filled, WALLE_LOCAL_DIR for 32-37"
 sitting_end
 ```
 
-- **VERIFY:** Every `WD-` step shows `DONE`, or `BLOCKED` for WD-4.5 alone (indexed as B-22), or `N/A` for WD-3.1 if Access Approval is unavailable; at least nine re-run lines; `sitting_end` prints `SITTING-END OK`; `gcloud auth revoke` has run (01's end-of-sitting rule) so no admin token is cached.
+- **VERIFY:** `need` is silent for every variable in the Status "Produces" list, `WALLE_LOCAL_DIR` included (32 to 37 and 41 write into the clone); every `WD-` step shows `DONE`, or `BLOCKED` for WD-4.5 alone (indexed as B-22), or `N/A` for WD-3.1 if Access Approval is unavailable; at least nine re-run lines; `sitting_end` prints `SITTING-END OK`; `gcloud auth revoke` has run (01's end-of-sitting rule) so no admin token is cached.
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** The listing as `${R}-11.2-handover-v1.txt`. E-05. TISAX 1.4.1.
 
@@ -1270,11 +1374,13 @@ sitting_end
 - [ ] WD-0.1: every decision `SIGNED`; `TIER_R_RECORD` present; `EVE_H_LIVE_RECORD` present; no default project.
 - [ ] WD-0.2: both approvers named, neither the requester; two written confirmations.
 - [ ] WD-0.3: a dated record says whether Access Approval is available.
+- [ ] WD-0.4: `WALLE_LOCAL_DIR` in `~/.platform-env`, a clean clone of `WALLE_REPO_REMOTE` on `main`.
 - [ ] WD-1.1: family ids `F<n><letter>` accepted; rule R-13 committed with its two fixtures.
 - [ ] WD-1.2: `walle-owners@` is a security group holding `sa-1-admin@` only, never `walle@`; `BD-31-1`.
 - [ ] WD-1.3: `register/walle.yaml` merged with `tier: P-SA`, `env: prod`, `privilege: super_admin_pending`, twenty-one `pending` lines; `walle/agent-manifest.yaml` merged; `manifest_sha` matches; the RG-3.6 parse records R-02, R-03, R-05 and R-13.
 - [ ] WD-2.1: the folder allow-list covers every wanted service, the four Workspace APIs of S110 included; spec merged with the security reviewer's approval; budget 500.
-- [ ] WD-2.2: `pab-agents-p-sa` exists, enforcement version 4, one resource, no binding before FM-2.16.
+- [ ] WD-2.2: the rules file merged; the `ENT_PLATFORM_POLICY` grant `ACTIVE` at organisation scope before any policy command.
+- [ ] WD-2.2b: `pab-agents-p-sa` exists, on the same enforcement version as `pab-agents` (read on the day; `4` on 2026-09-15), one resource, no binding before FM-2.16; the grant revoked at the end of the step.
 - [ ] WD-2.3: FM-3.1 to FM-3.3 and FM-2.2 to FM-2.22 `DONE@walle-prod`; checker `ZERO-DIFF`; `BD-31-2`.
 - [ ] WD-2.4: parent `FLD_AGENTS_P_SA_PROD`; the enabled services equal the spec; no forbidden service; **no human or group at project level**; deny `R1,R2,R3,R3b,R4,R5` and `CA`; PAB binding names `pab-agents-p-sa`; budget 500; one delete lien; both entitlements `AVAILABLE`.
 - [ ] WD-2.5: six keyless identities with exactly the roles of the table; `walle-actions-super@` without `cloudtasks.enqueuer`; `walle-agent@`, `walle-operators-caller@` and `walle-tasks@` with nothing.
@@ -1282,20 +1388,20 @@ sitting_end
 - [ ] WD-3.1: Access Approval enrolled with two approver contacts, or `N/A` with the residual signed.
 - [ ] WD-4.1 to WD-4.4: repair grant approved by the second human; Firestore `(default)` `europe-west1`, native, delete-protected; `walle_audit` `EU` with no default expiry; `walle_workspace_logs` **absent**.
 - [ ] WD-4.5: nine tables matching the committed `AUDIT_TABLES`, `ts` DAY partitioning, 400-day expiry, `actions` clustered on `operation` — or BLOCKED on B-22, which WD-11.2 confirms README carries.
-- [ ] WD-5.1 to WD-5.4: four topics with no stray binding; `walle-tasks@` with two `serviceAccountUser` members and nothing else; `walle-actions@` with no self-impersonation; queue at 1/1/3; operators' token-creator binding on the group only.
+- [ ] WD-5.1 to WD-5.4: four topics with no stray binding; the Cloud Tasks service agent proven to exist before it is bound, the mechanism recorded; `walle-tasks@` with two `serviceAccountUser` members and nothing else; `walle-actions@` with no self-impersonation; queue at 1/1/3; operators' token-creator binding on the group only.
 - [ ] WD-6.1 to WD-6.3: five regional secrets, no global secret, **no version**; three readers one way and two the other; `walle-agent@` and `walle-dispatcher@` on none; five PENDING lines for 32.
-- [ ] WD-7.1 to WD-7.4: `walleAuditWriter` with exactly three permissions, stage GA; the access array with **exactly two** writer entries; the probe echoing `updateData` and `get` only for both services and `{}` for `walle-agent@`; no project-level BigQuery or KMS role; no key ring.
-- [ ] WD-8.1 to WD-8.4: `mo-metrics@` `READER` present; `eve-export@` and the validator custodian granted or PENDING with 36 named; `eve-v0@` PENDING; **no** `eve-controller@` or `eve-verifier@` entry; no `view` entry; no `OWNER`, `WRITER`, special group or domain entry.
+- [ ] WD-7.1 to WD-7.4: `walleAuditWriter` with exactly three permissions, stage GA; the access array with **exactly two** writer entries; all five secrets proven empty before the probe minted a token; the probe echoing `updateData` and `get` only for both services and `{}` for `walle-agent@`; the impersonation bindings gone; no project-level BigQuery or KMS role; no key ring.
+- [ ] WD-8.1 to WD-8.4: `mo-metrics@` `READER` present and never removed by WD-8.2 (`no reader removed`); `eve-export@` and the validator custodian granted or PENDING with 36 named; `eve-v0@` PENDING; **no** `eve-controller@` or `eve-verifier@` entry; no `view` entry; no `OWNER`, `WRITER`, special group or domain entry.
 - [ ] WD-9.1, WD-9.2: the pin directory holds only its README; the check runs zero times and says so; no KMS role for `walle-actions@`.
-- [ ] WD-10.1: the guard merged and proven both ways (deletes an empty dataset, refuses one with a row).
-- [ ] WD-11.1, WD-11.2: checker re-run clean; `BD-31-3`; no active grant; only the two Access Approval bindings remain; `SITTING-END OK`.
+- [ ] WD-10.1: the guard merged **before WD-4.4** and proven four ways (dataset mode deletes an empty dataset with both flags; a zero count without `--exports-verified` exits 3; a seeded row without `--decision` exits 4; an unknown mode exits 2); `walle/AUDIT_TABLES` committed with nine names.
+- [ ] WD-11.1, WD-11.2: checker re-run clean; `BD-31-3`; `repair 0`, `policy 0`, `folder 0` — no active grant at any of the three scopes; only the two Access Approval bindings remain; every "Produces" variable set; `SITTING-END OK`.
 - [ ] Every EVIDENCE line registered in `EVIDENCE_REGISTER`.
 
 ## 13. What the next files need from this part
 
 | File | Needs | From |
 |---|---|---|
-| 32 | `WALLE_PROJECT`, `WALLE_SECRET_NAMES` (five names, no version), `SA_ACTIONS`, `SA_ACTIONS_SUPER`; the projects' Workspace APIs enabled so the consented clients can call them; the rule that every version is added with `--data-file=-` and pinned by number | WD-2.4, WD-6.1, WD-6.2, WD-6.3 |
+| 32 | `WALLE_PROJECT`, `WALLE_SECRET_NAMES` (five names, no version), `SA_ACTIONS`, `SA_ACTIONS_SUPER`, `WALLE_LOCAL_DIR`; the projects' Workspace APIs enabled so the consented clients can call them; the rule that every version is added with `--data-file=-` and pinned by number; WD-7.3's re-run rule — once a secret holds a version, no probe impersonates `walle-actions@` or `walle-actions-super@` — which 32 WC-7.3 states from its side | WD-0.4, WD-2.4, WD-6.1, WD-6.2, WD-6.3, WD-7.3 |
 | 33 | `SA_ACTIONS`, `SA_ACTIONS_SUPER`, `SA_DISPATCH`, `SA_TASKS`, `SA_OPS_CALLER`; `ENT_DEPLOY_CREDENTIAL_HOLDER_WALLE`; `SINK_TO_TRIGGERS_WALLE` for the dispatcher's subscription; `walle_audit` with its nine tables and the two writer entries; the two PENDING `run.invoker` lines (WD-5.2, WD-5.4); the manifest's `invokers.control` list; `pab-agents-p-sa`'s resource list if an approval surface lands elsewhere | WD-2.5, WD-2.6, WD-4.5, WD-5.2, WD-5.4, WD-7.2 |
 | 34 | `WALLE_PROJECT` with `modelarmor` and `observability` enabled; the `_Default` route of FM-2.8, which the content-log exclusion must keep; `walle-agent@` holding nothing | WD-2.4, WD-2.5 |
 | 35 | `WALLE_PROJECT_NUMBER` for the engine's agent identity; the row's `principal`, `gateway_id` and `armor_template` `pending-` markers to replace by pull request (R-13 then allows the flip); `aiplatform` enabled; `pab-agents-p-sa` bound | WD-1.3, WD-2.2, WD-2.4 |
@@ -1306,7 +1412,9 @@ sitting_end
 | 40, 41 | `SA_MO_METRICS`'s row-6 `READER` (Mo's metric 9 joins Google's admin events to `walle_audit`); the validator custodian's row-21 `READER` for the recompute check | WD-8.1, WD-8.2 |
 | 42 | `BD-31-1` to `BD-31-3`; evidence rows WD-0.1 to WD-11.1; the supersession of the hand data plane by a terraform import | §1 to §11 |
 | README (index corrections) | A new BLOCKED row **B-22**, "Wall-E: the nine audit schema files", separate from B-16's service code, naming WD-4.5 and the gates 33, 36 and 38; the re-run lines of WD-5.2, WD-5.4, WD-6.3, WD-8.2, WD-8.3 and WD-9.2 | WD-4.5, WD-11.2 |
-| 13, 16, 17 (design corrections) | The four Workspace APIs added to the `fld-agents-p-sa` allow-list; the family-id pattern and rule R-13; 17 §3's note that `walle-tasks` is one of the six accounts and that the P-SA trigger filter is completed inside the run | WD-2.1, WD-1.1, WD-2.3 |
+| 13, 16, 17 (design corrections) | The four Workspace APIs added to the `fld-agents-p-sa` allow-list; the family-id pattern and rule R-13; 17 §3's note that `walle-tasks` is one of the six accounts and that the P-SA trigger filter is completed inside the run; 13 OP-7.8 re-run if WD-2.2b's fallback had to create `pab-agents-p-sa` on a lower enforcement version than `pab-agents` | WD-2.1, WD-1.1, WD-2.3, WD-2.2b |
+| 08 (correction) | WO-2.15's `*Assumption:*` on `gcloud access-approval settings delete` is settled: the subcommand exists (`delete`, `get`, `update`; flags `--enrolled_services`, `--notification_emails`), reference read 2026-09-16 | WD-3.1 |
+| 33 | WS-0.3's deploy commands follow their grant request in the same block; split them as WD-2.2 and WD-2.2b are split, with a VERIFY that waits for `state=ACTIVE` | WD-2.2 |
 
 ## 14. Findings closed and deferred
 
@@ -1321,7 +1429,7 @@ sitting_end
 | S055 | major | Closed for the `walle_audit` half | Row 21 has a command: the validator custodian gets dataset `READER` in WD-8.2, or a PENDING line. Rows 45 and 46 (`eve_grades`, `grades_eve`) are 11's and 40's |
 | S070 | major | Closed for this file | Every foreign grant goes through `exists_or_pending`, which records a PENDING line and runs nothing when the principal is absent; the desired-state function makes each re-run idempotent; the interleaving is named per row in §8's table, with the file that completes it |
 | S071 | major | Closed | `penv_guard` fails when a gcloud default project is set (WD-0.1); every command in this file passes `--project` or `--project_id`; `CLOUDSDK_CORE_PROJECT` is never exported (01) |
-| S089 | major | Closed | WD-10.1 commits a guard that counts rows, prints `IRREVERSIBLE: destroys audit evidence` with the time-travel sentence, and refuses without confirmed exports, a matching dated decision record and a typed dataset name; the project itself is deleted only through FM-REVOKE after the evidence export confirms |
+| S089 | major | Closed | WD-10.1 commits a guard, merged before the dataset exists, that lists every table, counts what `numRows` records, prints `IRREVERSIBLE: destroys audit evidence` with the time-travel sentence, and refuses **unconditionally** — whatever the count reads — without confirmed exports, a matching dated decision record and a typed dataset name; WD-4.4's and WD-4.5's rollbacks invoke the guard and print no `bq rm`; the project itself is deleted only through FM-REVOKE after the evidence export confirms |
 | S093 | major | Closed | Nine tables from one committed list (`walle/AUDIT_TABLES`), the count checked both ways in the verify; `generic_requests`, `ladder_events` and `grades` are created with the other six |
 | S107 | major | Closed (with 36) | Only S0 principals are granted here; `eve-controller@` and `eve-verifier@` are recorded as S3-entry lines for 36 and their absence from the array is part of WD-8.4's verify; every PENDING line is written to the re-run index |
 | S108 | major | Closed | The probe runs as the service accounts through an impersonated token against `tables:testIamPermissions`, expects `updateData` and `get` only, expects `{}` for `walle-agent@`, and removes the impersonation grant in the same step (WD-7.3) |
@@ -1337,18 +1445,21 @@ Deferred: none without an owner. Recorded items with an owner and a file: Wall-E
 
 - Whether `bigquery.tables.deleteData` is a documented permission name. The review's fix for S108 named it; the BigQuery access-control page as read on 2026-09-15 does not list it, and `testIamPermissions` errors on an unknown permission rather than omitting it. WD-7.3 therefore probes documented names only (`updateData`, `getData`, `get`, `delete`, `update`, `setIamPolicy`); if the name turns out to exist, add it to the probe and expect it absent.
 - The exact Admin console event names in the trigger filter (WD-2.3). They are compared with one real event in FM-2.14's verify before the spec revision merges.
-- Whether `gcloud access-approval settings delete` exists as a subcommand (WD-3.1), carried over from 08 WO-2.15's same assumption.
+- Whether `gcloud beta services identity create` implements `cloudtasks.googleapis.com` (WD-5.2). The reference documents the command only as "creates a service identity for a consumer", with no supported-service list and no GA variant, and the Cloud Tasks agent is normally created on first use of the API. The step tolerates a refusal, provokes first use, and proves the agent exists before binding it; the mechanism that worked is recorded on the day.
+- Which principal-access-boundary enforcement version is current, and what it blocks beyond the previous one (WD-2.2b). The `--details-enforcement-version` flag reference gives only "for example, `1` or `latest`"; the concept page defers to the enforcement-version reference (§16), which on 2026-09-15 documented version 4 without saying it is the default. The step reads the version from `pab-agents` so the two policies match, and the fallback records what was accepted.
 - Whether a P-SA row's single `autonomy_ceiling` string is meant to carry the highest cell of the manifest's per-family table, or something else (WD-1.3). 16's schema admits one value; 05 §3.2 does not say which. Settled with 16's owner before 38's flip.
 - Whether `recovery_class: R-K` or `R-A` is right for a row whose project holds both the audit evidence and the robot's tokens (WD-1.3). The stricter is used; 09 §3.5 is the source.
 - Whether the Cloud Tasks queue name is reusable sooner than seven days after deletion (WD-5.3's rollback); the queue-management page's figure was not re-read on the day.
 - Whether `bq update --source` normalises a dataset access array (ordering, added fields) such that the read-back diff needs the recorded normalised form rather than an exact match (WD-7.2); the function prints the difference rather than failing silently.
 - Whether the `to-triggers-walle` filter's SHA-256 survives Logging's own normalisation of the filter text (WD-2.6); if it does not, the checker compares the normalised form and the spec records it.
 - Whether the platform owner's standing viewer rights cover `cloudasset.assets.searchAllIamPolicies` at project scope (WD-7.4); 17 FM-2.20 records the same limit.
-- Whether `numRows` on a table written by the Storage Write API lags far enough to matter to WD-10.1's guard; the guard treats a zero count as "no rows recorded", never as proof of emptiness.
+- How far `numRows` on a table written by the Storage Write API lags (WD-10.1). It no longer matters to the guard's safety: the export, decision and typed-confirmation checks run whatever the count reads, and a zero or missing count is printed as "unknown-or-zero". It matters only to the wording of the `IRREVERSIBLE` sentence, which states the recorded count and the number of tables with none.
 
 ## 16. Sources
 
-Read on 2026-09-15: [gcloud firestore databases create](https://docs.cloud.google.com/sdk/gcloud/reference/firestore/databases/create) (`--location` required, `--database`, `--type` of `firestore-native` or `datastore-mode`, `--delete-protection`, `--edition` default `standard`, `--project` as a gcloud-wide flag); [update](https://docs.cloud.google.com/sdk/gcloud/reference/firestore/databases/update) (`--delete-protection` / `--no-delete-protection`); [delete](https://docs.cloud.google.com/sdk/gcloud/reference/firestore/databases/delete) (`--database`, `--etag`); [gcloud tasks queues create](https://docs.cloud.google.com/sdk/gcloud/reference/tasks/queues/create) (`--location`, `--max-dispatches-per-second`, `--max-concurrent-dispatches`, `--max-attempts`); [Create HTTP target tasks](https://docs.cloud.google.com/tasks/docs/creating-http-target-tasks) ("grant the Service Account User (`roles/iam.serviceAccountUser`) role to the Cloud Tasks primary service agent on the service account you just created"; the token's service account needs Cloud Run Invoker on the handler); [gcloud secrets create](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/create) (`--location` for a regional secret, `--replication-policy` for the global form, `--regional-kms-key-name`); [gcloud secrets list](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/list) and [get-iam-policy](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/get-iam-policy) (`--location` lists and reads regional secrets); [gcloud iam roles create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/roles/create) and [undelete](https://docs.cloud.google.com/sdk/gcloud/reference/iam/roles/undelete) (`ROLE_ID` with `--project` or `--organization`; a role deleted too long ago cannot be undeleted); [BigQuery tables.testIamPermissions](https://docs.cloud.google.com/bigquery/docs/reference/rest/v2/tables/testIamPermissions) (POST `https://bigquery.googleapis.com/bigquery/v2/projects/{projectId}/datasets/{datasetId}/tables/{tableId}/testIamPermissions`, body `{"permissions":[...]}`, response echoing the subset the caller holds — note the path segment, not a `:` suffix); [BigQuery IAM roles and permissions](https://docs.cloud.google.com/bigquery/docs/access-control) (`bigquery.tables.updateData` and `getData`; no insert-only permission is documented, SD-43); [bq command-line reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference) (`mk --dataset --location --description --label`, `mk --table --time_partitioning_field --time_partitioning_type --time_partitioning_expiration --clustering_fields`, `ls --format=json`, `show --format=prettyjson`, `update --source`, `rm -d -f -t -r`); [Access Approval](https://docs.cloud.google.com/assured-workloads/access-approval/docs/overview) with `gcloud access-approval settings update` and `get` (`--enrolled_services`, `--notification_emails`), as 08 read them. Relied on through 11, 12, 13, 14, 16 and 17 and their sources: PAM `entitlements describe`, `grants create|approve|revoke` with `--billing-project`; `gcloud iam principal-access-boundary-policies create|describe|delete|search-policy-bindings` and `gcloud iam policy-bindings create|describe`; `gcloud iam policies get|update` with `--kind=denypolicies` and `--etag`; `gcloud logging sinks create|describe`; `gcloud pubsub topics create|get-iam-policy|add-iam-policy-binding` and `subscriptions create|pull|delete`; `gcloud beta services identity create`; `gcloud identity groups create|describe|memberships list`; `gcloud billing budgets`; `gcloud alpha resource-manager liens`; `gcloud asset search-all-iam-policies`; project ids, key rings and dataset names being permanent.
+Read on 2026-09-15: [gcloud firestore databases create](https://docs.cloud.google.com/sdk/gcloud/reference/firestore/databases/create) (`--location` required, `--database`, `--type` of `firestore-native` or `datastore-mode`, `--delete-protection`, `--edition` default `standard`, `--project` as a gcloud-wide flag); [update](https://docs.cloud.google.com/sdk/gcloud/reference/firestore/databases/update) (`--delete-protection` / `--no-delete-protection`); [delete](https://docs.cloud.google.com/sdk/gcloud/reference/firestore/databases/delete) (`--database`, `--etag`); [gcloud tasks queues create](https://docs.cloud.google.com/sdk/gcloud/reference/tasks/queues/create) (`--location`, `--max-dispatches-per-second`, `--max-concurrent-dispatches`, `--max-attempts`); [Create HTTP target tasks](https://docs.cloud.google.com/tasks/docs/creating-http-target-tasks) ("grant the Service Account User (`roles/iam.serviceAccountUser`) role to the Cloud Tasks primary service agent on the service account you just created"; the token's service account needs Cloud Run Invoker on the handler); [gcloud secrets create](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/create) (`--location` for a regional secret, `--replication-policy` for the global form, `--regional-kms-key-name`); [gcloud secrets list](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/list) and [get-iam-policy](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/get-iam-policy) (`--location` lists and reads regional secrets); [gcloud iam roles create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/roles/create) and [undelete](https://docs.cloud.google.com/sdk/gcloud/reference/iam/roles/undelete) (`ROLE_ID` with `--project` or `--organization`; a role deleted too long ago cannot be undeleted); [BigQuery tables.testIamPermissions](https://docs.cloud.google.com/bigquery/docs/reference/rest/v2/tables/testIamPermissions) (POST `https://bigquery.googleapis.com/bigquery/v2/projects/{projectId}/datasets/{datasetId}/tables/{tableId}/testIamPermissions`, body `{"permissions":[...]}`, response echoing the subset the caller holds — note the path segment, not a `:` suffix); [BigQuery IAM roles and permissions](https://docs.cloud.google.com/bigquery/docs/access-control) (`bigquery.tables.updateData` and `getData`; no insert-only permission is documented, SD-43); [bq command-line reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference) (`mk --dataset --location --description --label`, `mk --table --time_partitioning_field --time_partitioning_type --time_partitioning_expiration --clustering_fields`, `ls --format=json`, `show --format=prettyjson`, `update --source`, `rm -d -f -t -r`); [Access Approval](https://docs.cloud.google.com/assured-workloads/access-approval/docs/overview) with `gcloud access-approval settings update` and `get` (`--enrolled_services`, `--notification_emails`), as 08 read them.
+
+Read on 2026-09-16, for the second-round corrections: [gcloud access-approval settings](https://docs.cloud.google.com/sdk/gcloud/reference/access-approval/settings) (the group has `delete`, `get` and `update`) and [settings update](https://docs.cloud.google.com/sdk/gcloud/reference/access-approval/settings/update) (`--enrolled_services`, `--notification_emails`, `--project | --folder | --organization`, underscores as written); [gcloud pam grants list](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/list) (`--entitlement` resolved through exactly one of `--project`, `--folder`, `--organization`, with `--location`; `--filter`); [gcloud beta services identity create](https://docs.cloud.google.com/sdk/gcloud/reference/beta/services/identity/create) ("creates a service identity for a consumer"; `--service`, `--project | --folder | --organization`; no list of supported services); [principal access boundary policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies) ("Periodically, IAM adds new enforcement versions that can block additional permissions"; `latest` is "not recommended" because principals may "lose access to resources unexpectedly"; the default can take up to four weeks to move) and the [enforcement-version reference](https://docs.cloud.google.com/iam/docs/pab-blocked-permissions) (per-version tables; version 4 documented on 2026-09-15); [gcloud iam principal-access-boundary-policies create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/principal-access-boundary-policies/create) (`--details-enforcement-version`, "for example, `1` or `latest`"); [create and manage custom roles](https://docs.cloud.google.com/iam/docs/creating-custom-roles) and [projects.roles.delete](https://docs.cloud.google.com/iam/docs/reference/rest/v1/projects.roles/delete) (7 days to undelete; then permanent deletion, a process of up to 30 days during which the role id cannot be reused — up to 37 days in all); [bq command-line tool reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference) (`ls --max_results`, default 50, maximum 1,000). Relied on through 11, 12, 13, 14, 16 and 17 and their sources: PAM `entitlements describe`, `grants create|approve|revoke` with `--billing-project`; `gcloud iam principal-access-boundary-policies create|describe|delete|search-policy-bindings` and `gcloud iam policy-bindings create|describe`; `gcloud iam policies get|update` with `--kind=denypolicies` and `--etag`; `gcloud logging sinks create|describe`; `gcloud pubsub topics create|get-iam-policy|add-iam-policy-binding` and `subscriptions create|pull|delete`; `gcloud beta services identity create`; `gcloud identity groups create|describe|memberships list`; `gcloud billing budgets`; `gcloud alpha resource-manager liens`; `gcloud asset search-all-iam-policies`; project ids, key rings and dataset names being permanent.
 
 ## Related
 

@@ -1658,7 +1658,7 @@ Second-round findings closed on 2026-09-16:
 | Finding | What this page now does |
 |---|---|
 | P-26 missed `roles/iam.securityAdmin` | P-26 lists all five organisation roles and the folder and project analogues; §3.3 gates on a binding read plus a permission probe taken from Google's own role definition, so the gate cannot pass without Security Admin |
-| PR-2.4 truncated the logs on a resumed run | Every creation is guarded by `[ -s … ] ||`, the backfill loop and the closing checkpoint are guarded on an existing `DONE` line, and the VERIFY asks for a second run with identical output |
+| PR-2.4 truncated the logs on a resumed run | Every creation is guarded by `[ -s … ] \|\|`, the backfill loop and the closing checkpoint are guarded on an existing `DONE` line, and the VERIFY asks for a second run with identical output |
 | PR-3.2's sitting id computed twice | `SITTING_ID` is computed once and exported; the VERIFY asserts two lines with the same id; the literal placeholders are replaced and `checkpoint` now refuses any `<placeholder>` |
 | `penv_guard` passed vacuously on a hidden `gcloud` failure | The exit status is checked separately, with "configuration does not exist yet" told apart from "gcloud failed"; the `(unset)` case is marked as an assumption |
 | PR-5.2 wrote P-02 `closed` with no evidence | PR-2.6 performs the Super Admin → View admins read and its screenshot; PR-5.2 refuses to write the snapshot without a register row and records the closing step for each closed row |

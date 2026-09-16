@@ -619,13 +619,17 @@ python3 -c 'import json,sys,os; d=json.load(open(sys.argv[1])); a=[x for x in d[
   1. On the user's Security page, read the number of registered **security keys**. Type it back:
 
 ```bash
-read -r -p 'Security keys listed on walle@ Security page (type the number): ' kc
-case "$kc" in 2) ;; *) echo "STOP: expected 2 registered security keys, read '${kc:-<empty>}'. Nothing is attested, nothing is enforced, no move is made." >&2; return 1 2>/dev/null || exit 1;; esac
-printf '%s\tWW-4.2\tsecurity_keys_observed=%s\tobserver=%s\twitness=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$kc" "$(git -C "$BUILD_LOG_DIR" config user.email)" "$SECOND_HUMAN_EMAIL" >> "$BUILD_LOG_DIR/attestations.tsv"
-git -C "$BUILD_LOG_DIR" add attestations.tsv && git -C "$BUILD_LOG_DIR" commit -q -m "attest WW-4.2 security key count"
+printf '%s' 'Security keys listed on walle@ Security page (type the number): ' >&2
+read -r kc
+if [ "$kc" = "2" ]; then
+  printf '%s\tWW-4.2\tsecurity_keys_observed=%s\tobserver=%s\twitness=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$kc" "$(git -C "$BUILD_LOG_DIR" config user.email)" "$SECOND_HUMAN_EMAIL" >> "$BUILD_LOG_DIR/attestations.tsv"
+  git -C "$BUILD_LOG_DIR" add attestations.tsv && git -C "$BUILD_LOG_DIR" commit -q -m "attest WW-4.2 security key count"
+else
+  echo "STOP: expected 2 registered security keys, read '${kc:-<empty>}'. Nothing is attested, nothing is enforced, no move is made. Return to WW-4.1." >&2
+fi
 ```
 
-  The prompt is `read -r -p` and not the `read -r "kc?…"` form: the second is a zsh extension, and under bash — which [01](01-prerequisites-and-conventions.md) also supports — `read` treats `kc?Security` as a variable name and rejects it as not a valid identifier, so nothing is ever read. The guard is a `case` that **returns non-zero**, not a bare `echo`: it stands **before** the attestation write, so a wrong or empty count can never be committed as signed evidence. This is the whole of S086; both halves have to hold.
+  The prompt is a `printf` followed by a bare `read -r kc`, because neither shell-specific prompt form is portable across the two shells [01](01-prerequisites-and-conventions.md) runs the blocks under: the `read -r "kc?…"` form is a zsh extension that bash rejects as "not a valid identifier", so under bash nothing is read; and `read -p 'prompt'` means "read from the coprocess" in zsh, so under the zsh sitting shell it fails with no coprocess and nothing is read either. The guard is an `if` on the typed value, not a bare `echo` after the fact: the attestation write and its commit sit **inside** the branch that only a count of 2 enters, so a wrong or empty count can never be committed as signed evidence, and the block does not need `exit` — which would close the sitting shell and lose the sourced variables — to achieve that. This is the whole of S086; both halves have to hold.
 
   2. Cross-read Reporting > User Reports > Security, the `walle@` row, column "number of security keys" (the Admin SDK name for the same figure is `accounts:num_security_keys`). This report lags by up to two days, so it corroborates and never gates.
   3. `isEnrolledIn2Sv` from WW-3.4 is kept only as a **necessary** condition. It is true for any 2SV method — a Google prompt or an authenticator app satisfies it — so it can never be the evidence that a *security key* exists. The superseded helper printed "both robots have a key enrolled; enforcement is now safe" on that field alone.
@@ -753,14 +757,16 @@ The group is the *runtime* protection; the file is the **assertion** that the gr
 - **WHERE:** The APIs Explorer panel on the Directory API reference pages, in the `OWNER_DAILY_ACCOUNT` clean profile; then the shell.
 - **ACTION:** Repeat the reads of [06](06-organisation-bootstrap-and-roster.md) OB-1.3 as of today, because the roster has changed since (the G3 reduction, `factory-groups@`, `eve@`):
 
-  The two reads are **two separate APIs Explorer calls with two separate copies**, and the block stops between them and waits. `pbpaste` reads whatever is on the clipboard at the moment it runs: pasted as one uninterrupted block, both redirects would capture the *same* clipboard and the delegated-admin file would be a duplicate of the super-admin file, so every delegated admin would drop silently out of the floor set — the exact hole denial test 13 exists to catch.
+  The two reads are **two separate APIs Explorer calls with two separate copies**, and the block stops between them and waits. `pbpaste` reads whatever is on the clipboard at the moment it runs: pasted as one uninterrupted block, both redirects would capture the *same* clipboard and the delegated-admin file would be a duplicate of the super-admin file, so every delegated admin would drop silently out of the floor set — the exact hole denial test 13 exists to catch. The pause is a `printf` and a bare `read -r`, for the reason given in WW-4.2: `read -p` is a coprocess read in zsh and the `name?prompt` form is rejected by bash, and the block must wait under both.
 
 ```bash
 checkpoint WW-6.1 START
 d="$BUILD_LOG_DIR/evidence/30"; mkdir -p "$d"
-read -r -p 'Run users.list with customer=<DIRECTORY_CUSTOMER_ID>, query=isAdmin=true, viewType=admin_view, projection=full, maxResults=500; copy the whole JSON response; then press Return: ' _
+printf '%s' 'Run users.list with customer=<DIRECTORY_CUSTOMER_ID>, query=isAdmin=true, viewType=admin_view, projection=full, maxResults=500; copy the whole JSON response; then press Return: ' >&2
+read -r go
 pbpaste > "$d/WW-6.1-users-isAdmin.json"
-read -r -p 'Now run the SAME call with query=isDelegatedAdmin=true, copy that JSON response, then press Return: ' _
+printf '%s' 'Now run the SAME call with query=isDelegatedAdmin=true, copy that JSON response, then press Return: ' >&2
+read -r go
 pbpaste > "$d/WW-6.1-users-isDelegatedAdmin.json"
 cmp -s "$d/WW-6.1-users-isAdmin.json" "$d/WW-6.1-users-isDelegatedAdmin.json" && { echo "STOP: the two files are identical; the clipboard was not replaced between the calls"; false; }
 python3 - "$d" <<'PY'
@@ -975,10 +981,10 @@ awk -F'\t' '$2 ~ /^(CL-2\.4|CL-5\.3|PS-4\.5)$/ {print $2"\t"$3}' "$BUILD_LOG_DIR
   The filter needs all three predicates, because login events are written by a **different service** from admin events and the bucket also holds every other account's sign-ins:
 
 ```bash
-gcloud logging metrics create walle-interactive-login --project="$LOGGING_PROJECT" --bucket-name="$LOG_BUCKET_IDENTITY" --description="Any login audit entry whose actor is walle@ (setup 30 WW-8.6, fallback for BD-30-1)" --log-filter='logName:"organizations/'"$ORG_ID"'/logs/" AND protoPayload.serviceName="login.googleapis.com" AND protoPayload.authenticationInfo.principalEmail="'"$ROBOT"'"'
+gcloud logging metrics create walle-interactive-login --project="$LOGGING_PROJECT" --bucket-name="$LOG_BUCKET_IDENTITY" --description="Any login audit entry whose actor is walle@ (setup 30 WW-8.6, fallback for BD-30-1)" --log-filter='logName:"organizations/'"$ORG_ID"'/logs/cloudaudit.googleapis.com%2Fdata_access" AND protoPayload.serviceName="login.googleapis.com" AND protoPayload.authenticationInfo.principalEmail="'"$ROBOT"'"'
 ```
 
-  `--bucket-name` takes the **full** bucket path, which is what `LOG_BUCKET_IDENTITY` already holds (`projects/<LOGGING_PROJECT>/locations/<REGION>/buckets/platform-identity-logs`); there is no `--bucket-location` flag.
+  `--bucket-name` takes the **full** bucket path, which is what `LOG_BUCKET_IDENTITY` already holds (`projects/<LOGGING_PROJECT>/locations/<REGION>/buckets/platform-identity-logs`) and the same form [08](08-witness-organisation.md) WO-2.7 uses; there is no `--bucket-location` flag. The `logName` predicate names the Data Access log, because Login Audit writes nothing else (S181, WW-9.2 reads the same log), and the filter is identical to WW-9.2's so that the metric and the manual read prove the same rows.
 
   §8's rule is that the alert reaches **two named individuals**, so the second operator needs a channel in the same project — a Monitoring alert policy can only name notification channels of its own project, which is why `NOTIF_CH_EMAIL_CORE` (in `CORE_PROJECT`) is not usable here:
 
@@ -1172,7 +1178,7 @@ Google Cloud: [Google Workspace audit logs in Cloud Logging](https://docs.cloud.
 
 Git host: [About code owners](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) (last-match-wins; an email owner "must be associated with a GitHub account" and every code owner must hold write on the repository; a pull request's author never satisfies a required code-owner review on their own pull request, which is why WW-1.4's `*` line carries two owners) and [branch protection](https://docs.github.com/en/rest/branches/branch-protection) (the API shape used in WW-1.6, identical to [03](03-decisions-and-people.md) DC-9.6); the CODEOWNERS errors endpoint `GET /repos/{owner}/{repo}/codeowners/errors`, which lists inert entries.
 
-Shell: [Bash reference, `read`](https://www.gnu.org/software/bash/manual/bash.html#index-read) (`read [-p prompt] [name …]`; names must be valid identifiers, so the `var?prompt` form is a zsh extension and not portable); [git-fetch](https://git-scm.com/docs/git-fetch) (remote-tracking refs such as `origin/main` are updated only by fetch or pull); [gitignore](https://git-scm.com/docs/gitignore) ("Git does not track directories, only files").
+Shell: [Bash reference, `read`](https://www.gnu.org/software/bash/manual/bash.html#index-read) (`read [-p prompt] [name …]`; names must be valid identifiers, so the `var?prompt` form is a zsh extension and not portable); [zsh shell builtin commands, `read`](https://zsh.sourceforge.io/Doc/Release/Shell-Builtin-Commands.html) (`-p`: "Input is read from the coprocess"; the `name?prompt` form is zsh's own — so neither prompt form works in both shells, and every interactive pause in this file is a `printf` followed by a bare `read -r`); [git-fetch](https://git-scm.com/docs/git-fetch) (remote-tracking refs such as `origin/main` are updated only by fetch or pull); [gitignore](https://git-scm.com/docs/gitignore) ("Git does not track directories, only files").
 
 ## 16. Unverified on 2026-09-15, and what closes each
 

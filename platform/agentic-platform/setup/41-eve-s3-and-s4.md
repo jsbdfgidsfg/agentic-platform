@@ -3,16 +3,17 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-16
 - Last executed: never
-- Stage: review §2 stage 40. Two entries, not one sitting: **S3 entry** (verify the Eve-H and Eve-W halves, then make the invariant-class halt and demote live) and, after the S3 exit gate has passed at 100 %, **S4 entry** (the `eve-approval` key, the PEM archive, `eve-gate`, the receipt view, the denial suite). Between them sit at least thirty days of S3 running against real L3 batch executions.
+- Review corrections applied on 2026-09-16, with the pages re-read that day: `E3-4.2` polls version 1 out of `PENDING_GENERATION` before anything reads it, and `E3-4.3` refuses unless that poll recorded `ENABLED`; every KMS command addresses the ring through `EVE_KEYRING` (as `EVE_KEYRING_NAME`, checked against `EVE_PROJECT` and `REGION` in the preamble) and both Policy Troubleshooter resource names are built from it; the three PEM digests are all taken from files, never from a pipe; the bucket-lock reads use the JSON field names `gcloud storage` actually renders; `E3-2.3` reads the Cloud Run v2 path `template.template.containers[0].image` and fails on an empty projection; §7.1 to §7.4 run **before** §6 because `E3-6.2` needs `EVE_RECEIPTS_DS`; `E3-7.6` maps SQL files to transfer configs by `displayName` and stops on a file that resolves to none; `E3-9.3` proves EVE-12 and EVE-22 by Policy Troubleshooter with no grant and no impersonation; values one step creates and a later step consumes (working directories, the grant name) are carried in `E3_VARS`; `pam_wait` waits for `ACTIVE`, the state PAM actually reports; the `keys/` condition derives the bucket name from `EVE_EVIDENCE_BUCKET`; `E3-1.5` derives the repository slug instead of relying on `gh`'s placeholders.
+- Stage: review §2 stage 40. Two entries, not one sitting: **S3 entry** (verify the Eve-H and Eve-W halves, then make the invariant-class halt and demote live) and, after the S3 exit gate has passed at 100 %, **S4 entry** (the `eve-approval` key, the PEM archive, `eve-gate`, the receipt view, the denial suite). Between them sit at least thirty days of S3 running against real L3 batch executions. **Execution order of the S4 sitting: §4, §5, §7, §6, §8, §9, §10** — the receipts dataset of `E3-7.1` is an input to the `eve-gate` deploy of `E3-6.2`, so §7 runs first; the section numbers keep their ids.
 - Step prefix: `E3`. Steps: 62. **BLOCKED:** `E3-6.1`, `E3-6.2`, `E3-6.3`, `E3-6.4`, `E3-6.5`, `E3-8.2`, `E3-8.3`, `E3-9.2`, `E3-9.4` — all on README **B-19** (Eve's `eve-gate` entrypoint, the signing path, the gate end-to-end test and the key-destruction guard tool). `E3-3.2` and `E3-3.3` refuse rather than block: they need the twelve seeded-fault fixtures of **B-09**, which [25](25-eve-human-super-admin-detections.md) already required. **IRREVERSIBLE-class:** `E3-4.2` (the key name, permanent inside a key ring that itself can never be deleted) and `E3-4.3` (the PEM object, written into a bucket whose retention policy is locked, so it can be neither replaced nor deleted before `EVIDENCE_RETENTION_DAYS` have passed).
 - Replaces: [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md) Phases 11 and 12 in full. Neither is executed again.
 - Salvaged: Phase 11's key properties (HSM, `ASYMMETRIC_SIGN`, `EC_SIGN_P256_SHA256`, one signer), its **PEM before first use in two places** rule and the one-bucket argument, its `--max-retries=0` reasoning, its "Eve is a client everywhere" discovery shape, its three-column receipt view and the authorised-view placement argument, the `eve_authority: binding` pull-request rule, the manual-rotation rule with the 30-day overlap; Phase 12's two teardown facts, its rollback (disable, never destroy) and the EVE-1 to EVE-22 denial table; [../../eve/02-identity-and-auth.md](../../eve/02-identity-and-auth.md)'s signing-key table and its "The PEM archive, in two places, before first use"; [../../eve/05-stages.md](../../eve/05-stages.md)'s S3-entry observe-mode split and its S4-entry control list.
 - Not copied: `SELECT run_id, item, verdict_ts FROM eve.verdicts`, which names a column the table does not have (S036); `gcloud kms asymmetric-sign --impersonate-service-account="$SA_EVE_VERIFIER"` as the proof that the verifier cannot sign (S137); `python setup/walle_setup.py teardown --destroy-key-versions --dry-run` as a verify, and `_pem_archive_present` as code that exists (S134); the signer binding before the audit configuration, and a whole-project-policy write from `/tmp/eve-policy.json` with no etag and no diff (S205); "retarget the transfer config's **destination dataset**" for a query whose destination is inside its own SQL (S204); `gcloud config get-value account` as a member string, and a **standing** `roles/iam.serviceAccountUser` for a human on `eve-controller@`; `${EVE_AR}` as an Eve-project image registry (S006: every Eve image is built and attested in `CICD_PROJECT`); a second bucket for the key archive.
 - Applies decisions (signed in [03](03-decisions-and-people.md) before the step that needs them): E-2, E-4, E-6, E-10, E-13, E-15, E-17, E-18, E-20; **E-21**, recorded at `E3-8.1` by this file; CC-11, CC-21, CC-32; decision 11 (the blind grader), decision 36, decision 44; P13, P34, P19, P118, P143; SD-10, SD-12, SD-37, SD-44, SD-45, SD-47, SD-48.
 - Closes: S036, S134, S137, S204, S205. **Defers S129** (the `eve-advisor` reporting path, M10) with a reason, an owner and the commands to be written — §14.
-- Consumes: `EVE_PROJECT`, `EVE_KEYRING`, `EVE_DS`, `EVE_QUALITY_DS`, `EVE_EVIDENCE_BUCKET`, `EVE_EVIDENCE_KEY_EU`, `ENT_PROJECT_REPAIR_EVE`, `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` ([23](23-eve-project-and-evidence-stores.md)); `SA_EVE_VERIFIER`, `EVE_ROBOT`, `EVE_TOKEN_VERSION` ([24](24-eve-workspace-identity-and-audit-feeds.md)); `SA_EVE_CONSOLE`, `EVE_CONFIG_REPO`, `EVE_RECONCILER_IMAGE`, `EVE_JOB_DETECT`, `EVE_JOB_REPORTS_POLL`, `EVE_JOB_ROSTER`, `EVE_JOB_HEARTBEAT`, `EVE_CODE_COMMIT` ([25](25-eve-human-super-admin-detections.md)); `EVE_INCIDENTS_TABLE`, `EVE_PAGES_TABLE`, `NOTIF_CH_EVE_EMAIL_SECOND_HUMAN`, `NOTIF_CH_EVE_SMS_SECOND_HUMAN` ([26](26-eve-reporting-and-witness-export.md)); `WITNESS_BUCKET`, `WITNESS_ALERT_FINGERPRINT` ([27](27-witness-grants-and-alarms.md)); `EVE_H_LIVE_RECORD` ([28](28-eve-independent-proof-and-sandbox-drills.md)); `SA_EVE`, `SA_EVE_V0`, `EVE_MIRROR_DS`, `EVE_V0_CONFIGS` ([36](36-wall-e-joins-to-eve-and-mo.md)); `SA_ACTIONS`, `WALLE_PROJECT`, `WALLE_AUDIT_DS` ([31](31-wall-e-project-and-data-plane.md)); `ACTIONS_URL`, `SUPER_ACTIONS_URL` ([33](33-wall-e-action-services-and-approval-surfaces.md)); `SA_MO_METRICS`, `MO_PROJECT` ([22](22-mo-foundations.md)); `WALLE_REPO_REMOTE` ([30](30-wall-e-workspace-side.md)); `SA_WALLE_DEPLOYER`, `AR_PLATFORM`, `CICD_PROJECT` ([10](10-core-projects-and-ci-identities.md)); `BINAUTHZ_ATTESTOR` ([11](11-keys-and-validator-custodian.md)); `REGION`, `BQ_LOCATION`, `EVIDENCE_RETENTION_DAYS` ([01](01-prerequisites-and-conventions.md), [03](03-decisions-and-people.md)); Stage 0 itself.
+- Consumes: `EVE_PROJECT`, `EVE_KEYRING`, `EVE_DS`, `EVE_QUALITY_DS`, `EVE_EVIDENCE_BUCKET`, `EVE_EVIDENCE_KEY_EU`, `ENT_PROJECT_REPAIR_EVE`, `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` ([23](23-eve-project-and-evidence-stores.md)); `SA_EVE_VERIFIER`, `EVE_ROBOT`, `EVE_TOKEN_VERSION` ([24](24-eve-workspace-identity-and-audit-feeds.md)); `SA_EVE_CONSOLE`, `EVE_CONFIG_REPO`, `EVE_RECONCILER_IMAGE`, `EVE_JOB_DETECT`, `EVE_JOB_REPORTS_POLL`, `EVE_JOB_ROSTER`, `EVE_JOB_HEARTBEAT`, `EVE_CODE_COMMIT` ([25](25-eve-human-super-admin-detections.md)); `EVE_INCIDENTS_TABLE`, `EVE_PAGES_TABLE`, `NOTIF_CH_EVE_EMAIL_SECOND_HUMAN`, `NOTIF_CH_EVE_SMS_SECOND_HUMAN` ([26](26-eve-reporting-and-witness-export.md)); `WITNESS_BUCKET`, `WITNESS_ALERT_FINGERPRINT` ([27](27-witness-grants-and-alarms.md)); `EVE_H_LIVE_RECORD` ([28](28-eve-independent-proof-and-sandbox-drills.md)); `SA_EVE`, `SA_EVE_V0`, `EVE_MIRROR_DS`, `EVE_V0_CONFIGS` ([36](36-wall-e-joins-to-eve-and-mo.md)); `SA_ACTIONS`, `WALLE_PROJECT`, `WALLE_AUDIT_DS` ([31](31-wall-e-project-and-data-plane.md)); `ACTIONS_URL`, `SUPER_ACTIONS_URL` ([33](33-wall-e-action-services-and-approval-surfaces.md)); `SA_MO_METRICS`, `MO_PROJECT` ([22](22-mo-foundations.md)); `WALLE_REPO_REMOTE` ([30](30-wall-e-workspace-side.md)); `SA_WALLE_DEPLOYER`, `AR_PLATFORM`, `CICD_PROJECT` ([10](10-core-projects-and-ci-identities.md)); `BINAUTHZ_ATTESTOR`, `SA_VALIDATOR_CUSTODIAN` ([11](11-keys-and-validator-custodian.md)); `REGION`, `BQ_LOCATION`, `EVIDENCE_RETENTION_DAYS` ([01](01-prerequisites-and-conventions.md), [03](03-decisions-and-people.md)); Stage 0 itself.
 - Produces: `EVE_KEY_VERSION`, `EVE_GATE_URL`, `EVE_RECEIPTS_DS`; the S3-entry record, the S3 exit-gate record and the S4-entry record; decision record **E-21**; the first cell at `eve_authority: binding`.
 - Commands, flags, roles, APIs, constraints and console paths checked against Google's documentation on 2026-09-15 (§16). What could not be settled that day is in §15.
 
@@ -29,7 +30,7 @@ Nothing here is built early "so it is ready". A signing key that gates nothing i
 | 1 | The S3-entry verification of both halves: Eve-H (23 to 28) and Eve-W (36), read as records rather than rebuilt | `${R}-1.6` S3-entry record |
 | 2 | The invariant class live, the rate-based class still observe-only, by one reviewed `eve/config` merge | `EVE_CONFIG_REPO`, a new `eve_config_version` |
 | 3 | The S3 exit gate: twelve faults, two negative controls, the blind grader, thirty days | `${R}-3.5` S3 exit record, signed by the Eve owner and the security reviewer |
-| 4 | `eve-approval`: HSM, `EC_SIGN_P256_SHA256`, in ring `eve` in `EVE_PROJECT`, one signer | `EVE_KEY_VERSION` |
+| 4 | `eve-approval`: HSM, `EC_SIGN_P256_SHA256`, in ring `EVE_KEYRING` in `EVE_PROJECT`, one signer | `EVE_KEY_VERSION` |
 | 5 | The public key archived in two places **before the first signature**, one of them a locked bucket | `gs://…/keys/eve-approval-v1.pem`; `contracts/eve-public-keys/1.pem` |
 | 6 | Data Access audit logging on `AsymmetricSign` **before** the signer binding exists | `EVE_PROJECT`'s `auditConfigs` |
 | 7 | `eve-gate`: its own Cloud Run job, `--max-retries=0`, deterministic, no model call | `EVE_GATE_URL` |
@@ -55,9 +56,9 @@ flowchart TD
   D --> E["E3-3 S3 exit gate: 12 faults, 2 negative controls, blind grader"]
   E --> F["E3-4 The key and the PEM archive"]
   F --> G["E3-5 Audit configuration, then the signer binding"]
-  G --> H["E3-6 eve-gate (BLOCKED on B-19)"]
-  H --> I["E3-7 Receipt view, Mo carve-out, the S4 query changes"]
-  I --> J["E3-8 The key-destruction guard (E-21)"]
+  G --> I["E3-7 Receipt view, Mo carve-out, the S4 query changes"]
+  I --> H["E3-6 eve-gate (BLOCKED on B-19); needs EVE_RECEIPTS_DS from E3-7.1"]
+  H --> J["E3-8 The key-destruction guard (E-21)"]
   J --> K["E3-9 The denial suite; the first binding cell"]
   K --> L["E3-10 Close: S4 entry record"]
   F -.->|"a defect, a suspected compromise"| M["Rollback: disable the version, never destroy it"]
@@ -70,7 +71,16 @@ source ~/.platform-env
 penv_guard
 source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
 R="$BUILD_LOG_DIR/records/$(date -u +%F)-E3"
+E3_VARS="$BUILD_LOG_DIR/work/41-sitting-vars.sh"; mkdir -p "$BUILD_LOG_DIR/work"; touch "$E3_VARS"; . "$E3_VARS"
+e3_set() { printf 'export %s="%s"\n' "$1" "$2" >> "$E3_VARS"; export "$1=$2"; }
+need EVE_PROJECT EVE_KEYRING REGION
+EVE_KEYRING_NAME="${EVE_KEYRING##*/}"
+[ "$EVE_KEYRING" = "projects/${EVE_PROJECT}/locations/${REGION}/keyRings/${EVE_KEYRING_NAME}" ] || { echo "STOP: EVE_KEYRING is not a ring in EVE_PROJECT at REGION: $EVE_KEYRING"; false; }
 ```
+
+**Values that cross steps.** A working directory made by `mktemp -d`, a clone path or a PAM grant name is created in one step and consumed in a later one, sometimes a section away, and every block above starts from a fresh shell. Such a value is therefore written once with `e3_set NAME value` into `E3_VARS`, which the preamble sources, and every consuming step opens with `need NAME` so an empty value stops the block rather than sending `cp` to `/eve-approval-v1.pem` or `pam_revoke` to nothing. `E3_VARS` is a working file, not a record: it holds paths and grant names only, is never committed, and is emptied at the start of each sitting by `E3-0.3`. The three sittings and their sections: **S3 entry** is §0 to §2; **the S3 exit gate** is §3 (with §0 re-read); **S4 entry** is §4 to §10 in the order §4, §5, §7, §6, §8, §9, §10. Nothing in `E3_VARS` is ever needed across two sittings.
+
+**The ring is addressed through `EVE_KEYRING`.** [23](23-eve-project-and-evidence-stores.md) `EP-3.3` recorded it as a full resource name, `projects/…/locations/europe-west1/keyRings/eve`. Every KMS command here passes `--keyring="$EVE_KEYRING_NAME"` (the last path segment) with `--location="$REGION"` and `--project="$EVE_PROJECT"`, and the preamble proves the three agree before any block runs; the full resource names for Policy Troubleshooter and `analyze-iam-policy` are built as `//cloudkms.googleapis.com/${EVE_KEYRING}/cryptoKeys/eve-approval`. No step spells the ring name as a literal.
 
 ## Preconditions
 
@@ -109,13 +119,17 @@ Nobody signs their own gate. The platform owner requests; the Eve owner approves
 |---|---|---|
 | `gcloud kms keys create --purpose` takes `asymmetric-signing`; `--default-algorithm` takes `ec-sign-p256-sha256`; `--protection-level` takes `software`, `hsm`, `hsm-single-tenant`, `external`, `external-vpc` and defaults to `software` | `gcloud kms keys create` reference | `E3-4.2`'s three flags, each written out rather than defaulted |
 | `--destroy-scheduled-duration` is "the amount of time that versions of the key should spend in the `DESTROY_SCHEDULED` state before transitioning to `DESTROYED`", in `INTEGER[UNIT]` form with `s`, `m`, `h` or `d` | same reference | `E3-4.2` sets `30d` explicitly, so the key does not depend on a default; the folder constraint then has nothing to refuse |
+| "When you first create the key, the initial key version has a state of Pending generation. When the state changes to Enabled, you can use the key." `PENDING_GENERATION` "may not be used, enabled, disabled, or destroyed yet"; `GENERATION_FAILED` is terminal | *Creating asymmetric keys*; `CryptoKeyVersionState` in the REST reference | `E3-4.2` polls `versions describe 1 --format='value(state)'` until `ENABLED` before its readback, and `E3-4.3` refuses to export unless that poll recorded `ENABLED`: a `get-public-key` against a pending version fails, and a `versions list` read too early shows the wrong state |
+| `gcloud storage buckets describe --format="default(retention_policy)"` prints `retention_policy:` with `effectiveTime`, `isLocked` and `retentionPeriod` beneath it; `uniform_bucket_level_access` and `public_access_prevention` are top-level snake_case fields | *Use and lock retention policies*; *Uniform bucket-level access*; *Public access prevention* | `E3-1.5` and `E3-4.5` read the JSON and assert with `jq -e '.retention_policy.isLocked == true'` rather than projecting camelCase names that render as blanks |
+| A PAM grant's `state` values are `APPROVAL_AWAITED`, `SCHEDULED`, `ACTIVATING`, `ACTIVE`, `ACTIVATION_FAILED`, `DENIED`, `EXPIRED`, `REVOKING`, `REVOKED`, `ENDED`, `WITHDRAWING`, `WITHDRAWN` | *Request temporary elevated access* | `pam_wait "$g" ACTIVE`, as [12](12-privileged-access-catalogue.md) writes it; `ACTIVATED` is not a state and a wait on it never returns |
+| Policy Troubleshooter takes a BigQuery table by full resource name `//bigquery.googleapis.com/projects/PROJECT/datasets/DATASET/tables/TABLE` and the permission `bigquery.tables.getData`; it "analyzes all relevant policies, memberships in Google Groups, and inheritance from parent resources" | *Troubleshoot IAM permissions in BigQuery* | `E3-9.3` proves EVE-12 and EVE-22 without opening a grant on any account, which the file's own rule at `E3-5.7` and `E3-9.2` forbids |
 | The default scheduled-for-destruction duration is 30 days; a version can be restored during it; `constraints/cloudkms.minimumDestroyScheduledDuration` sets a floor and `constraints/cloudkms.disableBeforeDestroy` requires a disable first | *Destroy and restore key versions*; *Control key version destruction* | `E3-8.4`: the belt behind the guard. B21 of [13](13-organisation-policies-deny-and-pab.md) already sets both at `fld-agentic-platform` |
 | Whether a **destroyed** version's public key stays retrievable is not documented | *Destroy and restore key versions* (silent on it) | Why the archive exists at all, and why `E3-4.3` precedes any signature |
 | `AsymmetricSign` needs `cloudkms.cryptoKeyVersions.useToSign`, typed **`DATA_READ`**; `GetPublicKey` needs `viewPublicKey`, also `DATA_READ`; Data Access logs must be explicitly enabled | *Cloud KMS audit logging* | `E3-5.1` to `E3-5.3` run **before** `E3-5.4`, which is what S205 asked for |
 | The `etag` field is optimistic concurrency control: it is returned by `getIamPolicy` and must be sent back in `setIamPolicy`; a stale etag fails with HTTP 409 | *Understanding allow policies* | `E3-5.2` keeps the etag and refuses to write without it; a whole-policy write from a hand-edited stale file is how bindings disappear |
 | `gcloud policy-intelligence troubleshoot-policy iam RESOURCE --principal-email=… --permission=…` checks a principal's permission against the effective allow policy, deny policy and principal access boundary; the result is `overallAccessState`, values `CAN_ACCESS`, `CANNOT_ACCESS`, `UNKNOWN_INFO`, `UNKNOWN_CONDITIONAL` | `gcloud policy-intelligence troubleshoot-policy iam` reference; *Troubleshoot IAM permissions* | `E3-5.7` replaces the impersonation test of S137. It also covers inherited project and folder grants, which a key-level `get-iam-policy` does not |
 | `roles/iam.serviceAccountTokenCreator` carries `getAccessToken`; impersonation needs it **even for a project Owner**. `roles/iam.serviceAccountUser` carries `actAs` and not `getAccessToken` | *Service account permissions*; *Use service account impersonation* | Why `--impersonate-service-account` can never be the proof of a key policy, and why `E3-5.8` looks for both roles |
-| `gcloud asset analyze-iam-policy` takes `--organization|--folder|--project` as the scope, plus `--full-resource-name`, `--identity`, `--permissions`, `--roles`, `--analyze-service-account-impersonation`, `--expand-groups` | `gcloud asset analyze-iam-policy` reference | `E3-5.8`'s two reads, one for `actAs` on the account resource, one for impersonation reachability |
+| `gcloud asset analyze-iam-policy` takes `--organization\|--folder\|--project` as the scope, plus `--full-resource-name`, `--identity`, `--permissions`, `--roles`, `--analyze-service-account-impersonation`, `--expand-groups` | `gcloud asset analyze-iam-policy` reference | `E3-5.8`'s two reads, one for `actAs` on the account resource, one for impersonation reachability |
 | An authorized view "must be a different dataset than the dataset used in the source query"; "the source data dataset and authorized view dataset must be in the same regional location"; the querying principal needs `roles/bigquery.dataViewer` on the **view's** dataset and no IAM permission on the source; the view is authorised through the source dataset's access list (console: Sharing → Authorize views) | *Authorized views* | `E3-7.1` to `E3-7.4`: the receipts dataset exists because the view may not sit in `eve` |
 | `bq update --transfer_config` accepts `--params`, `--target_dataset`, `--display_name`, `--schedule`, `--service_account_name`, `--update_credentials`; the query text itself is changed with `--params='{"query":"…"}'` | *Scheduling queries*; bq CLI reference | `E3-7.6`, and the rule S204 asked for: a DML query's destination is inside its SQL, so `--target_dataset` moves nothing |
 | Cloud Scheduler runs a Cloud Run job by `POST https://run.googleapis.com/v2/projects/PROJECT/locations/REGION/jobs/JOB:run` with an **OAuth** token (`--oauth-service-account-email`), not OIDC | *Run jobs on a schedule* | `E3-6.3`, and why `EVE_GATE_URL` holds a `:run` URI and not a service address |
@@ -140,12 +154,12 @@ need EVE_PROJECT EVE_KEYRING EVE_DS EVE_WS_LOGS_DS EVE_QUALITY_DS EVE_EVIDENCE_B
      ENT_PROJECT_REPAIR_EVE ENT_DEPLOY_CREDENTIAL_HOLDER_EVE
 need WALLE_PROJECT WALLE_AUDIT_DS SA_ACTIONS ACTIONS_URL SUPER_ACTIONS_URL WALLE_REPO_REMOTE \
      MO_PROJECT SA_MO_METRICS CICD_PROJECT AR_PLATFORM REGION BQ_LOCATION EVIDENCE_RETENTION_DAYS
-need EVE_H_LIVE_RECORD STAGE0_RECORD SECOND_HUMAN_EMAIL SECURITY_REVIEWER_EMAIL BLIND_GRADER_EMAIL
+need EVE_H_LIVE_RECORD STAGE0_RECORD SECOND_HUMAN_EMAIL SECURITY_REVIEWER_EMAIL BLIND_GRADER_EMAIL SA_VALIDATOR_CUSTODIAN OWNER_DAILY_ACCOUNT
 awk -F'\t' '$3 == "BLOCKED" {print $2"\t"$7}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u
 grep -E '^(EP|EW|EH|ER|WG|EV|WJ)-' "$BUILD_LOG_DIR/rerun-index.tsv" | grep -i '41' || echo "no 41 re-run lines recorded"
 ```
 
-- **VERIFY:** `need` is silent for all three lines. The `BLOCKED` list may contain `B-19` (this file's own, handled in §6 and §8) and must **not** contain `B-07`, `B-08` or `B-09`: Eve's schemas, its reconciler and its SQL are all prerequisites of an S3 that has already run. The re-run grep prints at least two lines — [23](23-eve-project-and-evidence-stores.md) `EP-7.7`'s `keys/` prefix grant and [36](36-wall-e-joins-to-eve-and-mo.md) `WJ-3.6`'s `mo-metrics@` grant at S4 — both closed in this file (`E3-4.3`, `E3-7.5`).
+- **VERIFY:** `need` is silent for all three lines and for the preamble's `EVE_KEYRING` check, which must print nothing (a `STOP` there means the ring 23 recorded is not in `EVE_PROJECT` at `REGION`, and no KMS step of this file may run). The `BLOCKED` list may contain `B-19` (this file's own, handled in §6 and §8) and must **not** contain `B-07`, `B-08` or `B-09`: Eve's schemas, its reconciler and its SQL are all prerequisites of an S3 that has already run. The re-run grep prints at least two lines — [23](23-eve-project-and-evidence-stores.md) `EP-7.7`'s `keys/` prefix grant and [36](36-wall-e-joins-to-eve-and-mo.md) `WJ-3.6`'s `mo-metrics@` grant at S4 — both closed in this file (`E3-4.3`, `E3-7.5`).
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-0.1-inputs-v1.txt`; `evidence_add E3-0.1 inputs E-05 1.4.1 build-log:records/<file> <file>`.
 
@@ -170,14 +184,21 @@ grep -c 'blind grader' "$(ls -1 "$PLATFORM_REPO_DIR"/decisions/*-blind-grader*.m
 
 - **WHO:** Eve owner reads them aloud at the start of each of the three sittings; platform owner records.
 - **WHERE:** The sitting.
-- **ACTION:** No commands. Four rules, and each has a step that enforces it:
+- **ACTION:** One command, run once at the start of each sitting so that no working directory or grant name carries over from the previous one:
+
+```bash
+: > "$E3_VARS"
+wc -c "$E3_VARS"
+```
+
+  Then four rules, and each has a step that enforces it:
 
 1. **No model produces an Eve approval.** `eve-gate` holds no model client, `aiplatform` is denied on `EVE_PROJECT`, and neither Eve identity holds any `aiplatform.*` permission (`E3-1.3`, `E3-6.4`, EVE-14).
 2. **No single human produces one either.** No standing human `actAs` and no `tokenCreator` on `eve-controller@`, ever (`E3-5.8`).
 3. **Humans raise autonomy, machines lower it.** Eve halts and demotes; nothing in this file lets Eve raise a level, shorten a dwell or clear its own halt. A cell becomes binding only by a merged pull request with two human approvals (`E3-9.5`).
 4. **The PEM is archived before the key is used.** Not after the first signature, not at the end of the sitting (`E3-4.3`). If a signature is ever found to predate the archive, it is a severity 2 incident and the family goes to L0.
 
-- **VERIFY:** The four rules are quoted in the sitting record with the step id that enforces each.
+- **VERIFY:** `wc -c` prints `0`. The four rules are quoted in the sitting record with the step id that enforces each.
 - **ROLLBACK:** Not applicable.
 - **EVIDENCE:** `${R}-0.3-rules-v1.md`. E-13. TISAX 1.4.1.
 
@@ -212,8 +233,6 @@ checkpoint E3-1.1 START
 for j in "$EVE_JOB_REPORTS_POLL" "$EVE_JOB_ROSTER" "$EVE_JOB_DETECT" "$EVE_JOB_HEARTBEAT"; do
   gcloud scheduler jobs describe "${j##*/}" --project="$EVE_PROJECT" --location="$REGION" --format='value(name,state,schedule,lastAttemptTime)'
 done
-bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --format=prettyjson \
-  'SELECT stream_or_application, COUNT(*) AS rows_7d, MAX(ts) AS latest FROM `'"$EVE_PROJECT"'.'"$EVE_WS_LOGS_DS"'.__TABLES_SUMMARY__` WHERE FALSE GROUP BY 1' >/dev/null 2>&1 || true
 bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --format=csv \
   "$(cat "$PLATFORM_REPO_DIR/eve/checks/s3_entry_feeds.sql")"
 gcloud logging read 'resource.type="cloud_run_job" AND severity>=ERROR' --project="$EVE_PROJECT" --freshness=7d --limit=20 --format='value(timestamp,jsonPayload.message)'
@@ -289,16 +308,21 @@ bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --format=csv \
 - **ACTION:**
 
 ```bash
-gcloud storage buckets describe "$EVE_EVIDENCE_BUCKET" \
-  --format='value(retentionPolicy.isLocked,retentionPolicy.retentionPeriod,uniform_bucket_level_access.enabled,public_access_prevention)'
+need EVE_EVIDENCE_BUCKET EVIDENCE_RETENTION_DAYS EVE_CONFIG_REPO
+gcloud storage buckets describe "$EVE_EVIDENCE_BUCKET" --format=json > "${R}-1.5-bucket-v1.json"
+jq -e '.retention_policy.isLocked == true' "${R}-1.5-bucket-v1.json" && echo "LOCKED"
+[ "$(jq -r '.retention_policy.retentionPeriod' "${R}-1.5-bucket-v1.json")" = "$((EVIDENCE_RETENTION_DAYS * 86400))" ] && echo "RETENTION MATCHES"
+jq -r '.uniform_bucket_level_access, .public_access_prevention' "${R}-1.5-bucket-v1.json"
 gcloud storage ls "${EVE_EVIDENCE_BUCKET}/ladder/" | tail -3
 git -C "$PLATFORM_REPO_DIR" ls-remote "$EVE_CONFIG_REPO" HEAD
-gh api "repos/{owner}/{repo}/branches/main/protection" --jq '.required_pull_request_reviews.required_approving_review_count' 2>/dev/null || echo "read branch protection by hand and record the screenshot"
+erepo="$(printf '%s' "$EVE_CONFIG_REPO" | sed -E 's#^https://github.com/##; s#\.git$##')"
+gh api "repos/${erepo}/branches/main/protection" --jq '{reviews: .required_pull_request_reviews, checks: .required_status_checks.contexts}'
 ```
 
-- **VERIFY:** `isLocked` is `True` and the period equals `EVIDENCE_RETENTION_DAYS` in seconds — if it is `False`, the archive of §4 is deletable and the forgery argument does not hold, so §4 does not open. The `ladder/` prefix holds the artefact `walle-deployer@` published at Stage 0. `eve/config` requires **two** approving reviewers with the Eve owner among the required reviewers, and the external validator runs on every pull request.
+  The bucket resource is read as JSON and asserted with `jq -e`: `gcloud storage` renders the retention policy under the snake_case key `retention_policy` with `isLocked` and `retentionPeriod` beneath it, and a `value(retentionPolicy.isLocked)` projection prints a blank line, which an operator can read as either answer. `jq -e` exits non-zero on `false` or `null`, so a missing policy fails loudly. The repository slug is derived from `EVE_CONFIG_REPO` because `gh`'s `{owner}/{repo}` placeholders resolve only inside a clone of that repository, which this shell is not.
+- **VERIFY:** `LOCKED` and `RETENTION MATCHES` both print — if `jq -e` fails, the archive of §4 is deletable and the forgery argument does not hold, so §4 does not open; `true` and `enforced` for uniform access and public-access prevention. The `ladder/` prefix holds the artefact `walle-deployer@` published at Stage 0. `eve/config` requires **two** approving reviewers with the Eve owner among the required reviewers, and the external validator runs on every pull request.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** `${R}-1.5-perimeter-v1.txt`. E-07, E-08. TISAX 1.3.1, 4.2.1.
+- **EVIDENCE:** `${R}-1.5-perimeter-v1.txt` and `${R}-1.5-bucket-v1.json`. E-07, E-08. TISAX 1.3.1, 4.2.1.
 
 ### E3-1.6 Write the S3-entry record
 
@@ -336,7 +360,7 @@ gh api "repos/{owner}/{repo}/branches/main/protection" --jq '.required_pull_requ
 
 ```bash
 checkpoint E3-2.2 START
-T41="$(mktemp -d)"; git clone "$EVE_CONFIG_REPO" "$T41/cfg"
+T41="$(mktemp -d)"; e3_set T41 "$T41"; git clone "$EVE_CONFIG_REPO" "$T41/cfg"
 git -C "$T41/cfg" checkout -b s3-entry-invariant-live
 python3.12 - "$T41/cfg" <<'EOF'
 import sys, pathlib, yaml
@@ -370,16 +394,28 @@ git -C "$T41/cfg" push -u origin s3-entry-invariant-live
 - **ACTION:** The four reconciler jobs read `eve/config` at start. Redeploy by digest — never by tag — so that what runs is what was attested.
 
 ```bash
+need T41 EVE_RECONCILER_IMAGE ENT_DEPLOY_CREDENTIAL_HOLDER_EVE
+git -C "$T41/cfg" fetch origin && CFGV="$(git -C "$T41/cfg" rev-parse --short origin/main)"; echo "EVE_CONFIG_VERSION=$CFGV"
 g="$(pam_request "$ENT_DEPLOY_CREDENTIAL_HOLDER_EVE" "setup-41 E3-2.3: roll the reconciler jobs onto the S3-entry config version" 1800)"; echo "$g"
-pam_wait "$g" ACTIVATED
+pam_wait "$g" ACTIVE
 for j in eve-reconciler-detect eve-reconciler-poll eve-reconciler-roster eve-reconciler-heartbeat; do
   gcloud run jobs update "$j" --project="$EVE_PROJECT" --region="$REGION" \
-    --image="$EVE_RECONCILER_IMAGE" --update-env-vars="EVE_CONFIG_VERSION=$(git -C "$T41/cfg" rev-parse --short HEAD)"
+    --image="$EVE_RECONCILER_IMAGE" --update-env-vars="EVE_CONFIG_VERSION=${CFGV}"
 done
 pam_revoke "$g"
 ```
 
-- **VERIFY:** Each job's `--format='value(spec.template.template.containers[0].image)'` prints the digest form `@sha256:`, never a tag. The next scheduled execution of each job completes. Within the alarm's window, `WITNESS_ALERT_FINGERPRINT` fires on the configuration-fingerprint change and the witness administrators confirm receipt — a configuration change the witness did not see is exactly the silent edit [27](27-witness-grants-and-alarms.md) was built to catch, so an alarm that stays quiet here is a finding against the alarm, not a convenience. The grant reads `REVOKED`.
+  `T41` is the clone `E3-2.2` made and recorded in `E3_VARS`; the version is read from `origin/main` after the merge, not from the local branch. The Cloud Run v2 Job resource has no `spec` wrapper: the image sits at `template.template.containers[0].image` (Job → ExecutionTemplate → TaskTemplate → containers).
+- **VERIFY:**
+
+```bash
+for j in eve-reconciler-detect eve-reconciler-poll eve-reconciler-roster eve-reconciler-heartbeat; do
+  img="$(gcloud run jobs describe "$j" --project="$EVE_PROJECT" --region="$REGION" --format='value(template.template.containers[0].image)')"
+  printf '%s\t%s\t' "$j" "$img"; printf '%s' "$img" | grep -q '@sha256:' && echo DIGEST || echo "NOT A DIGEST: STOP"
+done
+```
+
+  Four `DIGEST` lines and no empty image column — an empty projection is a wrong field path, not a pass. The next scheduled execution of each job completes. Within the alarm's window, `WITNESS_ALERT_FINGERPRINT` fires on the configuration-fingerprint change and the witness administrators confirm receipt — a configuration change the witness did not see is exactly the silent edit [27](27-witness-grants-and-alarms.md) was built to catch, so an alarm that stays quiet here is a finding against the alarm, not a convenience. The grant reads `REVOKED`.
 - **ROLLBACK:** Redeploy the previous digest with the previous `EVE_CONFIG_VERSION`; the alarm fires again and the record says why.
 - **EVIDENCE:** `${R}-2.3-roll-v1.txt` and the witness acknowledgement. E-06, E-12. TISAX 1.5.1, 5.2.4.
 
@@ -523,12 +559,14 @@ bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --format=prettyjson 
 checkpoint E3-4.1 START
 need EVE_PROJECT EVE_KEYRING ENT_PROJECT_REPAIR_EVE
 g_key="$(pam_request "$ENT_PROJECT_REPAIR_EVE" "setup-41 E3-4.2 to E3-5.6: create eve-approval, export the PEM, bind the signer after the audit config" 3600)"; echo "$g_key"
-pam_wait "$g_key" ACTIVATED
-pam_record "$g_key" "${R}-4.1-grant.json"
+e3_set G_KEY "$g_key"
+pam_wait "$G_KEY" ACTIVE
+pam_record "$G_KEY" "${R}-4.1-grant.json"
 ```
 
-- **VERIFY:** `pam_record` prints `ACTIVATED`, the requester as the platform owner, an approver event whose principal is the Eve owner, and `externallyModified: false`. If the approver is the requester, stop: the whole separation argument of this file rests on that line.
-- **ROLLBACK:** `pam_revoke "$g_key"`. The grant is revoked at `E3-5.6` in any case, and the revocation time is recorded.
+  The grant name is written to `E3_VARS` as `G_KEY` because `E3-5.6` revokes it from a fresh shell five steps later; `pam_wait` waits for `ACTIVE`, which is the state PAM reports for a live grant.
+- **VERIFY:** `pam_record` prints `ACTIVE`, the requester as the platform owner, an approver event whose principal is the Eve owner, and `externallyModified: false`. If the approver is the requester, stop: the whole separation argument of this file rests on that line. `grep G_KEY "$E3_VARS"` prints the grant name.
+- **ROLLBACK:** `pam_revoke "$G_KEY"`. The grant is revoked at `E3-5.6` in any case, and the revocation time is recorded.
 - **EVIDENCE:** `${R}-4.1-grant.json`. E-08. TISAX 4.1.1, 4.2.1.
 
 ### E3-4.2 Create `eve-approval` — **IRREVERSIBLE** as a name
@@ -537,57 +575,74 @@ pam_record "$g_key" "${R}-4.1-grant.json"
 - **WHERE:** Shell, inside `g_key`.
 - **ACTION:**
 
-  > **IRREVERSIBLE.** A key ring cannot be deleted and a key name inside it cannot be reused. `eve-approval` in ring `eve` is permanent: a typo here leaves a dead name in the ring for ever, and a wrong algorithm cannot be corrected in place — it can only be superseded by a second name, which every future reader then has to be told about. Confirm before running: the ring is `EVE_KEYRING` and its location is `europe-west1`; the gate of `E3-3.5` says "S4 entry may begin"; the algorithm is the one `walle-actions`' verification path implements.
+  > **IRREVERSIBLE.** A key ring cannot be deleted and a key name inside it cannot be reused. `eve-approval` in ring `EVE_KEYRING` is permanent: a typo here leaves a dead name in the ring for ever, and a wrong algorithm cannot be corrected in place — it can only be superseded by a second name, which every future reader then has to be told about. Confirm before running, reading the **values** aloud and not the variable names: `echo "$EVE_KEYRING"` prints `projects/<EVE_PROJECT>/locations/europe-west1/keyRings/<ring>` and `echo "$EVE_KEYRING_NAME"` prints its last segment, which is the ring the signed key table names; `echo "$REGION"` prints `europe-west1`; the gate of `E3-3.5` says "S4 entry may begin"; the algorithm is the one `walle-actions`' verification path implements.
 
 ```bash
+need EVE_PROJECT EVE_KEYRING REGION G_KEY
+echo "$EVE_KEYRING"; echo "$EVE_KEYRING_NAME"; echo "$REGION"
 gcloud kms keys create eve-approval \
-  --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+  --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
   --purpose=asymmetric-signing \
   --default-algorithm=ec-sign-p256-sha256 \
   --protection-level=hsm \
   --destroy-scheduled-duration=30d
+KEY_STATE=""
+for i in $(seq 1 30); do
+  KEY_STATE="$(gcloud kms keys versions describe 1 --key=eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" --format='value(state)')"
+  echo "$(date -u +%H:%M:%S) eve-approval version 1: ${KEY_STATE:-no state read}"
+  case "$KEY_STATE" in ENABLED) break;; PENDING_GENERATION|'') sleep 10;; *) echo "STOP: unexpected state $KEY_STATE"; break;; esac
+done
+[ "$KEY_STATE" = ENABLED ] && e3_set EVE_APPROVAL_V1_STATE ENABLED || echo "STOP: version 1 is '${KEY_STATE}' after five minutes; E3-4.3 refuses until a re-run of this poll records ENABLED"
 ```
 
   `--protection-level=hsm` is written out because the flag defaults to `software`; P118's `constraints/cloudkms.allowedProtectionLevels = is:HSM` at `fld-agentic-platform` would refuse a software key anyway, and `E3-4.5` proves the level rather than trusting either. `--destroy-scheduled-duration=30d` is written out for the same reason: the default is 30 days today, B21 requires `in:30d`, and a value stated in the command is a value a reader can check against the record.
-- **VERIFY:**
+
+  **The poll is not optional.** An asymmetric key's initial version is generated asynchronously: "when you first create the key, the initial key version has a state of Pending generation. When the state changes to Enabled, you can use the key." A `versions list` run straight after `keys create` reads `PENDING_GENERATION`, and a `get-public-key` at that moment fails with a precondition error — on an HSM key the wait is normally seconds, and the loop allows five minutes. The loop records `EVE_APPROVAL_V1_STATE=ENABLED` in `E3_VARS` only when it has seen `ENABLED` itself, and `E3-4.3` needs that value. `GENERATION_FAILED` is terminal: the version cannot be enabled, and the name is spent — which is the case the banner warns about, and the reason the poll stops on any state that is neither pending nor enabled instead of looping past it.
+- **VERIFY:** Only after the poll has printed `ENABLED`:
 
 ```bash
-gcloud kms keys describe eve-approval --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+need EVE_APPROVAL_V1_STATE
+gcloud kms keys describe eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
   --format='value(purpose,versionTemplate.algorithm,versionTemplate.protectionLevel,destroyScheduledDuration)'
-gcloud kms keys versions list --key=eve-approval --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+gcloud kms keys versions list --key=eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
   --format='table(name,state,protectionLevel)'
 ```
 
-  Expect `ASYMMETRIC_SIGN`, `EC_SIGN_P256_SHA256`, `HSM`, `2592000s`, and exactly one version, `ENABLED`, `HSM`. Anything else stops the sitting.
+  Expect `ASYMMETRIC_SIGN`, `EC_SIGN_P256_SHA256`, `HSM`, `2592000s`, and exactly one version, `ENABLED`, `HSM`. Anything else stops the sitting; a version still `PENDING_GENERATION` here means the readback was run before the poll finished, and the poll is re-run rather than the readback repeated until it looks right.
 - **ROLLBACK:** **None for the name.** The version can be disabled (`E3-10.3`) and the key left unused; it cannot be removed, and it must not be destroyed.
-- **EVIDENCE:** `${R}-4.2-key-v1.txt` with both readbacks and the countersignature; `evidence_add E3-4.2 eve-approval-key E-08 4.3.1 build-log:records/<file> <file>`. E-08. TISAX 4.3.1.
+- **EVIDENCE:** `${R}-4.2-key-v1.txt` with the poll's state lines, both readbacks and the countersignature; `evidence_add E3-4.2 eve-approval-key E-08 4.3.1 build-log:records/<file> <file>`. E-08. TISAX 4.3.1.
 
 ### E3-4.3 Export the public key and archive it — **IRREVERSIBLE** as an object
 
 - **WHO:** Platform owner; security reviewer watches the digest comparison.
-- **WHERE:** Shell, inside `g_key`, in a working directory that is not the wiki and not a synced folder.
-- **ACTION:** Before the version is ever used to sign. Two copies, and the first lands in the locked bucket.
+- **WHERE:** Shell, inside `G_KEY`, in a working directory that is not the wiki and not a synced folder (`mktemp -d`, recorded in `E3_VARS` as `W`).
+- **ACTION:** Before the version is ever used to sign. Two copies, and the first lands in the locked bucket. **The step refuses to run unless `E3-4.2`'s poll recorded `ENABLED`**, and re-reads the state itself: an export against a `PENDING_GENERATION` version fails, and an export against anything else is not the key this file argues from.
 
   > **IRREVERSIBLE.** The evidence bucket's retention policy is locked: an object written to `keys/` cannot be deleted or replaced by anyone, including a project owner, until `EVIDENCE_RETENTION_DAYS` have passed. Confirm before uploading: the file is the **public** key of version 1 of `eve-approval` (a PEM beginning `-----BEGIN PUBLIC KEY-----`), the digest matches the live key, and the object name carries the version number.
 
 ```bash
-need EVE_EVIDENCE_BUCKET GRP_EVE_OWNERS
-penv_set EVE_KEY_VERSION "projects/${EVE_PROJECT}/locations/${REGION}/keyRings/eve/cryptoKeys/eve-approval/cryptoKeyVersions/1"
+need EVE_EVIDENCE_BUCKET GRP_EVE_OWNERS EVE_APPROVAL_V1_STATE G_KEY
+[ "$EVE_APPROVAL_V1_STATE" = ENABLED ] || { echo "STOP: E3-4.2's poll did not record ENABLED"; false; }
+[ "$(gcloud kms keys versions describe 1 --key=eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" --format='value(state)')" = ENABLED ] || { echo "STOP: version 1 is not ENABLED now"; false; }
+penv_set EVE_KEY_VERSION "${EVE_KEYRING}/cryptoKeys/eve-approval/cryptoKeyVersions/1"
 
-W="$(mktemp -d)"
+W="$(mktemp -d)"; e3_set W "$W"
 gcloud kms keys versions get-public-key 1 \
-  --key=eve-approval --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+  --key=eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
   --output-file="$W/eve-approval-v1.pem"
 head -1 "$W/eve-approval-v1.pem"
-shasum -a 256 "$W/eve-approval-v1.pem"
+shasum -a 256 "$W/eve-approval-v1.pem" | tee "$W/eve-approval-v1.sha256"
 
 # the keys/ prefix grant 23 EP-7.7 recorded PENDING for this file
-gcloud storage buckets add-iam-policy-binding "$EVE_EVIDENCE_BUCKET" \
+B="${EVE_EVIDENCE_BUCKET#gs://}"
+gcloud storage buckets add-iam-policy-binding "$EVE_EVIDENCE_BUCKET" --project="$EVE_PROJECT" \
   --member="group:${GRP_EVE_OWNERS}" --role=roles/storage.objectCreator \
-  --condition="expression=resource.name.startsWith(\"projects/_/buckets/${EVE_PROJECT}-eve-evidence/objects/keys/\"),title=keys-prefix-only,description=41 E3-4.3: the eve-approval public-key archive, written by the Eve owner group at creation and at each rotation"
+  --condition="expression=resource.name.startsWith(\"projects/_/buckets/${B}/objects/keys/\"),title=keys-prefix-only,description=41 E3-4.3: the eve-approval public-key archive, written by the Eve owner group at creation and at each rotation"
 
 gcloud storage cp "$W/eve-approval-v1.pem" "${EVE_EVIDENCE_BUCKET}/keys/eve-approval-v1.pem"
 ```
+
+  The condition's bucket name is derived from `EVE_EVIDENCE_BUCKET` (the signed NAMES value 23 `EP-2.5` expanded), never retyped: a condition on a bucket name that differs from the real one by a character is inert, and that would not show today, because this first object is written under the platform owner's own grant, but at the first rotation.
 
   **One bucket, not two.** A fresh bucket would be an ordinary bucket: every project owner and every `roles/storage.objectAdmin` could overwrite or delete the PEM, and per-object retention cannot be enabled from the command line after creation. The evidence bucket already carries the guarantee, locked.
 
@@ -595,16 +650,19 @@ gcloud storage cp "$W/eve-approval-v1.pem" "${EVE_EVIDENCE_BUCKET}/keys/eve-appr
 - **VERIFY:**
 
 ```bash
-gcloud storage cat "${EVE_EVIDENCE_BUCKET}/keys/eve-approval-v1.pem" | shasum -a 256
-gcloud kms keys versions get-public-key 1 --key=eve-approval --keyring=eve \
-  --location="$REGION" --project="$EVE_PROJECT" | shasum -a 256
+need W
+gcloud storage cp "${EVE_EVIDENCE_BUCKET}/keys/eve-approval-v1.pem" "$W/from-bucket.pem"
+gcloud kms keys versions get-public-key 1 --key=eve-approval --keyring="$EVE_KEYRING_NAME" \
+  --location="$REGION" --project="$EVE_PROJECT" --output-file="$W/from-kms-again.pem"
+shasum -a 256 "$W/eve-approval-v1.pem" "$W/from-bucket.pem" "$W/from-kms-again.pem"
+head -1 "$W/from-bucket.pem"
 gcloud storage buckets get-iam-policy "$EVE_EVIDENCE_BUCKET" --format=json \
   | jq -c '[.bindings[] | {role, members, condition: (.condition.title // "-")}]'
 ```
 
-  The two digests are identical. The bucket policy shows `objectCreator` for `group:eve-owners@` with condition title `keys-prefix-only`, alongside `eve-verifier@`'s unconditioned `objectCreator` and `walle-deployer@`'s `ladder-prefix-only` — **three** grants and no `objectAdmin`, `objectUser` or `storage.admin` for any principal. `BD-41-1` records the narrowing and closes `EP-7.7`'s pending line.
+  **Three digests, all from files, all identical**, and `from-bucket.pem` begins `-----BEGIN PUBLIC KEY-----`. Every copy is written with `--output-file` or `gcloud storage cp` and hashed on disk; nothing is piped from stdout into `shasum`, because the command's stdout rendering is not pinned to be byte-identical to the file it writes (a trailing newline is enough to break a digest), and a comparison that can fail on a correct archive is one an operator learns to work around. If the digests differ, read it as **the comparison is wrong before the archive is**: the two KMS exports are the same command, so a difference between them is a tooling fault, and a difference only on the bucket copy means the upload was not the file hashed — record it and re-upload under a `-v2` object name as ROLLBACK says. The bucket policy shows `objectCreator` for `group:eve-owners@` with condition title `keys-prefix-only`, alongside `eve-verifier@`'s unconditioned `objectCreator` and `walle-deployer@`'s `ladder-prefix-only` — **three** grants and no `objectAdmin`, `objectUser` or `storage.admin` for any principal. `BD-41-1` records the narrowing and closes `EP-7.7`'s pending line.
 - **ROLLBACK:** The grant can be removed. **The object cannot.** If the wrong file was uploaded, it stays until retention expires: write the correct object under the same version number with a `-v2` record naming the mistake, and record a finding — never assume the wrong object can be cleaned up later.
-- **EVIDENCE:** `${R}-4.3-pem-archive-v1.txt` with both digests and the policy; `evidence_add E3-4.3 pem-archive E-08 4.3.1 build-log:records/<file> <file>`. E-08. TISAX 4.3.1, 1.3.1.
+- **EVIDENCE:** `${R}-4.3-pem-archive-v1.txt` with the three file paths, their digests and the policy; `evidence_add E3-4.3 pem-archive E-08 4.3.1 build-log:records/<file> <file>`. E-08. TISAX 4.3.1, 1.3.1.
 
 ### E3-4.4 The second copy, in Wall-E's repository, merged before any signature
 
@@ -613,36 +671,45 @@ gcloud storage buckets get-iam-policy "$EVE_EVIDENCE_BUCKET" --format=json \
 - **ACTION:** The repository copy is what `walle-actions` compiles in for offline pinned-PEM verification as the **primary** path, with KMS `getPublicKey` as the fallback only. The file goes under the same CODEOWNERS entry that protects `ladder.yaml`.
 
 ```bash
-T41W="$(mktemp -d)"; git clone "$WALLE_REPO_REMOTE" "$T41W/wall-e"
+need W WALLE_REPO_REMOTE
+T41W="$(mktemp -d)"; e3_set T41W "$T41W"; git clone "$WALLE_REPO_REMOTE" "$T41W/wall-e"
 cp "$W/eve-approval-v1.pem" "$T41W/wall-e/contracts/eve-public-keys/1.pem"
+shasum -a 256 "$W/eve-approval-v1.pem" "$T41W/wall-e/contracts/eve-public-keys/1.pem"
 git -C "$T41W/wall-e" checkout -b eve-approval-v1
 git -C "$T41W/wall-e" add contracts/eve-public-keys/1.pem
 git -C "$T41W/wall-e" commit -m "eve-approval public key, version 1, exported at creation (setup 41 E3-4.4)"
 git -C "$T41W/wall-e" push -u origin eve-approval-v1
 ```
 
-- **VERIFY:** The pull request merges with two distinct authenticated approving reviewers, neither the author and neither a service account. `shasum -a 256` of the merged file equals the two digests of `E3-4.3`. **Do not sign until this is merged**: a signature that exists before the pinned copy does is one the primary path cannot verify, and no amount of later merging repairs it.
+- **VERIFY:** The two digests printed before the push are identical. The pull request merges with two distinct authenticated approving reviewers, neither the author and neither a service account. `shasum -a 256` of the merged file, read back from `main` as `E3-4.5` does, equals the three digests of `E3-4.3`. **Do not sign until this is merged**: a signature that exists before the pinned copy does is one the primary path cannot verify, and no amount of later merging repairs it.
 - **ROLLBACK:** Revert the merge only if the file is wrong; then re-export and re-merge. The bucket copy stays either way.
 - **EVIDENCE:** The merge commit, the two approvals and the digest as `${R}-4.4-pinned-pem-v1.txt`. E-08, E-12. TISAX 4.3.1, 1.5.1.
 
 ### E3-4.5 Three digests, one lock, one version
 
 - **WHO:** Security reviewer runs this one himself.
-- **WHERE:** Shell.
+- **WHERE:** Shell. Nothing from the platform owner's working directory is reused: each of the three copies is fetched afresh from where it now lives — the locked bucket, the merged `main` of `WALLE_REPO_REMOTE`, and Cloud KMS — into a directory of the reviewer's own, and hashed as a file.
 - **ACTION:**
 
 ```bash
-gcloud storage cat "${EVE_EVIDENCE_BUCKET}/keys/eve-approval-v1.pem" | shasum -a 256
-shasum -a 256 "$T41W/wall-e/contracts/eve-public-keys/1.pem"
-gcloud kms keys versions get-public-key 1 --key=eve-approval --keyring=eve \
-  --location="$REGION" --project="$EVE_PROJECT" | shasum -a 256
+need EVE_EVIDENCE_BUCKET WALLE_REPO_REMOTE
+T="$(mktemp -d)"
+gcloud storage cp "${EVE_EVIDENCE_BUCKET}/keys/eve-approval-v1.pem" "$T/from-bucket.pem"
+wrepo="$(printf '%s' "$WALLE_REPO_REMOTE" | sed -E 's#^https://github.com/##; s#\.git$##')"
+gh api -H 'Accept: application/vnd.github.raw' "repos/${wrepo}/contents/contracts/eve-public-keys/1.pem?ref=main" > "$T/from-repo.pem"
+gcloud kms keys versions get-public-key 1 --key=eve-approval --keyring="$EVE_KEYRING_NAME" \
+  --location="$REGION" --project="$EVE_PROJECT" --output-file="$T/from-kms.pem"
+shasum -a 256 "$T/from-bucket.pem" "$T/from-repo.pem" "$T/from-kms.pem" | tee "${R}-4.5-three-digests-v1.txt"
+head -1 "$T/from-bucket.pem" "$T/from-repo.pem" "$T/from-kms.pem"
 gcloud storage objects describe "${EVE_EVIDENCE_BUCKET}/keys/eve-approval-v1.pem" --format='value(name,size)'
-gcloud storage buckets describe "$EVE_EVIDENCE_BUCKET" --format='value(retentionPolicy.isLocked,retentionPolicy.retentionPeriod)'
+gcloud storage buckets describe "$EVE_EVIDENCE_BUCKET" --format=json | jq -e '.retention_policy.isLocked == true' && echo "LOCKED"
+gcloud kms keys versions describe 1 --key=eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
+  --format='value(state,protectionLevel,algorithm)'
 ```
 
-- **VERIFY:** **Three identical digests.** The object is `keys/eve-approval-v1.pem`. `isLocked` is `True`. If `isLocked` were `False` the archive would be deletable and the argument that `walle-actions` did not mint its own approval would not hold — in that case nothing is signed and the bucket is repaired first.
+- **VERIFY:** **Three identical digests**, from `$T/from-bucket.pem`, `$T/from-repo.pem` and `$T/from-kms.pem`, and all three first lines `-----BEGIN PUBLIC KEY-----`. The object is `keys/eve-approval-v1.pem`. `LOCKED` prints — if `jq -e` fails, the archive would be deletable and the argument that `walle-actions` did not mint its own approval would not hold; in that case nothing is signed and the bucket is repaired first. The version reads `ENABLED HSM EC_SIGN_P256_SHA256`. If `from-repo.pem` alone differs, check the repository's `.gitattributes` for end-of-line normalisation before anything else: the committed bytes must be the exported bytes, or the pinned-PEM path verifies against a file that is not the key.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** `${R}-4.5-three-digests-v1.txt`, signed by the security reviewer. E-08. TISAX 4.3.1.
+- **EVIDENCE:** `${R}-4.5-three-digests-v1.txt`, naming the three file paths, signed by the security reviewer. E-08. TISAX 4.3.1.
 
 ### E3-4.6 Record `EVE_KEY_VERSION`
 
@@ -652,7 +719,7 @@ gcloud storage buckets describe "$EVE_EVIDENCE_BUCKET" --format='value(retention
 
 ```bash
 grep '^export EVE_KEY_VERSION=' "$PLATFORM_ENV_FILE"
-gcloud kms keys versions describe 1 --key=eve-approval --keyring=eve --location="$REGION" \
+gcloud kms keys versions describe 1 --key=eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" \
   --project="$EVE_PROJECT" --format='value(name,state,algorithm,protectionLevel)'
 ```
 
@@ -666,13 +733,14 @@ The order of this section is the whole of S205, and it is not negotiable: a sign
 
 ### E3-5.1 Read the project policy fresh, and keep the etag
 
-- **WHO:** Platform owner, inside `g_key`.
+- **WHO:** Platform owner, inside `G_KEY`.
 - **WHERE:** Shell.
 - **ACTION:**
 
 ```bash
 checkpoint E3-5.1 START
-P="$(mktemp -d)"
+need G_KEY
+P="$(mktemp -d)"; e3_set P "$P"
 gcloud projects get-iam-policy "$EVE_PROJECT" --format=json > "$P/before.json"
 jq -r '.etag' "$P/before.json"
 jq -r '[.bindings[] | {role, members}] | length' "$P/before.json"
@@ -690,6 +758,8 @@ jq -r '[.auditConfigs[]? | .service] | sort | join(",")' "$P/before.json"
 - **ACTION:**
 
 ```bash
+need P
+[ -s "$P/before.json" ] || { echo "STOP: $P/before.json is missing or empty; re-run E3-5.1 in this sitting"; false; }
 python3.12 - "$P/before.json" "$P/after.json" <<'EOF'
 import json, sys
 src, dst = sys.argv[1], sys.argv[2]
@@ -723,7 +793,7 @@ gcloud projects set-iam-policy "$EVE_PROJECT" "$P/after.json" --format=json > "$
 ```bash
 gcloud projects get-iam-policy "$EVE_PROJECT" --format=json \
   | jq -r '.auditConfigs[] | select(.service=="cloudkms.googleapis.com") | .auditLogConfigs[].logType'
-gcloud kms keys get-iam-policy eve-approval --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+gcloud kms keys get-iam-policy eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
   --format=json | jq -r '[.bindings[]?] | length'
 ```
 
@@ -733,13 +803,14 @@ gcloud kms keys get-iam-policy eve-approval --keyring=eve --location="$REGION" -
 
 ### E3-5.4 Bind `roles/cloudkms.signer` to `eve-controller@`, and to nothing else
 
-- **WHO:** Platform owner, inside `g_key`; Eve owner watches.
+- **WHO:** Platform owner, inside `G_KEY`; Eve owner watches.
 - **WHERE:** Shell.
 - **ACTION:**
 
 ```bash
+need G_KEY SA_EVE
 gcloud kms keys add-iam-policy-binding eve-approval \
-  --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+  --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
   --member="serviceAccount:${SA_EVE}" --role=roles/cloudkms.signer
 ```
 
@@ -757,7 +828,7 @@ gcloud kms keys add-iam-policy-binding eve-approval \
 ```bash
 exists_or_pending "serviceAccount:${SA_ACTIONS}" E3-5.5 "41 E3-5.5: publicKeyViewer on eve-approval for the fallback path" && \
 gcloud kms keys add-iam-policy-binding eve-approval \
-  --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+  --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
   --member="serviceAccount:${SA_ACTIONS}" --role=roles/cloudkms.publicKeyViewer
 ```
 
@@ -772,13 +843,17 @@ gcloud kms keys add-iam-policy-binding eve-approval \
 - **ACTION:**
 
 ```bash
-pam_revoke "$g_key"
-pam_record "$g_key" "${R}-5.6-grant-closed.json"
-gcloud kms keys get-iam-policy eve-approval --keyring=eve --location="$REGION" \
+need G_KEY
+pam_revoke "$G_KEY"
+pam_wait "$G_KEY" REVOKED
+pam_record "$G_KEY" "${R}-5.6-grant-closed.json"
+gcloud kms keys get-iam-policy eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" \
   --project="$EVE_PROJECT" --flatten='bindings[].members' --format='table(bindings.role,bindings.members)'
-gcloud kms keyrings get-iam-policy eve --location="$REGION" --project="$EVE_PROJECT" --format=json \
+gcloud kms keyrings get-iam-policy "$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" --format=json \
   | jq -r '[.bindings[]?] | length'
 ```
+
+  `G_KEY` is the grant name `E3-4.1` wrote to `E3_VARS`; `need` stops the block if it is absent, so a revoke can never silently address nothing.
 
 - **VERIFY:** The grant reads `REVOKED` with its end time. The key policy shows **exactly** `eve-controller@ signer` and, if made, `walle-actions@ publicKeyViewer` — two lines, no more. The **ring** policy is empty: a grant at ring level would reach every key in it, including the evidence key.
 - **ROLLBACK:** Not applicable.
@@ -791,23 +866,26 @@ gcloud kms keyrings get-iam-policy eve --location="$REGION" --project="$EVE_PROJ
 - **ACTION:** The superseded runbook proved this with `--impersonate-service-account="$SA_EVE_VERIFIER"` and expected `PERMISSION_DENIED`. That is a **false pass**: impersonation needs `roles/iam.serviceAccountTokenCreator` on the target account — which this design deliberately never grants, and which even a project Owner does not carry — so the command fails at the impersonation step with its own permission error that reads exactly like the expected one. Worse, an operator who grants token creator to make the test run has created a standing impersonation path into the reconciler. The policy proof needs no impersonation and also covers inherited project and folder grants, which a key-level `get-iam-policy` does not show.
 
 ```bash
+need SA_EVE SA_EVE_VERIFIER SA_EVE_V0 SA_EVE_CONSOLE SA_ACTIONS SECOND_HUMAN_EMAIL OWNER_DAILY_ACCOUNT
+KEY_RES="//cloudkms.googleapis.com/${EVE_KEYRING}/cryptoKeys/eve-approval"; echo "$KEY_RES"
 for who in "$SA_EVE_VERIFIER" "$SA_EVE_V0" "$SA_EVE_CONSOLE" "$SA_ACTIONS" "$SECOND_HUMAN_EMAIL" "$OWNER_DAILY_ACCOUNT"; do
   printf '%s\t' "$who"
-  gcloud policy-intelligence troubleshoot-policy iam \
-    "//cloudkms.googleapis.com/projects/${EVE_PROJECT}/locations/${REGION}/keyRings/eve/cryptoKeys/eve-approval" \
+  gcloud policy-intelligence troubleshoot-policy iam "$KEY_RES" \
     --principal-email="$who" \
     --permission=cloudkms.cryptoKeyVersions.useToSign \
     --format='value(overallAccessState)'
 done
-gcloud policy-intelligence troubleshoot-policy iam \
-  "//cloudkms.googleapis.com/projects/${EVE_PROJECT}/locations/${REGION}/keyRings/eve/cryptoKeys/eve-approval" \
+printf '%s\t' "$SA_EVE"
+gcloud policy-intelligence troubleshoot-policy iam "$KEY_RES" \
   --principal-email="$SA_EVE" --permission=cloudkms.cryptoKeyVersions.useToSign \
   --format='value(overallAccessState)'
 ```
 
+  The resource name is built from `EVE_KEYRING`, and echoed first so the reviewer sees the key the seven reads are about: a resource name with a ring that does not exist returns `UNKNOWN_INFO` for everybody, which is a wrong resource, not a proof.
+
 - **VERIFY:** `CANNOT_ACCESS` for all six of the first list — the verifier, the v0 account, the console, `walle-actions@`, the Eve owner and the platform owner's daily account. `CAN_ACCESS` for `eve-controller@` and for nothing else. `UNKNOWN_INFO` or `UNKNOWN_CONDITIONAL` is **not** a pass: it means the caller could not see enough policy, and the read is repeated with a principal that can. **Never grant `serviceAccountTokenCreator` to make a test run.** The real `AsymmetricSign` denial (EVE-3) is exercised at `E3-9.2`, where `eve-verifier@`'s own workload runs it.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** `${R}-5.7-troubleshoot-v1.txt` with all eight lines; `evidence_add E3-5.7 kms-negative E-08 4.2.1 build-log:records/<file> <file>`. E-08. TISAX 4.2.1. Closes **S137**.
+- **EVIDENCE:** `${R}-5.7-troubleshoot-v1.txt` with the echoed resource name and all seven principal lines (six `CANNOT_ACCESS`, one `CAN_ACCESS`); `evidence_add E3-5.7 kms-negative E-08 4.2.1 build-log:records/<file> <file>`. E-08. TISAX 4.2.1. Closes **S137**.
 
 ### E3-5.8 No human can become `eve-controller@`
 
@@ -824,7 +902,7 @@ gcloud asset analyze-iam-policy --project="$EVE_PROJECT" --billing-project="$CIC
   --expand-groups --format=json > "${R}-5.8-actas.json"
 jq -r '[.analysisResults[]?.iamBinding | {role, members}] | .[] | "\(.role)\t\(.members|join(","))"' "${R}-5.8-actas.json" | sort -u
 gcloud asset analyze-iam-policy --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" \
-  --full-resource-name="//cloudkms.googleapis.com/projects/${EVE_PROJECT}/locations/${REGION}/keyRings/eve/cryptoKeys/eve-approval" \
+  --full-resource-name="//cloudkms.googleapis.com/${EVE_KEYRING}/cryptoKeys/eve-approval" \
   --permissions="cloudkms.cryptoKeyVersions.useToSign" --analyze-service-account-impersonation \
   --expand-groups --format=json > "${R}-5.8-impersonation.json"
 jq -r '[.serviceAccountImpersonationAnalysis[]?.analysisResult.analysisResults[]?.iamBinding | {role, members}] | .[] | "\(.role)\t\(.members|join(","))"' "${R}-5.8-impersonation.json" | sort -u
@@ -835,14 +913,14 @@ jq -r '[.serviceAccountImpersonationAnalysis[]?.analysisResult.analysisResults[]
 - **ROLLBACK:** Read only. Any binding found is removed on the spot and recorded.
 - **EVIDENCE:** Both JSON files and the two summaries; `evidence_add E3-5.8 no-human-signer E-08 4.2.1 build-log:records/<file> <file>`. E-02, E-08. TISAX 4.2.1, 1.5.1.
 
-### E3-5.9 No standing `cloudkms.admin` on ring `eve`
+### E3-5.9 No standing `cloudkms.admin` on ring `EVE_KEYRING`
 
 - **WHO:** Security reviewer.
 - **WHERE:** Shell.
 - **ACTION:** The other half of S134's fix: the guard of §8 is worth nothing if a human holds ring administration standing.
 
 ```bash
-gcloud kms keyrings get-iam-policy eve --location="$REGION" --project="$EVE_PROJECT" --format=json | jq -c '.bindings // []'
+gcloud kms keyrings get-iam-policy "$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" --format=json | jq -c '.bindings // []'
 gcloud projects get-iam-policy "$EVE_PROJECT" --format=json \
   | jq -r '[.bindings[] | select(.role=="roles/cloudkms.admin" or .role=="roles/owner" or .role=="roles/editor")] | .[] | "\(.role)\t\(.members|join(","))\t\(.condition.title // "-")"'
 "$PLATFORM_REPO_DIR/pam/tools/sweep.py" --project "$EVE_PROJECT" --role roles/cloudkms.admin
@@ -855,6 +933,8 @@ gcloud projects get-iam-policy "$EVE_PROJECT" --format=json \
 ## 6. `eve-gate` — **BLOCKED on B-19**
 
 `eve-gate` is the fourth entrypoint of the same image, deployed as **its own** Cloud Run job so that only its identity holds `signer`. Every step in this section is blocked until the code exists.
+
+**Run §7.1 to §7.4 before this section.** `E3-6.2` passes `EVE_RECEIPTS_DS` into the job's environment, and that variable is written by `E3-7.1`; deployed in file order the gate would carry an empty receipts dataset and its receipt write — the one thing `walle-actions` reads from Eve — would go nowhere. The receipts dataset, the view and its two grants depend on nothing in §6, so they come first; `E3-6.2` opens with `need EVE_RECEIPTS_DS` and refuses otherwise. The execution order of the S4 sitting is §4, §5, §7, §6, §8, §9, §10, as the Status block and the flow diagram say.
 
 > **BLOCKED**: Needs: the `gate` entrypoint in Eve's image — the plan fetch through `GET /v1/plans/{id}`, the five recomputations, `sign_envelope()` reachable **only** from `verdict_for_plan()`, the reason-code validator, the veto path and the receipt write. Commit it in: the Eve repository, reviewed by the second operator, built and attested in `CICD_PROJECT`, pushed to `AR_PLATFORM` by digest. Unblocked by: a re-run of `E3-6.1` printing the digest and the attestation. Gate waiting: S4 entry in full — `E3-6.*`, `E3-8.2`, `E3-8.3`, `E3-9.2`, `E3-9.4`, and the first `eve_authority: binding` cell at `E3-9.5`. README row: **B-19**.
 
@@ -874,7 +954,10 @@ gcloud projects get-iam-policy "$EVE_PROJECT" --format=json \
 - **ACTION:** When unblocked:
 
 ```bash
-g_gate="$(pam_request "$ENT_DEPLOY_CREDENTIAL_HOLDER_EVE" "setup-41 E3-6.2: deploy eve-gate as eve-controller@" 1800)"; pam_wait "$g_gate" ACTIVATED
+need EVE_RECEIPTS_DS EVE_KEY_VERSION EVE_TOKEN_VERSION SA_EVE EVE_RECONCILER_IMAGE ACTIONS_URL SUPER_ACTIONS_URL ENT_DEPLOY_CREDENTIAL_HOLDER_EVE
+bq show --format=prettyjson "${EVE_PROJECT}:${EVE_RECEIPTS_DS}" > /dev/null || { echo "STOP: the receipts dataset of E3-7.1 does not exist; run §7.1 to §7.4 first"; false; }
+bq show --format=prettyjson "${EVE_PROJECT}:${EVE_RECEIPTS_DS}" | jq -r '.location'
+g_gate="$(pam_request "$ENT_DEPLOY_CREDENTIAL_HOLDER_EVE" "setup-41 E3-6.2: deploy eve-gate as eve-controller@" 1800)"; pam_wait "$g_gate" ACTIVE
 gcloud run jobs deploy eve-gate \
   --project="$EVE_PROJECT" --region="$REGION" \
   --image="$EVE_RECONCILER_IMAGE" \
@@ -886,8 +969,8 @@ gcloud run jobs deploy eve-gate \
 pam_revoke "$g_gate"
 ```
 
-  **`--max-retries=0`, not 1.** A retried gate task would re-sign, and a second envelope for the same plan is a second authorisation. The secret is referenced by name and pinned version; no value is read, printed or stored.
-- **VERIFY:** When unblocked: `maxRetries` is `0`; the service account is `eve-controller@`; the image is a digest; `SUPER_ACTIONS_URL` is present (its absence would leave the super lane running through an incident — the defect [36](36-wall-e-joins-to-eve-and-mo.md) `WJ-5.3` closed); the secret reference names version `EVE_TOKEN_VERSION` and not `latest`. The grant reads `REVOKED` and `E3-5.8`'s read is repeated to prove the `actAs` is gone.
+  **`--max-retries=0`, not 1.** A retried gate task would re-sign, and a second envelope for the same plan is a second authorisation. The secret is referenced by name and pinned version; no value is read, printed or stored. The `need` line and the dataset read are the precondition on §7.1 to §7.4: an empty `EVE_RECEIPTS_DS` in `--set-env-vars` is not a deploy error, it is a gate that writes receipts nowhere.
+- **VERIFY:** When unblocked: `gcloud run jobs describe eve-gate --project="$EVE_PROJECT" --region="$REGION" --format='yaml(template.template.containers[0].image,template.template.containers[0].env,template.template.serviceAccount,template.template.maxRetries)'` shows `maxRetries` `0`; the service account `eve-controller@`; the image as a digest; `EVE_RECEIPTS_DS` set to the value `E3-7.1` recorded; `SUPER_ACTIONS_URL` is present (its absence would leave the super lane running through an incident — the defect [36](36-wall-e-joins-to-eve-and-mo.md) `WJ-5.3` closed); the secret reference names version `EVE_TOKEN_VERSION` and not `latest`. The grant reads `REVOKED` and `E3-5.8`'s read is repeated to prove the `actAs` is gone.
 - **ROLLBACK:** `gcloud run jobs delete eve-gate --project="$EVE_PROJECT" --region="$REGION"`. Plans then sit at `pending_eve` and `eve_silence` sets `no_autonomous` after four business hours — closed, never open.
 - **EVIDENCE:** `${R}-6.2-eve-gate-v1.txt`. E-09, E-08. TISAX 5.2.3, 4.2.1.
 
@@ -953,7 +1036,7 @@ The receipt view is the one thing `walle-actions` may read from Eve. It exposes 
 ### E3-7.1 Create the receipts dataset
 
 - **WHO:** Platform owner under `ENT_PROJECT_REPAIR_EVE`, approved by the Eve owner.
-- **WHERE:** Shell.
+- **WHERE:** Shell. **This step runs before §6**: `E3-6.2` consumes the `EVE_RECEIPTS_DS` it writes.
 - **ACTION:** An authorized view must live in a **different dataset** from its source, in the same location, so it cannot sit in `eve`.
 
 ```bash
@@ -1003,7 +1086,7 @@ bq show --format=prettyjson "${EVE_PROJECT}:${EVE_DS}.verdicts" | jq -r '.timePa
 - **ACTION:** Access-array edits follow [01](01-prerequisites-and-conventions.md)'s convention: `mktemp`, keep the etag, read back and diff. A `bq update --source` writes the **whole** dataset resource, so an edit built from a stale or hand-typed file silently drops entries.
 
 ```bash
-A="$(mktemp -d)"
+A="$(mktemp -d)"; e3_set A "$A"
 bq show --format=prettyjson "${EVE_PROJECT}:${EVE_DS}" > "$A/eve-before.json"
 jq -r '.etag, ([.access[]] | length)' "$A/eve-before.json"
 P="$EVE_PROJECT" D="$EVE_RECEIPTS_DS" python3.12 - "$A/eve-before.json" "$A/eve-after.json" <<'EOF'
@@ -1033,6 +1116,7 @@ diff <(jq -S '.access' "$A/eve-after.json") <(jq -S '.access' "$A/eve-readback.j
 - **ACTION:** Dataset-level `READER` on the view's dataset — carve-out 2 of decision 48. The query jobs for that read run and are billed in `WALLE_PROJECT` under `walle-actions@`'s own job-creation right there; nothing runs in `EVE_PROJECT` on Wall-E's behalf.
 
 ```bash
+need A SA_ACTIONS EVE_RECEIPTS_DS
 bq show --format=prettyjson "${EVE_PROJECT}:${EVE_RECEIPTS_DS}" > "$A/receipts-before.json"
 SA="$SA_ACTIONS" python3.12 - "$A/receipts-before.json" "$A/receipts-after.json" <<'EOF'
 import json, os, sys
@@ -1059,6 +1143,7 @@ bq show --format=prettyjson "${EVE_PROJECT}:${EVE_DS}" \
 - **ACTION:** Topology row 18 and decision 51 make Eve's mirror the off-project evidence copy Mo reads **from S4**, so Wall-E's deployers cannot rewrite the evidence Mo argues from. It is dataset-level `READER` on the mirror's dataset only — which is why the mirror has a dataset of its own and does not sit in `eve` next to `verdicts`, `findings` and the blind tables.
 
 ```bash
+need A SA_MO_METRICS EVE_MIRROR_DS
 bq show --format=prettyjson "${EVE_PROJECT}:${EVE_MIRROR_DS}" > "$A/mirror-before.json"
 exists_or_pending "serviceAccount:${SA_MO_METRICS}" E3-7.5 "41 E3-7.5: mo-metrics@ READER on the mirror dataset at S4 (topology row 18)" && {
   SA="$SA_MO_METRICS" python3.12 - "$A/mirror-before.json" "$A/mirror-after.json" <<'EOF'
@@ -1090,21 +1175,31 @@ bq show --format=prettyjson "${EVE_PROJECT}:${EVE_DS}" \
 2. **Never drop the old table on the strength of a successful run.** Run both, compare row counts **per partition**, and only then drop.
 
 ```bash
+need EVE_V0_CONFIGS
+Q="$(mktemp -d)"; : > "$Q/configs.tsv"
 for cfg in $(printf '%s\n' "$EVE_V0_CONFIGS" | tr ',' '\n'); do
-  bq show --transfer_config --format=prettyjson "$cfg" | jq -r '.displayName, .schedule, .ownerInfo.email, .params.query' > "${R}-7.6-before-${cfg##*/}.txt"
+  bq show --transfer_config --format=prettyjson "$cfg" > "$Q/${cfg##*/}.json"
+  jq -r '.displayName, .schedule, .ownerInfo.email, .params.query' "$Q/${cfg##*/}.json" > "${R}-7.6-before-${cfg##*/}.txt"
+  printf '%s\t%s\n' "$(jq -r '.displayName' "$Q/${cfg##*/}.json")" "$cfg" >> "$Q/configs.tsv"
 done
+cat "$Q/configs.tsv"
 for f in "$PLATFORM_REPO_DIR"/eve/sql/s4/*.sql; do
-  cfg="$(basename "$f" .sql)"
-  bq update --transfer_config --params="$(jq -n --arg q "$(cat "$f")" '{query: $q}')" \
-    "$(printf '%s\n' "$EVE_V0_CONFIGS" | tr ',' '\n' | grep "/${cfg}$")"
+  dn="$(basename "$f" .sql)"
+  cfg="$(awk -F'\t' -v d="$dn" '$1 == d {print $2}' "$Q/configs.tsv")"
+  n="$(printf '%s' "$cfg" | grep -c .)"
+  if [ "$n" -eq 1 ]; then
+    bq update --transfer_config --params="$(jq -n --arg q "$(cat "$f")" '{query: $q}')" "$cfg" && echo "UPDATED ${dn} -> ${cfg}"
+  else
+    echo "STOP: ${dn}.sql resolved to ${n} transfer configs by displayName, expected exactly one; nothing updated for it"
+  fi
 done
 for cfg in $(printf '%s\n' "$EVE_V0_CONFIGS" | tr ',' '\n'); do
-  bq show --transfer_config --format=prettyjson "$cfg" | jq -r '.ownerInfo.email, (.params.query | length)'
+  printf '%s\t' "${cfg##*/}"; bq show --transfer_config --format=prettyjson "$cfg" | jq -r '[.displayName, .ownerInfo.email, .schedule, (.params.query | length)] | @tsv'
 done
 ```
 
-  The query text comes from a committed file, never from a shell heredoc typed at the console: what a config runs must be reviewable in the repository afterwards.
-- **VERIFY:** For each config: `ownerInfo.email` is still `eve-v0@` (the pinning survived the update — a config whose owner reverts to a human credential is not independent evidence and dies when that person leaves); the schedule is unchanged and still off the hour; the new query length matches the committed file. One manual run of each, then the per-partition row-count comparison against the previous destination. Nothing is dropped in this sitting: a drop is its own dated step after a full retention period of agreement.
+  The query text comes from a committed file, never from a shell heredoc typed at the console: what a config runs must be reviewable in the repository afterwards. **A transfer config is addressed by its resource name, which ends in a server-generated id** (`projects/N/locations/eu/transferConfigs/<id>`), never in its display name, so a SQL file cannot be matched to a config by grepping `EVE_V0_CONFIGS` for the file's basename — that grep returns nothing and `bq update` runs with no config argument. The map above is built once per sitting from each config's `displayName`, read live, and a file that resolves to zero or several configs is reported and skipped. *Assumption:* [36](36-wall-e-joins-to-eve-and-mo.md) named each config's `displayName` after the basename of the SQL file it runs; if the names differ, the map is committed as `eve/sql/s4/configs.tsv` (`displayName<TAB>resource name`) and read in place of the live one, and the record says which.
+- **VERIFY:** `cat "$Q/configs.tsv"` prints one line per config in `EVE_V0_CONFIGS`, each with a non-empty display name; the update loop prints an `UPDATED` line for **every** `.sql` file and no `STOP` — one `STOP` means one S4 change did not apply, and the step is not closed until it is resolved. For each config: `ownerInfo.email` is still `eve-v0@` (the pinning survived the update — a config whose owner reverts to a human credential is not independent evidence and dies when that person leaves); the schedule is unchanged and still off the hour; the new query length matches the committed file. One manual run of each, then the per-partition row-count comparison against the previous destination. Nothing is dropped in this sitting: a drop is its own dated step after a full retention period of agreement.
 - **ROLLBACK:** `bq update --transfer_config --params` with the previous query text, which is in `${R}-7.6-before-*.txt`.
 - **EVIDENCE:** The before and after files and the row-count comparison as `${R}-7.6-config-update-v1`. E-11. TISAX 5.2.4. Closes **S204**.
 
@@ -1159,7 +1254,7 @@ for c in cloudkms.allowedProtectionLevels cloudkms.disableBeforeDestroy cloudkms
   gcloud org-policies describe "$c" --project="$EVE_PROJECT" --effective \
     --format='value(spec.rules[0].enforce,spec.rules[0].values.allowedValues)'
 done
-gcloud kms keys describe eve-approval --keyring=eve --location="$REGION" --project="$EVE_PROJECT" \
+gcloud kms keys describe eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT" \
   --format='value(destroyScheduledDuration)'
 ```
 
@@ -1236,14 +1331,42 @@ gcloud kms keys describe eve-approval --keyring=eve --location="$REGION" --proje
 - **ROLLBACK:** None; the attempt changes nothing.
 - **EVIDENCE:** `${R}-9.2-eve3-v1.txt` with the log entry. E-06, E-12. TISAX 1.5.1.
 
-### E3-9.3 EVE-12 and EVE-22: the reads that must fail
+### E3-9.3 EVE-12 and EVE-22: the reads that must fail, proved by Policy Troubleshooter
 
-- **WHO:** Platform owner runs the queries under a time-boxed grant on the **querying** account, revoked in the same step; Eve owner witnesses.
+- **WHO:** Security reviewer runs; Eve owner witnesses. **No grant is opened on any account and nothing is impersonated**: the rule of `E3-5.7` and `E3-9.2` — `roles/iam.serviceAccountTokenCreator` is never granted to make a test run — holds here without exception, which is why the earlier form of this step (queries "under a time-boxed grant on the querying account") is gone.
 - **WHERE:** Shell.
-- **ACTION:** Each query runs as the principal under test, in that principal's own project, exactly as production would.
-- **VERIFY:** `walle-actions@` selecting from `${EVE_DS}.verdicts` is denied; the same account selecting from `${EVE_RECEIPTS_DS}.verdict_receipts` succeeds and returns three columns. `mo-metrics@` selecting from `${EVE_DS}.findings` is denied; from `${EVE_MIRROR_DS}` and `${EVE_QUALITY_DS}` it succeeds. The validator custodian is denied everywhere except `eve_quality`. Every grant used to run the test reads `REVOKED` before the step closes.
-- **ROLLBACK:** Read-only queries; the grants are revoked in-step.
-- **EVIDENCE:** `${R}-9.3-reads-v1.txt` with each command, its principal and its outcome. E-08, E-12. TISAX 4.2.1.
+- **ACTION:** Eleven legs. Each asks whether one principal holds `bigquery.tables.getData` on one table, by the table's full resource name, against the effective allow, deny and principal-access-boundary policies — the form Google's own BigQuery access-troubleshooting page uses for datasets and tables. The dataset-level `READER` entries `E3-7.4` and `E3-7.5` wrote are what the reads must reflect.
+
+```bash
+need SA_ACTIONS SA_MO_METRICS SA_VALIDATOR_CUSTODIAN EVE_DS EVE_RECEIPTS_DS EVE_MIRROR_DS EVE_QUALITY_DS
+MIRROR_T="$(bq ls --format=prettyjson "${EVE_PROJECT}:${EVE_MIRROR_DS}" | jq -r '.[0].tableReference.tableId')"
+QUALITY_T="$(bq ls --format=prettyjson "${EVE_PROJECT}:${EVE_QUALITY_DS}" | jq -r '.[0].tableReference.tableId')"
+echo "mirror table: $MIRROR_T; quality table: $QUALITY_T"
+bqres() { printf '//bigquery.googleapis.com/projects/%s/datasets/%s/tables/%s' "$EVE_PROJECT" "$1" "$2"; }
+leg() { # PRINCIPAL DATASET TABLE EXPECTED
+  s="$(gcloud policy-intelligence troubleshoot-policy iam "$(bqres "$2" "$3")" --principal-email="$1" --permission=bigquery.tables.getData --format='value(overallAccessState)')"
+  printf '%s\t%s.%s\t%s\texpected %s\t%s\n' "$1" "$2" "$3" "${s:-EMPTY}" "$4" "$([ "$s" = "$4" ] && echo OK || echo FAIL)"
+}
+{
+leg "$SA_ACTIONS"             "$EVE_DS"          verdicts         CANNOT_ACCESS
+leg "$SA_ACTIONS"             "$EVE_DS"          findings         CANNOT_ACCESS
+leg "$SA_ACTIONS"             "$EVE_RECEIPTS_DS" verdict_receipts CAN_ACCESS
+leg "$SA_MO_METRICS"          "$EVE_DS"          findings         CANNOT_ACCESS
+leg "$SA_MO_METRICS"          "$EVE_RECEIPTS_DS" verdict_receipts CANNOT_ACCESS
+leg "$SA_MO_METRICS"          "$EVE_MIRROR_DS"   "$MIRROR_T"      CAN_ACCESS
+leg "$SA_MO_METRICS"          "$EVE_QUALITY_DS"  "$QUALITY_T"     CAN_ACCESS
+leg "$SA_VALIDATOR_CUSTODIAN" "$EVE_QUALITY_DS"  "$QUALITY_T"     CAN_ACCESS
+leg "$SA_VALIDATOR_CUSTODIAN" "$EVE_DS"          verdicts         CANNOT_ACCESS
+leg "$SA_VALIDATOR_CUSTODIAN" "$EVE_MIRROR_DS"   "$MIRROR_T"      CANNOT_ACCESS
+leg "$SA_VALIDATOR_CUSTODIAN" "$EVE_RECEIPTS_DS" verdict_receipts CANNOT_ACCESS
+} | tee "${R}-9.3-reads-v1.txt"
+grep -c 'OK$' "${R}-9.3-reads-v1.txt"
+```
+
+  The three `CAN_ACCESS` legs are the positive controls: without them a troubleshooter that answered `CANNOT_ACCESS` to everything — a wrong resource name, a caller who cannot read the policies — would pass the eight negative legs vacuously. If `E3-7.5` recorded `PENDING` rather than making the mirror grant, the `mo-metrics@` mirror leg reads `CANNOT_ACCESS`, is recorded as expected-pending, and is re-run with the grant.
+- **VERIFY:** `grep -c` prints `11`: every leg `OK`, with the expected string named per leg — `CANNOT_ACCESS` for `walle-actions@` on `eve.verdicts` and `eve.findings`, for `mo-metrics@` on `eve.findings` and the receipts view, and for the validator custodian on `eve`, the mirror and the receipts; `CAN_ACCESS` for `walle-actions@` on the receipts view, for `mo-metrics@` on the mirror and on `eve_quality`, and for the custodian on `eve_quality`. `UNKNOWN_INFO`, `UNKNOWN_CONDITIONAL` or `EMPTY` on any leg is **not** a pass: the read is repeated with a principal that can see the policies, and never resolved by granting anything to the principal under test. The live-query form of the same proof runs where each principal's own workload runs: `walle-actions`' read of `verdict_receipts` in the end-to-end pass of `E3-9.4` (BLOCKED on B-19), and `mo-metrics@`'s reads in the drift job that `E3-7.5` re-ran in this sitting.
+- **ROLLBACK:** Read only; nothing is granted and nothing is revoked.
+- **EVIDENCE:** `${R}-9.3-reads-v1.txt` with each principal, resource, outcome and expectation; `evidence_add E3-9.3 eve-12-eve-22 E-08 4.2.1 build-log:records/<file> <file>`. E-08, E-12. TISAX 4.2.1.
 
 ### E3-9.4 The gate end to end: one approved, one refused, one vetoed — **BLOCKED on B-19**
 
@@ -1299,7 +1422,7 @@ awk -F'\t' '$2 ~ /^E3-/ {print $2"\t"$3}' "$BUILD_LOG_DIR/checkpoints.tsv" | sor
 ```bash
 gcloud scheduler jobs delete eve-gate-poll --project="$EVE_PROJECT" --location="$REGION"
 gcloud run jobs delete eve-gate --project="$EVE_PROJECT" --region="$REGION"
-gcloud kms keys versions disable 1 --key=eve-approval --keyring=eve --location="$REGION" --project="$EVE_PROJECT"
+gcloud kms keys versions disable 1 --key=eve-approval --keyring="$EVE_KEYRING_NAME" --location="$REGION" --project="$EVE_PROJECT"
 sitting_end
 ```
 
@@ -1312,8 +1435,8 @@ sitting_end
 
 | Step | What it does | Confirm first | Who confirms |
 |---|---|---|---|
-| `E3-4.2` | Creates `eve-approval` in a ring that can never be deleted, under a name that can never be reused | `E3-3.5` says "S4 entry may begin"; the ring and location are read from `EVE_KEYRING`; the algorithm is the one `walle-actions` implements; the four flags are read aloud from the command before it is run | Security reviewer countersigns the build-log line |
-| `E3-4.3` | Writes the PEM into a bucket whose retention policy is **locked**: the object can be neither deleted nor replaced for `EVIDENCE_RETENTION_DAYS` | The file begins `-----BEGIN PUBLIC KEY-----`; its digest equals the live key's; the object name carries the version number; `isLocked` is `True` | Security reviewer watches the digest comparison |
+| `E3-4.2` | Creates `eve-approval` in a ring that can never be deleted, under a name that can never be reused | `E3-3.5` says "S4 entry may begin"; the **values** of `EVE_KEYRING`, `EVE_KEYRING_NAME` and `REGION` are echoed and read aloud; the algorithm is the one `walle-actions` implements; the four flags are read aloud from the command before it is run; after the create, the poll has printed `ENABLED` before any readback | Security reviewer countersigns the build-log line |
+| `E3-4.3` | Writes the PEM into a bucket whose retention policy is **locked**: the object can be neither deleted nor replaced for `EVIDENCE_RETENTION_DAYS` | `EVE_APPROVAL_V1_STATE` is `ENABLED` and the live state agrees; the file begins `-----BEGIN PUBLIC KEY-----`; its digest equals the live key's, file against file; the object name carries the version number; `jq -e '.retention_policy.isLocked == true'` passed at `E3-1.5` | Security reviewer watches the digest comparison |
 | `E3-8.2`, `E3-8.3` | The only path that could ever destroy a version | The tool refuses on all three rules; the proof runs against a **twin** key, never `eve-approval` | Eve owner runs; security reviewer watches |
 
 Nothing else here is irreversible. The signer binding, the receipts grants, `eve-gate` and the scheduler can all be removed, and removing any of them fails closed.
@@ -1325,8 +1448,8 @@ Nothing else here is irreversible. The signer binding, the receipts grants, `eve
 - [ ] `E3-1.2`: four Eve accounts enabled; `READER` on `walle_audit` for exactly three; invoker lists exact on both action services; nine mirror tables.
 - [ ] `E3-1.3`: `aiplatform` denied, not enabled, no role bound, and the deliberate enable **refused**.
 - [ ] `E3-1.4`: `review_queue_blind` carries no verdict or reason column; grades run continuously from S1.
-- [ ] `E3-1.5`: the evidence bucket's retention policy is **locked**; `eve/config` needs two reviewers; the validator runs.
-- [ ] `E3-2.1` to `E3-2.3`: the two classes agreed and committed; the merge has two human approvers; the jobs run the new digest; the witness fingerprint alarm fired and was acknowledged.
+- [ ] `E3-1.5`: the evidence bucket's retention policy is **locked** (`jq -e` on `retention_policy.isLocked`, not a blank projection) and its period equals `EVIDENCE_RETENTION_DAYS`; `eve/config` needs two reviewers; the validator runs.
+- [ ] `E3-2.1` to `E3-2.3`: the two classes agreed and committed; the merge has two human approvers; the jobs run the new digest, read at `template.template.containers[0].image` with four `DIGEST` lines; the witness fingerprint alarm fired and was acknowledged.
 - [ ] `E3-2.4`: one invariant halt, one demote **downwards only**, one page delivered, one operator clear — all timed and recorded.
 - [ ] `E3-2.5`: a rate-based rule wrote a finding, raised no incident, halted nothing.
 - [ ] `E3-3.1`: thirty days of verdicts with real L3 batch executions in the same window.
@@ -1335,20 +1458,20 @@ Nothing else here is irreversible. The signer binding, the receipts grants, `eve
 - [ ] `E3-3.4`: agreement reported as a Wilson bound and marked informational.
 - [ ] `E3-3.5`: the S3 exit record signed by the Eve owner and the security reviewer, copied to the witness, before §4 opened.
 - [ ] `E3-4.1`: the grant's approver is the Eve owner and is not the requester.
-- [ ] `E3-4.2`: `ASYMMETRIC_SIGN`, `EC_SIGN_P256_SHA256`, `HSM`, `2592000s`, one `ENABLED` version.
-- [ ] `E3-4.3` to `E3-4.5`: **three identical digests**; the object under a locked policy; the Wall-E merge with two approvers **before** any signature; three bucket grants and no `objectAdmin`.
+- [ ] `E3-4.2`: the poll saw `PENDING_GENERATION` become `ENABLED`; `ASYMMETRIC_SIGN`, `EC_SIGN_P256_SHA256`, `HSM`, `2592000s`, one `ENABLED` version; the ring addressed as `EVE_KEYRING_NAME`.
+- [ ] `E3-4.3` to `E3-4.5`: **three identical digests, all taken from files**; the object under a locked policy; the `keys/` condition names the bucket derived from `EVE_EVIDENCE_BUCKET`; the Wall-E merge with two approvers **before** any signature; three bucket grants and no `objectAdmin`.
 - [ ] `E3-5.1` to `E3-5.3`: bindings unchanged, etag carried, `DATA_READ` on Cloud KMS in force while the key policy still had **zero** bindings.
 - [ ] `E3-5.4` to `E3-5.6`: one signer, `eve-controller@`; no `signerVerifier`, no `cryptoOperator`; the ring policy empty; the grant `REVOKED`.
-- [ ] `E3-5.7`: `CANNOT_ACCESS` on `useToSign` for six principals, `CAN_ACCESS` for one, and no `UNKNOWN_*` left unresolved.
+- [ ] `E3-5.7`: seven lines — `CANNOT_ACCESS` on `useToSign` for six principals, `CAN_ACCESS` for one — against a resource name built from `EVE_KEYRING`, and no `UNKNOWN_*` left unresolved.
 - [ ] `E3-5.8`: no `tokenCreator`, no standing human `actAs`, no impersonation path to `useToSign`.
 - [ ] `E3-5.9`: no standing `cloudkms.admin`, `owner` or `editor` on `EVE_PROJECT`.
-- [ ] `E3-6.*`: BLOCKED on **B-19**, each with its own line and the gate it holds; `EVE_GATE_URL` is `*tbd*` until they clear.
+- [ ] `E3-6.*`: BLOCKED on **B-19**, each with its own line and the gate it holds; `EVE_GATE_URL` is `*tbd*` until they clear; §7.1 to §7.4 were run **before** §6 and `E3-6.2`'s `need EVE_RECEIPTS_DS` passed.
 - [ ] `E3-7.1` to `E3-7.4`: receipts dataset in `EU` with the `europe` key; the view's columns exactly `['run_id','item','verdict_ts']`; the `verdicts` partition field still `ts`; the read-back diff matches; `walle-actions@` holds nothing on `eve`.
 - [ ] `E3-7.5`: `mo-metrics@` reads exactly two Eve datasets; the `eve` filter prints `[]`; the drift job passes with the new entry.
-- [ ] `E3-7.6`: every updated config still owned by `eve-v0@`, still off the hour, with the committed query text; nothing dropped.
+- [ ] `E3-7.6`: every SQL file resolved to exactly one transfer config by `displayName` (an `UPDATED` line each, no `STOP`); every updated config still owned by `eve-v0@`, still off the hour, with the committed query text; nothing dropped.
 - [ ] `E3-8.1`: decision **E-21** signed; no page still names the retired flag.
 - [ ] `E3-8.4`: three organisation policies in force and the key's own destroy duration `2592000s`.
-- [ ] `E3-9.1` to `E3-9.5`: every suite row has a runner; EVE-3 proved by the identity itself; EVE-12 and EVE-22 proved by real refused queries; the first `eve_authority: binding` cell merged with two human approvals and the CI refusal observed.
+- [ ] `E3-9.1` to `E3-9.5`: every suite row has a runner; EVE-3 proved by the identity itself; EVE-12 and EVE-22 proved by eleven Policy Troubleshooter legs, eight `CANNOT_ACCESS` and three `CAN_ACCESS`, with no grant opened and nothing impersonated; the first `eve_authority: binding` cell merged with two human approvals and the CI refusal observed.
 - [ ] `E3-10.1` to `E3-10.3`: the S4-entry record signed and in the witness; three variables recorded; `BD-41-1` written; two consumed pending lines closed; `SITTING-END OK`.
 
 ## 13. What the next file needs from this one
@@ -1369,7 +1492,7 @@ Nothing else here is irreversible. The signer binding, the receipts grants, `eve
 | Id | Severity | Closed by |
 |---|---|---|
 | S036 | blocking | `E3-7.2` creates the view as `SELECT run_id, item, ts AS verdict_ts FROM eve.verdicts`. The `verdicts` table's `ts` column is **not** renamed — it is the partitioning field the table was created with and the name the LLD gives it — and the verify proves both: the view's three output names and the table's partition field. The steps that depend on the view (`E3-7.3`, `E3-7.4`, EVE-12 at `E3-9.3`) therefore have something to act on |
-| S134 | major | The guard is given one owner by decision **E-21** at `E3-8.1`, and it is Eve's: `eve/tools/destroy_key_version.py`, refusing on three rules (bucket copy, committed copy, the 400-day horizon), with a three-case CI self-test at `E3-8.2` and a two-way proof against a **twin** key at `E3-8.3`. The dead `walle_setup.py teardown --destroy-key-versions --dry-run` verify is deleted and named in "not copied"; `E3-8.1` also corrects the five pages that still describe the flag as live. `E3-4.2` creates the key with an explicit `--destroy-scheduled-duration=30d`, `E3-8.4` reads back the three organisation policies behind it, and `E3-5.9` proves no principal holds standing `roles/cloudkms.admin` on ring `eve` outside PAM |
+| S134 | major | The guard is given one owner by decision **E-21** at `E3-8.1`, and it is Eve's: `eve/tools/destroy_key_version.py`, refusing on three rules (bucket copy, committed copy, the 400-day horizon), with a three-case CI self-test at `E3-8.2` and a two-way proof against a **twin** key at `E3-8.3`. The dead `walle_setup.py teardown --destroy-key-versions --dry-run` verify is deleted and named in "not copied"; `E3-8.1` also corrects the five pages that still describe the flag as live. `E3-4.2` creates the key with an explicit `--destroy-scheduled-duration=30d`, `E3-8.4` reads back the three organisation policies behind it, and `E3-5.9` proves no principal holds standing `roles/cloudkms.admin` on ring `EVE_KEYRING` outside PAM |
 | S137 | major | `E3-5.7` replaces the impersonation test with `gcloud policy-intelligence troubleshoot-policy iam` on the key resource for `cloudkms.cryptoKeyVersions.useToSign`, expecting `overallAccessState: CANNOT_ACCESS` for six principals and `CAN_ACCESS` for `eve-controller@` alone — which also covers inherited project and folder grants that a key-level `get-iam-policy` misses. The step says in terms that `serviceAccountTokenCreator` is never granted to make a test run, and the real `AsymmetricSign` denial (EVE-3) moves to `E3-9.2`, where `eve-verifier@`'s own job runs it and the denied Data Access entry is the evidence |
 | S204 | minor | `E3-7.6` states the rule the superseded text got wrong — a DML config's destination lives inside its SQL, so `--target_dataset` moves nothing — and updates configs with `bq update --transfer_config --params='{"query":…}'` from committed files, verifying that `ownerInfo.email` is still `eve-v0@` and the schedule still off the hour. Nothing is dropped on the strength of one run: both destinations are compared per partition first, and the drop is a separate dated step. [36](36-wall-e-joins-to-eve-and-mo.md) had already removed the underlying defect by building the mirror in its own dataset with nine configs, so no retarget is needed here; the rule is written down so it is not reinvented |
 | S205 | minor | §5's order is the fix: `E3-5.1` reads the policy fresh and keeps the etag; `E3-5.2` adds the Cloud KMS and IAP audit configuration, prints a **bindings diff that must be empty** before the write, and writes with the etag so a concurrent change fails with 409 rather than silently overwriting; `E3-5.3` proves `DATA_READ` is in force **while the key policy still has zero bindings**; only then does `E3-5.4` bind the signer. No signature can exist in an unlogged window, and no whole-policy write from a stale file can drop a binding |
@@ -1393,11 +1516,22 @@ Nothing else here is irreversible. The signer binding, the receipts grants, `eve
 - **The minimum scheduled-destruction duration Cloud KMS accepts.** Secondary sources say 24 hours; Google's own page states only the 30-day default. Nothing here depends on the minimum: the constraint sets a 30-day floor and the key states 30 days explicitly.
 - **Whether Cloud Scheduler's OAuth invocation of a Cloud Run job can be scoped narrowly enough to refuse anything but `:run`.** Not documented. `eve-controller@` holds `run.invoker` on its own job, which is the narrowest available form; the compensation is `--max-retries=0` and the single-task shape, so a repeated invocation cannot produce a second envelope for the same plan.
 - **Whether the external validator of `eve/config` rejects a rule that is in the catalogue and in neither class.** Asserted by `E3-2.2`'s design and to be proved on the first deliberate bad branch; until that run, the count check in the script is the control and the gap is recorded.
+- **Whether Policy Troubleshooter evaluates a BigQuery dataset's access entries (`READER`/`WRITER` in the dataset's `access[]` array) exactly as it evaluates IAM bindings.** Google's BigQuery troubleshooting page points at the troubleshooter with dataset and table resource names and `bigquery.tables.getData`, and BigQuery exposes dataset access as IAM, but the page does not say so in words. `E3-9.3` therefore carries three positive-control legs that must read `CAN_ACCESS` — a troubleshooter blind to dataset entries would fail those first — and names the live-query form (each principal's own workload) as the second leg.
+- **How long an HSM asymmetric key version stays in `PENDING_GENERATION`.** The *Creating asymmetric keys* page states the states, not a duration. `E3-4.2`'s poll allows five minutes at ten-second intervals and stops on anything that is neither pending nor enabled; a version still pending after that is recorded and the sitting waits rather than the loop being lengthened blindly.
+- **The exact JSON field names `gcloud storage buckets describe --format=json` renders for the retention policy in the installed version.** The *Use and lock retention policies* page shows `retention_policy` with `retentionPeriod` beneath it (top-level snake_case, nested camelCase) and the lock page shows `isLocked`; if the installed `gcloud` renders differently, `jq -e` fails loudly rather than printing a blank, and the operator reads the raw JSON and records the working path for the next run.
 
 ## 16. Sources read on 2026-09-15
 
 - `gcloud kms keys create` (`--purpose=asymmetric-signing`; `--default-algorithm=ec-sign-p256-sha256`; `--protection-level` values with default `software`; `--destroy-scheduled-duration` "the amount of time that versions of the key should spend in the `DESTROY_SCHEDULED` state before transitioning to `DESTROYED`", `INTEGER[UNIT]`): https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/create
-- `gcloud kms keys versions get-public-key` (`VERSION` positional, `--key`, `--keyring`, `--location`, `--output-file` "path to the output file to store public key", `--public-key-format`): https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/versions/get-public-key
+- `gcloud kms keys versions get-public-key` (`VERSION` positional, `--key`, `--keyring`, `--location`, `--output-file` "path to the output file to store public key"; without it the key "will be printed to stdout", which is why every digest here is taken from a file; `--public-key-format`): https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/versions/get-public-key
+- Creating asymmetric keys, re-read 2026-09-16 ("When you first create the key, the initial key version has a state of Pending generation. When the state changes to Enabled, you can use the key."): https://docs.cloud.google.com/kms/docs/creating-asymmetric-keys
+- `CryptoKeyVersionState` (`PENDING_GENERATION` "may not be used, enabled, disabled, or destroyed yet"; `GENERATION_FAILED`; `ENABLED`; `DISABLED`; `DESTROY_SCHEDULED`; `DESTROYED`), read 2026-09-16: https://docs.cloud.google.com/kms/docs/reference/rest/v1/projects.locations.keyRings.cryptoKeys.cryptoKeyVersions
+- `gcloud kms keys versions describe` (`VERSION`, `--key`, `--keyring`, `--location`; "returns metadata for the given version", read with `--format='value(state)'`), read 2026-09-16: https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/versions/describe
+- Use and lock retention policies (`gcloud storage buckets describe gs://BUCKET --format="default(retention_policy)"` printing `retention_policy:` with `effectiveTime` and `retentionPeriod`; `--lock-retention-period`), read 2026-09-16: https://docs.cloud.google.com/storage/docs/using-bucket-lock
+- Uniform bucket-level access and Public access prevention (`--format="default(uniform_bucket_level_access)"`, `--format="default(public_access_prevention)"`), read 2026-09-16: https://docs.cloud.google.com/storage/docs/uniform-bucket-level-access and https://docs.cloud.google.com/storage/docs/using-public-access-prevention
+- Cloud Run Admin API v2 `Job` (`template` is an `ExecutionTemplate`, whose `template` is a `TaskTemplate` with `containers[]`, `serviceAccount`, `maxRetries` — no `spec` wrapper), read 2026-09-16: https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs
+- Privileged Access Manager, request temporary elevated access (grant states `APPROVAL_AWAITED`, `SCHEDULED`, `ACTIVATING`, `ACTIVE`, `ACTIVATION_FAILED`, `DENIED`, `EXPIRED`, `REVOKING`, `REVOKED`, `ENDED`, `WITHDRAWING`, `WITHDRAWN`), read 2026-09-16: https://docs.cloud.google.com/iam/docs/pam-request-temporary-elevated-access
+- Troubleshoot IAM permissions in BigQuery (dataset `//bigquery.googleapis.com/projects/PROJECT_ID/datasets/DATASET` and table `…/tables/TABLE` resource names; `bigquery.tables.getData`, `bigquery.jobs.create`, `bigquery.datasets.get`; "analyzes all relevant policies, memberships in Google Groups, and inheritance from parent resources"), read 2026-09-16: https://docs.cloud.google.com/bigquery/docs/troubleshoot-access-control
 - Destroy and restore key versions (30-day default scheduled-destruction duration; restore inside the window; silent on a destroyed version's public key): https://docs.cloud.google.com/kms/docs/destroy-restore
 - Control key version destruction (`constraints/cloudkms.disableBeforeDestroy`; `constraints/cloudkms.minimumDestroyScheduledDuration` as a floor against a duration "as low as 24 hours"): https://docs.cloud.google.com/kms/docs/control-key-destruction
 - Organization policy constraints for Cloud KMS: https://docs.cloud.google.com/kms/docs/org-policy-constraints

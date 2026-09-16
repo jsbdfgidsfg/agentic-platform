@@ -106,7 +106,9 @@ The monitored administrator installs Eve (SD-12). That is why the platform owner
 | **WG-3.2 returns no entry at all** | The heartbeat did not reach the witness through a table-level API, so no audit entry carries the heartbeat table's `resourceName` and the arrival metric of WG-3.3 would count nothing. This is a breach of 26 ER-4.3's export contract, not a filter to work around. Stop the file, record it as a contract breach, and hand it back to the platform owner through the second human. Only when he confirms in writing that the push uses a load or query job — a deviation he must justify — is WG-3.2's documented fallback filter used instead, and WG-3.3 records which of the two forms was chosen. |
 | Enabling `bigquerydatatransfer.googleapis.com` (WG-3.1) fails, or its transfer configs never run, after WG-1.3 | The API provisions a Google-owned service agent outside the witness domain and grants it `roles/bigquerydatatransfer.serviceAgent` automatically; domain-restricted sharing applies to grants made by service agents, so the automatic grant can be refused and the transfer configs then sit failed with no rows and no alarm. WG-3.1's first sub-step adds that one subject to `allowedMemberSubjects` before the API is enabled. If it was missed, add it now as a dated change countersigned by the second administrator, wait for propagation, disable and re-enable the API, and re-read the transfer runs. |
 | The SMS channel cannot be verified in the recipient's country | Record it, keep email and the paging service, and raise the gap to the incident commander; the G-2 record states which recipients have SMS. |
-| A policy is created before its metric has a data point | It will never fire. This is why sitting 3b is separate and why every policy step begins with a `gcloud monitoring time-series list` pre-check that must return at least one point. If a policy was nevertheless created early, delete it, wait for the metric's first point, and create it again; record both timestamps. |
+| A policy is created before its metric has a data point | It will never fire. This is why sitting 3b is separate and why every policy step over a log-based metric (WG-3.5, WG-3.6, WG-3.8, WG-3.9) begins with a `timeSeries.list` pre-check that must return at least one point (there is no `gcloud monitoring` command for time series; the read is the Monitoring API, as files 19 and 40 use it). The two log-match policies (WG-3.7, WG-3.10) evaluate entries as they arrive and need no point. If a metric policy was nevertheless created early, delete it, wait for the metric's first point, and create it again; record both timestamps. |
+| A `bq ls --transfer_config` reading shows `FAILED`, or `bq ls --transfer_run` shows no `SUCCEEDED` run, for `witness-integrity` or `witness-rp5-repage` | The scheduled query is not writing alert rows, so `WITNESS_ALERT_FINGERPRINT` or the RP-5 policy is blind. Read the run's error message (`bq show --transfer_run <run name>`): a permission error is the service-agent grant of WG-3.1 or the dataset entry for `WITNESS_INTEGRITY_SA`; an `Unrecognized name` error is a shape change, which is WG-3.0's stop. Fix the cause, trigger one run with `bq mk --transfer_run --run_time`, and do not close the step until a `SUCCEEDED` run is listed. |
+| A recipient cannot say which policy notified him (route 2, RP-5 or the fingerprint alarm) | Every notification body names its policy's `displayName`; the three names are distinct and each policy reads its own metric (WG-3.3). Read the displayName from the message and from the incident in Monitoring > Alerting; a message that names the wrong policy for the test that was run is a defect in the filters, and the test is failed, not passed. |
 | Billing on `EVE_WITNESS_PROJECT` is found disabled | Severity 1 to the incident commander and the second human; a witness administrator re-links the witness billing account (08 WO-1.12); every alarm in this file is assumed to have been blind for the outage, and the window is written into the G-2 record. |
 | An IRREVERSIBLE-by-name step is interrupted | None here is irreversible: every step of this file can be rolled back. The one exception in effect is a push that has already written rows into the witness, which nobody removes. |
 
@@ -128,7 +130,7 @@ The monitored administrator installs Eve (SD-12). That is why the platform owner
 | `WITNESS_ALERT_BILLING` | witness | policy resource name, Cloud Billing admin actions on the witness project |
 | `WITNESS_ALERT_FINGERPRINT` | witness | policy resource name, configuration-fingerprint change or cumulative-count decrease |
 
-Five witness-local names are used by the commands below and are recorded as an addendum to the plan's variable table, because they never leave the witness organisation: `WITNESS_APPENDER_ROLE` (the custom role id), `WITNESS_INTEGRITY_SA` (the witness-side scheduled-query identity), `WITNESS_SMS_CHANNEL` (up to three SMS channel resource names, comma-separated, in the same order as `WITNESS_EMAIL_CHANNEL`), `WITNESS_CHANNEL_COUNT` (how many channels every policy in this file must carry — computed in WG-3.4, never assumed to be six) and `WITNESS_CUSTODY_DIR` (the local directory whose files are uploaded under `custody/`, set in WG-1.2).
+Witness-local names used by the commands below are recorded as an addendum to the plan's variable table, because they never leave the witness organisation: `WITNESS_APPENDER_ROLE` (the custom role id), `WITNESS_INTEGRITY_SA` (the witness-side scheduled-query identity), `WITNESS_DTS_AGENT` (the BigQuery Data Transfer service agent admitted in WG-3.1), `WITNESS_SMS_CHANNEL` (the **verified** SMS channel resource names, comma-separated, in the same order as `WITNESS_EMAIL_CHANNEL`), `WITNESS_CHANNEL_COUNT` (how many channels every policy in this file must carry — computed in WG-3.4, never assumed to be six), `WITNESS_CUSTODY_DIR` (the local directory whose files are uploaded under `custody/`, set in WG-1.2), the dates `WITNESS_BASELINE_DATE`, `WITNESS_WG16_DATE`, `WITNESS_WG31_DATE` and `WITNESS_SCHEMA_GATE_DATE` (which name the custody files later steps read back), `WITNESS_HB_RESOURCE_TYPE`, `WITNESS_EXPORT_RESOURCE_TYPE` and `WITNESS_ALERT_RESOURCE_TYPE` (the monitored resource type each log-based metric was seen to carry, read in the pre-checks), and `WITNESS_INTEGRITY_TC` and `WITNESS_RP5_TC` (the two transfer config resource names).
 
 Every witness command runs with `CLOUDSDK_ACTIVE_CONFIG_NAME=witness`, no default project, and `--project`, `--organization` or `--billing-account` written out.
 
@@ -142,7 +144,6 @@ Every witness command runs with `CLOUDSDK_ACTIVE_CONFIG_NAME=witness`, no defaul
 - **WHERE:** A signed paper or PDF hand-over, then the witness workstation shell.
 - **ACTION:** The hand-over carries exactly two addresses and nothing else: `SA_EVE_EXPORT` and one other tenant service account address used **only** as the subject of the refused grant in WG-1.8. It also states the date of `EVE_FIRST_RUN_RECORD`, so that the witness knows what backlog to expect, and the six-hourly export cadence agreed in 26.
 
-```bash
   The hand-over also carries the committed `eve/schemas/witness_heartbeat.json` that 26 ER-4.3 merged, and its SHA-256. 26 copies 08 WO-2.9's contract v1 rather than authoring its own shape, and this is the witness side of that check: the witness confirms, before anything is granted, that what the tenant will push matches the table the witness built.
 
 ```bash
@@ -479,8 +480,9 @@ need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_HEARTBEAT_TABLE WO_2_9_CONTRA
 D="$(date -u +%F)"
 bq --project_id="$EVE_WITNESS_PROJECT" show --schema --format=prettyjson "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}.${WITNESS_HEARTBEAT_TABLE}" > "$WITNESS_CUSTODY_DIR/${D}-WG-3.0-live-schema.json"
 NORM='[.[]|{name,type,mode:(.mode//"NULLABLE"),fields:(.fields//[]|map({name,type,mode:(.mode//"NULLABLE")}))}]|sort_by(.name)'
-diff <(jq -S "$NORM" "$WO_2_9_CONTRACT_FILE") <(jq -S "$NORM" "$WITNESS_CUSTODY_DIR/${D}-WG-3.0-live-schema.json") && echo "LIVE TABLE MATCHES WO-2.9 CONTRACT v1"
-diff <(jq -S "$NORM" "$WITNESS_CONTRACT_FILE") <(jq -S "$NORM" "$WITNESS_CUSTODY_DIR/${D}-WG-3.0-live-schema.json") && echo "LIVE TABLE MATCHES THE COMMITTED TENANT COPY"
+G="$WITNESS_CUSTODY_DIR/${D}-WG-3.0-schema-gate-v1.txt"
+{ diff <(jq -S "$NORM" "$WO_2_9_CONTRACT_FILE") <(jq -S "$NORM" "$WITNESS_CUSTODY_DIR/${D}-WG-3.0-live-schema.json") && echo "LIVE TABLE MATCHES WO-2.9 CONTRACT v1"; } | tee -a "$G"
+{ diff <(jq -S "$NORM" "$WITNESS_CONTRACT_FILE") <(jq -S "$NORM" "$WITNESS_CUSTODY_DIR/${D}-WG-3.0-live-schema.json") && echo "LIVE TABLE MATCHES THE COMMITTED TENANT COPY"; } | tee -a "$G"
 for C in heartbeat_ts kind source_project config_fingerprint ws_log_rows_window first_run_record schema_version table_counts; do
   jq -e --arg c "$C" 'map(select(.name==$c))|length==1' "$WITNESS_CUSTODY_DIR/${D}-WG-3.0-live-schema.json" >/dev/null && echo "column present: $C" || echo "COLUMN MISSING: $C"
 done
@@ -489,9 +491,9 @@ bq --project_id="$EVE_WITNESS_PROJECT" query --use_legacy_sql=false --dry_run "S
 penv_set WITNESS_SCHEMA_GATE_DATE "$D"
 ```
 
-- **VERIFY:** Both `diff`s print their MATCHES line; the loop prints `column present` eight times and `COLUMN MISSING` none; the `table_counts` field listing is exactly `table_name`, `rows_window`, `rows_cumulative`; and the `--dry_run` succeeds, which is the compile-time proof that WG-3.8's SQL will parse against this table. A `kind` value of `hourly` is read back from a real row (WG-2.3 saw one). **Nothing in WG-3.8 or WG-3.9 is created until this step passes.**
+- **VERIFY:** Both `diff`s print their MATCHES line, and both lines are in `${D}-WG-3.0-schema-gate-v1.txt` (WG-3.8 and WG-3.9 grep that file before they create anything); the loop prints `column present` eight times and `COLUMN MISSING` none; the `table_counts` field listing is exactly `table_name`, `rows_window`, `rows_cumulative`; and the `--dry_run` succeeds, which is the compile-time proof that WG-3.8's SQL will parse against this table. A `kind` value of `hourly` is read back from a real row (WG-2.3 saw one). **Nothing in WG-3.8 or WG-3.9 is created until this step passes.**
 - **ROLLBACK:** None; the step only reads. A mismatch is **not** repaired here: the witness never alters `WITNESS_HEARTBEAT_TABLE` in place (08 WO-2.9's rollback rule is a `heartbeat_v2` table beside the first), and a tenant-side shape change is 26 ER-4.3's to correct and re-push. The second human carries the mismatch back, the file stops at this step, and the re-run index gains a line.
-- **EVIDENCE:** The live schema, both diffs and the dry-run output as `<date>-WG-3.0-schema-gate-v1` under `custody/`. EU AI Act E-06, E-08. TISAX 5.2, 1.6.
+- **EVIDENCE:** The live schema, the gate file with both MATCHES lines, and the dry-run output as `<date>-WG-3.0-schema-gate-v1` under `custody/`. EU AI Act E-06, E-08. TISAX 5.2, 1.6.
 
 ### WG-3.1 Add what the witness needs to evaluate its own rows
 
@@ -608,11 +610,15 @@ gcloud logging read "logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.g
 - **ROLLBACK:** None; the step only reads.
 - **EVIDENCE:** The entries, redacted of nothing, the filter form chosen, and — if the fallback was taken — the platform owner's written confirmation of the contract deviation, as `<date>-WG-3.2-principal-email-check-v1` under `drills/`. EU AI Act E-06. TISAX 5.2.
 
-### WG-3.3 Create the four log-based metrics
+### WG-3.3 Create the five log-based metrics
 
-- **WHO:** Witness administrator 1; witness administrator 2 reads each filter.
+- **WHO:** Witness administrator 1; witness administrator 2 reads each filter and confirms that no two metrics share a table.
 - **WHERE:** Witness workstation shell.
-- **ACTION:** User-defined log-based metrics are calculated from all logs received by the Logging API for the project, whatever any inclusion or exclusion filter does, which is what makes Data Access entries usable here even though the `_Default` sink does not store them. A counter metric writes no point when nothing matches, which is exactly what a metric-absence condition needs.
+- **ACTION:** User-defined log-based metrics are calculated from all logs received by the Logging API for the project, whatever any inclusion or exclusion filter does, which is what makes Data Access entries usable here even though the `_Default` sink does not store them. A counter metric writes no point when nothing matches, which is exactly what a metric-absence condition needs. **The data for a user-defined log-based metric comes only from log entries received after the metric is created**: the heartbeat WG-2.3 saw is not in any of these metrics, and that is why this sitting stops after WG-3.4 and the policies wait for the next heartbeat and the next export (Sittings table, 3a and 3b).
+
+  **One table per alert metric.** The fingerprint alarm (WG-3.8) and the RP-5 re-page (WG-3.9) each fire on a row their own scheduled query writes. If one metric counted writes to both `integrity_alerts` and `rp5_repage`, the two policies would be indistinguishable: every late acknowledgement would page as "Eve's configuration changed" and every fingerprint change would page as "call the on-call secondary". So `witness-integrity-alert` counts `integrity_alerts` only and `witness-rp5-alert` counts `rp5_repage` only; WG-3.8 reads the first, WG-3.9 the second, and WG-3.11 checks the `displayName` on each receipt.
+
+  The filter form is the one WG-3.2 settled: the table-level `resourceName` form below when WG-3.2 printed `CONTRACT HONOURED`, or the documented `tableDataChange` fallback only on the platform owner's written confirmation. Whichever form is used, the build-log line for this step names it.
 
 ```bash
 need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_HEARTBEAT_TABLE WITNESS_BUCKET SA_EVE_EXPORT
@@ -620,12 +626,13 @@ BN="${WITNESS_BUCKET#gs://}"
 gcloud logging metrics create witness-heartbeat-insert --project="$EVE_WITNESS_PROJECT" --description="Rows written by eve-export@ into the witness heartbeat table (27 WG-3.3)" --log-filter="logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.googleapis.com%2Fdata_access\" AND protoPayload.serviceName=\"bigquery.googleapis.com\" AND protoPayload.authenticationInfo.principalEmail=\"${SA_EVE_EXPORT}\" AND protoPayload.resourceName:\"datasets/${WITNESS_MIRROR_DS}/tables/${WITNESS_HEARTBEAT_TABLE}\" AND NOT protoPayload.status.code:*"
 gcloud logging metrics create witness-export-object --project="$EVE_WITNESS_PROJECT" --description="Objects created by eve-export@ under exports/ in the witness bucket (27 WG-3.3)" --log-filter="logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.googleapis.com%2Fdata_access\" AND protoPayload.serviceName=\"storage.googleapis.com\" AND protoPayload.methodName=\"storage.objects.create\" AND protoPayload.authenticationInfo.principalEmail=\"${SA_EVE_EXPORT}\" AND protoPayload.resourceName:\"buckets/${BN}/objects/exports/\""
 gcloud logging metrics create witness-incident-insert --project="$EVE_WITNESS_PROJECT" --description="Rows written into the witness incidents mirror (route 2 backstop, 27 WG-3.3)" --log-filter="logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.googleapis.com%2Fdata_access\" AND protoPayload.serviceName=\"bigquery.googleapis.com\" AND protoPayload.resourceName:\"datasets/${WITNESS_MIRROR_DS}/tables/incidents\" AND NOT protoPayload.status.code:*"
-gcloud logging metrics create witness-integrity-alert --project="$EVE_WITNESS_PROJECT" --description="Rows written into integrity_alerts or rp5_repage by the witness scheduled queries (27 WG-3.3)" --log-filter="logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.googleapis.com%2Fdata_access\" AND protoPayload.serviceName=\"bigquery.googleapis.com\" AND (protoPayload.resourceName:\"datasets/${WITNESS_MIRROR_DS}/tables/integrity_alerts\" OR protoPayload.resourceName:\"datasets/${WITNESS_MIRROR_DS}/tables/rp5_repage\") AND NOT protoPayload.status.code:*"
+gcloud logging metrics create witness-integrity-alert --project="$EVE_WITNESS_PROJECT" --description="Rows written into integrity_alerts by the witness-integrity scheduled query, and nothing else (27 WG-3.3, read by WG-3.8)" --log-filter="logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.googleapis.com%2Fdata_access\" AND protoPayload.serviceName=\"bigquery.googleapis.com\" AND protoPayload.resourceName:\"datasets/${WITNESS_MIRROR_DS}/tables/integrity_alerts\" AND NOT protoPayload.status.code:*"
+gcloud logging metrics create witness-rp5-alert --project="$EVE_WITNESS_PROJECT" --description="Rows written into rp5_repage by the witness-rp5-repage scheduled query, and nothing else (27 WG-3.3, read by WG-3.9)" --log-filter="logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.googleapis.com%2Fdata_access\" AND protoPayload.serviceName=\"bigquery.googleapis.com\" AND protoPayload.resourceName:\"datasets/${WITNESS_MIRROR_DS}/tables/rp5_repage\" AND NOT protoPayload.status.code:*"
 ```
 
-- **VERIFY:** `gcloud logging metrics list --project="$EVE_WITNESS_PROJECT" --format="table(name,filter.len())"` shows the four names. In Logs Explorer, each filter pasted as a query returns the entries it is meant to count over the last six hours (`witness-incident-insert` and `witness-integrity-alert` may legitimately return none yet). The metrics are created **before** the policies, so that they have points by the time WG-3.5 and WG-3.6 run.
-- **ROLLBACK:** `gcloud logging metrics delete <name> --project="$EVE_WITNESS_PROJECT"` for each.
-- **EVIDENCE:** The metric list and the four filters as `<date>-WG-3.3-log-metrics-v1` under `custody/`. EU AI Act E-06, E-08. TISAX 5.2, 1.6.
+- **VERIFY:** `gcloud logging metrics list --project="$EVE_WITNESS_PROJECT" --format="table(name,filter.len())"` shows the five names. `gcloud logging metrics describe witness-integrity-alert --project="$EVE_WITNESS_PROJECT" --format="value(filter)" | grep -c rp5_repage` prints `0`, and `gcloud logging metrics describe witness-rp5-alert --project="$EVE_WITNESS_PROJECT" --format="value(filter)" | grep -c integrity_alerts` prints `0`: the two alert metrics share no table. In Logs Explorer, each filter pasted as a query returns the entries it is meant to count over the last six hours (`witness-incident-insert`, `witness-integrity-alert` and `witness-rp5-alert` may legitimately return none yet). Nothing else is created in this sitting after WG-3.4: the metrics have no point until the next heartbeat and the next export arrive, and every policy of sitting 3b is gated on that point.
+- **ROLLBACK:** `gcloud logging metrics delete <name> --project="$EVE_WITNESS_PROJECT"` for each of the five.
+- **EVIDENCE:** The metric list, the five filters and the filter form chosen (WG-3.2) as `<date>-WG-3.3-log-metrics-v1` under `custody/`. EU AI Act E-06, E-08. TISAX 5.2, 1.6.
 
 ### WG-3.4 Create and verify the three SMS channels
 
@@ -642,25 +649,50 @@ penv_set WITNESS_SMS_CHANNEL "$(gcloud beta monitoring channels list --project="
 ```
 
   Then, in the console, for each channel: send the verification code and have the owner of that number enter it.
-- **VERIFY:** `printf '%s\n' "$WITNESS_SMS_CHANNEL" | tr ',' '\n' | wc -l` prints `3`. `gcloud beta monitoring channels list --project="$EVE_WITNESS_PROJECT" --filter='displayName:witness-sms-' --format="table(displayName,type,enabled,verificationStatus)"` shows three enabled channels with `VERIFIED`. Each person states, in the sitting, that he entered his own code. A channel that cannot be verified is recorded with its country and left out of the policies, and the gap goes into the G-2 record.
-- **ROLLBACK:** `gcloud beta monitoring channels delete <channel> --project="$EVE_WITNESS_PROJECT"`.
-- **EVIDENCE:** The channel table **without** numbers as `<date>-WG-3.4-sms-channels-v1` under `custody/`; the three verification statements on the sitting form. EU AI Act E-10. TISAX 1.6.
+
+  **The channel count is computed, never assumed.** A channel that cannot be verified is left out of every policy, so the number of channels a policy must carry is whatever this step ends with, not six. After the verifications, keep only the `VERIFIED` SMS channels in `WITNESS_SMS_CHANNEL` and write the count every later VERIFY compares against:
+
+```bash
+need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL
+penv_set --force WITNESS_SMS_CHANNEL "$(gcloud beta monitoring channels list --project="$EVE_WITNESS_PROJECT" --filter='displayName:witness-sms- AND verificationStatus=VERIFIED AND enabled=true' --format='value(name)' | sort | paste -sd, -)"
+penv_set WITNESS_CHANNEL_COUNT "$(( $(printf '%s' "$WITNESS_EMAIL_CHANNEL" | tr ',' '\n' | grep -c .) + $(printf '%s' "$WITNESS_SMS_CHANNEL" | tr ',' '\n' | grep -c .) ))"
+echo "every policy in this file carries ${WITNESS_CHANNEL_COUNT} channels"
+```
+
+- **VERIFY:** `gcloud beta monitoring channels list --project="$EVE_WITNESS_PROJECT" --filter='displayName:witness-sms-' --format="table(displayName,type,enabled,verificationStatus)"` shows three enabled channels with `VERIFIED`, and then `printf '%s\n' "$WITNESS_SMS_CHANNEL" | tr ',' '\n' | grep -c .` prints `3` and `WITNESS_CHANNEL_COUNT` is `6`. If a channel could not be verified, the list shows it as not `VERIFIED`, it is absent from `WITNESS_SMS_CHANNEL`, `WITNESS_CHANNEL_COUNT` is `5` or `4`, and the sitting form records which recipient lacks SMS and in which country; that line goes into the G-2 record (WG-4.3) and is what WG-3.11 and the monthly check of WG-4.2 compare against. Each person states, in the sitting, that he entered his own code. Email is present for all three regardless (08 WO-2.4), so no recipient is ever on zero channels.
+- **ROLLBACK:** `gcloud beta monitoring channels delete <channel> --project="$EVE_WITNESS_PROJECT"`, then re-run the two `penv_set` lines so that the count follows.
+- **EVIDENCE:** The channel table **without** numbers, and the computed `WITNESS_CHANNEL_COUNT` with the reason for any channel below three, as `<date>-WG-3.4-sms-channels-v1` under `custody/`; the verification statements on the sitting form. EU AI Act E-10. TISAX 1.6.
 
 ### WG-3.5 The heartbeat absence policy, about 90 minutes
 
 - **WHO:** Witness administrator 1 creates; the second human confirms the receipt of the test in WG-3.11.
 - **WHERE:** Witness workstation shell.
-- **ACTION:** Run only after WG-2.3 confirmed a heartbeat row and `gcloud logging metrics list` shows the metric exists: **a metric-absence condition requires at least one successful measurement before it can ever trigger**, so a policy created over an empty metric is a policy that never fires. The heartbeat is hourly (SD-07), so 90 minutes allows one late beat and no more. There is no business-hours window in Cloud Monitoring: the window is flat, all day, every day, which is what the witness wants — silence at 03:00 on a Sunday is exactly the case the design cares about.
+- **ACTION:** Sitting 3b, at least one hourly heartbeat after WG-3.3 created the metric. **A metric-absence condition requires at least one successful measurement before it can ever trigger**, and a log-based metric holds only entries received after it was created, so a policy created in the same sitting as its metric is a policy that never fires. The heartbeat is hourly (SD-07), so 90 minutes allows one late beat and no more. There is no business-hours window in Cloud Monitoring: the window is flat, all day, every day, which is what the witness wants — silence at 03:00 on a Sunday is exactly the case the design cares about.
+
+  **The pre-check is the gate.** There is no `gcloud monitoring` command that lists time series; the read is the Monitoring API's `timeSeries.list`, and it must return at least one point for the metric in the last two hours before the policy is created. It also prints the monitored resource type the metric actually carries, which the policy filter must name.
 
 ```bash
-need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL
+need EVE_WITNESS_PROJECT
+M="logging.googleapis.com/user/witness-heartbeat-insert"
+START="$(date -u -v-2H +%FT%TZ)"; END="$(date -u +%FT%TZ)"
+F="$(mktemp -d)/hb.json"
+curl -sS --fail-with-body -G -H "Authorization: Bearer $(gcloud auth print-access-token)" "https://monitoring.googleapis.com/v3/projects/${EVE_WITNESS_PROJECT}/timeSeries" --data-urlencode "filter=metric.type=\"${M}\"" --data-urlencode "interval.startTime=${START}" --data-urlencode "interval.endTime=${END}" --data-urlencode "view=FULL" > "$F"
+jq -e '[.timeSeries[]?.points[]?] | length > 0' "$F" >/dev/null && echo "METRIC HAS POINTS: create the policy" || echo "NO POINT YET: do not create the policy; wait for the next heartbeat"
+jq -r '.timeSeries[]? | .resource.type' "$F" | sort -u
+penv_set WITNESS_HB_RESOURCE_TYPE "<the one resource type printed above>"
+```
+
+  The alignment period is `600s`, not the metric's cadence: Google recommends a rolling window of at least ten minutes for a log-based metric, because log ingestion delay otherwise leaves gaps inside the window that read as absence and late arrivals that read as recovery. The cadence is expressed by `duration` (5400 s), not by the window.
+
+```bash
+need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL WITNESS_CHANNEL_COUNT WITNESS_HB_RESOURCE_TYPE
 POL="$(mktemp -d)/witness-heartbeat-absence.json"
-jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" '{displayName:"witness-heartbeat-absence", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"No heartbeat row from eve-export@ for 90 minutes", conditionAbsent:{filter:"metric.type=\"logging.googleapis.com/user/witness-heartbeat-insert\" AND resource.type=\"bigquery_dataset\"", duration:"5400s", aggregations:[{alignmentPeriod:"300s", perSeriesAligner:"ALIGN_SUM"}], trigger:{count:1}}}], notificationChannels:($ch|split(",")), documentation:{content:"Eve has stopped writing its hourly heartbeat into the witness. Treat as severity 1: the tenant may be silent, Eve may be stopped, or the push may be withheld. Do not ask the platform owner first. Confirm from this project only, then call the second human and the incident commander. RB-03.", mimeType:"text/markdown"}}' > "$POL"
+jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" --arg rt "$WITNESS_HB_RESOURCE_TYPE" '{displayName:"witness-heartbeat-absence", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"No heartbeat row from eve-export@ for 90 minutes", conditionAbsent:{filter:("metric.type=\"logging.googleapis.com/user/witness-heartbeat-insert\" AND resource.type=\""+$rt+"\""), duration:"5400s", aggregations:[{alignmentPeriod:"600s", perSeriesAligner:"ALIGN_SUM"}], trigger:{count:1}}}], notificationChannels:($ch|split(",")|map(select(length>0))), documentation:{content:"Eve has stopped writing its hourly heartbeat into the witness. Treat as severity 1: the tenant may be silent, Eve may be stopped, or the push may be withheld. Do not ask the platform owner first. Confirm from this project only, then call the second human and the incident commander. RB-03.", mimeType:"text/markdown"}}' > "$POL"
 gcloud monitoring policies create --project="$EVE_WITNESS_PROJECT" --policy-from-file="$POL"
 penv_set WITNESS_ALERT_HEARTBEAT "$(gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --filter='displayName="witness-heartbeat-absence"' --format='value(name)')"
 ```
 
-- **VERIFY:** `gcloud monitoring policies describe "$WITNESS_ALERT_HEARTBEAT" --project="$EVE_WITNESS_PROJECT" --format="json(displayName,enabled,conditions,notificationChannels)"` shows `5400s`, six channels and `enabled: true`. In the console, Monitoring > Alerting > Policies > the policy, the condition's chart shows data points (not "no data"); if it shows no data, the metric has not yet written a point and the policy is deleted and created again after WG-3.11's reading. *Assumption:* the resource type carried by a BigQuery Data Access log-based metric is `bigquery_dataset`; WG-3.11 reads the actual label set in Metrics Explorer and the filter is corrected to it on the day if it differs.
+- **VERIFY:** The pre-check printed `METRIC HAS POINTS` and exactly one resource type; the policy is not created otherwise. `gcloud monitoring policies describe "$WITNESS_ALERT_HEARTBEAT" --project="$EVE_WITNESS_PROJECT" --format="json(displayName,enabled,conditions,notificationChannels)"` shows `duration: 5400s`, `alignmentPeriod: 600s`, `enabled: true`, and `jq '.notificationChannels|length'` on that output equals `WITNESS_CHANNEL_COUNT`. In the console, Monitoring > Alerting > Policies > the policy, the condition's chart shows data points, not "no data".
 - **ROLLBACK:** `gcloud monitoring policies delete "$WITNESS_ALERT_HEARTBEAT" --project="$EVE_WITNESS_PROJECT"`; the deletion is an Admin Activity entry to three people (08 WO-2.7).
 - **EVIDENCE:** The policy JSON as `<date>-WG-3.5-heartbeat-absence-v1` under `custody/`. Closes H-1(b) as corrected. EU AI Act E-06, E-10. TISAX 1.6, 5.2.
 
@@ -670,15 +702,30 @@ penv_set WITNESS_ALERT_HEARTBEAT "$(gcloud monitoring policies list --project="$
 - **WHERE:** Witness workstation shell.
 - **ACTION:** The maximum configurable trigger absence time is 23.5 hours, so the "26 h" of 07 §7 H-4 and eve/03's `witness_push_absence_hours: 26` cannot be created and are corrected here. A daily export with any window under 24 hours fires every day, which is why 26 exports every six hours: with four exports a day, 23.5 hours of silence means three consecutive misses and is never normal.
 
+  The pre-check, as in WG-3.5, over the last 24 hours (the export is six-hourly, so at least one point exists once one export cycle has passed since WG-3.3):
+
 ```bash
-need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL
+need EVE_WITNESS_PROJECT
+M="logging.googleapis.com/user/witness-export-object"
+START="$(date -u -v-24H +%FT%TZ)"; END="$(date -u +%FT%TZ)"
+F="$(mktemp -d)/ex.json"
+curl -sS --fail-with-body -G -H "Authorization: Bearer $(gcloud auth print-access-token)" "https://monitoring.googleapis.com/v3/projects/${EVE_WITNESS_PROJECT}/timeSeries" --data-urlencode "filter=metric.type=\"${M}\"" --data-urlencode "interval.startTime=${START}" --data-urlencode "interval.endTime=${END}" --data-urlencode "view=FULL" > "$F"
+jq -e '[.timeSeries[]?.points[]?] | length > 0' "$F" >/dev/null && echo "METRIC HAS POINTS: create the policy" || echo "NO POINT YET: do not create the policy; wait for the next export"
+jq -r '.timeSeries[]? | .resource.type' "$F" | sort -u
+penv_set WITNESS_EXPORT_RESOURCE_TYPE "<the one resource type printed above>"
+```
+
+  The alignment period is `600s` for the same reason as WG-3.5: at least ten minutes for a log-based metric, chosen for log ingestion delay; the cadence lives in `duration`.
+
+```bash
+need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL WITNESS_CHANNEL_COUNT WITNESS_EXPORT_RESOURCE_TYPE
 POL="$(mktemp -d)/witness-export-absence.json"
-jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" '{displayName:"witness-export-absence", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"No export object from eve-export@ for 23.5 hours", conditionAbsent:{filter:"metric.type=\"logging.googleapis.com/user/witness-export-object\" AND resource.type=\"gcs_bucket\"", duration:"84600s", aggregations:[{alignmentPeriod:"600s", perSeriesAligner:"ALIGN_SUM"}], trigger:{count:1}}}], notificationChannels:($ch|split(",")), documentation:{content:"No export objects have reached the witness bucket for 23.5 hours; the expected cadence is every six hours. Severity 1. Check the heartbeat policy first: a live heartbeat with a dead export points at the bucket grant or the manifest writer; both dead point at Eve or at the tenant.", mimeType:"text/markdown"}}' > "$POL"
+jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" --arg rt "$WITNESS_EXPORT_RESOURCE_TYPE" '{displayName:"witness-export-absence", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"No export object from eve-export@ for 23.5 hours", conditionAbsent:{filter:("metric.type=\"logging.googleapis.com/user/witness-export-object\" AND resource.type=\""+$rt+"\""), duration:"84600s", aggregations:[{alignmentPeriod:"600s", perSeriesAligner:"ALIGN_SUM"}], trigger:{count:1}}}], notificationChannels:($ch|split(",")|map(select(length>0))), documentation:{content:"No export objects have reached the witness bucket for 23.5 hours; the expected cadence is every six hours. Severity 1. Check the heartbeat policy first: a live heartbeat with a dead export points at the bucket grant or the manifest writer; both dead point at Eve or at the tenant.", mimeType:"text/markdown"}}' > "$POL"
 gcloud monitoring policies create --project="$EVE_WITNESS_PROJECT" --policy-from-file="$POL"
 penv_set WITNESS_ALERT_EXPORT "$(gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --filter='displayName="witness-export-absence"' --format='value(name)')"
 ```
 
-- **VERIFY:** The describe shows `84600s` (23.5 hours) and six channels. The condition chart shows the objects of WG-2.3's backlog push. `gcloud storage ls "${WITNESS_BUCKET}/exports/**" | wc -l` grows by the next scheduled export, read again at WG-3.11.
+- **VERIFY:** The pre-check printed `METRIC HAS POINTS`; the policy is not created otherwise. The describe shows `84600s` (23.5 hours), `alignmentPeriod: 600s`, and a `notificationChannels` length equal to `WITNESS_CHANNEL_COUNT`. The condition chart shows the objects of the exports since WG-3.3 (not WG-2.3's backlog push, which predates the metric). `gcloud storage ls "${WITNESS_BUCKET}/exports/**" | wc -l` grows by the next scheduled export, read again at WG-3.11.
 - **ROLLBACK:** `gcloud monitoring policies delete "$WITNESS_ALERT_EXPORT" --project="$EVE_WITNESS_PROJECT"`.
 - **EVIDENCE:** The policy JSON and the corrected number as `<date>-WG-3.6-export-absence-v1` under `custody/`; the correction of H-4 goes back to 07 §7 through WG-4.2. EU AI Act E-06. TISAX 1.6.
 
@@ -686,17 +733,17 @@ penv_set WITNESS_ALERT_EXPORT "$(gcloud monitoring policies list --project="$EVE
 
 - **WHO:** Witness administrator 1 creates; the incident commander approves the documentation text; the second human confirms receipt in WG-3.11.
 - **WHERE:** Witness workstation shell.
-- **ACTION:** A notification channel belongs to one project and can only be used by policies in that project, so nothing in `EVE_PROJECT` can page a witness channel: route 1 (minutes) is the organisation's paging service of 15, and route 2 is here. On every severity 1, 26's incident-mode push writes the incident row at once; this policy is a log-based alerting policy that fires on that write. Log-based alerting policies require a notification rate limit, which is set to five minutes so that a storm does not become a hundred messages.
+- **ACTION:** A notification channel belongs to one project and can only be used by policies in that project, so nothing in `EVE_PROJECT` can page a witness channel: route 1 (minutes) is the organisation's paging service of 15, and route 2 is here. On every severity 1, 26's incident-mode push writes the incident row at once; this policy is a log-based alerting policy that fires on that write. Log-based alerting policies require a notification rate limit, which is set to five minutes so that a storm does not become a hundred messages. This policy matches log entries directly, not a metric, so it has no `timeSeries.list` pre-check: it fires on the first matching entry after it is created.
 
 ```bash
-need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL SA_EVE_EXPORT
+need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL WITNESS_CHANNEL_COUNT SA_EVE_EXPORT
 POL="$(mktemp -d)/witness-incident-route2.json"
-jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" --arg p "$SA_EVE_EXPORT" --arg pr "$EVE_WITNESS_PROJECT" --arg ds "$WITNESS_MIRROR_DS" '{displayName:"witness-incident-route2", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"An incident row reached the witness", conditionMatchedLog:{filter:("logName=\"projects/"+$pr+"/logs/cloudaudit.googleapis.com%2Fdata_access\" AND protoPayload.serviceName=\"bigquery.googleapis.com\" AND protoPayload.authenticationInfo.principalEmail=\""+$p+"\" AND protoPayload.resourceName:\"datasets/"+$ds+"/tables/incidents\" AND NOT protoPayload.status.code:*")}}], notificationChannels:($ch|split(",")), alertStrategy:{notificationRateLimit:{period:"300s"}}, documentation:{content:"Route 2 backstop: Eve pushed a severity 1 incident row to the witness. Route 1 (the paging service) should already have paged; if it did not, that is itself a severity 1. Read the row in eve_mirror.incidents from this project. If the subject of the report is the platform owner, the sole recipient is the second human; if it is the second human, it is the security reviewer, or the incident commander until one is appointed. Escalate past twice the acknowledgement target to the incident commander.", mimeType:"text/markdown"}}' > "$POL"
+jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" --arg p "$SA_EVE_EXPORT" --arg pr "$EVE_WITNESS_PROJECT" --arg ds "$WITNESS_MIRROR_DS" '{displayName:"witness-incident-route2", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"An incident row reached the witness", conditionMatchedLog:{filter:("logName=\"projects/"+$pr+"/logs/cloudaudit.googleapis.com%2Fdata_access\" AND protoPayload.serviceName=\"bigquery.googleapis.com\" AND protoPayload.authenticationInfo.principalEmail=\""+$p+"\" AND protoPayload.resourceName:\"datasets/"+$ds+"/tables/incidents\" AND NOT protoPayload.status.code:*")}}], notificationChannels:($ch|split(",")|map(select(length>0))), alertStrategy:{notificationRateLimit:{period:"300s"}}, documentation:{content:"Route 2 backstop: Eve pushed a severity 1 incident row to the witness. Route 1 (the paging service) should already have paged; if it did not, that is itself a severity 1. Read the row in eve_mirror.incidents from this project. If the subject of the report is the platform owner, the sole recipient is the second human; if it is the second human, it is the security reviewer, or the incident commander until one is appointed. Escalate past twice the acknowledgement target to the incident commander.", mimeType:"text/markdown"}}' > "$POL"
 gcloud monitoring policies create --project="$EVE_WITNESS_PROJECT" --policy-from-file="$POL"
 penv_set WITNESS_ALERT_INCIDENT "$(gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --filter='displayName="witness-incident-route2"' --format='value(name)')"
 ```
 
-- **VERIFY:** The describe shows `conditionMatchedLog`, the rate limit of `300s` and six channels. A test: at WG-3.11 the platform owner raises one harmless severity 1 test incident through 26's incident-mode path (never by writing a row by hand from the witness side), and the three recipients confirm the message. *Assumption:* the incidents mirror table exists (08 WO-2.10); until it does, the policy is created and simply never matches, and WG-3.11 records the test as deferred with the BLOCKED line of WG-3.9.
+- **VERIFY:** The describe shows `conditionMatchedLog`, the rate limit of `300s` and a `notificationChannels` length equal to `WITNESS_CHANNEL_COUNT`. A test: at WG-3.11 the platform owner raises one harmless severity 1 test incident through 26's incident-mode path (never by writing a row by hand from the witness side), and the three recipients confirm a message whose body names `witness-incident-route2` — the displayName, not merely "a message". *Assumption:* the incidents mirror table exists (08 WO-2.10); until it does, the policy is created and simply never matches, and WG-3.11 records the test as deferred with the BLOCKED line of WG-3.9.
 - **ROLLBACK:** `gcloud monitoring policies delete <name> --project="$EVE_WITNESS_PROJECT"`.
 - **EVIDENCE:** The policy JSON and, at WG-3.11, the three receipts as `<date>-WG-3.7-route2-incident-v1` under `drills/`. Closes X-ORG-07 on the witness side. EU AI Act E-10, E-08. TISAX 1.6, 1.5.
 
@@ -704,10 +751,13 @@ penv_set WITNESS_ALERT_INCIDENT "$(gcloud monitoring policies list --project="$E
 
 - **WHO:** Witness administrator 1 writes the query; witness administrator 2 reads the SQL; the second human is named in the documentation as a recipient.
 - **WHERE:** Witness workstation shell.
-- **ACTION:** The heartbeat carries a configuration fingerprint and cumulative per-table row counts (SD-12, 08 WO-2.9). A quiet edit to Eve — a changed sink filter, a paused schedule, a narrowed privilege set — changes the fingerprint; a deleted or rewritten row makes a cumulative count go down. BigQuery has no insert-only permission (SD-43), so row tampering is **detected, not prevented**, and this is where it is detected. A scheduled query every fifteen minutes compares each hourly heartbeat with the one before it and writes a row into `integrity_alerts`; the metric of WG-3.3 turns that row into a page.
+- **ACTION:** The heartbeat carries a configuration fingerprint and cumulative per-table row counts (SD-12, 08 WO-2.9). A quiet edit to Eve — a changed sink filter, a paused schedule, a narrowed privilege set — changes the fingerprint; a deleted or rewritten row makes a cumulative count go down. BigQuery has no insert-only permission (SD-43), so row tampering is **detected, not prevented**, and this is where it is detected. A scheduled query every fifteen minutes compares each hourly heartbeat with the one before it and writes a row into `integrity_alerts`; the metric `witness-integrity-alert` of WG-3.3 — which counts that table and no other — turns the row into a page.
+
+  **Gate: WG-3.0 passed.** Every column the SQL names (`heartbeat_ts`, `kind`, `config_fingerprint`, `table_counts.table_name`, `table_counts.rows_cumulative`) is one WG-3.0 proved present in the live table and compiled with `--dry_run`; `kind = 'hourly'` is a value 08 WO-2.9's contract defines. The order inside the step is fixed: the scheduled query first, one manual run to prove it executes, the seeded proof (which writes the metric's first point), the `timeSeries.list` pre-check, and only then the policy.
 
 ```bash
-need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_HEARTBEAT_TABLE WITNESS_INTEGRITY_SA BQ_LOCATION
+need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_HEARTBEAT_TABLE WITNESS_INTEGRITY_SA BQ_LOCATION WITNESS_SCHEMA_GATE_DATE WITNESS_CUSTODY_DIR
+grep -q "LIVE TABLE MATCHES WO-2.9 CONTRACT v1" "$WITNESS_CUSTODY_DIR/${WITNESS_SCHEMA_GATE_DATE}-WG-3.0-schema-gate-v1.txt" 2>/dev/null && echo "WG-3.0 gate passed on ${WITNESS_SCHEMA_GATE_DATE}" || echo "STOP: no passed WG-3.0 record; nothing in WG-3.8 is created"
 Q="$(mktemp -d)/integrity.sql"
 cat > "$Q" <<SQL
 INSERT INTO \`${EVE_WITNESS_PROJECT}.${WITNESS_MIRROR_DS}.integrity_alerts\` (detected_at, reason, detail, heartbeat_ts, previous_heartbeat_ts)
@@ -737,21 +787,56 @@ WHERE NOT EXISTS (
   WHERE a.heartbeat_ts = n.heartbeat_ts AND a.reason = n.reason AND a.detail = n.detail)
 SQL
 cat "$Q"
+bq --project_id="$EVE_WITNESS_PROJECT" query --use_legacy_sql=false --dry_run < "$Q"
 bq --project_id="$EVE_WITNESS_PROJECT" mk --transfer_config --data_source=scheduled_query --display_name="witness-integrity" --schedule="every 15 minutes" --service_account_name="$WITNESS_INTEGRITY_SA" --location="$BQ_LOCATION" --params="$(jq -n --arg q "$(cat "$Q")" '{query:$q}')"
+penv_set WITNESS_INTEGRITY_TC "$(bq --project_id="$EVE_WITNESS_PROJECT" ls --transfer_config --transfer_location="$BQ_LOCATION" --format=prettyjson | jq -r '.[] | select(.displayName=="witness-integrity") | .name')"
+bq --project_id="$EVE_WITNESS_PROJECT" mk --transfer_run --run_time="$(date -u +%FT%TZ)" "$WITNESS_INTEGRITY_TC"
+bq --project_id="$EVE_WITNESS_PROJECT" ls --transfer_run --transfer_location="$BQ_LOCATION" --format=prettyjson "$WITNESS_INTEGRITY_TC" | jq -r '.[] | [.runTime, .state, (.errorStatus.message // "-")] | @tsv'
 ```
 
-  Then the policy that pages on any row it writes:
+  The manual run must list as `SUCCEEDED` (it writes nothing, because no fingerprint has changed) before anything else is built; a `FAILED` run is read with `bq show --transfer_run <run name>` and handled under the transfer row of "If something goes wrong in the middle".
+
+  **The seeded proof, before the policy.** A witness administrator copies the heartbeat table to `heartbeat_seed`, inserts one **synthetic** hourly row into the copy with the same counts and a different fingerprint, and runs the same SQL with the source table name swapped. The synthetic row is never written into the real heartbeat table; the alert row it produces is written into the real `integrity_alerts` — that is the point, because it is the metric's first point and what the pre-check needs. The synthetic fingerprint is sixty-four zeros, so the alert row's `detail` ends in `-> 000…0` and no reader mistakes it for a finding; the SQL is the production SQL with only the source table name swapped, which the two `grep -c` lines prove (`1` and `0`).
 
 ```bash
+need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_HEARTBEAT_TABLE
+bq --project_id="$EVE_WITNESS_PROJECT" cp -f "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}.${WITNESS_HEARTBEAT_TABLE}" "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}.heartbeat_seed"
+bq --project_id="$EVE_WITNESS_PROJECT" query --use_legacy_sql=false "INSERT INTO \`${EVE_WITNESS_PROJECT}.${WITNESS_MIRROR_DS}.heartbeat_seed\` SELECT CURRENT_TIMESTAMP() AS heartbeat_ts, kind, window_start, window_end, source_project, CONCAT('SEED-', run_id) AS run_id, REPEAT('0', 64) AS config_fingerprint, ws_log_rows_window, table_counts, first_run_record, schema_version FROM \`${EVE_WITNESS_PROJECT}.${WITNESS_MIRROR_DS}.heartbeat_seed\` WHERE kind = 'hourly' ORDER BY heartbeat_ts DESC LIMIT 1"
+sed -e "s/\.${WITNESS_HEARTBEAT_TABLE}\`/.heartbeat_seed\`/" "$Q" > "$(dirname "$Q")/integrity-seed.sql"
+grep -c heartbeat_seed "$(dirname "$Q")/integrity-seed.sql"
+grep -c "\.${WITNESS_HEARTBEAT_TABLE}\`" "$(dirname "$Q")/integrity-seed.sql"
+bq --project_id="$EVE_WITNESS_PROJECT" query --use_legacy_sql=false < "$(dirname "$Q")/integrity-seed.sql"
+bq --project_id="$EVE_WITNESS_PROJECT" query --use_legacy_sql=false --format=prettyjson "SELECT detected_at, reason, detail FROM \`${EVE_WITNESS_PROJECT}.${WITNESS_MIRROR_DS}.integrity_alerts\` ORDER BY detected_at DESC LIMIT 3"
+bq --project_id="$EVE_WITNESS_PROJECT" rm -f -t "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}.heartbeat_seed"
+```
+
+  The pre-check, as in WG-3.5, over the last hour (the seed row was written minutes ago):
+
+```bash
+need EVE_WITNESS_PROJECT
+M="logging.googleapis.com/user/witness-integrity-alert"
+START="$(date -u -v-1H +%FT%TZ)"; END="$(date -u +%FT%TZ)"
+F="$(mktemp -d)/ia.json"
+curl -sS --fail-with-body -G -H "Authorization: Bearer $(gcloud auth print-access-token)" "https://monitoring.googleapis.com/v3/projects/${EVE_WITNESS_PROJECT}/timeSeries" --data-urlencode "filter=metric.type=\"${M}\"" --data-urlencode "interval.startTime=${START}" --data-urlencode "interval.endTime=${END}" --data-urlencode "view=FULL" > "$F"
+jq -e '[.timeSeries[]?.points[]?] | length > 0' "$F" >/dev/null && echo "METRIC HAS POINTS: create the policy" || echo "NO POINT YET: do not create the policy; the seed did not reach the metric — read WG-3.2's filter form"
+jq -r '.timeSeries[]? | .resource.type' "$F" | sort -u
+penv_set WITNESS_ALERT_RESOURCE_TYPE "<the one resource type printed above>"
+```
+
+  Then the policy that pages on any row the query writes. Its filter names `witness-integrity-alert` and nothing WG-3.9 reads; the alignment period is `600s`, chosen for log ingestion delay on a log-based metric (at least ten minutes), so that one written row is never split across two windows and missed by `COMPARISON_GT 0`:
+
+```bash
+need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL WITNESS_CHANNEL_COUNT WITNESS_ALERT_RESOURCE_TYPE
 POL="$(mktemp -d)/witness-integrity-alert.json"
-jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" '{displayName:"witness-integrity-alert", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"Eve configuration fingerprint changed, or a cumulative count went down", conditionThreshold:{filter:"metric.type=\"logging.googleapis.com/user/witness-integrity-alert\" AND resource.type=\"bigquery_dataset\"", comparison:"COMPARISON_GT", thresholdValue:0, duration:"0s", aggregations:[{alignmentPeriod:"300s", perSeriesAligner:"ALIGN_SUM"}]}}], notificationChannels:($ch|split(",")), alertStrategy:{notificationRateLimit:{period:"300s"}}, documentation:{content:"Either Eve's configuration changed (fingerprint) or evidence rows were removed or rewritten (a cumulative count went down). Read eve_mirror.integrity_alerts from this project. A fingerprint change is expected only when an eve/config merge reviewed by the second human is in flight; anything else is a severity 1 report about the administrator, whose sole recipient is the second human.", mimeType:"text/markdown"}}' > "$POL"
+jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" --arg rt "$WITNESS_ALERT_RESOURCE_TYPE" '{displayName:"witness-integrity-alert", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"Eve configuration fingerprint changed, or a cumulative count went down", conditionThreshold:{filter:("metric.type=\"logging.googleapis.com/user/witness-integrity-alert\" AND resource.type=\""+$rt+"\""), comparison:"COMPARISON_GT", thresholdValue:0, duration:"0s", aggregations:[{alignmentPeriod:"600s", perSeriesAligner:"ALIGN_SUM"}]}}], notificationChannels:($ch|split(",")|map(select(length>0))), alertStrategy:{notificationRateLimit:{period:"300s"}}, documentation:{content:"witness-integrity-alert. Either Eve's configuration changed (fingerprint) or evidence rows were removed or rewritten (a cumulative count went down). Read eve_mirror.integrity_alerts from this project; a detail ending in sixty-four zeros is a drill row (27 WG-3.8, 28). A fingerprint change is expected only when an eve/config merge reviewed by the second human is in flight; anything else is a severity 1 report about the administrator, whose sole recipient is the second human.", mimeType:"text/markdown"}}' > "$POL"
 gcloud monitoring policies create --project="$EVE_WITNESS_PROJECT" --policy-from-file="$POL"
 penv_set WITNESS_ALERT_FINGERPRINT "$(gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --filter='displayName="witness-integrity-alert"' --format='value(name)')"
 ```
 
-- **VERIFY:** `bq --project_id="$EVE_WITNESS_PROJECT" ls --transfer_config --transfer_location="$BQ_LOCATION" --format=prettyjson | jq '.[] | {displayName, schedule, serviceAccountName, state}'` shows `witness-integrity`, every 15 minutes, the integrity identity. A seeded proof, done here and repeated by 28: a witness administrator inserts one **synthetic** heartbeat row with `kind='hourly'`, the same counts and a different `config_fingerprint`, into a copy table `heartbeat_seed`, points a one-off run of the same SQL at it, and confirms a row appears in `integrity_alerts` and the policy fires. The synthetic row is never written into the real heartbeat table.
-- **ROLLBACK:** `bq rm --transfer_config <config name>`; `gcloud monitoring policies delete "$WITNESS_ALERT_FINGERPRINT" --project="$EVE_WITNESS_PROJECT"`.
-- **EVIDENCE:** The SQL, the transfer config, the policy JSON and the seeded proof as `<date>-WG-3.8-fingerprint-and-count-alarm-v1` under `drills/`. Answers SD-12 and SD-43. EU AI Act E-06, E-08. TISAX 5.2, 1.6.
+  The policy was created after the seed row, so the seed did not page. The proof that the **policy** fires is a second seed, run the same way once the policy exists, and it is the receipt WG-3.11 asks the second human for.
+- **VERIFY:** In order: the `--dry_run` succeeds; `bq --project_id="$EVE_WITNESS_PROJECT" ls --transfer_config --transfer_location="$BQ_LOCATION" --format=prettyjson | jq '.[] | select(.displayName=="witness-integrity") | {displayName, schedule, serviceAccountName, state}'` shows every 15 minutes, the integrity identity, and a `state` that is not `FAILED`; `bq ls --transfer_run` lists at least one run with `state` `SUCCEEDED` and no `errorStatus`. The first seed produced exactly one row in `integrity_alerts` with `reason = 'config_fingerprint_changed'` and a `detail` ending in the sixty-four-zero fingerprint; `heartbeat_seed` no longer exists (`bq ls` of the dataset). The pre-check printed `METRIC HAS POINTS` and one resource type. `gcloud monitoring policies describe "$WITNESS_ALERT_FINGERPRINT" --project="$EVE_WITNESS_PROJECT" --format="json(displayName,conditions,notificationChannels)"` shows the filter naming `witness-integrity-alert` (and `grep -c rp5` on it prints `0`), `alignmentPeriod: 600s`, and a `notificationChannels` length equal to `WITNESS_CHANNEL_COUNT`. The second seed, after the policy exists, produces a message on every channel whose body names **`witness-integrity-alert`** — read from the message and from Monitoring > Alerting > Incidents, where the incident's policy is `witness-integrity-alert` and not `witness-rp5-repage`. A message from any other policy fails the step. The proof is repeated by 28 on a real fingerprint change.
+- **ROLLBACK:** `bq rm --transfer_config "$WITNESS_INTEGRITY_TC"`; `gcloud monitoring policies delete "$WITNESS_ALERT_FINGERPRINT" --project="$EVE_WITNESS_PROJECT"`; the seed rows in `integrity_alerts` stay, recognisable by their fingerprint.
+- **EVIDENCE:** The SQL, the dry-run output, the transfer config and its run list, the two seed rows, the pre-check output, the policy JSON and the receipts naming the policy, as `<date>-WG-3.8-fingerprint-and-count-alarm-v1` under `drills/`. Answers SD-12 and SD-43. EU AI Act E-06, E-08. TISAX 5.2, 1.6.
 
 ### WG-3.9 RP-5: the re-page on the acknowledgement copy (BLOCKED)
 
@@ -760,8 +845,12 @@ penv_set WITNESS_ALERT_FINGERPRINT "$(gcloud monitoring policies list --project=
 - **WHERE:** Witness workstation shell.
 - **ACTION:** Acknowledgement is tracked where the page is acknowledged — the organisation's paging service (15, SD-08) — because Cloud Monitoring cannot express "unacknowledged past twice the target" over table rows. The witness holds the **copy** and re-pages from it, so that a page swallowed inside the tenant is still escalated by a system the tenant does not administer. The targets come from `oncall.yaml` (26): 15 minutes in business hours, 60 outside (*Assumption:* until the incident commander signs other numbers).
 
+  **Gate: WG-3.0 passed, and the `pages` mirror exists.** The re-page reads its own metric, `witness-rp5-alert` (WG-3.3), which counts `rp5_repage` and nothing else: a re-page can therefore never arrive as the fingerprint alarm, and a fingerprint change can never arrive as a re-page. The order inside the step is WG-3.8's: scheduled query, one manual run, the seeded proof, the pre-check, then the policy.
+
 ```bash
-need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_INTEGRITY_SA BQ_LOCATION
+need EVE_WITNESS_PROJECT WITNESS_MIRROR_DS WITNESS_INTEGRITY_SA BQ_LOCATION WITNESS_SCHEMA_GATE_DATE WITNESS_CUSTODY_DIR
+grep -q "LIVE TABLE MATCHES WO-2.9 CONTRACT v1" "$WITNESS_CUSTODY_DIR/${WITNESS_SCHEMA_GATE_DATE}-WG-3.0-schema-gate-v1.txt" 2>/dev/null && echo "WG-3.0 gate passed on ${WITNESS_SCHEMA_GATE_DATE}" || echo "STOP: no passed WG-3.0 record"
+bq --project_id="$EVE_WITNESS_PROJECT" show --schema --format=prettyjson "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}.pages" | jq -r '.[].name' | tee /dev/stderr | grep -cE '^(page_id|severity|sent_at|acknowledged_at)$'
 Q="$(mktemp -d)/rp5.sql"
 cat > "$Q" <<SQL
 INSERT INTO \`${EVE_WITNESS_PROJECT}.${WITNESS_MIRROR_DS}.rp5_repage\` (detected_at, page_id, severity, minutes_unacknowledged, escalation)
@@ -776,16 +865,38 @@ WHERE p.severity <= 2
   AND NOT EXISTS (SELECT 1 FROM \`${EVE_WITNESS_PROJECT}.${WITNESS_MIRROR_DS}.rp5_repage\` r
                   WHERE r.page_id = p.page_id AND r.escalation = IF(TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), p.sent_at, MINUTE) > 2 * <target minutes>, 'incident_commander', 'secondary'))
 SQL
+bq --project_id="$EVE_WITNESS_PROJECT" query --use_legacy_sql=false --dry_run < "$Q"
 bq --project_id="$EVE_WITNESS_PROJECT" mk --transfer_config --data_source=scheduled_query --display_name="witness-rp5-repage" --schedule="every 15 minutes" --service_account_name="$WITNESS_INTEGRITY_SA" --location="$BQ_LOCATION" --params="$(jq -n --arg q "$(cat "$Q")" '{query:$q}')"
-POL="$(mktemp -d)/witness-rp5-repage.json"
-jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" '{displayName:"witness-rp5-repage", combiner:"OR", severity:"WARNING", conditions:[{displayName:"A page copied to the witness is still unacknowledged past its target", conditionThreshold:{filter:"metric.type=\"logging.googleapis.com/user/witness-integrity-alert\" AND resource.type=\"bigquery_dataset\"", comparison:"COMPARISON_GT", thresholdValue:0, duration:"0s", aggregations:[{alignmentPeriod:"300s", perSeriesAligner:"ALIGN_SUM"}]}}], notificationChannels:($ch|split(",")), alertStrategy:{notificationRateLimit:{period:"900s"}}, documentation:{content:"RP-5: a severity 1 or 2 page has not been acknowledged in the paging service past its target, as seen from the witness copy. Read eve_mirror.rp5_repage. escalation=secondary means call the oncall secondary; escalation=incident_commander means call the incident commander. Acknowledging in the witness is not acknowledging: the record of record is the paging service.", mimeType:"text/markdown"}}' > "$POL"
-gcloud monitoring policies create --project="$EVE_WITNESS_PROJECT" --policy-from-file="$POL"
-penv_set WITNESS_ALERT_INCIDENT "${WITNESS_ALERT_INCIDENT},$(gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --filter='displayName="witness-rp5-repage"' --format='value(name)')"
+penv_set WITNESS_RP5_TC "$(bq --project_id="$EVE_WITNESS_PROJECT" ls --transfer_config --transfer_location="$BQ_LOCATION" --format=prettyjson | jq -r '.[] | select(.displayName=="witness-rp5-repage") | .name')"
+bq --project_id="$EVE_WITNESS_PROJECT" mk --transfer_run --run_time="$(date -u +%FT%TZ)" "$WITNESS_RP5_TC"
+bq --project_id="$EVE_WITNESS_PROJECT" ls --transfer_run --transfer_location="$BQ_LOCATION" --format=prettyjson "$WITNESS_RP5_TC" | jq -r '.[] | [.runTime, .state, (.errorStatus.message // "-")] | @tsv'
 ```
 
-- **VERIFY:** `printf '%s\n' "$WITNESS_ALERT_INCIDENT" | tr ',' '\n' | wc -l` prints `2`. A seeded page row (inserted by a witness administrator into a copy table, as in WG-3.8, never into the mirror) produces a row in `rp5_repage` with `escalation='secondary'` and a message to three people. The column names used above are read from Eve's committed `pages` schema at `EVE_SCHEMAS_COMMIT` and corrected to it; the SQL as written assumes `page_id`, `severity`, `sent_at` and `acknowledged_at`.
-- **ROLLBACK:** `bq rm --transfer_config <config name>`; delete the policy; `penv_set --force WITNESS_ALERT_INCIDENT` back to the single name.
-- **EVIDENCE:** The SQL, the transfer config and the seeded proof as `<date>-WG-3.9-rp5-repage-v1` under `drills/`. Closes RP-5 as corrected by X-ORG-07. EU AI Act E-10. TISAX 1.5, 1.6.
+  The seeded proof, as in WG-3.8: a copy of `pages` as `pages_seed`, one synthetic unacknowledged severity-2 row with `sent_at` past the target, the same SQL with the source table swapped, one row in the real `rp5_repage` with `escalation = 'secondary'`, and the copy removed. That row is the metric's first point. Then the pre-check on **`witness-rp5-alert`**:
+
+```bash
+need EVE_WITNESS_PROJECT
+M="logging.googleapis.com/user/witness-rp5-alert"
+START="$(date -u -v-1H +%FT%TZ)"; END="$(date -u +%FT%TZ)"
+F="$(mktemp -d)/rp5.json"
+curl -sS --fail-with-body -G -H "Authorization: Bearer $(gcloud auth print-access-token)" "https://monitoring.googleapis.com/v3/projects/${EVE_WITNESS_PROJECT}/timeSeries" --data-urlencode "filter=metric.type=\"${M}\"" --data-urlencode "interval.startTime=${START}" --data-urlencode "interval.endTime=${END}" --data-urlencode "view=FULL" > "$F"
+jq -e '[.timeSeries[]?.points[]?] | length > 0' "$F" >/dev/null && echo "METRIC HAS POINTS: create the policy" || echo "NO POINT YET: do not create the policy"
+jq -r '.timeSeries[]? | .resource.type' "$F" | sort -u
+```
+
+  The policy, on `witness-rp5-alert` only, with the same `600s` alignment as WG-3.8 and for the same reason (a log-based metric needs a window of at least ten minutes against ingestion delay):
+
+```bash
+need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL WITNESS_CHANNEL_COUNT WITNESS_ALERT_RESOURCE_TYPE WITNESS_ALERT_INCIDENT
+POL="$(mktemp -d)/witness-rp5-repage.json"
+jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" --arg rt "$WITNESS_ALERT_RESOURCE_TYPE" '{displayName:"witness-rp5-repage", combiner:"OR", severity:"WARNING", conditions:[{displayName:"A page copied to the witness is still unacknowledged past its target", conditionThreshold:{filter:("metric.type=\"logging.googleapis.com/user/witness-rp5-alert\" AND resource.type=\""+$rt+"\""), comparison:"COMPARISON_GT", thresholdValue:0, duration:"0s", aggregations:[{alignmentPeriod:"600s", perSeriesAligner:"ALIGN_SUM"}]}}], notificationChannels:($ch|split(",")|map(select(length>0))), alertStrategy:{notificationRateLimit:{period:"900s"}}, documentation:{content:"witness-rp5-repage. RP-5: a severity 1 or 2 page has not been acknowledged in the paging service past its target, as seen from the witness copy. Read eve_mirror.rp5_repage. escalation=secondary means call the oncall secondary; escalation=incident_commander means call the incident commander. Acknowledging in the witness is not acknowledging: the record of record is the paging service. This is not the fingerprint alarm: that one is witness-integrity-alert.", mimeType:"text/markdown"}}' > "$POL"
+gcloud monitoring policies create --project="$EVE_WITNESS_PROJECT" --policy-from-file="$POL"
+penv_set --force WITNESS_ALERT_INCIDENT "${WITNESS_ALERT_INCIDENT},$(gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --filter='displayName="witness-rp5-repage"' --format='value(name)')"
+```
+
+- **VERIFY:** The `pages` schema listing prints `4` (the four column names the SQL uses exist; if it prints less, the SQL is corrected to Eve's committed `pages` schema at `EVE_SCHEMAS_COMMIT` before anything is created). The `--dry_run` succeeds. `bq ls --transfer_config` shows `witness-rp5-repage` with a `state` that is not `FAILED`, and `bq ls --transfer_run` lists at least one `SUCCEEDED` run. The first seed produced exactly one row in `rp5_repage` with `escalation = 'secondary'`. The pre-check printed `METRIC HAS POINTS` for `witness-rp5-alert`. `printf '%s\n' "$WITNESS_ALERT_INCIDENT" | tr ',' '\n' | wc -l` prints `2`. `gcloud monitoring policies describe` of the new policy shows a filter naming `witness-rp5-alert` (`grep -c integrity` on it prints `0`), `alignmentPeriod: 600s`, and a `notificationChannels` length equal to `WITNESS_CHANNEL_COUNT`. A second seed, after the policy exists, produces on every channel a message whose body names **`witness-rp5-repage`** — read from the message and from Monitoring > Alerting > Incidents — and **no** message from `witness-integrity-alert`; if the fingerprint policy also fires, the metrics of WG-3.3 are wrong and the step fails.
+- **ROLLBACK:** `bq rm --transfer_config "$WITNESS_RP5_TC"`; delete the policy; `penv_set --force WITNESS_ALERT_INCIDENT` back to the single name. The seed rows in `rp5_repage` stay.
+- **EVIDENCE:** The SQL, the dry-run output, the transfer config and its run list, the seed rows, the pre-check output, the policy JSON and the receipts naming the policy, as `<date>-WG-3.9-rp5-repage-v1` under `drills/`. Closes RP-5 as corrected by X-ORG-07. EU AI Act E-10. TISAX 1.5, 1.6.
 
 ### WG-3.10 The billing check: an alarm on every billing action, and a weekly reading
 
@@ -793,10 +904,12 @@ penv_set WITNESS_ALERT_INCIDENT "${WITNESS_ALERT_INCIDENT},$(gcloud monitoring p
 - **WHERE:** Witness workstation shell.
 - **ACTION:** A project whose billing is disabled stops: "some resources might be deleted and might not be fully recoverable". The witness's billing account is its own (08 WO-1.12), so no tenant principal can close it — but a coerced witness administrator, a failed payment or an expired card can. Two controls, because neither alone is enough: an alarm on every Cloud Billing admin action touching this project, which fires in minutes and while the project still runs; and a weekly human reading of `billingEnabled`, which is the only check that still works when the project has already stopped and its own alarms with it.
 
+  This is a log-match policy, like WG-3.7: it evaluates entries as they arrive, reads no metric and needs no `timeSeries.list` pre-check.
+
 ```bash
-need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL
+need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL WITNESS_SMS_CHANNEL WITNESS_CHANNEL_COUNT
 POL="$(mktemp -d)/witness-billing-change.json"
-jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" --arg pr "$EVE_WITNESS_PROJECT" '{displayName:"witness-billing-change", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"A Cloud Billing admin action touched the witness project", conditionMatchedLog:{filter:("logName=\"projects/"+$pr+"/logs/cloudaudit.googleapis.com%2Factivity\" AND protoPayload.serviceName=\"cloudbilling.googleapis.com\"")}}], notificationChannels:($ch|split(",")), alertStrategy:{notificationRateLimit:{period:"300s"}}, documentation:{content:"Somebody changed the billing of the witness project. If billing has been unlinked or the account closed, the project stops and every alarm in it goes with it. Read: gcloud billing projects describe <project>. Severity 1 to the incident commander and the second human; re-link the witness billing account at once; write the blind window into the G-2 record.", mimeType:"text/markdown"}}' > "$POL"
+jq -n --arg ch "${WITNESS_EMAIL_CHANNEL},${WITNESS_SMS_CHANNEL}" --arg pr "$EVE_WITNESS_PROJECT" '{displayName:"witness-billing-change", combiner:"OR", severity:"CRITICAL", conditions:[{displayName:"A Cloud Billing admin action touched the witness project", conditionMatchedLog:{filter:("logName=\"projects/"+$pr+"/logs/cloudaudit.googleapis.com%2Factivity\" AND protoPayload.serviceName=\"cloudbilling.googleapis.com\"")}}], notificationChannels:($ch|split(",")|map(select(length>0))), alertStrategy:{notificationRateLimit:{period:"300s"}}, documentation:{content:"Somebody changed the billing of the witness project. If billing has been unlinked or the account closed, the project stops and every alarm in it goes with it. Read: gcloud billing projects describe <project>. Severity 1 to the incident commander and the second human; re-link the witness billing account at once; write the blind window into the G-2 record.", mimeType:"text/markdown"}}' > "$POL"
 gcloud monitoring policies create --project="$EVE_WITNESS_PROJECT" --policy-from-file="$POL"
 penv_set WITNESS_ALERT_BILLING "$(gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --filter='displayName="witness-billing-change"' --format='value(name)')"
 ```
@@ -808,7 +921,7 @@ gcloud billing projects describe "$EVE_WITNESS_PROJECT" --format="value(billingE
 gcloud billing accounts describe "$WITNESS_BILLING_ACCOUNT_ID" --format="value(open,displayName)"
 ```
 
-- **VERIFY:** The policy describe shows `conditionMatchedLog` and six channels. The two readings print `True` with the witness billing account, and `True` for the account being open. A test: witness administrator 1 re-applies the same budget as 08 WO-2.5 with `gcloud billing budgets update` (a harmless Cloud Billing write) and the three recipients confirm the message. *Assumption:* the budget write is logged against the project as `cloudbilling.googleapis.com` Admin Activity; if it is not, the test is repeated with a re-link of the same billing account (`gcloud billing projects link` with the account already linked), and the result recorded either way.
+- **VERIFY:** The policy describe shows `conditionMatchedLog` and a `notificationChannels` length equal to `WITNESS_CHANNEL_COUNT`. The two readings print `True` with the witness billing account, and `True` for the account being open. A test: witness administrator 1 re-applies the same budget as 08 WO-2.5 with `gcloud billing budgets update` (a harmless Cloud Billing write) and the three recipients confirm a message naming `witness-billing-change`. *Assumption:* the budget write is logged against the project as `cloudbilling.googleapis.com` Admin Activity; if it is not, the test is repeated with a re-link of the same billing account (`gcloud billing projects link` with the account already linked), and the result recorded either way.
 - **ROLLBACK:** `gcloud monitoring policies delete "$WITNESS_ALERT_BILLING" --project="$EVE_WITNESS_PROJECT"`.
 - **EVIDENCE:** The policy JSON, the two readings and the test receipts as `<date>-WG-3.10-billing-check-v1` under `drills/`. Closes X-RQB-06's W-4 half. EU AI Act E-06. TISAX 6.1, 1.6.
 
@@ -819,12 +932,18 @@ gcloud billing accounts describe "$WITNESS_BILLING_ACCOUNT_ID" --format="value(o
 - **ACTION:** A metric-absence policy is only as good as its first measurement: until the metric has written one point, the policy cannot fire, and a policy that cannot fire looks exactly like a policy with nothing to report. Each of the five policies is read for evidence that its condition has data.
 
 ```bash
-need EVE_WITNESS_PROJECT WITNESS_ALERT_HEARTBEAT WITNESS_ALERT_EXPORT WITNESS_ALERT_INCIDENT WITNESS_ALERT_BILLING WITNESS_ALERT_FINGERPRINT
+need EVE_WITNESS_PROJECT WITNESS_CHANNEL_COUNT WITNESS_ALERT_HEARTBEAT WITNESS_ALERT_EXPORT WITNESS_ALERT_INCIDENT WITNESS_ALERT_BILLING WITNESS_ALERT_FINGERPRINT
 for P in "$WITNESS_ALERT_HEARTBEAT" "$WITNESS_ALERT_EXPORT" "$WITNESS_ALERT_FINGERPRINT" "$WITNESS_ALERT_BILLING" $(printf '%s' "$WITNESS_ALERT_INCIDENT" | tr ',' ' '); do gcloud monitoring policies describe "$P" --project="$EVE_WITNESS_PROJECT" --format="value(displayName,enabled,notificationChannels.len())"; done
+echo "expected channel count: ${WITNESS_CHANNEL_COUNT}"
+START="$(date -u -v-24H +%FT%TZ)"; END="$(date -u +%FT%TZ)"
+for M in witness-heartbeat-insert witness-export-object witness-integrity-alert witness-rp5-alert; do
+  N="$(curl -sS --fail-with-body -G -H "Authorization: Bearer $(gcloud auth print-access-token)" "https://monitoring.googleapis.com/v3/projects/${EVE_WITNESS_PROJECT}/timeSeries" --data-urlencode "filter=metric.type=\"logging.googleapis.com/user/${M}\"" --data-urlencode "interval.startTime=${START}" --data-urlencode "interval.endTime=${END}" --data-urlencode "view=FULL" | jq '[.timeSeries[]?.points[]?] | length')"
+  echo "${M}: ${N} points in 24 h"
+done
 gcloud logging read "logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.googleapis.com%2Fdata_access\"" --project="$EVE_WITNESS_PROJECT" --freshness=24h --limit=5 --format="value(timestamp,protoPayload.methodName,protoPayload.resourceName)"
 ```
 
-- **VERIFY:** Each policy prints its name, `True` and `6`. In Metrics explorer, each of `logging.googleapis.com/user/witness-heartbeat-insert` and `.../witness-export-object` shows at least one point in the last 24 hours (the heartbeat: at least 20 points after a day). The fingerprint, incident, RP-5 and billing policies each have the seeded or test firing of WG-3.7, WG-3.8, WG-3.9 and WG-3.10 recorded with its delivery time to each of the three people. The second human writes, in his own words and from his own devices, what he received and when, for each test; a receipt relayed by anyone else is not a receipt.
+- **VERIFY:** Each policy prints its name, `True` and the number equal to `WITNESS_CHANNEL_COUNT` (six when all three SMS channels verified; the G-2 record names any recipient without SMS). The loop prints at least one point for each of the four metrics — the heartbeat at least 20 after a day, the export at least 3, the two alert metrics at least the seed of WG-3.8 and WG-3.9 (the RP-5 line reads `0` while WG-3.9 is BLOCKED, and is recorded as such). The fingerprint, incident, RP-5 and billing policies each have the seeded or test firing of WG-3.7, WG-3.8, WG-3.9 and WG-3.10 recorded with its delivery time to each of the three people **and the `displayName` the message carried** — `witness-incident-route2`, `witness-integrity-alert`, `witness-rp5-repage`, `witness-billing-change` — matched against the test that was run; a receipt that names the wrong policy fails that policy's step. The second human writes, in his own words and from his own devices, what he received and when, for each test; a receipt relayed by anyone else is not a receipt.
   The **deliberate withheld heartbeat** — the drill G-2 asks for — is not run here: it is 28's, on production `eve-export@`, after this file's first heartbeat and before the super-admin grant (SD-26), so that the person who proves it is the one outside the administration line.
 - **ROLLBACK:** None; the step only reads and records.
 - **EVIDENCE:** The policy table, the metric charts and the second human's signed receipts as `<date>-WG-3.11-alarms-have-seen-data-v1` under `drills/`. EU AI Act E-10, E-06. TISAX 1.6, 1.5.
@@ -833,10 +952,10 @@ gcloud logging read "logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.g
 
 - **WHO:** Witness administrator 1 writes; witness administrator 2 and the second human sign.
 - **WHERE:** The sitting form, then the pull request to `BUILD_LOG_DIR`.
-- **ACTION:** The W-4 record names the five alert variables and their policy names, the two windows (5400s and 84600s) with the sentence that 23.5 hours is a documented maximum and not a preference, the channels (three email, three SMS or fewer with the reason), the tests and their receipts, and the open items:
+- **ACTION:** The W-4 record names the five alert variables and their six policy names, the five metrics and which table each counts, the two windows (5400s and 84600s) with the sentence that 23.5 hours is a documented maximum and not a preference, the `600s` alignment on every metric policy and why, the channels (`WITNESS_CHANNEL_COUNT`: three email, three SMS or fewer with the reason), the tests and their receipts with the policy name each carried, and the open items:
   1. The withheld-heartbeat drill, owned by 28.
   2. WG-3.9, until `EVE_SCHEMAS_COMMIT` and 08 WO-2.10.
-  3. Table-level narrowing of the appender role so that `eve-export@` cannot insert into `integrity_alerts` and `rp5_repage` — for 42 to review, with the residual as it stands.
+  3. Table-level narrowing of the appender role so that `eve-export@` cannot insert into `integrity_alerts` and `rp5_repage` — for 42 to review, with the residual as it stands; **or closed here**, if WG-1.6 took its table-level fallback, in which case the record says so and 42's row is struck.
   4. Any SMS recipient without a verified channel.
 - **VERIFY:** The witness build log holds twelve W-4 lines, each DONE, BLOCKED (WG-3.9) or PENDING with a re-run index line. The second human's signature is on the record, not only on the receipts.
 - **ROLLBACK:** Superseded by `v2`; never edited.
@@ -867,7 +986,7 @@ gcloud storage cp --no-clobber --retain-until="$(date -u -v+10y +%FT%TZ)" --rete
 - **WHERE:** The pull request to `BUILD_LOG_DIR` and `DRILL_CALENDAR`; a separate note to the platform owner for the design-page corrections.
 - **ACTION:** Add to `DRILL_CALENDAR`:
   1. **Weekly**: the `billingEnabled` and account-open reading of WG-3.10, by the witness administrator on duty, recorded under `rota/`.
-  2. **Monthly**: a witness administrator re-reads the managed constraint (WG-1.3), the legacy reset (WG-1.4), the appender role's five permissions (WG-1.5) and both grants (WG-1.6, WG-1.7), and the second human confirms the five alert policies are enabled with six channels each.
+  2. **Monthly**: a witness administrator re-reads the managed constraint (WG-1.3, five subjects since WG-3.1), the legacy reset (WG-1.4), the appender role's five permissions (WG-1.5) and both grants (WG-1.6, WG-1.7), reads `bq ls --transfer_config` for both scheduled queries (`state` not `FAILED`), and the second human confirms the six alert policies are enabled with `WITNESS_CHANNEL_COUNT` channels each, as the G-2 record states it.
   3. **Quarterly**: the negative tests of WG-1.8 and WG-1.9 are run again, with fresh error text.
   4. **After every `eve/config` merge**: 28's drill, which must see a fingerprint change in `integrity_alerts` (WG-3.8) within two heartbeats.
 
@@ -899,7 +1018,7 @@ gcloud storage cp --no-clobber --retain-until="$(date -u -v+10y +%FT%TZ)" --rete
 | The member constraint admits one tenant principal; two refusals recorded | `WG-1.3`, `WG-1.4`, `WG-1.8`, `WG-1.9` | here |
 | The two create-only grants, with no delete or rewrite anywhere | `WG-1.5`, `WG-1.6`, `WG-1.7` | here |
 | The first heartbeat and the backlog landed | `WG-2.3` | here (written by a witness administrator) |
-| Alarms exist, are enabled, notify six channels and have seen data | `WG-3.5` to `WG-3.11` | here |
+| Alarms exist, are enabled, notify every channel of `WITNESS_CHANNEL_COUNT` (six, or fewer with the recipient and reason named), each reads its own metric, and each has seen data | `WG-3.3` to `WG-3.11` | here |
 | The alarm fires when the push is withheld | **open** | 28 |
 | Eve's monitoring of the human super admins is independently proven | **open** | 28, `EVE_H_LIVE_RECORD` |
 
@@ -913,8 +1032,8 @@ gcloud storage cp --no-clobber --retain-until="$(date -u -v+10y +%FT%TZ)" --rete
 |---|---|---|---|
 | S005 | blocking | The W-3 and W-4 half: the member constraint, the appender role, rows 32 and 33 with commands and negative tests (WG-1.3 to WG-1.9); the metrics, the two absence policies, route 2, the fingerprint alarm and the billing check, each with a VERIFY that shows data (WG-3.3 to WG-3.11) | 08 (tenant, project, stores, records), 26 (the export and heartbeat jobs) |
 | S061 | major | `constraints/iam.managed.allowedPolicyMembers` with `allowedMemberSubjects` naming `eve-export@` and the three witness humans, and `allowedPrincipalSets` naming the witness organisation (WG-1.3). No customer id appears anywhere; WG-1.8 proves another tenant service account is refused | — |
-| X-ORG-06 | blocking | Two cadences and two windows: 90 minutes on the hourly heartbeat (WG-3.5) and 84600 s, the documented maximum, on the six-hourly export (WG-3.6); metrics created before policies and each policy proven to have a measurement (WG-3.3, WG-3.11); the 26-hour figure corrected in 07 and eve/03 through WG-4.2 | 26 (the two cadences in the jobs), 28 (the withheld-push drill) |
-| X-ORG-07 | blocking | Route 2 in the witness: the incident-mode row raises a log-match policy to email and SMS for the second human and both witness administrators within minutes (WG-3.7); RP-5 re-pages from the witness copy while acknowledgement stays in the paging service (WG-3.9); SMS channels created and verified (WG-3.4) | 15 (route 1, the paging service), 26 (route 1 wiring and the incident-mode push) |
+| X-ORG-06 | blocking | Two cadences and two windows: 90 minutes on the hourly heartbeat (WG-3.5) and 84600 s, the documented maximum, on the six-hourly export (WG-3.6); metrics created in sitting 3a and policies in sitting 3b, each metric policy gated on a `timeSeries.list` pre-check that shows a point and aligned at 600 s against log ingestion delay (WG-3.3, WG-3.5, WG-3.6, WG-3.11); the 26-hour figure corrected in 07 and eve/03 through WG-4.2 | 26 (the two cadences in the jobs), 28 (the withheld-push drill) |
+| X-ORG-07 | blocking | Route 2 in the witness: the incident-mode row raises a log-match policy to email and SMS for the second human and both witness administrators within minutes (WG-3.7); RP-5 re-pages from the witness copy while acknowledgement stays in the paging service, on a metric of its own so that a re-page and a fingerprint alarm can never be confused (WG-3.3, WG-3.9); SMS channels created and verified, and the channel count computed (WG-3.4) | 15 (route 1, the paging service), 26 (route 1 wiring and the incident-mode push) |
 | X-ORG-10 | major | The order: managed constraint first (WG-1.3), legacy `iam.allowedPolicyMemberDomains` set to `allowAll` as the dated decision WIT-DRS second (WG-1.4), grants third (WG-1.6, WG-1.7), negative tests fourth (WG-1.8, WG-1.9); both policies read back with `--effective` | — |
 | X-RQB-06 | major | The `billingEnabled` and account-open check, weekly on the rota, plus a minutes-latency alarm on every Cloud Billing admin action against the witness project (WG-3.10); the blind-window rule when billing has been off | 04 (the purchase), 08 (witness-owned billing), 26 (the tenant-side push-failure alert) |
 | S138 | major | No `dataEditor` on `eve_mirror`: a custom role with `bigquery.tables.updateData`, `tables.get`, `tables.list`, `datasets.get`, `datasets.getIamPolicy` and nothing else (WG-1.5, WG-1.6), so the pushing identity cannot delete, rewrite or even read back the witness copy; the residual (it can append to the two alert tables) is recorded in WG-3.1 and WG-3.12 | 23 (Eve's own writer roles, SD-43), 26 (the exporter's roles in the tenant) |
@@ -934,12 +1053,13 @@ Deferred: none of the seven. The parts named in the last column belong to those 
 - [ ] WG-2.1 to WG-2.4: the push was enabled inside a one-hour grant the second human approved, and the grant is gone.
 - [ ] WG-2.3: a witness administrator, not the platform owner, read the first heartbeat row (`schema_version` 1, the right `source_project`, a 64-character fingerprint) and the backlog objects under `exports/`.
 - [ ] WG-3.2: `principalEmail` was seen unredacted, or the deviation to `resourceName`-only filters is recorded.
-- [ ] WG-3.3: four log-based metrics exist and their filters return entries in Logs Explorer.
-- [ ] WG-3.4: three SMS channels are `VERIFIED`, or each missing one is recorded with its reason.
-- [ ] WG-3.5 and WG-3.6: `5400s` and `84600s`; both policies enabled, six channels each, condition charts showing data.
-- [ ] WG-3.7: route 2 fires on an incident row and three people confirmed receipt themselves.
-- [ ] WG-3.8: the integrity scheduled query runs every 15 minutes as the witness identity, and a seeded fingerprint change produced a row and a page.
-- [ ] WG-3.9: done, or BLOCKED with its re-run index line.
+- [ ] WG-3.0: the live heartbeat table matches 08 WO-2.9's contract v1 field by field, the gate file holds both MATCHES lines, and WG-3.8's SQL compiled with `--dry_run` before anything in WG-3.8 or WG-3.9 was created.
+- [ ] WG-3.3: five log-based metrics exist, `witness-integrity-alert` and `witness-rp5-alert` share no table, and their filters return entries in Logs Explorer.
+- [ ] WG-3.4: three SMS channels are `VERIFIED`, or each missing one is recorded with its reason; `WITNESS_CHANNEL_COUNT` is computed, not assumed.
+- [ ] WG-3.5 and WG-3.6: created in sitting 3b after a `timeSeries.list` pre-check showed a point; `5400s` and `84600s`; `alignmentPeriod` `600s`; both policies enabled with `WITNESS_CHANNEL_COUNT` channels each, condition charts showing data.
+- [ ] WG-3.7: route 2 fires on an incident row and three people confirmed, themselves, a message naming `witness-incident-route2`.
+- [ ] WG-3.8: the integrity scheduled query runs every 15 minutes as the witness identity with a `SUCCEEDED` run listed, the seed produced a row and a point before the policy was created, and a second seed produced a page naming `witness-integrity-alert` and no other policy.
+- [ ] WG-3.9: done, on `witness-rp5-alert` with the same proof and a page naming `witness-rp5-repage` only, or BLOCKED with its re-run index line.
 - [ ] WG-3.10: the billing alarm fired on a test billing write; the weekly reading is on the rota.
 - [ ] WG-3.11: the second human's own receipts, with times, for every test.
 - [ ] WG-4.1 to WG-4.3: the K5/K6 rota is in the witness under `rota/`; four calendar entries and four re-run lines are merged; the five design corrections are acknowledged; the G-2 pack names its two open rows and their owner.
@@ -973,7 +1093,10 @@ Produces: `WITNESS_ALERT_HEARTBEAT`, `WITNESS_ALERT_EXPORT`, `WITNESS_ALERT_INCI
 
 - Resource Manager, "Restricting identities by domain" / "Domain-restricted sharing": `constraints/iam.managed.allowedPolicyMembers` with `allowedMemberSubjects` (individual members, for example `user:example-user@example.com`) and `allowedPrincipalSets` (for example `//cloudresourcemanager.googleapis.com/organizations/0123456789012`); the policy YAML shape with `spec.rules[].enforce` and `parameters`, applied with `gcloud org-policies set-policy POLICY_FILE --update-mask=spec`; "If your organization was created on or after May 3, 2024, then the constraint is enforced by default, with your domain listed as the only allowed value"; the legacy constraint turned off with `spec.rules[].allowAll: true`; "Your organization principal set and Google Workspace ID are not automatically allowed"; entering a Workspace customer id allows all identities in all its domains and all service accounts in its organisation; the constraint applies to automated grants made by service agents, which must be excepted by name.
 - `gcloud org-policies describe CONSTRAINT (--organization | --folder | --project) [--effective]`; `set-policy`, `delete`, `list`, `reset`.
-- Cloud Monitoring, "Alerting policies with metric absence": "The maximum configurable trigger absence time is 23.5 hours"; a metric-absence condition requires "at least one successful measurement — one that retrieves data — within the maximum period of time after the policy was installed or modified".
+- Cloud Monitoring, "Alerting policies with metric absence": "The maximum configurable trigger absence time is 23.5 hours"; a metric-absence condition requires "at least one successful measurement — one that retrieves data — within the maximum period of time after the policy was installed or modified"; "If you are monitoring a log-based metric, then we recommend that the Rolling window menu is set to at least 10 minutes" — hence `alignmentPeriod: 600s` on every policy over a log-based metric here (WG-3.5, WG-3.6, WG-3.8, WG-3.9).
+- Cloud Monitoring, `gcloud monitoring` reference: the command groups are `dashboards`, `policies`, `snoozes` and `uptime`; there is no time-series group, so the pre-checks read `projects.timeSeries.list` (`GET https://monitoring.googleapis.com/v3/{name}/timeSeries` with `filter`, `interval.startTime`, `interval.endTime`, `view`; the response carries `timeSeries[].points[]` and each series' `resource.type`), as files 19 and 40 do.
+- Cloud Logging, "Overview of log-based metrics" (checked again on 2026-09-16): "The data for a user-defined log-based metric comes only from log entries received after the metric is created" — the reason sitting 3a ends after WG-3.4 and every policy of sitting 3b is gated on a point.
+- BigQuery, "Scheduling queries" and the `bq` reference: `bq ls --transfer_run --transfer_location=LOCATION <transfer config resource name>` lists a scheduled query's runs (`--run_attempt` defaults to `LATEST`); `bq mk --transfer_run --run_time=TIMESTAMP <resource name>` triggers one run; the transfer config resource name is `projects/<number>/locations/<location>/transferConfigs/<id>`; a `TransferConfig` carries an output-only `state`, the state of its most recently updated run (`SUCCEEDED`, `FAILED`, `PENDING`, `RUNNING`, `CANCELLED`).
 - Cloud Monitoring, `projects.alertPolicies` REST reference: `conditionAbsent` with `filter`, `duration`, `aggregations`, `trigger`; policy fields `displayName`, `combiner`, `conditions`, `notificationChannels`, `documentation`, `alertStrategy.notificationRateLimit.period`, `alertStrategy.autoClose`, `severity`.
 - Cloud Monitoring, "Create and manage notification channels": SMS needs a verification code entered in the console and "isn't a fully reliable notification channel type, and it might not be available in certain regions"; email channels need no verification; channels are configured per project. `gcloud beta monitoring channels create --type --channel-labels --display-name --description --user-labels`, with `list`, `describe`, `update`, `delete` and no verification subcommand; the SMS channel type is `sms` with the label `number`.
 - Cloud Logging, "Overview of log-based metrics": "By default, user-defined log-based metrics are calculated from all logs received by the Logging API for the Google Cloud project, regardless of any inclusion filters or exclusion filters"; project-scoped metrics count entries only while "Billing is enabled on the project"; "When the aggregated count for an interval is zero, a value of zero is written to the time series when an adjacent interval has a non-zero value", otherwise there is a data gap. `gcloud logging metrics create --description --log-filter [--bucket-name] --project`.
@@ -989,8 +1112,9 @@ Produces: `WITNESS_ALERT_HEARTBEAT`, `WITNESS_ALERT_EXPORT`, `WITNESS_ALERT_INCI
 
 | Item | Where | Closes it |
 |---|---|---|
-| Whether a **custom** role is accepted in a BigQuery dataset access entry (the console offers custom roles; the REST `access[].role` wording was not read in full) | WG-1.6 | the command's own result on the day; the recorded fallback is the same custom role at project level on `EVE_WITNESS_PROJECT`, with the deviation written down |
-| The monitored resource type carried by a BigQuery Data Access log-based metric (`bigquery_dataset` assumed) and by a Cloud Storage one (`gcs_bucket` assumed) | WG-3.5, WG-3.6, WG-3.8 | Metrics Explorer on the day; the filters are corrected to what the metric actually carries before the policies are kept |
+| Whether a **custom** role is accepted in a BigQuery dataset access entry (the console offers custom roles; the REST `access[].role` wording was not read in full) | WG-1.6 | the command's own result on the day; the recorded fallback is the same custom role bound **per table** on the mirror tables with `bq add-iam-policy-binding --table`, skipping the two alert tables — never a project-level grant, which would reach every table in the project |
+| The monitored resource type carried by a BigQuery Data Access log-based metric and by a Cloud Storage one | WG-3.5, WG-3.6, WG-3.8, WG-3.9 | the `timeSeries.list` pre-check in each step prints the `resource.type` the metric actually carries, and the policy filter is written from that value (`WITNESS_HB_RESOURCE_TYPE`, `WITNESS_EXPORT_RESOURCE_TYPE`, `WITNESS_ALERT_RESOURCE_TYPE`); nothing is assumed |
+| Whether the witness workstation's `date` accepts `-v-2H` (macOS form, as 08 and WG-4.1 assume) | WG-3.5, WG-3.6, WG-3.8, WG-3.9, WG-3.11 | on a GNU `date`, `-d '2 hours ago'` replaces it; the pre-check output, not the command form, is the evidence |
 | Whether the domain restriction is evaluated before the "service account does not exist" check, so that WG-1.8's refusal is unambiguous | WG-1.8 | the recorded error text; if ambiguous, repeat with another existing tenant service account |
 | Whether a `gcloud billing budgets update` on the witness billing account produces a `cloudbilling.googleapis.com` Admin Activity entry **against the project** | WG-3.10 | the test on the day; fallback test is a re-link of the already-linked account |
 | The insert method Eve's export code uses (the metric filters accept any method on the table, so they hold whichever it is) | WG-3.2, WG-3.3 | WG-3.2 reads the method from a real entry. The switch name itself is settled: 26 ER-4.4 and ER-4.9 deploy both jobs with `WITNESS_PUSH=disabled` and leave the flip to this file |

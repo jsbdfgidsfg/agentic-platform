@@ -295,6 +295,178 @@
       "local_hash": "8d65db03462a1349a4bb316676a177b045dd80715c24f84148432ccf901df010",
       "remote_modified": "2026-09-15T00:45:18.581Z"
     },
+    "platform/agentic-platform/setup/01-prerequisites-and-conventions.md": {
+      "file_id": "1QNHADtbKT4n3WhY4Kr2TqBhC6XCl7RPtiNEuAByB0U0",
+      "remote_modified": "2026-09-16T09:15:14.514Z"
+    },
+    "platform/agentic-platform/setup/02-toil-baseline.md": {
+      "file_id": "1GlIVdafl-2cYCZ1EjOLPiV-7aa96PRvtdW1hVIxxk4s",
+      "remote_modified": "2026-09-16T09:15:17.776Z"
+    },
+    "platform/agentic-platform/setup/03-decisions-and-people.md": {
+      "file_id": "1Ljsr-HGkV34pL41ZA7mhBgboVUA-0cKbpKOBXMe_gmY",
+      "remote_modified": "2026-09-16T09:15:21.404Z"
+    },
+    "platform/agentic-platform/setup/04-purchases-and-lead-times.md": {
+      "file_id": "1Em5M2dPpiFGTff78ee8wNmv9J7b0u0brwxGz9iyz7HM",
+      "remote_modified": "2026-09-16T09:15:23.277Z"
+    },
+    "platform/agentic-platform/setup/05-gemini-enterprise-inventory.md": {
+      "file_id": "1fz_tpK3znsNWZKFmUpm-ou0YbCv11uMF9bwBj6grA_k",
+      "remote_modified": "2026-09-16T09:15:25.258Z"
+    },
+    "platform/agentic-platform/setup/06-organisation-bootstrap-and-roster.md": {
+      "file_id": "15aTU9x9Lje9oOKLV0ha9CRWUN0ivZy4aAf6RrRfVD4o",
+      "remote_modified": "2026-09-16T09:15:27.265Z"
+    },
+    "platform/agentic-platform/setup/07-billing-account.md": {
+      "file_id": "1oEGekszYyQbiWqtkhJI3NVJuD0sQtH2_M3mP0Bya0V8",
+      "remote_modified": "2026-09-16T09:15:28.549Z"
+    },
+    "platform/agentic-platform/setup/08-witness-organisation.md": {
+      "file_id": "1kpmXXuxKyrp6r9dnaKv8upNcLSrSpCLUHlniocA5cxU",
+      "remote_modified": "2026-09-16T09:15:31.558Z"
+    },
+    "platform/agentic-platform/setup/09-folders-and-security-command-center.md": {
+      "file_id": "1wezY3-faGdiVuCOACPu39sIO0LTSfF5KFroKj1DHbUI",
+      "remote_modified": "2026-09-16T09:15:34.661Z"
+    },
+    "platform/agentic-platform/setup/10-core-projects-and-ci-identities.md": {
+      "file_id": "19ghplmDQyTCRIjwdx_onr4CtfI7fw7CisV_ebkhwPz4",
+      "remote_modified": "2026-09-16T09:15:36.553Z"
+    },
+    "platform/agentic-platform/setup/11-keys-and-validator-custodian.md": {
+      "file_id": "1dnCcjXxDtvtFI0AwLxpEumJa9JfTxlAERKeRccPRokQ",
+      "remote_modified": "2026-09-16T09:15:38.284Z"
+    },
+    "platform/agentic-platform/setup/12-privileged-access-catalogue.md": {
+      "file_id": "1h3zFVqbenvtm29hzRJBIF9TVKifOztfKnQVzV2W6eRc",
+      "remote_modified": "2026-09-16T09:15:40.062Z"
+    },
+    "platform/agentic-platform/setup/13-organisation-policies-deny-and-pab.md": {
+      "file_id": "14mJK8erjYBTbKQiIIn6Zk2YbRzWqHSZxh0igu4n10IU",
+      "remote_modified": "2026-09-16T09:15:41.884Z"
+    },
+    "platform/agentic-platform/setup/14-central-logging-and-billing-export.md": {
+      "file_id": "1ZqLyCDC35j2BLpkm0KzTHfdoiQqesASMNlZ68uPC3M8",
+      "remote_modified": "2026-09-16T09:15:43.833Z"
+    },
+    "platform/agentic-platform/setup/15-pager-siem-and-detections.md": {
+      "file_id": "1IUQPFTVX8G3GiarVlogDBer1x0v9CYIwsrOuzEEhkg0",
+      "remote_modified": "2026-09-16T09:15:46.799Z"
+    },
+    "platform/agentic-platform/setup/16-register-and-shared-registry.md": {
+      "file_id": "1bYDmUSW9t3RXtIxtG87Nws_oT9vf6bIPZY-F860_dbg",
+      "remote_modified": "2026-09-16T09:15:48.768Z"
+    },
+    "platform/agentic-platform/setup/17-factory-module-equivalents-and-tier-r-gate.md": {
+      "file_id": "18tkR1wAKz3T8vcHh9Rf80FI2LJqj2QqO8IFqZ2dl4sQ",
+      "remote_modified": "2026-09-16T09:15:51.129Z"
+    },
+    "platform/agentic-platform/setup/18-model-armor-floor-spikes-and-kill-switch.md": {
+      "file_id": "1ieuznA2jUli5ViDt9D5EE_hMiFiKumh1QDvcsJPOrVg",
+      "remote_modified": "2026-09-16T09:15:52.823Z"
+    },
+    "platform/agentic-platform/setup/19-gemini-enterprise-import-and-baseline.md": {
+      "file_id": "1M2DnrX0OnMQT6Ae5iTkWx6wGrfXjAqNQizu0xGyW8A4",
+      "remote_modified": "2026-09-16T09:15:54.685Z"
+    },
+    "platform/agentic-platform/setup/20-gemini-enterprise-gateway-and-tier-c-gate.md": {
+      "file_id": "1aAUmRHiuFRPT4S0Z_MfPMH8LqshySIfgcohbHJnKT6A",
+      "remote_modified": "2026-09-16T09:15:55.830Z"
+    },
+    "platform/agentic-platform/setup/21-sandbox-tenant-and-nonprod-foundation.md": {
+      "file_id": "1iA6-nl6vaD6PrGhIrPnX_qj-OzCSiV9mevrHRHIXNU8",
+      "remote_modified": "2026-09-16T09:15:57.676Z"
+    },
+    "platform/agentic-platform/setup/22-mo-foundations.md": {
+      "file_id": "1m-US3U04pRtX_Gd2JQINRfPSdONkxh3-IuT4qrWeE08",
+      "remote_modified": "2026-09-16T09:15:59.695Z"
+    },
+    "platform/agentic-platform/setup/23-eve-project-and-evidence-stores.md": {
+      "file_id": "1Lw6Tnr9k1yd_ibHPu3A3G7BvlkEJNR8EwumFwIa2Nq0",
+      "remote_modified": "2026-09-16T09:16:01.592Z"
+    },
+    "platform/agentic-platform/setup/24-eve-workspace-identity-and-audit-feeds.md": {
+      "file_id": "1__RhKoVvkWXTxQX40JnUTgGUBTUf2gYpN1QpP_UNmYQ",
+      "remote_modified": "2026-09-16T09:16:03.640Z"
+    },
+    "platform/agentic-platform/setup/25-eve-human-super-admin-detections.md": {
+      "file_id": "1-MjFoS3rJcm6uXfTX2tEgtZeiYgIUC25uKYu2gio3RE",
+      "remote_modified": "2026-09-16T09:16:04.920Z"
+    },
+    "platform/agentic-platform/setup/26-eve-reporting-and-witness-export.md": {
+      "file_id": "1WfNQ6hDPCIgvJFmENAPycCdzeV68KeX42QEGdYtJnJk",
+      "remote_modified": "2026-09-16T09:16:06.894Z"
+    },
+    "platform/agentic-platform/setup/27-witness-grants-and-alarms.md": {
+      "file_id": "1h8KrcCVqXfgNcPvtbvl3e3AoizAFLIfj2nQ_9pTvsA4",
+      "remote_modified": "2026-09-16T09:16:08.885Z"
+    },
+    "platform/agentic-platform/setup/28-eve-independent-proof-and-sandbox-drills.md": {
+      "file_id": "1dpgJ2-jYb1uyAmlSblbmqKAs01Y4DV5OdDuKHAD33-o",
+      "remote_modified": "2026-09-16T09:16:10.439Z"
+    },
+    "platform/agentic-platform/setup/29-mo-eve-quality-pack.md": {
+      "file_id": "1czbTlU_59QTTwax2maTRScEgbG9W-XRbXGShPJsVgHc",
+      "remote_modified": "2026-09-16T09:16:12.366Z"
+    },
+    "platform/agentic-platform/setup/30-wall-e-workspace-side.md": {
+      "file_id": "1tSSvY4_8uVojo-4Prm6ZcRhfR2CTPYuQdrs1vgs3eAM",
+      "remote_modified": "2026-09-16T09:16:14.562Z"
+    },
+    "platform/agentic-platform/setup/31-wall-e-project-and-data-plane.md": {
+      "file_id": "1t9un9KTjsBDvA4224Hx3_tNM4FjZXe0-wO2-7jncrLE",
+      "remote_modified": "2026-09-16T09:16:17.148Z"
+    },
+    "platform/agentic-platform/setup/32-wall-e-consents.md": {
+      "file_id": "1Zz0d5mIPQaiIhyb8-vk9k_XEhnRFebuID664xpwNUrM",
+      "remote_modified": "2026-09-16T09:16:18.288Z"
+    },
+    "platform/agentic-platform/setup/33-wall-e-action-services-and-approval-surfaces.md": {
+      "file_id": "1yYp6bLhxRwLfBkpMPjhucfKV_GDQH9DT8jNPT8HXyvI",
+      "remote_modified": "2026-09-16T09:16:22.541Z"
+    },
+    "platform/agentic-platform/setup/34-wall-e-identity-spike-and-model-armor.md": {
+      "file_id": "1x75jMaKE7UqYwewwhWfwxsrdcl7yUlYkobkJMjh0K6w",
+      "remote_modified": "2026-09-16T09:16:25.955Z"
+    },
+    "platform/agentic-platform/setup/35-wall-e-engine-registration-and-gateways.md": {
+      "file_id": "1E8KcZUoCzG1WxCRmqp8DRDIML4gr1hqf218I7LcabUI",
+      "remote_modified": "2026-09-16T09:16:28.885Z"
+    },
+    "platform/agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md": {
+      "file_id": "14a-7N2p7KW-pi1NsJex00x9IV1E6P_MIhbib3MDOPLw",
+      "remote_modified": "2026-09-16T09:16:30.806Z"
+    },
+    "platform/agentic-platform/setup/37-wall-e-sandbox-rehearsal.md": {
+      "file_id": "1vqiCJ2u2BdQoNhtjdXRY7DbQluAGyHyp0dmskMboloQ",
+      "remote_modified": "2026-09-16T09:16:32.459Z"
+    },
+    "platform/agentic-platform/setup/38-super-admin-gate-and-grant.md": {
+      "file_id": "1z6RrSDA9vxsu9yKe2GTvb9BA3IjjwroeBikfVIVFvAU",
+      "remote_modified": "2026-09-16T09:16:34.996Z"
+    },
+    "platform/agentic-platform/setup/39-wall-e-stage-0.md": {
+      "file_id": "1pvy8kfNOQvW1zTpYzEe3Xv2FvMZT7cYqVMBv61ZIkhA",
+      "remote_modified": "2026-09-16T09:16:36.765Z"
+    },
+    "platform/agentic-platform/setup/40-mo-after-stage-0.md": {
+      "file_id": "1BzofKBoAmWTsTcKRAQdT9wZKnW3cNgFNCd9pDOTkqAM",
+      "remote_modified": "2026-09-16T09:16:38.558Z"
+    },
+    "platform/agentic-platform/setup/41-eve-s3-and-s4.md": {
+      "file_id": "19aGmaKEG5W3dBqxitHPJn6GSjITwmGDGQRnYHMgIk3Y",
+      "remote_modified": "2026-09-16T09:16:39.665Z"
+    },
+    "platform/agentic-platform/setup/42-gates-drills-and-evidence.md": {
+      "file_id": "1QlRmkqnZDoMuBmm1XbutuSNHLOtia7_Gb_m9kdKUZ44",
+      "remote_modified": "2026-09-16T09:16:43.228Z"
+    },
+    "platform/agentic-platform/setup/README.md": {
+      "file_id": "1QJ076OrDslo0ttK0RQx1BhBaG4-cY7KzFPO1mX0tRHU",
+      "remote_modified": "2026-09-16T09:16:44.429Z"
+    },
     "platform/agents.md": {
       "file_id": "1nR2mBKLjQHIksJWWjbAWv4f5S95ddhTsjLp7yQLdBE8",
       "local_hash": "afcfe3725a60e604312bf66608ea5572edd0d42196f2e884101df471dc48fe26",
@@ -589,6 +761,7 @@
     "platform": "10Tug5CiVs9mi5A2IZ444xmRy2N8bFOl4",
     "platform/agentic-platform": "1tuJJr0jSxIaq3zZGr9FgsluinmAMPVU7",
     "platform/agentic-platform/brief": "17SunY7PXieJukddTg5x7puIDGkd_MxHr",
+    "platform/agentic-platform/setup": "1ONFgPjjhjHjUoTNRXqCZ_P3LPrwD3nXp",
     "platform/edge-ai-v2": "1Rxc6xAd39RI3NTfnzwC6wI1uaxqQlHkb",
     "platform/eve": "1SSQ3sTBYOSzznTjx4pyR7mXbFA5gdDQc",
     "platform/mo": "1aUKqrilzhb6A_GGFBX4mZc6hNGbSdRDz",

@@ -2,14 +2,65 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-15
+- Status: **not to be used until aligned with the setup procedures** (decision SD-37, [../../agentic-platform/setup/03-decisions-and-people.md](../../agentic-platform/setup/03-decisions-and-people.md) §11; blocker B-18 in the [setup README](../../agentic-platform/setup/README.md) §8). Last aligned with: [SETUP.md](../SETUP.md) as it stood on 2026-09-14, which was superseded on 2026-09-15.
 - Objective: 2026-09-13 — the robot holds **Super Admin** (P33); Wall-E's custom roles are retired and a second OAuth client and service (`walle-actions-super`) exist ([../../agentic-platform/01-hld.md](../../agentic-platform/01-hld.md) "What this reverses and what it costs", §13.1).
 - Topology: 2026-09-13 — the script and the self-test implement the four-project placement of [../../project-topology.md](../../project-topology.md) ("The four-project placement", below).
 
-Executes [SETUP.md](../SETUP.md), the 21-phase runbook (18 numbered phases plus
-12b, 12c and 13b), as far as a script honestly can. SETUP.md is authoritative: where it and ARCHITECTURE.md disagree,
-this follows SETUP.md, and the disagreements are listed at the bottom of this
-page.
+## Do not run it: what it automates, and what replaced that
+
+`walle_setup.py` automates parts of the 21-phase runbook that stood in [SETUP.md](../SETUP.md)
+(18 numbered phases plus 12b, 12c and 13b). That runbook was superseded on 2026-09-15 by the
+human-executed setup procedures in [../../agentic-platform/setup/](../../agentic-platform/setup/README.md),
+files [30](../../agentic-platform/setup/30-wall-e-workspace-side.md) to
+[39](../../agentic-platform/setup/39-wall-e-stage-0.md) for Wall-E, after the review
+[../../agentic-platform/13-setup-procedure-review.md](../../agentic-platform/13-setup-procedure-review.md)
+found blocking defects in both the runbook and this script. **The script is not aligned with the
+new procedures.** It still creates `eve@` (which [24](../../agentic-platform/setup/24-eve-workspace-identity-and-audit-feeds.md)
+alone creates, S088), reads its own `~/.walle-env` instead of the one variables file of
+[01](../../agentic-platform/setup/01-prerequisites-and-conventions.md) §5, creates the project
+under `FOLDER_ID` (S019) instead of the factory-module run of [17](../../agentic-platform/setup/17-factory-module-equivalents-and-tier-r-gate.md),
+creates the production engine inside `deploy` before the identity spike (S015, S025), and
+carries the further defects listed per subcommand below.
+
+Under SD-37 the manual steps in files 30 to 39 are canonical. A subcommand may replace a manual
+step only after its listed defects are fixed **and** `selftest/selftest.sh` gains a live
+read-only mode (B-18, owner the Wall-E owner). Until then every step in those files that cites
+the script reads BLOCKED for the script path and gives the manual commands, and the script runs
+only inside `walle_shell` ([01](../../agentic-platform/setup/01-prerequisites-and-conventions.md) §5),
+never with `PROJECT` set in an ordinary shell. Repairing it is adopted by a new decision record
+under SD-37, not by a sentence in a runbook ([38](../../agentic-platform/setup/38-super-admin-gate-and-grant.md) §0).
+
+### Which new steps each subcommand would correspond to
+
+Each Wall-E file carries its own "How to execute this part" table with the same information at
+step granularity; where this table and a file disagree, the file is right.
+
+| Subcommand | Old SETUP.md phase | New file and steps it would correspond to | Why it cannot be used yet |
+|---|---|---|---|
+| `preflight` | §1.4, §1.5; PREREQUISITES §11 | [01](../../agentic-platform/setup/01-prerequisites-and-conventions.md) §4 and §11 (PR-4.*, PR-6.*); the sitting gate [30](../../agentic-platform/setup/30-wall-e-workspace-side.md) §0 (WW-0.*) | Tests a small part of a list that is itself superseded, against `~/.walle-env` |
+| `workspace` (M0, M1, M2A, M2B, M3, M4) | 1, 3, 4, 5 | [30](../../agentic-platform/setup/30-wall-e-workspace-side.md) §2 to §5, §8 (WW-2.* to WW-5.*, WW-8.*); Phase 5 is owned by [14](../../agentic-platform/setup/14-central-logging-and-billing-export.md) CL-1.3 and verified by WW-9.* | Creates `eve@`, its licence and its role in the same run (S088); refuses while shipped placeholders stand (S171); M1 resets `EVE_ROBOT`'s password; the M2A gate passes on `isEnrolledIn2Sv` alone (S086); M2B and M3 omit rows (S103, S113); M4 would turn on a tenant feed 14 owns |
+| `workspace` M2C, the grant | 2 | [38](../../agentic-platform/setup/38-super-admin-gate-and-grant.md) §4 to §6 (GT-4.* to GT-6.*); the twin grant [37](../../agentic-platform/setup/37-wall-e-sandbox-rehearsal.md) WR-2.3 | Reached only by re-running `workspace`, which walks M1 and M2A again after the consent and so destroys both refresh tokens (S014); gated by a file's existence, not the eighteen signed lines (S092). The repaired form is a separate `grant-gate` subcommand |
+| `gcp` | 6, 7, 8 | [31](../../agentic-platform/setup/31-wall-e-project-and-data-plane.md) §2 and §4 to §9 (WD-2.*, WD-4.* to WD-9.*) | `projects create --folder="$FOLDER_ID"` on a folder nothing creates (S019); commands without `--project` (S071); a standing creator Owner (S018); the project is an `FM-AGENT` run under 17, not a script call |
+| `consent`, `consent --super` | 9 | [32](../../agentic-platform/setup/32-wall-e-consents.md) §3 to §6 (WC-3.* to WC-6.*) | No scope selector (S111); the granted-scope check always passes (S098); a plaintext operator token cache (S087); attestations taken before the event (S173); the two broad-client secrets are created nowhere (S020). 32 requires a rewritten consent command (B-17) |
+| `armor`, `armor --enforce` | 12c | [34](../../agentic-platform/setup/34-wall-e-identity-spike-and-model-armor.md) §7 (WI-7.*) | Writes the folder floor unconditionally (S096); basic-config templates with no custom error and no SDP step (S097); no regional endpoint override (S118); roles bound to service agents that do not exist yet (S174) |
+| `spike` | 12b step 3 | [34](../../agentic-platform/setup/34-wall-e-identity-spike-and-model-armor.md) §2 (WI-2.*); its claim reading is reproduced in WI-2.7 | Dies unless `walle-actions` was deployed by `deploy`, which also creates the production engine (S015) |
+| `deploy` | 10, 11, 12, 12b, 14 | [33](../../agentic-platform/setup/33-wall-e-action-services-and-approval-surfaces.md) §3, §4, §7 (WS-3.*, WS-4.*, WS-7.*); [34](../../agentic-platform/setup/34-wall-e-identity-spike-and-model-armor.md) §1 (WI-1.*); [35](../../agentic-platform/setup/35-wall-e-engine-registration-and-gateways.md) §2 to §4 (WE-2.* to WE-4.*); [39](../../agentic-platform/setup/39-wall-e-stage-0.md) §4 (S0-4.*) | One subcommand spans five phases and creates the engine before the spike and without its gateway (S015, S025, S075, S115); binds `group:$OPERATORS` as invoker (S095); omits Binary Authorization and the VPC flags (S006); two organisation sinks (S094); project-level Token Creator (S112); grants `expressUser` (S105); never rewrites `EXEC_CALLER_ALLOWLIST` (S016); the deny policy with unsourced names (S017); the super service fails on any third control-list entry (S076) |
+| `register` | 13 | [35](../../agentic-platform/setup/35-wall-e-engine-registration-and-gateways.md) §7 and §8 (WE-7.*, WE-8.*) | Does not refuse a non-`eu` app (X-GE-13) and drives the console path (S056) |
+| `registry` | 13b | [35](../../agentic-platform/setup/35-wall-e-engine-registration-and-gateways.md) §1 and §9 (WE-1.*, WE-9.*) | Writes `registries` from `$PROJECT` (S057) and imports two YAML files that exist nowhere (S074) |
+| `triggers` | 16 | [39](../../agentic-platform/setup/39-wall-e-stage-0.md) §6 (S0-6.*) | Not reviewed step by step; it shares the config, environment and `--yes` model of the rest and 39 §6 is manual and BLOCKED on B-16 |
+| `verify` | every phase | [33](../../agentic-platform/setup/33-wall-e-action-services-and-approval-surfaces.md) §8 (WS-8.*); [39](../../agentic-platform/setup/39-wall-e-stage-0.md) S0-12.1, as `verify --strict` with SKIP as FAIL | The checks encode the defects above; it reads and refreshes the robot's refresh token on the operator's machine (S104); a check that cannot run passes as SKIP (S101) |
+| `denials` | 17 | [37](../../agentic-platform/setup/37-wall-e-sandbox-rehearsal.md) §6 (WR-6.*) on the twin; [39](../../agentic-platform/setup/39-wall-e-stage-0.md) §7 (S0-7.*) on production | `HARD_DENIED` is an inline tuple no service loads (S078); check 48 passes when no event was generated (S100); `--yes` records human judgements as passed (S099) |
+| `stage0` | 18 | [39](../../agentic-platform/setup/39-wall-e-stage-0.md) S0-12.2, BLOCKED on B-18 | Runs `verify` without `--strict` and proceeds on any number of SKIPs (S101); the grant record is a file's existence (S092) |
+| `rollback --phase N` | 2, 9, 10, 11, 12, 12b, 14 | the ROLLBACK line of each step | Phases 1, 3, 4, 5, 13 and 13b have no scripted undo (S170); the Phase 10 undo deletes `walle-actions` only |
+| `teardown` | — | [31](../../agentic-platform/setup/31-wall-e-project-and-data-plane.md) §10 (WD-10.*), a rollback that cannot destroy evidence | Unguarded against the audit and evidence stores |
+| `status` | — | the checkpoint log of [01](../../agentic-platform/setup/01-prerequisites-and-conventions.md) §7 and the resume rule of the [setup README](../../agentic-platform/setup/README.md) §4 | Reads the script's own build log, not the checkpoint log |
+
+## The script as it stood on 2026-09-14, for whoever repairs it (B-18)
+
+Everything below this line describes the script as written against the superseded runbook. It
+is kept so the repair can be scoped; "SETUP.md" in it means the retired page, whose phases map
+to the new files in [SETUP.md](../SETUP.md) "Where each phase went".
 
 **It stops at Stage 0, and no autonomous write is possible when it finishes.**
 Every write family is at L1 (shadow) on chat and scheduled triggers and L0 on
@@ -31,11 +82,11 @@ record of the tier gate. Before that, `verify` asserts the robot is **not** a
 super admin; after it, that it **is**, with the hygiene set and the roster rule.
 
 
-Before the first subcommand, work through [PREREQUISITES.md](../PREREQUISITES.md): the roles,
-licences, keys, tools, organisation policies and product preconditions this tool assumes are already
-in place, with the check that proves each one. `./walle preflight` tests only a small part of that list.
+The prerequisites it assumed were [PREREQUISITES.md](../PREREQUISITES.md), also superseded; the
+platform prerequisites are now [01](../../agentic-platform/setup/01-prerequisites-and-conventions.md).
+`./walle preflight` tested only a small part of that list.
 
-## Run it
+## The subcommands, in the order the script expected them (historical, not to be run)
 
 ```bash
 cp walle.env.example ~/.walle-env && $EDITOR ~/.walle-env   # fill in every <...>
@@ -115,8 +166,9 @@ Three subcommands implement the chapters
 [11-prompt-security.md](../11-prompt-security.md),
 [12-agent-identity.md](../12-agent-identity.md) and
 [13-agent-interconnection.md](../13-agent-interconnection.md), as SETUP.md
-Phases 12c, 12b and 13b carry them. The gcloud invocations are SETUP.md's,
-verbatim. The config keys they need are documented in `walle.env.example`
+Phases 12c, 12b and 13b carried them. The gcloud invocations were SETUP.md's,
+verbatim; the corrected forms are now [34](../../agentic-platform/setup/34-wall-e-identity-spike-and-model-armor.md)
+and [35](../../agentic-platform/setup/35-wall-e-engine-registration-and-gateways.md). The config keys they need are documented in `walle.env.example`
 with the subcommand that validates each: `AGENT_IDENTITY_MODE`,
 `AGENT_IDENTITY_SPIKE_RESULT`, `INGRESS_GATEWAY`, `EGRESS_GATEWAY`, `FOLDER_ID`
 (`armor`, and validated by `gcp` beside `WALLE_FOLDER_ID`, the numeric tier folder
@@ -214,7 +266,7 @@ approval or control.
 **What remains manual after these three.** Reading which method the Gemini
 Enterprise caller actually uses (`query` or `streamQuery`) from the Agent
 Runtime request logs during the first operator session, and recording it in
-SETUP.md with the date. Capturing each operator's principal at their first
+the build log of [35](../../agentic-platform/setup/35-wall-e-engine-registration-and-gateways.md) with the date. Capturing each operator's principal at their first
 sign-in for the external-IdP case (12-agent-identity.md 5.2): only a session
 produces it. Running the injection regression suite against
 `walle-ingress-prompt` and recording `filterVersionConfig`. Proving a block and
@@ -382,6 +434,11 @@ A check that could not run reports `SKIP`, not `PASS`. `--strict` makes skips
 failures.
 
 ## Where this differs from the documents
+
+Historical. Both sides of every comparison below are superseded: SETUP.md by files 30 to 39 of
+the setup procedures, and the script's behaviour by the defect list per subcommand above. The
+list is kept because several of its items became review findings, and the repair must not
+reintroduce them.
 
 - **SETUP.md Phase 10 lists the environment variables by name** (nineteen since
   2026-09-13, with `EVE_PUBLIC_KEY_PEM` and `READ_CALLER_ALLOWLIST`). The script
@@ -617,6 +674,11 @@ The script and `selftest/selftest.sh` implement the four-project placement of [.
   are [PREREQUISITES.md](../PREREQUISITES.md) §11.
 
 ## Checking the script before you trust it
+
+Under SD-37 this self-test **is not evidence** that any Google command works: it stubs `gcloud`,
+`bq` and `gsutil` and asserts only the shape of what the script emits. B-18 requires, on top of
+the fixes above, a live read-only mode that runs the read probes against a real project and is
+recorded in the build log before any subcommand replaces a manual step.
 
 `selftest/selftest.sh` exercises the script with no credentials, no project and no
 network. It puts stubs for `gcloud`, `bq` and `gsutil` on the path, records every

@@ -6,14 +6,14 @@
 - Last reviewed: 2026-09-15
 - Last executed: never
 - Stage: review §2 stage 30 (Eve Phase 9's grants and Phase 10), re-cut to Eve-H part 3 (SD-10). Runs after 23 and 24, before 26. Gate lines G-4 and G-5 get their production half here; both are closed by the second human's proof in 28, never by this file.
-- Step prefix: `EH`. Steps: 52. BLOCKED steps: EH-3.1, EH-3.2, EH-3.4, EH-4.1, EH-4.2, EH-4.3, EH-4.4, EH-4.5, EH-5.2, EH-5.3, EH-5.4, EH-5.5, EH-6.1, EH-6.4, EH-7.3, EH-7.4, EH-7.5, EH-8.2, EH-8.3, EH-9.0, EH-9.1, EH-9.2, EH-9.3, EH-9.4 — every step that needs Eve's code (README B-08) or Eve's committed configuration (B-09). EH-0.2 is BLOCKED while the DPO record of SD-11 does not exist (B-11), and it blocks the whole file: **no Eve job is deployed, and no poll by actor is scheduled, before that record exists.** Rules `SI-02`…`SI-07`, `SI-10` and `SI-11` are committed **BLOCKED inside EH-2.3** while the Cloud Audit Log view they read does not exist (B-12, owed by 14 CL-7.1/CL-7.2; see the precondition below). Steps that record `PENDING` rather than `BLOCKED`: EH-1.4 (the re-run of 14 CL-7.3), EH-4.6 (`halt_target_pending`, wired in 36), EH-6.2 (notification channels, made in 26), EH-4.0 (an Admin SDK quota increase, if the read shows one is needed).
+- Step prefix: `EH`. Steps: 52. BLOCKED steps: EH-3.1, EH-3.2, EH-3.4, EH-4.1, EH-4.2, EH-4.3, EH-4.4, EH-4.5, EH-5.2, EH-5.3, EH-5.4, EH-5.5, EH-6.1, EH-6.4, EH-7.3, EH-7.4, EH-7.5, EH-8.2, EH-8.3, EH-9.1, EH-9.2, EH-9.3, EH-9.4 — every step that needs Eve's code (README B-08) or Eve's committed configuration (B-09). EH-9.0 (the twin's own `eve-verifier@` and its grants) is not blocked: it needs no code. EH-0.2 is BLOCKED while the DPO record of SD-11 does not exist (B-11), and it blocks the whole file: **no Eve job is deployed, and no poll by actor is scheduled, before that record exists.** Rules `SI-02`…`SI-07`, `SI-10` and `SI-11` are committed **BLOCKED inside EH-2.3** while the Cloud Audit Log view they read does not exist (B-12, owed by 14 CL-7.1/CL-7.2; see the precondition below). Steps that record `PENDING` rather than `BLOCKED`: EH-1.4 (the re-run of 14 CL-7.3), EH-4.6 (`halt_target_pending`, wired in 36), EH-6.2 (notification channels, made in 26), EH-4.0 (an Admin SDK quota increase, if the read shows one is needed).
 - Replaces: Phase 9's grant half and Phase 10 of [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md), and the Phase 5 absence alert. That page is not executed.
 - Salvaged: Phase 10's job-and-scheduler shape (one Cloud Run job per pass, Cloud Scheduler with an **OAuth** token to `run.googleapis.com`, container overrides carrying the entrypoint argument, off-the-hour minutes) with the S033 and S136 corrections; Phase 10's `eve-console` IAP sequence with the S034 and S198 corrections; Phase 5's argument that the alarm must be an **absence** alarm, rewritten onto the data (S132); Phase 10b step 1's Reports-poll-by-actor intent and its application list.
 - Not copied: `gcloud builds submit` with no source path (S030); `gcloud services identity create` on the GA track (S034); `bq update --transfer_config --disable_auto_scheduling` (S133); the verify that runs `gcloud run jobs execute` as the owner (S033); the standing `roles/iam.serviceAccountUser` for the human on Eve's accounts (S143); `--max-retries=1` with a schedule-time idempotency key the container never receives (S136); the `${OPERATORS}` group as the console's IAP audience (S198); a log-based metric over every `bigquery_dts_config` entry (S132).
 - Applies decisions (signed in 03 before the step that needs them): SD-01, SD-10, SD-11, SD-12, SD-43, SD-44, SD-45, SD-47, SD-48, NAMES.
 - Closes: S029 (Eve-H's half), S030, S032, S033, S034, S132, S133, S136, S143, S198. Defers none without an owner (§13).
-- Consumes: `EVE_PROJECT`, `EVE_PROJECT_NUMBER`, `EVE_DS`, `EVE_WS_LOGS_DS`, `EVE_WS_REPORTS_DS`, `EVE_EVIDENCE_BUCKET`, `EVE_KEYRING`, `EVE_KEYRING_EU`, `ENT_PROJECT_REPAIR_EVE`, `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE`, `EVE_TWIN_PROJECT`, `EVE_TWIN_PROJECT_NUMBER` (23); `SA_EVE_VERIFIER`, `EVE_ROBOT`, `EVE_ROLE_NAME`, `EVE_SINK`, `EVE_OAUTH_CLIENT_SECRET_NAME`, `EVE_REFRESH_TOKEN_SECRET_NAME`, `EVE_TOKEN_VERSION`, `EVE_TWIN_ROBOT`, `EVE_TWIN_TOKEN_VERSION`, `EVE_TWIN_SINK` (24); `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `GRP_EVE_OWNERS` (06); `AR_PLATFORM`, `SA_CI_BUILD`, `CICD_PROJECT` (10); `BINAUTHZ_ATTESTOR`, `KEY_BINAUTHZ` (11); `PLATFORM_LOGS_VIEWS_DS`, `LOGGING_PROJECT` (14); `ONCALL_FILE` and the `agp_roster_humans` list shape (15); `BUSINESS_TZ`, `SECOND_HUMAN_EMAIL`, `DPO_CONTACT`, the SD-11 DPO record (03).
-- Produces: `SA_EVE_CONSOLE`, `EVE_CONFIG_REPO`, `EVE_RECONCILER_IMAGE`, `EVE_JOB_REPORTS_POLL`, `EVE_JOB_ROSTER`, `EVE_JOB_DETECT`, `EVE_JOB_HEARTBEAT`, `EVE_CONSOLE_URL`, `GRP_EVE_CONSOLE_READERS`, `EVE_CODE_COMMIT`.
+- Consumes: `EVE_PROJECT`, `EVE_PROJECT_NUMBER`, `EVE_DS`, `EVE_WS_LOGS_DS`, `EVE_WS_REPORTS_DS`, `EVE_EVIDENCE_BUCKET`, `EVE_KEYRING`, `EVE_KEYRING_EU`, `ENT_PROJECT_REPAIR_EVE`, `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE`, `EVE_TWIN_PROJECT`, `EVE_TWIN_PROJECT_NUMBER`, `ENT_PROJECT_REPAIR_EVE_TWIN`, `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE_TWIN` (23); `EVE_WITNESS_PROJECT` (08); `SA_1_ADMIN` (06); `SA_EVE_VERIFIER`, `EVE_ROBOT`, `EVE_ROLE_NAME`, `EVE_SINK`, `EVE_OAUTH_CLIENT_SECRET_NAME`, `EVE_REFRESH_TOKEN_SECRET_NAME`, `EVE_TOKEN_VERSION`, `EVE_TWIN_ROBOT`, `EVE_TWIN_TOKEN_VERSION`, `EVE_TWIN_SINK` (24); `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `GRP_EVE_OWNERS` (06); `AR_PLATFORM`, `SA_CI_BUILD`, `CICD_PROJECT` (10); `BINAUTHZ_ATTESTOR`, `KEY_BINAUTHZ` (11); `PLATFORM_LOGS_VIEWS_DS`, `LOGGING_PROJECT` (14); `ONCALL_FILE` and the `agp_roster_humans` list shape (15); `BUSINESS_TZ`, `SECOND_HUMAN_EMAIL`, `DPO_CONTACT`, the SD-11 DPO record (03).
+- Produces: `SA_EVE_CONSOLE`, `EVE_CONFIG_REPO`, `EVE_RECONCILER_IMAGE`, `EVE_JOB_REPORTS_POLL`, `EVE_JOB_ROSTER`, `EVE_JOB_DETECT`, `EVE_JOB_HEARTBEAT`, `EVE_CONSOLE_URL`, `GRP_EVE_CONSOLE_READERS`, `EVE_CODE_COMMIT`; and two the plan's variable table does not list, added here with the reason at the step: `EVE_CONFIG_COMMIT` (EH-2.5: a date-stamped build-log filename cannot be read by a block run on a later date) and `SA_EVE_TWIN_VERIFIER` (EH-9.0: the twin's own runtime identity, which no earlier file creates).
 - Commands checked against Google's documentation on 2026-09-15 and 2026-09-16 (§15). What could not be settled is listed in §14.
 
 ## What this part builds
@@ -46,7 +46,9 @@ and is not needed by anything here (SD-10).
    token rules, hourly for the rest); and the heartbeat pass that computes data freshness (H-1)
    and checks Eve's own credential. Each job runs as `eve-verifier@`; each gets
    `roles/run.jobsExecutorWithOverrides` for the token identity the scheduler uses (S033).
-5. **Four schedules, created, proven and then left PAUSED** (§5). Eve must never report to
+5. **Five schedules on the four jobs, created, proven and then left PAUSED** (§5) — the
+   detection job carries two, `detect --fast` every five minutes and the full pass hourly.
+   Eve must never report to
    nobody: the first scheduled run happens in 26, after route 1 to the second human has been
    tested. The invocation path is proven here with a `selftest` argument and
    `gcloud scheduler jobs run`, never by the owner running the job by hand (S033). The
@@ -116,6 +118,7 @@ flowchart TD
 ## Preconditions
 
 - [ ] 23 complete: `EVE_PROJECT` built by FM-VERIFIER with its deny entries and budget; `EVE_DS`, `EVE_WS_LOGS_DS`, `EVE_WS_REPORTS_DS`, `EVE_QUALITY_DS` created with CMEK from `EVE_EVIDENCE_KEY_EU`; the SD-43 writer custom roles created; `EVE_EVIDENCE_BUCKET` locked with the `ladder/` grant made before the lock; `ENT_PROJECT_REPAIR_EVE` and `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` `AVAILABLE` with the second human as approver.
+- [ ] 23, for the twin: `EVE_TWIN_PROJECT` built by the same FM-VERIFIER run with its own `eve`, `eve_workspace_logs` and `eve_workspace_reports` datasets, the SD-43 roles, and the entitlements `ENT_PROJECT_REPAIR_EVE_TWIN` and `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE_TWIN` `AVAILABLE` with the second human as approver (*Assumption:* 23 names them with the `_TWIN` suffix; EH-9.0 stops with a `PENDING` line against 23 if they do not exist). No earlier file creates the twin's runtime identity: EH-9.0 does.
 - [ ] 24 complete: `EVE_SINK` writing the six streams into `EVE_WS_LOGS_DS`; `eve@` in the service-identity OU with `EVE_ROLE_NAME` and **no** Super Admin (G-3 recorded); the two regional secrets with `EVE_TOKEN_VERSION` pinned; `SA_EVE_VERIFIER` created keyless; `EVE_TWIN_ROBOT` and `EVE_TWIN_TOKEN_VERSION` set; `ROSTER_FILE` updated with `eve@` and merged.
 - [ ] 06: `ROSTER_FILE` and `CONTROL_GROUPS_FILE` merged; `GRP_EVE_OWNERS` exists and is **owned by the second human**.
 - [ ] 10: `AR_PLATFORM`, `SA_CI_BUILD`, `CICD_PROJECT`, `CICD_PROJECT_NUMBER`.
@@ -134,7 +137,7 @@ flowchart TD
 | Role | Does | Present at |
 |---|---|---|
 | Platform owner (`sa-1-admin@`) | Performs every shell step, under `ENT_PROJECT_REPAIR_EVE` or `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` where the step says so. He is a **subject** of what he builds; that is why every elevation is approved by another person and ends inside the sitting | every step |
-| Second human (`SECOND_HUMAN_EMAIL`, `sa-2-admin@`) | Approves every PAM grant on `EVE_PROJECT`; is the required reviewer on **every** `eve/config` merge; owns `eve-owners@` and therefore `eve-console-readers@`; confirms that EH-5.5's removal happened | EH-0.1, EH-2.1, EH-2.5, EH-3.1, EH-4.x, EH-5.1, EH-5.5, EH-7.1, EH-10.1 |
+| Second human (`SECOND_HUMAN_EMAIL`, `sa-2-admin@`) | Approves every PAM grant on `EVE_PROJECT` and on the twin; is the required reviewer on **every** `eve/config` merge, including `tools/fingerprint.sh`; owns `eve-owners@` and therefore `eve-console-readers@`; confirms that EH-5.5's and EH-9.3's removals happened; **recomputes the fingerprint baseline from their own session** (EH-8.3) | EH-0.1, EH-2.1, EH-2.5, EH-3.1, EH-4.x, EH-5.1, EH-5.5, EH-7.1, EH-8.3, EH-9.0, EH-9.3, EH-10.1 |
 | DPO (`DPO_CONTACT`) | Holds the SD-11 record; confirms the purpose, the data classes, the retention and the recipients before any poll by actor is scheduled | EH-0.2 |
 | Eve owner (the platform owner until 03 names another person) | Writes `thresholds.yaml`, the detection catalogue, the roster reference and the code; owns B-08 and B-09 | EH-2.2 to EH-2.4, §3 |
 | Second operator (`SECOND_OPERATOR_EMAIL`) | Second reviewer on the `eve/config` pull requests when the second human is the author | EH-2.2 to EH-2.5 |
@@ -223,10 +226,10 @@ What Eve's repository must carry at one commit with green CI:
 | Path | What it is | Used by |
 |---|---|---|
 | `reconciler/Dockerfile`, `reconciler/cloudbuild.yaml` | the image, with a final attestation step following `ci/BUILD-CONTRACT.md` | EH-3.2 |
-| `reconciler/entrypoints/reports_poll.py` | `activities.list` by actor and application into `eve_workspace_reports`, paging with `pageToken`, `MERGE` on the idempotency key | EH-4.1 |
-| `reconciler/entrypoints/roster_check.py` | `roleAssignments.list`, `users.list` with `isAdmin`, the Reports-privilege holders; the diff in both directions | EH-4.2 |
-| `reconciler/entrypoints/detect.py` | evaluates `detections.yaml` over `eve_workspace_logs` and `eve_workspace_reports`; writes `eve.findings`; records `halt_target_pending` | EH-4.3 |
-| `reconciler/entrypoints/heartbeat.py` | H-1 freshness per stream and per application against `thresholds.yaml`; Eve's credential check; the configuration fingerprint | EH-4.4, EH-6.1, EH-8.2 |
+| `reconciler/entrypoints/reports_poll.py` | `activities.list` once per **application** with `userKey=all` into `eve_workspace_reports`, paging with `pageToken`, actors filtered after retrieval, `MERGE` on the idempotency key; logs `quotaExceeded`, `rateLimitExceeded` and HTTP 429 as structured error lines (EH-4.0, `SI-13`) | EH-4.0, EH-4.1 |
+| `reconciler/entrypoints/roster_check.py` | `roleAssignments.list`, `users.list` with `isAdmin`, the Reports-privilege holders; the diff in both directions; hourly | EH-4.2 |
+| `reconciler/entrypoints/detect.py` | evaluates `detections/catalogue.yaml` over `eve_workspace_logs`, `eve_workspace_reports` and `platform_logs_views.eve_self_integrity`; `--fast` evaluates only the severity-1 admin, login and token rules; writes `eve.findings`; records `halt_target_pending` | EH-4.3 |
+| `reconciler/entrypoints/heartbeat.py` | H-1 freshness per stream and per application against `thresholds.yaml`; Eve's credential check; the configuration fingerprint, computed **identically** to `eve-config/tools/fingerprint.sh` (EH-8.1) | EH-4.4, EH-6.1, EH-8.2 |
 | `reconciler/entrypoints/selftest.py` | reads nothing, writes one build-log line, sends no page, makes no Reports call | EH-5.3 |
 | `console/Dockerfile`, `console/cloudbuild.yaml` | the read-only console | EH-7.3 |
 | `ci/deny_model_deps.py`, `ci/assert_no_model_import.py`, `ci/callgraph_sign.py`, `ci/golden_replay.py`, `ci/assert_no_aiplatform_iam.py` | the five gates that must pass before the image is admitted | EH-3.1 |
@@ -637,7 +640,7 @@ git switch -c thresholds-eve-h && git add thresholds.yaml && git commit -m "eve/
 - **ROLLBACK:** A reverting pull request, itself reviewed by the second human.
 - **EVIDENCE:** The merge commit and the assertion output as `${R}-2.2-thresholds-v1`. E-05. TISAX 5.2.1.
 
-### EH-2.3 The detection catalogue: `SA-01`…`SA-09` with actor = any roster human, and `SI-01`…`SI-09`
+### EH-2.3 The detection catalogue: `SA-01`…`SA-10` with actor = any roster human, and `SI-01`…`SI-13`
 
 - **WHO:** Eve owner writes; the second human approves as code owner; IT security is shown the file so the SIEM's copy and Eve's can be compared (15 PS-8.2).
 - **WHERE:** `eve-config`, branch `detections-eve-h`.
@@ -664,7 +667,7 @@ either.
 | SA-03 | a change to Sharing options, the SecOps export, Admin console activity rules, API controls, OAuth app trust, domain-wide delegation, 2SV policy, SSO, super-admin self-recovery or session settings, **by any actor** | admin stream; the poll | 1 | as above |
 | SA-04 | any `login` event for `eve@` (and, from 38, `walle@`) — a robot never signs in | login stream; the poll | 1 | as above |
 | SA-05 | an OAuth token authorisation on `eve@` from a client id outside the committed one; any consent change on it; a `tokens.delete` on `eve@` not attributed to a K-class action | token stream; the poll | 1 | as above |
-| SA-06 | the daily roster diff in either direction, including the Reports-privilege holders | EH-4.2's output | 1 | as above |
+| SA-06 | the hourly roster diff in either direction, including the Reports-privilege holders | EH-4.2's output | 1 | as above |
 | SA-07 | an admin event attributed to a watched actor with no matching record within its lag budget | `eve_workspace_logs` joined to the poll | 1 | as above; before 36 there is no `walle_audit` side, so it fires only on the two evidence routes disagreeing |
 | SA-08 | an event by a **robot** actor in an application no catalogue family covers | the poll | 1 | as above |
 | SA-09 | a membership change on any group in `CONTROL_GROUPS_FILE`, `eve-owners@`, `eve-console-readers@` or the `mo-*` groups | groups and admin streams; the poll | 1 | as above |
@@ -911,11 +914,12 @@ git add roster-reference.yaml && git commit -m "eve/config: roster reference by 
 need EVE_CONFIG_REPO SA_EVE_VERIFIER SA_EVE_CONSOLE
 cd "$HOME/work/eve-config" && git switch main && git pull --ff-only
 git rev-parse HEAD | tee "${R}-2.5-eve-config-commit.txt"
+penv_set EVE_CONFIG_COMMIT "$(git rev-parse HEAD)"
 gh api repos/<org>/eve-config/collaborators --jq '.[].login'
 gh api repos/<org>/eve-config/actions/permissions --jq '{enabled, allowed_actions}' 2>/dev/null || echo "no Actions configured"
 ```
 
-- **VERIFY:** The commit id is recorded (it is quoted by every job's environment in §4, and is part of the fingerprint in §8); the collaborator list contains only named humans — no machine account, no Workload Identity principal, and neither Eve service account (they have no git identity at all, which is the point); if the host offers Actions, none has write scope on this repository.
+- **VERIFY:** `penv_set` prints `set EVE_CONFIG_COMMIT` and `printenv EVE_CONFIG_COMMIT` equals the `tee` line. The commit lives in the variables file, **not only** in the date-stamped record: §4 and §9 run on a later date than this step (they wait on B-08), and a block that re-derives `R` with that day's date cannot `cat` today's file. The id is quoted by every job's environment in §4 and is part of the fingerprint in §8; the collaborator list contains only named humans — no machine account, no Workload Identity principal, and neither Eve service account (they have no git identity at all, which is the point); if the host offers Actions, none has write scope on this repository.
 - **ROLLBACK:** None; read only.
 - **EVIDENCE:** The three outputs as `${R}-2.5-eve-config-closed-v1`. E-05. TISAX 5.2.1, 4.2.1.
 
@@ -986,11 +990,13 @@ for I in eve-reconciler eve-console; do D="$(gcloud artifacts docker images desc
 - **ACTION:** A Cloud Run deployment in another project pulls as that project's Cloud Run service agent, which must hold `roles/artifactregistry.reader` **on the repository** in the project that holds it. Repository-scoped, never project-scoped.
 
 ```bash
-need CICD_PROJECT REGION EVE_PROJECT_NUMBER EVE_TWIN_PROJECT_NUMBER
-for N in "$EVE_PROJECT_NUMBER" "$EVE_TWIN_PROJECT_NUMBER"; do gcloud artifacts repositories add-iam-policy-binding platform --location="$REGION" --project="$CICD_PROJECT" --member="serviceAccount:service-${N}@serverless-robot-prod.iam.gserviceaccount.com" --role=roles/artifactregistry.reader; done
+need CICD_PROJECT REGION EVE_PROJECT_NUMBER EVE_TWIN_PROJECT_NUMBER AR_PLATFORM
+AR_REPO="${AR_PLATFORM##*/}"     # the repository id is the last path segment of AR_PLATFORM (10); never a literal here
+test -n "$AR_REPO" || { echo "STOP: AR_PLATFORM has no repository segment"; exit 1; }
+for N in "$EVE_PROJECT_NUMBER" "$EVE_TWIN_PROJECT_NUMBER"; do gcloud artifacts repositories add-iam-policy-binding "$AR_REPO" --location="$REGION" --project="$CICD_PROJECT" --member="serviceAccount:service-${N}@serverless-robot-prod.iam.gserviceaccount.com" --role=roles/artifactregistry.reader; done
 ```
 
-- **VERIFY:** `gcloud artifacts repositories get-iam-policy platform --location="$REGION" --project="$CICD_PROJECT" --format=json | jq -r '.bindings[] | select(.role=="roles/artifactregistry.reader") | .members[]'` lists both service agents and no human. *Assumption:* the service-agent address form `service-PROJECT_NUMBER@serverless-robot-prod.iam.gserviceaccount.com` — re-read on the day on the Cloud Run IAM page, as 18 KS-5.2 also notes. If the agent does not exist yet, `gcloud beta services identity create --service=run.googleapis.com --project="$EVE_PROJECT"` creates it.
+- **VERIFY:** `gcloud artifacts repositories get-iam-policy "$AR_REPO" --location="$REGION" --project="$CICD_PROJECT" --format=json | jq -r '.bindings[] | select(.role=="roles/artifactregistry.reader") | .members[]'` lists both service agents and no human; `gcloud artifacts repositories describe "$AR_REPO" --location="$REGION" --project="$CICD_PROJECT" --format="value(name)"` ends in the same segment `AR_PLATFORM` ends in. *Assumption:* the service-agent address form `service-PROJECT_NUMBER@serverless-robot-prod.iam.gserviceaccount.com` — re-read on the day on the Cloud Run IAM page, as 18 KS-5.2 also notes. If the agent does not exist yet, `gcloud beta services identity create --service=run.googleapis.com --project="$EVE_PROJECT"` creates it.
 - **ROLLBACK:** `remove-iam-policy-binding` per member.
 - **EVIDENCE:** The policy read as `${R}-3.3-ar-readers-v1`. E-08. TISAX 4.2.1.
 
@@ -1022,9 +1028,26 @@ invoker set differ per pass, and a pass that pages must never retry itself.
 | Job | Entrypoint | Pass | `--max-retries` | Why |
 |---|---|---|---|---|
 | `eve-reports-poll` | `reports_poll` | every 5 minutes | `1` | idempotent `MERGE`; it writes no finding and sends no page, so one retry is safe and paging over a transient `activities.list` error is not wanted |
-| `eve-roster-check` | `roster_check` | daily | `0` | a roster diff pages in both directions; a retried task would page twice |
-| `eve-detect` | `detect` | hourly | `0` | writes findings and pages |
+| `eve-roster-check` | `roster_check` | hourly | `0` | a roster diff pages in both directions; a retried task would page twice |
+| `eve-detect` | `detect` | two schedules on one job: `detect --fast` every 5 minutes (the severity-1 admin, login and token rules) and `detect` hourly (every rule) | `0` | writes findings and pages |
 | `eve-heartbeat` | `heartbeat` | every 15 minutes | `0` | raises `log_pipeline_silent` and the credential alarm |
+
+**Why the detection pass has two cadences.** An hourly detection pass over a five-minute poll
+gives a worst case of Google's lag (about five minutes) plus five plus sixty, some seventy
+minutes from a super admin's action to a page, while `severity_1_ack_minutes: 15` and 28's
+blind proof were written as if the page arrived within the fifteen-minute admin lag budget.
+Those are different clocks. `detect --fast` runs on the poll's cadence and puts the true
+end-to-end figure at `reporting.detect_to_page_minutes: 25` (EH-2.2), which is the number 28
+EV-2.3 waits for; the hourly full pass carries the join, the roster and the self-integrity
+rules whose sources move more slowly.
+
+**One environment, written once.** The four jobs share their environment. It is composed in
+EH-4.1 and written to `"$BUILD_LOG_DIR/records/eve-common-env.txt"`; EH-4.2 to EH-4.4 and
+EH-9.1 read it from there with a `test -s` guard. An earlier draft composed it in EH-4.1's
+shell and dereferenced it in three later blocks, each of which the conventions start in a
+fresh shell — the three later jobs would have deployed with an empty environment and failed on
+their first tick with nothing in their VERIFY to catch it. The file holds names and numbers
+only, never a secret value, so it may live in the build log.
 
 **The idempotency key (S136).** Cloud Scheduler's `X-CloudScheduler-ScheduleTime` header reaches
 `run.googleapis.com`, the Admin API endpoint that starts the execution; the container never
@@ -1035,11 +1058,45 @@ write is a `MERGE` on `(pass_window, subject, rule_id)` for findings and on
 `(pass_window, actor, application, activity_id)` for the poll. The container contract is cited
 at the step because the whole retry argument rests on it.
 
+### EH-4.0 Read the Admin SDK quota for `activities.list`, and size the poll inside it
+
+- **WHO:** Platform owner; the Eve owner confirms the pass contract against the code.
+- **WHERE:** Shell, and the console: **APIs & Services > Enabled APIs & services > Admin SDK API > Quotas & System Limits** in `EVE_PROJECT` (the page Google's Reports API limits page links as the place to request more).
+- **ACTION:** Google documents two ceilings for the Reports API (read 2026-09-16): 2,400 queries
+  per minute per user per Cloud project, and **250 filter queries per minute (15,000 per
+  hour)** for `activities.list`, where a filter query is any request carrying `userKey`,
+  `actorIpAddress`, `eventName`, `filters`, `orgUnitID` or `groupIdFilter`. A pass that calls
+  `activities.list` once per actor and application, as the first draft did, is sixteen
+  applications times every watched account in one five-minute burst — 256 filter queries at
+  sixteen accounts, over the per-minute ceiling before paging, and a throttled poll degrades
+  into exactly the silence the heartbeat is meant to treat as a finding. The pass therefore
+  retrieves each application **once with `userKey=all`** (still a filter query, but sixteen of
+  them) and filters actors after retrieval; per-actor calls are made only for the
+  corroboration join of `SA-07`, and only for the actors whose events the pass is joining.
+  `thresholds.yaml` commits the ceiling as `poll_max_filter_queries_per_minute: 200` (EH-2.2)
+  and the pass must refuse to exceed it.
+
+```bash
+need EVE_PROJECT
+gcloud quotas info list --service=admin.googleapis.com --project="$EVE_PROJECT" --format="table(quotaId,metric,dimensionsInfos[0].details.value,dimensionsInfos[0].dimensions)" | tee "${R}-4.0-admin-sdk-quota.txt"
+python3 -c "import yaml; d=yaml.safe_load(open('$HOME/work/eve-config/thresholds.yaml'))['evidence']['reports_poll']; assert d['retrieval_mode']=='user_key_all', d; assert d['poll_max_filter_queries_per_minute'] <= 250, d; print('poll contract:', d['retrieval_mode'], d['poll_max_filter_queries_per_minute'])"
+```
+
+  If the read shows an effective per-minute value below the documented one, or the Eve owner's
+  sizing (sixteen applications, plus the join's per-actor calls, plus `pageToken` pages) does
+  not fit under `poll_max_filter_queries_per_minute`, request an increase on the console page
+  above (**Edit** on the quota row, **New value**, **Submit request**) and record the request
+  id as a `PENDING` line: `exists_or_pending --pending "Admin SDK quota increase <request id>" EH-4.0 "re-read the effective limit once granted"`.
+- **VERIFY:** The quota table is in the build log and names the `activities.list` filter-query limit; the assertion prints `poll contract: user_key_all 200`; the Eve owner confirms in writing that `reports_poll.py` at `EVE_CODE_COMMIT` calls `activities.list` with `userKey=all` per application and logs `quotaExceeded`, `rateLimitExceeded` and HTTP 429 as structured error lines (the metric of EH-6.1 and rule `SI-13` read those lines).
+- **ROLLBACK:** Read only; a quota request is withdrawn on the same page.
+- **EVIDENCE:** The table, the assertion and the Eve owner's confirmation as `${R}-4.0-admin-sdk-quota-v1`. E-06. TISAX 5.2.4.
+- *Assumption:* `gcloud quotas info list` returns the Admin SDK's per-minute quotas by `quotaId`; if the format string prints empty columns, drop `--format` and read the raw output. The documented ceilings are the authority either way.
+
 ### EH-4.1 Deploy `eve-reports-poll` — BLOCKED
 
 - **WHO:** Platform owner under `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` (approver the second human; deploying a job that runs as a credential holder is exactly the act 04 §8.5 reserves for two people).
 - **WHERE:** Shell; `EVE_PROJECT`.
-- **ACTION:** > **BLOCKED**: Needs: EH-0.2 `DONE` (the DPO record: this job is the one that processes named administrators' activity), EH-3.4 `DONE`, and EH-2.2 and EH-2.3 merged. Until then: `checkpoint EH-4.1 BLOCKED - - "needs EH-0.2, EH-3.4"`.
+- **ACTION:** > **BLOCKED**: Needs: EH-0.2 `DONE` (the DPO record: this job is the one that processes named administrators' activity), EH-3.4 `DONE`, EH-4.0 `DONE`, and EH-2.2, EH-2.3 and EH-2.5 merged and recorded (`EVE_CONFIG_COMMIT` set). Until then: `checkpoint EH-4.1 BLOCKED - - "needs EH-0.2, EH-3.4, EH-4.0"`.
 
   When unblocked. The job reads `eve@`'s refresh token **itself**, from the regional secret, at
   the pinned version: Cloud Run does not support regional secrets in `--set-secrets`, so the
@@ -1048,33 +1105,40 @@ at the step because the whole retry argument rests on it.
   EH-1.6).
 
 ```bash
-need EVE_PROJECT REGION EVE_RECONCILER_IMAGE SA_EVE_VERIFIER EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_ROBOT EVE_REFRESH_TOKEN_SECRET_NAME EVE_TOKEN_VERSION EVE_OAUTH_CLIENT_SECRET_NAME EVE_CONFIG_REPO EVE_EVIDENCE_BUCKET CICD_PROJECT ENT_DEPLOY_CREDENTIAL_HOLDER_EVE PLATFORM_REPO_REMOTE LOGGING_PROJECT PLATFORM_LOGS_VIEWS_DS
+need EVE_PROJECT REGION EVE_RECONCILER_IMAGE SA_EVE_VERIFIER EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_ROBOT EVE_REFRESH_TOKEN_SECRET_NAME EVE_TOKEN_VERSION EVE_OAUTH_CLIENT_SECRET_NAME EVE_CONFIG_REPO EVE_CONFIG_COMMIT EVE_EVIDENCE_BUCKET CICD_PROJECT ENT_DEPLOY_CREDENTIAL_HOLDER_EVE PLATFORM_REPO_REMOTE LOGGING_PROJECT PLATFORM_LOGS_VIEWS_DS BUILD_LOG_DIR
 gcloud pam grants create --entitlement="$ENT_DEPLOY_CREDENTIAL_HOLDER_EVE" --requested-duration=7200s --justification="setup 25 section 4: deploy Eve's four reconciler jobs by digest" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT"
-COMMON="^;^EVE_PROJECT=${EVE_PROJECT};EVE_DS=${EVE_DS};EVE_WS_LOGS_DS=${EVE_WS_LOGS_DS};EVE_WS_REPORTS_DS=${EVE_WS_REPORTS_DS};LOGGING_PROJECT=${LOGGING_PROJECT};PLATFORM_LOGS_VIEWS_DS=${PLATFORM_LOGS_VIEWS_DS};EVE_ROBOT=${EVE_ROBOT};SECRET_REGION=${REGION};REFRESH_TOKEN_SECRET=${EVE_REFRESH_TOKEN_SECRET_NAME};REFRESH_TOKEN_VERSION=${EVE_TOKEN_VERSION};OAUTH_CLIENT_SECRET=${EVE_OAUTH_CLIENT_SECRET_NAME};EVE_CONFIG_REPO=${EVE_CONFIG_REPO};EVE_CONFIG_COMMIT=$(cat "${R}-2.5-eve-config-commit.txt");ROSTER_SOURCE=${PLATFORM_REPO_REMOTE};EVIDENCE_BUCKET=${EVE_EVIDENCE_BUCKET#gs://};LADDER_PREFIX=ladder/;HALT_TARGET=pending;ENV=prod"
+COMMON="^;^EVE_PROJECT=${EVE_PROJECT};EVE_DS=${EVE_DS};EVE_WS_LOGS_DS=${EVE_WS_LOGS_DS};EVE_WS_REPORTS_DS=${EVE_WS_REPORTS_DS};LOGGING_PROJECT=${LOGGING_PROJECT};PLATFORM_LOGS_VIEWS_DS=${PLATFORM_LOGS_VIEWS_DS};EVE_ROBOT=${EVE_ROBOT};SECRET_REGION=${REGION};REFRESH_TOKEN_SECRET=${EVE_REFRESH_TOKEN_SECRET_NAME};REFRESH_TOKEN_VERSION=${EVE_TOKEN_VERSION};OAUTH_CLIENT_SECRET=${EVE_OAUTH_CLIENT_SECRET_NAME};EVE_CONFIG_REPO=${EVE_CONFIG_REPO};EVE_CONFIG_COMMIT=${EVE_CONFIG_COMMIT};ROSTER_SOURCE=${PLATFORM_REPO_REMOTE};EVIDENCE_BUCKET=${EVE_EVIDENCE_BUCKET#gs://};LADDER_PREFIX=ladder/;HALT_TARGET=pending;ENV=prod"
+printf '%s' "$COMMON" > "$BUILD_LOG_DIR/records/eve-common-env.txt"
+grep -Eq '(1//|ya29\.|GOCSPX-)' "$BUILD_LOG_DIR/records/eve-common-env.txt" && { echo "STOP: a credential-shaped value is in the environment"; exit 1; } || echo "environment carries names and numbers only"
 gcloud run jobs deploy eve-reports-poll --project="$EVE_PROJECT" --region="$REGION" --image="$EVE_RECONCILER_IMAGE" --service-account="$SA_EVE_VERIFIER" --binary-authorization=default --args="reports_poll" --tasks=1 --parallelism=1 --max-retries=1 --task-timeout=1800s --set-env-vars="$COMMON" --labels=agp-component=eve,agp-pass=reports-poll
 penv_set EVE_JOB_REPORTS_POLL "projects/${EVE_PROJECT}/locations/${REGION}/jobs/eve-reports-poll"
 ```
 
-  **What the pass does, and why the actor set is a union.** It calls `activities.list` once per
-  actor and application, with `userKey` set to the actor's primary email and the
-  `admin.reports.audit.readonly` scope `eve@` already holds, paging on `pageToken`. The actor
-  set is the union of `ROSTER_FILE`'s human, delegated-admin, break-glass and robot accounts
-  **and** the live admin-role holders the last roster check wrote to `eve.roster_observations`.
-  A super admin created five minutes ago is therefore polled from the next roster check
-  onwards, without anyone editing a file — the gap the review's reading of "every super admin
-  on the roster" left open. The applications are the fifteen of `thresholds.yaml`, every one an
-  allowed `applicationName` (verified 2026-09-16). It is the route that survives "Share data
-  with Google Cloud services" being switched off, which is why it exists at all.
+  **What the pass does, and why the actor set is a union.** For each of the **sixteen**
+  applications of `thresholds.yaml` — every one an allowed `applicationName` (verified
+  2026-09-16) — it calls `activities.list` **once, with `userKey=all`**, using the
+  `admin.reports.audit.readonly` scope `eve@` already holds, paging on `pageToken`, and keeps
+  every event whose actor is in the actor set (EH-4.0 explains why it is not one call per
+  actor). The actor set is the union of `ROSTER_FILE`'s human, delegated-admin, break-glass and
+  robot accounts **and** the live admin-role holders the last roster check wrote to
+  `eve.roster_observations`. Because the retrieval is `userKey=all`, an account that is on
+  neither list — a super admin created a minute ago — is still **retrieved** and matched by
+  every `actors: any` rule from its first action; the `actors: watched` rules pick it up at the
+  next hourly roster check, a residual window of at most sixty minutes that EH-2.2 records as
+  `watched_set_residual_window_minutes`. The poll is the route that survives "Share data with
+  Google Cloud services" being switched off, which is why it exists at all.
 - **VERIFY:** When unblocked:
 
 ```bash
 gcloud run jobs describe eve-reports-poll --region="$REGION" --project="$EVE_PROJECT" --format="yaml(spec.template.spec.template.spec.serviceAccountName,spec.template.spec.template.spec.containers[0].image,spec.template.spec.template.spec.containers[0].args,spec.template.spec.taskCount,spec.template.spec.template.spec.maxRetries,metadata.annotations)"
+gcloud run jobs describe eve-reports-poll --region="$REGION" --project="$EVE_PROJECT" --format=json | jq -e -r --arg c "$EVE_CONFIG_COMMIT" '[.spec.template.spec.template.spec.containers[0].env[] | {(.name): .value}] | add | if .EVE_CONFIG_COMMIT == $c and .EVE_ROBOT != null and .LADDER_PREFIX == "ladder/" then "env ok: EVE_CONFIG_COMMIT, EVE_ROBOT, LADDER_PREFIX present" else error("FAIL: environment incomplete \(.)") end'
+gcloud run jobs describe eve-reports-poll --region="$REGION" --project="$EVE_PROJECT" --format=json | jq -r '..|.env?//empty|.[].value' | grep -E '^(1//|ya29\.|GOCSPX-)' && echo "FAIL: a credential is in the environment" || echo "no credential in the environment"
 ```
 
   Service account `eve-verifier@`; image by digest, equal to `EVE_RECONCILER_IMAGE`; args
   `[reports_poll]`; `maxRetries: 1`; the annotation
-  `run.googleapis.com/binary-authorization: default`. No environment variable holds a secret
-  value (`gcloud run jobs describe … --format=json | jq -r '..|.env?//empty|.[].value' | grep -E '^(1//|ya29\.|GOCSPX-)' && echo "FAIL: a credential is in the environment" || echo "no credential in the environment"`).
+  `run.googleapis.com/binary-authorization: default`; the `env ok` line (the `jq -e` fails the
+  step otherwise); `no credential in the environment`; and `test -s "$BUILD_LOG_DIR/records/eve-common-env.txt"` succeeds, since three later steps read it.
 - **ROLLBACK:** `gcloud run jobs delete eve-reports-poll --region="$REGION" --project="$EVE_PROJECT"`.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then the describe output as `${R}-4.1-reports-poll-v1`. E-06, E-08. TISAX 5.2.1, 4.2.1.
 
@@ -1087,6 +1151,9 @@ gcloud run jobs describe eve-reports-poll --region="$REGION" --project="$EVE_PRO
   When unblocked:
 
 ```bash
+need EVE_PROJECT REGION EVE_RECONCILER_IMAGE SA_EVE_VERIFIER EVE_CONFIG_COMMIT BUILD_LOG_DIR
+test -s "$BUILD_LOG_DIR/records/eve-common-env.txt" || { echo "STOP: EH-4.1 has not written the shared environment"; exit 1; }
+COMMON="$(cat "$BUILD_LOG_DIR/records/eve-common-env.txt")"
 gcloud run jobs deploy eve-roster-check --project="$EVE_PROJECT" --region="$REGION" --image="$EVE_RECONCILER_IMAGE" --service-account="$SA_EVE_VERIFIER" --binary-authorization=default --args="roster_check" --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=900s --set-env-vars="$COMMON" --labels=agp-component=eve,agp-pass=roster-check
 penv_set EVE_JOB_ROSTER "projects/${EVE_PROJECT}/locations/${REGION}/jobs/eve-roster-check"
 ```
@@ -1094,12 +1161,14 @@ penv_set EVE_JOB_ROSTER "projects/${EVE_PROJECT}/locations/${REGION}/jobs/eve-ro
   The pass reads, with `eve@`'s credential: `roleAssignments.list` for the customer,
   `users.list` with `isAdmin` and `isDelegatedAdmin`, and the holders of the Reports privilege
   — the people who can switch the SecOps export off. It writes `eve.roster_observations` (the
-  live set, which EH-4.1 then polls) and diffs it against the roster file named in
+  live set, which EH-4.1's actor union reads) and diffs it against the roster file named in
   `roster-reference.yaml`, in **both** directions: an account with a role that is not on the
   roster is `role_assignment_added`; a roster account that lost its role is
   `role_assignment_missing`; a hand-over exception past its date is a failure in its own right
-  (06 OB-2.13). All are severity 1 through `SA-06`.
-- **VERIFY:** When unblocked: the describe output shows `roster_check`, `maxRetries: 0` and the digest. The functional proof is EH-5.4's `selftest` run plus 28's seeded change; nothing here runs the real pass.
+  (06 OB-2.13). All are severity 1 through `SA-06`. It runs **hourly** (`roster.check_cron`,
+  EH-2.2): two Directory calls and one table write, and the price of a daily cadence was a
+  new administrator outside the `watched` set for up to a day.
+- **VERIFY:** When unblocked: the describe output shows `roster_check`, `maxRetries: 0` and the digest; `gcloud run jobs describe eve-roster-check --region="$REGION" --project="$EVE_PROJECT" --format=json | jq -e -r --arg c "$EVE_CONFIG_COMMIT" '[.spec.template.spec.template.spec.containers[0].env[] | {(.name): .value}] | add | if .EVE_CONFIG_COMMIT == $c and .EVE_ROBOT != null and .LADDER_PREFIX == "ladder/" then "env ok" else error("FAIL: environment incomplete") end'` prints `env ok`. The functional proof is EH-5.4's `selftest` run plus 28's seeded change; nothing here runs the real pass.
 - **ROLLBACK:** `gcloud run jobs delete eve-roster-check --region="$REGION" --project="$EVE_PROJECT"`.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then the describe output as `${R}-4.2-roster-check-v1`. E-08. TISAX 4.2.1.
 
@@ -1112,17 +1181,26 @@ penv_set EVE_JOB_ROSTER "projects/${EVE_PROJECT}/locations/${REGION}/jobs/eve-ro
   When unblocked:
 
 ```bash
+need EVE_PROJECT REGION EVE_RECONCILER_IMAGE SA_EVE_VERIFIER EVE_CONFIG_COMMIT BUILD_LOG_DIR
+test -s "$BUILD_LOG_DIR/records/eve-common-env.txt" || { echo "STOP: EH-4.1 has not written the shared environment"; exit 1; }
+COMMON="$(cat "$BUILD_LOG_DIR/records/eve-common-env.txt")"
 gcloud run jobs deploy eve-detect --project="$EVE_PROJECT" --region="$REGION" --image="$EVE_RECONCILER_IMAGE" --service-account="$SA_EVE_VERIFIER" --binary-authorization=default --args="detect" --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=1800s --set-env-vars="$COMMON" --labels=agp-component=eve,agp-pass=detect
 penv_set EVE_JOB_DETECT "projects/${EVE_PROJECT}/locations/${REGION}/jobs/eve-detect"
 ```
 
-  The pass evaluates the eighteen rules over `eve_workspace_logs` (the six streams the sink
-  carries), `eve_workspace_reports` (the poll) and `platform_logs_views` (Cloud Audit Logs, for
-  `SI-02` to `SI-07`), writes `eve.findings` with `MERGE` on the pass window, and records for
-  every halting rule a `halt_target_pending` row rather than calling a halt endpoint that does
-  not exist (EH-4.6).
+  The pass evaluates the twenty-three rules of the catalogue over `eve_workspace_logs` (the six
+  streams the sink carries), `eve_workspace_reports` (the poll) and, once B-12 is closed,
+  `platform_logs_views.eve_self_integrity` (Cloud Audit Logs, for `SI-02` to `SI-07` and
+  `SI-10` to `SI-12`; while those carry `blocked: b12` the pass reports them as blocked and
+  evaluates nothing silently). It writes `eve.findings` with `MERGE` on the pass window and
+  records for every halting rule a `halt_target_pending` row rather than calling a halt
+  endpoint that does not exist (EH-4.6). The job's default argument is the full pass; the
+  five-minute schedule of EH-5.2 overrides it to `detect --fast`, which evaluates only the
+  severity-1 rules whose sources are the admin, login and token streams and the poll's copy of
+  them.
 - **VERIFY:** When unblocked: describe shows `detect`, `maxRetries: 0`, the digest, the
-  `binary-authorization` annotation.
+  `binary-authorization` annotation; the same `jq -e` as EH-4.2 (with the job name changed)
+  prints `env ok`.
 - **ROLLBACK:** `gcloud run jobs delete eve-detect --region="$REGION" --project="$EVE_PROJECT"`.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then as `${R}-4.3-detect-v1`. E-06, E-10. TISAX 5.2.4.
 
@@ -1135,6 +1213,9 @@ penv_set EVE_JOB_DETECT "projects/${EVE_PROJECT}/locations/${REGION}/jobs/eve-de
   When unblocked:
 
 ```bash
+need EVE_PROJECT REGION EVE_RECONCILER_IMAGE SA_EVE_VERIFIER EVE_CONFIG_COMMIT BUILD_LOG_DIR
+test -s "$BUILD_LOG_DIR/records/eve-common-env.txt" || { echo "STOP: EH-4.1 has not written the shared environment"; exit 1; }
+COMMON="$(cat "$BUILD_LOG_DIR/records/eve-common-env.txt")"
 gcloud run jobs deploy eve-heartbeat --project="$EVE_PROJECT" --region="$REGION" --image="$EVE_RECONCILER_IMAGE" --service-account="$SA_EVE_VERIFIER" --binary-authorization=default --args="heartbeat" --tasks=1 --parallelism=1 --max-retries=0 --task-timeout=600s --set-env-vars="$COMMON" --labels=agp-component=eve,agp-pass=heartbeat
 penv_set EVE_JOB_HEARTBEAT "projects/${EVE_PROJECT}/locations/${REGION}/jobs/eve-heartbeat"
 ```
@@ -1147,14 +1228,15 @@ penv_set EVE_JOB_HEARTBEAT "projects/${EVE_PROJECT}/locations/${REGION}/jobs/eve
      a finding (`log_pipeline_silent`), not an absence of findings.
   2. **Eve's credential.** Exchange `eve@`'s refresh token; `invalid_grant` is severity 1 and
      only a human re-bootstrap restores it. The check never prints or stores the token.
-  3. **The configuration fingerprint** (§8), written to `eve.config_fingerprint`.
+  3. **The configuration fingerprint** (§8), written to `eve.config_fingerprint`, computed
+     by the same gathering and canonicalisation as the committed `tools/fingerprint.sh`.
 
   On success — and only on success — the pass writes one structured log line
   `{"eve_heartbeat":"ok","streams_fresh":N,"applications_fresh":M}` at severity `INFO`. That
   line, not the job's logs in general, feeds the metric of §6. A pass that fails writes error
   lines and **no** `ok` line, which is exactly what the old filter could not distinguish
   (S132).
-- **VERIFY:** When unblocked: describe shows `heartbeat`, `maxRetries: 0`, `taskTimeout: 600s`.
+- **VERIFY:** When unblocked: describe shows `heartbeat`, `maxRetries: 0`, `taskTimeout: 600s`; the same `jq -e` as EH-4.2 (with the job name changed) prints `env ok`.
 - **ROLLBACK:** `gcloud run jobs delete eve-heartbeat --region="$REGION" --project="$EVE_PROJECT"`.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then as `${R}-4.4-heartbeat-v1`. E-06. TISAX 5.2.4.
 
@@ -1241,7 +1323,7 @@ echo "actAs window closes at $EXPIRY"
 - **ROLLBACK:** EH-5.5 is the rollback and it is mandatory, not optional.
 - **EVIDENCE:** The policy read and the expiry as `${R}-5.1-actas-window-v1`, initialled by the second human. E-08. TISAX 4.1.3.
 
-### EH-5.2 Create the four schedules with the `selftest` argument — BLOCKED
+### EH-5.2 Create the five schedules with the `selftest` argument — BLOCKED
 
 - **WHO:** Platform owner, inside the window.
 - **WHERE:** Shell; `EVE_PROJECT`.
@@ -1252,29 +1334,33 @@ echo "actAs window closes at $EXPIRY"
 ```bash
 need EVE_PROJECT REGION SA_EVE_VERIFIER
 TZ_ARG="Etc/UTC"; if [ -n "${BUSINESS_TZ-}" ] && [ "$BUSINESS_TZ" != '*tbd*' ]; then TZ_ARG="$BUSINESS_TZ"; else exists_or_pending --pending "decision BUSINESS_TZ (03)" EH-5.2 "re-run gcloud scheduler jobs update http --time-zone once BUSINESS_TZ is signed"; fi
-make_sched () {   # $1 cloud run job, $2 cron, $3 description
-  gcloud scheduler jobs create http "$1-schedule" --project="$EVE_PROJECT" --location="$REGION" --schedule="$2" --time-zone="$TZ_ARG" --description="$3" \
-    --uri="https://run.googleapis.com/v2/projects/${EVE_PROJECT}/locations/${REGION}/jobs/$1:run" \
+make_sched () {   # $1 schedule name, $2 cloud run job, $3 cron, $4 description
+  gcloud scheduler jobs create http "$1" --project="$EVE_PROJECT" --location="$REGION" --schedule="$3" --time-zone="$TZ_ARG" --description="$4" \
+    --uri="https://run.googleapis.com/v2/projects/${EVE_PROJECT}/locations/${REGION}/jobs/$2:run" \
     --http-method=POST --oauth-service-account-email="$SA_EVE_VERIFIER" --headers="Content-Type=application/json" \
     --message-body='{"overrides":{"containerOverrides":[{"args":["selftest"]}]}}' \
     --attempt-deadline=60s --max-retry-attempts=0
 }
-make_sched eve-reports-poll  "*/5 * * * *"  "Eve: Reports API poll by actor (setup 25 EH-5.2)"
-make_sched eve-detect        "13 * * * *"   "Eve: detection pass over the catalogue (setup 25 EH-5.2)"
-make_sched eve-heartbeat     "*/15 * * * *" "Eve: H-1 freshness, credential check, fingerprint (setup 25 EH-5.2)"
-make_sched eve-roster-check  "41 6 * * *"   "Eve: daily roster check, both directions (setup 25 EH-5.2)"
+make_sched eve-reports-poll-schedule eve-reports-poll "*/5 * * * *"  "Eve: Reports API poll, userKey=all per application (setup 25 EH-5.2)"
+make_sched eve-detect-fast-schedule  eve-detect       "2-57/5 * * * *" "Eve: detect --fast, severity-1 admin, login and token rules (setup 25 EH-5.2)"
+make_sched eve-detect-schedule       eve-detect       "13 * * * *"   "Eve: full detection pass over the catalogue (setup 25 EH-5.2)"
+make_sched eve-heartbeat-schedule    eve-heartbeat    "*/15 * * * *" "Eve: H-1 freshness, credential check, fingerprint (setup 25 EH-5.2)"
+make_sched eve-roster-check-schedule eve-roster-check "41 * * * *"   "Eve: hourly roster check, both directions (setup 25 EH-5.2)"
 ```
 
   `--max-retry-attempts=0` at the scheduler and `--max-retries=0` at the job are two different
   retries and both matter: the first stops a second dispatch, the second stops a second task.
-  Off-the-hour minutes keep Eve out of the crowded top of the hour. Minutes-level passes take
-  no time zone; the daily one does, which is why `BUSINESS_TZ` is read and a re-run recorded
-  when it is unsigned.
-- **VERIFY:** When unblocked: `gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format="table(name.basename(),schedule,timeZone,state,httpTarget.uri)"` lists four jobs, state `ENABLED`, each pointing at its own `:run` endpoint; `gcloud scheduler jobs describe eve-detect-schedule --location="$REGION" --project="$EVE_PROJECT" --format="value(httpTarget.body)" | base64 --decode` prints the `selftest` body.
+  Off-the-hour minutes keep Eve out of the crowded top of the hour, and the fast detection
+  schedule runs two minutes after each poll tick so it reads the poll's newest rows. The
+  roster check is hourly, matching `roster.check_cron` in `thresholds.yaml` (EH-2.2); the
+  schedule and the threshold must quote the same cron, which the VERIFY checks. Minutes-level
+  passes take no time zone; `BUSINESS_TZ` is still read so the `PENDING` line exists for the
+  business-hours silence budget of the heartbeat.
+- **VERIFY:** When unblocked: `gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format="table(name.basename(),schedule,timeZone,state,httpTarget.uri)"` lists **five** jobs, state `ENABLED`, two of them pointing at `eve-detect:run` and the other three at their own `:run` endpoint; `gcloud scheduler jobs describe eve-detect-schedule --location="$REGION" --project="$EVE_PROJECT" --format="value(httpTarget.body)" | base64 --decode` prints the `selftest` body; `test "$(gcloud scheduler jobs describe eve-roster-check-schedule --location="$REGION" --project="$EVE_PROJECT" --format='value(schedule)')" = "$(python3 -c "import yaml; print(yaml.safe_load(open('$HOME/work/eve-config/thresholds.yaml'))['roster']['check_cron'])")" && echo "roster cron matches thresholds.yaml"`.
 - **ROLLBACK:** `gcloud scheduler jobs delete <name> --location="$REGION" --project="$EVE_PROJECT"`.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then the listing as `${R}-5.2-schedules-selftest-v1`. E-08. TISAX 5.2.1.
 
-### EH-5.3 Pause all four immediately — BLOCKED
+### EH-5.3 Pause all five immediately — BLOCKED
 
 - **WHO:** Platform owner.
 - **WHERE:** Shell; `EVE_PROJECT`.
@@ -1284,11 +1370,12 @@ make_sched eve-roster-check  "41 6 * * *"   "Eve: daily roster check, both direc
   minutes. Pause first, prove second.
 
 ```bash
-for S in eve-reports-poll-schedule eve-detect-schedule eve-heartbeat-schedule eve-roster-check-schedule; do gcloud scheduler jobs pause "$S" --location="$REGION" --project="$EVE_PROJECT"; done
+need EVE_PROJECT REGION
+for S in eve-reports-poll-schedule eve-detect-fast-schedule eve-detect-schedule eve-heartbeat-schedule eve-roster-check-schedule; do gcloud scheduler jobs pause "$S" --location="$REGION" --project="$EVE_PROJECT"; done
 gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format="value(name.basename(),state)"
 ```
 
-- **VERIFY:** When unblocked: four lines, each `PAUSED`. If a tick fired between EH-5.2 and this step, its execution ran `selftest`, which writes nothing and pages nobody; record it in the build log as an observed self-test execution.
+- **VERIFY:** When unblocked: five lines, each `PAUSED`. If a tick fired between EH-5.2 and this step, its execution ran `selftest`, which writes nothing and pages nobody; record it in the build log as an observed self-test execution.
 - **ROLLBACK:** `gcloud scheduler jobs resume` — but not in this file: 26 resumes them.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then the listing as `${R}-5.3-paused-v1`. E-08. TISAX 5.2.1.
 
@@ -1304,10 +1391,10 @@ gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --forma
 
 ```bash
 need EVE_PROJECT REGION
-for S in eve-reports-poll eve-detect eve-heartbeat eve-roster-check; do
-  gcloud scheduler jobs run "${S}-schedule" --location="$REGION" --project="$EVE_PROJECT" || { echo "run refused for ${S}-schedule while PAUSED"; gcloud scheduler jobs resume "${S}-schedule" --location="$REGION" --project="$EVE_PROJECT" && gcloud scheduler jobs run "${S}-schedule" --location="$REGION" --project="$EVE_PROJECT"; gcloud scheduler jobs pause "${S}-schedule" --location="$REGION" --project="$EVE_PROJECT"; }
+for SPEC in "eve-reports-poll-schedule eve-reports-poll" "eve-detect-fast-schedule eve-detect" "eve-detect-schedule eve-detect" "eve-heartbeat-schedule eve-heartbeat" "eve-roster-check-schedule eve-roster-check"; do set -- $SPEC; S="$1"; J="$2"
+  gcloud scheduler jobs run "$S" --location="$REGION" --project="$EVE_PROJECT" || { echo "run refused for $S while PAUSED"; gcloud scheduler jobs resume "$S" --location="$REGION" --project="$EVE_PROJECT" && gcloud scheduler jobs run "$S" --location="$REGION" --project="$EVE_PROJECT"; gcloud scheduler jobs pause "$S" --location="$REGION" --project="$EVE_PROJECT"; }
   sleep 30
-  gcloud run jobs executions list --job="$S" --region="$REGION" --project="$EVE_PROJECT" --format="table(name.basename(),createTime,status.succeededCount,status.failedCount)" --limit=3
+  gcloud run jobs executions list --job="$J" --region="$REGION" --project="$EVE_PROJECT" --format="table(name.basename(),createTime,status.succeededCount,status.failedCount)" --limit=3
 done
 gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format="value(name.basename(),state,status.code,lastAttemptTime)"
 ```
@@ -1316,9 +1403,9 @@ gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --forma
   The block above tries it paused and, if refused, resumes, runs and pauses again inside the
   same step — so the schedule is never left enabled and the observed behaviour is recorded
   either way.
-- **VERIFY:** When unblocked: each Cloud Run job shows one new execution with
-  `succeededCount: 1`; each scheduler job's last attempt has no error code; all four are
-  `PAUSED` at the end of the step. A `PERMISSION_DENIED` on any dispatch means EH-4.5 did not
+- **VERIFY:** When unblocked: each Cloud Run job shows one new execution per schedule that
+  targets it (two for `eve-detect`) with `succeededCount: 1`; each scheduler job's last attempt
+  has no error code; all five are `PAUSED` at the end of the step. A `PERMISSION_DENIED` on any dispatch means EH-4.5 did not
   take: fix it there, never by widening the human's rights.
 - **ROLLBACK:** None needed; a `selftest` execution changes nothing.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then the execution tables and the final state listing as `${R}-5.4-scheduler-proof-v1`. E-06, E-08. TISAX 5.2.1, 1.5.1.
@@ -1331,11 +1418,13 @@ gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --forma
 
 ```bash
 need EVE_PROJECT REGION SA_EVE_VERIFIER SA_EVE_CONSOLE SA_1_ADMIN CICD_PROJECT ENT_DEPLOY_CREDENTIAL_HOLDER_EVE
-set_body () { gcloud scheduler jobs update http "$1-schedule" --location="$REGION" --project="$EVE_PROJECT" --message-body="{\"overrides\":{\"containerOverrides\":[{\"args\":[\"$2\"]}]}}"; }
-set_body eve-reports-poll reports_poll
-set_body eve-detect       detect
-set_body eve-heartbeat    heartbeat
-set_body eve-roster-check roster_check
+set_body () { gcloud scheduler jobs update http "$1" --location="$REGION" --project="$EVE_PROJECT" --message-body="{\"overrides\":{\"containerOverrides\":[{\"args\":$2}]}}"; }   # $2 is a JSON array of arguments
+set_body eve-reports-poll-schedule '["reports_poll"]'
+set_body eve-detect-fast-schedule  '["detect","--fast"]'
+set_body eve-detect-schedule       '["detect"]'
+set_body eve-heartbeat-schedule    '["heartbeat"]'
+set_body eve-roster-check-schedule '["roster_check"]'
+for S in eve-reports-poll-schedule eve-detect-fast-schedule eve-detect-schedule eve-heartbeat-schedule eve-roster-check-schedule; do printf '%s: ' "$S"; gcloud scheduler jobs describe "$S" --location="$REGION" --project="$EVE_PROJECT" --format="value(httpTarget.body)" | base64 --decode; echo; done
 COND="$(gcloud iam service-accounts get-iam-policy "$SA_EVE_VERIFIER" --project="$EVE_PROJECT" --format=json | jq -r '.bindings[] | select(.role=="roles/iam.serviceAccountUser" and .condition.title=="job-create-window") | .condition.expression')"
 if [ -n "$COND" ]; then gcloud iam service-accounts remove-iam-policy-binding "$SA_EVE_VERIFIER" --project="$EVE_PROJECT" --member="user:${SA_1_ADMIN}" --role=roles/iam.serviceAccountUser --condition="expression=${COND},title=job-create-window,description=setup 25 EH-5.1; removed in EH-5.5"; else echo "no job-create-window binding: the PAM grant carried actAs, and revoking it below is the removal"; fi
 gcloud pam grants list --entitlement="$ENT_DEPLOY_CREDENTIAL_HOLDER_EVE" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | while read -r G; do gcloud pam grants revoke "$G" --reason="setup 25 section 5 complete" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT"; done
@@ -1343,7 +1432,7 @@ for SA in "$SA_EVE_VERIFIER" "$SA_EVE_CONSOLE"; do echo "== $SA"; gcloud iam ser
 gcloud asset search-all-iam-policies --scope="projects/${EVE_PROJECT}" --query='policy:(serviceAccountUser OR serviceAccountTokenCreator)' --format="value(resource,policy.bindings.role,policy.bindings.members)"
 ```
 
-- **VERIFY:** When unblocked: each schedule's decoded body carries its real entrypoint and all four remain `PAUSED`; the two `get-iam-policy` reads print **nothing** — no `user:` member holds `serviceAccountUser` or `serviceAccountTokenCreator` on either Eve account; the organisation-scoped search returns no human on those two roles anywhere in `EVE_PROJECT`; no PAM grant is active; the second human confirms in writing. **This verify is the one the review asked for (S143) and it is a gate: if any human still holds `actAs`, the sitting does not end.**
+- **VERIFY:** When unblocked: each schedule's decoded body carries its real entrypoint (`["detect","--fast"]` on the fast one) and all five remain `PAUSED`; the two `get-iam-policy` reads print **nothing** — no `user:` member holds `serviceAccountUser` or `serviceAccountTokenCreator` on either Eve account; the organisation-scoped search returns no human on those two roles anywhere in `EVE_PROJECT`; no PAM grant is active; the second human confirms in writing. **This verify is the one the review asked for (S143) and it is a gate: if any human still holds `actAs`, the sitting does not end.**
 - **ROLLBACK:** None: removing the window is the desired end state. A later deploy requests a new grant.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then the four bodies, both policy reads, the search and the second human's confirmation as `${R}-5.5-actas-closed-v1`. E-08. TISAX 4.1.3, 4.2.1.
 
@@ -1359,23 +1448,26 @@ themselves, so both "the pass stopped" and "the pass runs but the data is stale"
 
 - **WHO:** Platform owner under `ENT_PROJECT_REPAIR_EVE`.
 - **WHERE:** Shell; `EVE_PROJECT`.
-- **ACTION:** > **BLOCKED**: Needs: EH-4.4 `DONE` (the pass must have emitted at least one `ok` line, which EH-5.4's `selftest` does not produce). Until then: `checkpoint EH-6.1 BLOCKED - - "needs EH-4.4 and one real heartbeat pass"`.
+- **ACTION:** > **BLOCKED**: Needs: EH-4.4 `DONE` — the job exists. **Not** "the pass has emitted an `ok` line": a log-based metric counts only entries received after it is created, so waiting for the first `ok` line guarantees the first one is missed. The metric is deliberately created before any real pass runs. Until then: `checkpoint EH-6.1 BLOCKED - - "needs EH-4.4"`.
 
-  A log-based metric is populated only from entries received **after** it is created, so it is
-  created now and observed in EH-6.4 after 26 resumes the schedules.
+  Created now, observed in EH-6.4 after 26 resumes the schedules.
 
 ```bash
 need EVE_PROJECT
 gcloud logging metrics create eve_heartbeat_ok --project="$EVE_PROJECT" --description="Eve heartbeat passes that completed and found the data fresh (setup 25 EH-6.1)" --log-filter='resource.type="cloud_run_job" AND resource.labels.job_name="eve-heartbeat" AND severity=INFO AND jsonPayload.eve_heartbeat="ok"'
 gcloud logging metrics create eve_pass_error --project="$EVE_PROJECT" --description="Eve reconciler pass errors, any pass (setup 25 EH-6.1)" --log-filter='resource.type="cloud_run_job" AND resource.labels.job_name=~"^eve-" AND severity>=ERROR'
+gcloud logging metrics create eve_reports_quota_exceeded --project="$EVE_PROJECT" --description="Reports API throttling seen by the poll: quotaExceeded, rateLimitExceeded or HTTP 429 (setup 25 EH-6.1; rule SI-13)" --log-filter='resource.type="cloud_run_job" AND resource.labels.job_name="eve-reports-poll" AND severity>=ERROR AND (jsonPayload.reason="quotaExceeded" OR jsonPayload.reason="rateLimitExceeded" OR jsonPayload.http_status=429)'
 ```
 
-  The two filters are deliberately disjoint: the first can only be written by a pass that
-  succeeded **and** found the data fresh; the second exists so a failing pass raises its own
-  threshold alarm instead of propping up the first series.
-- **VERIFY:** When unblocked: `gcloud logging metrics describe eve_heartbeat_ok --project="$EVE_PROJECT" --format="value(filter)"` prints the filter with `jsonPayload.eve_heartbeat="ok"`; the metric type is `logging.googleapis.com/user/eve_heartbeat_ok`.
-- **ROLLBACK:** `gcloud logging metrics delete eve_heartbeat_ok --project="$EVE_PROJECT"` (and the error metric).
-- **EVIDENCE:** Until unblocked, the BLOCKED line. Then both describes as `${R}-6.1-metrics-v1`. E-06. TISAX 5.2.4.
+  The first two filters are deliberately disjoint: the first can only be written by a pass
+  that succeeded **and** found the data fresh; the second exists so a failing pass raises its
+  own threshold alarm instead of propping up the first series. The third is narrower than the
+  second on purpose: a throttled poll is not a generic error but the one failure that reads
+  as quiet, and `SI-13` and the policy of EH-6.2 treat one occurrence as a finding.
+- **VERIFY:** When unblocked: `gcloud logging metrics describe eve_heartbeat_ok --project="$EVE_PROJECT" --format="value(filter)"` prints the filter with `jsonPayload.eve_heartbeat="ok"`; the metric type is `logging.googleapis.com/user/eve_heartbeat_ok`; `gcloud logging metrics list --project="$EVE_PROJECT" --format="value(name)"` lists the three names; the Eve owner confirms that `reports_poll.py` writes `jsonPayload.reason` and `jsonPayload.http_status` with those spellings (EH-4.0).
+- **ROLLBACK:** `gcloud logging metrics delete eve_heartbeat_ok --project="$EVE_PROJECT"` (and the other two).
+- **EVIDENCE:** Until unblocked, the BLOCKED line. Then the three describes as `${R}-6.1-metrics-v1`. E-06. TISAX 5.2.4.
+- *Assumption:* the structured field names `reason` and `http_status` are what Eve's poll logs; if the code at `EVE_CODE_COMMIT` uses others, the filter is edited to match before the metric is created, and the difference is recorded.
 
 ### EH-6.2 The absence policy and the error policy, with no channels yet
 
@@ -1423,13 +1515,30 @@ cat > "$W/eve-pass-errors.json" <<'EOF'
   "notificationChannels": []
 }
 EOF
+cat > "$W/eve-reports-throttled.json" <<'EOF'
+{
+  "displayName": "Eve: Reports API poll throttled",
+  "documentation": {"content": "The poll logged quotaExceeded, rateLimitExceeded or HTTP 429 from activities.list. A throttled route reads as quiet; treat as severity 1 (rule SI-13). Check the Admin SDK quota page (setup 25 EH-4.0).", "mimeType": "text/markdown"},
+  "combiner": "OR",
+  "conditions": [{
+    "displayName": "any throttled poll call in 5 minutes",
+    "conditionThreshold": {
+      "filter": "metric.type=\"logging.googleapis.com/user/eve_reports_quota_exceeded\" AND resource.type=\"cloud_run_job\"",
+      "comparison": "COMPARISON_GT", "thresholdValue": 0, "duration": "0s",
+      "aggregations": [{"alignmentPeriod": "300s", "perSeriesAligner": "ALIGN_COUNT", "crossSeriesReducer": "REDUCE_SUM"}]
+    }
+  }],
+  "notificationChannels": []
+}
+EOF
 gcloud monitoring policies create --project="$EVE_PROJECT" --policy-from-file="$W/eve-h1-absence.json"
 gcloud monitoring policies create --project="$EVE_PROJECT" --policy-from-file="$W/eve-pass-errors.json"
+gcloud monitoring policies create --project="$EVE_PROJECT" --policy-from-file="$W/eve-reports-throttled.json"
 cp "$W"/*.json "$BUILD_LOG_DIR/records/"; rm -rf "$W"
-exists_or_pending --pending "NOTIF_CH_EVE_EMAIL_SECOND_HUMAN (file 26)" EH-6.2 "26: attach the Eve channels to both policies and re-verify; an absence policy with no channel warns nobody"
+exists_or_pending --pending "NOTIF_CH_EVE_EMAIL_SECOND_HUMAN (file 26)" EH-6.2 "26: attach the Eve channels to all three policies and re-verify; an absence policy with no channel warns nobody"
 ```
 
-- **VERIFY:** `gcloud monitoring policies list --project="$EVE_PROJECT" --format="table(displayName,enabled,conditions[0].conditionAbsent.duration,notificationChannels)"` shows both policies, enabled, the absence duration `3600s`, and empty channel lists with a `PENDING` line recorded against 26. An absence policy is **not** evidence of anything until it has seen data; EH-6.4 is where that is proven.
+- **VERIFY:** `gcloud monitoring policies list --project="$EVE_PROJECT" --format="table(displayName,enabled,conditions[0].conditionAbsent.duration,notificationChannels)"` shows the three policies, enabled, the absence duration `3600s` on the H-1 policy, and empty channel lists with a `PENDING` line recorded against 26. An absence policy is **not** evidence of anything until it has seen data; EH-6.4 is where that is proven.
 - **ROLLBACK:** `gcloud monitoring policies delete <policy> --project="$EVE_PROJECT"`.
 - **EVIDENCE:** Both policy files and the listing as `${R}-6.2-policies-v1`. E-06. TISAX 5.2.4.
 
@@ -1476,7 +1585,7 @@ need EVE_PROJECT REGION
 gcloud scheduler jobs pause eve-heartbeat-schedule --location="$REGION" --project="$EVE_PROJECT"
 date -u +%FT%TZ | tee "${R}-6.4-pause-time.txt"
 # wait out the 60-minute absence duration plus the alignment period
-gcloud alpha monitoring policies list --project="$EVE_PROJECT" --filter='displayName:"Eve H-1"' --format="value(name)"
+gcloud monitoring policies list --project="$EVE_PROJECT" --filter='displayName:"Eve H-1"' --format="value(name)"   # GA track, as EH-6.2 and EH-8.2 use; never alpha here
 gcloud scheduler jobs resume eve-heartbeat-schedule --location="$REGION" --project="$EVE_PROJECT"
 date -u +%FT%TZ | tee "${R}-6.4-resume-time.txt"
 ```
@@ -1559,15 +1668,22 @@ gcloud beta services identity create --service=run.googleapis.com --project="$EV
 ```bash
 need EVE_PROJECT REGION SA_EVE_CONSOLE AR_PLATFORM EVE_CODE_COMMIT EVE_DS EVE_QUALITY_DS
 CONSOLE_DIGEST="$(gcloud artifacts docker images describe "${AR_PLATFORM}/eve-console:${EVE_CODE_COMMIT}" --format='value(image_summary.digest)')"
-gcloud run deploy eve-console --project="$EVE_PROJECT" --region="$REGION" --image="${AR_PLATFORM}/eve-console@${CONSOLE_DIGEST}" --service-account="$SA_EVE_CONSOLE" --binary-authorization=default --no-allow-unauthenticated --iap --ingress=internal-and-cloud-load-balancing --min-instances=0 --concurrency=8 --timeout=60s --set-env-vars="^;^EVE_PROJECT=${EVE_PROJECT};EVE_DS=${EVE_DS};EVE_QUALITY_DS=${EVE_QUALITY_DS};READ_ONLY=true"
+gcloud run deploy eve-console --project="$EVE_PROJECT" --region="$REGION" --image="${AR_PLATFORM}/eve-console@${CONSOLE_DIGEST}" --service-account="$SA_EVE_CONSOLE" --binary-authorization=default --no-allow-unauthenticated --iap --min-instances=0 --concurrency=8 --timeout=60s --set-env-vars="^;^EVE_PROJECT=${EVE_PROJECT};EVE_DS=${EVE_DS};EVE_QUALITY_DS=${EVE_QUALITY_DS};READ_ONLY=true"
 penv_set EVE_CONSOLE_URL "$(gcloud run services describe eve-console --project="$EVE_PROJECT" --region="$REGION" --format='value(status.url)')"
 ```
 
-  `--ingress=internal-and-cloud-load-balancing` is set because Google's own guidance is to stop
-  traffic reaching the service through its `run.app` URL and bypassing IAP; if the console must
-  be reachable from outside the network, the alternative Google names is disabling the default
-  URL, and whichever is chosen is recorded here as a dated decision, not left to taste.
-- **VERIFY:** When unblocked: `gcloud run services describe eve-console --project="$EVE_PROJECT" --region="$REGION" --format="yaml(spec.template.spec.serviceAccountName,spec.template.spec.containers[0].image,metadata.annotations)"` shows `eve-console@`, the image **by digest**, the `binary-authorization: default` annotation and the IAP annotation; an unauthenticated `curl` of `EVE_CONSOLE_URL` returns 403, never the page.
+  **Ingress stays at its default, `all`, and IAP is the gate.** Google's page on enabling IAP
+  for Cloud Run (read 2026-09-16) states that enabling IAP on the service directly secures
+  traffic from **all** ingress paths, including the default `run.app` URL and any load
+  balancer, that no load balancer is required, and that IAP cannot be configured on both a
+  load balancer and the service. An earlier draft added
+  `--ingress=internal-and-cloud-load-balancing` with no load balancer anywhere in 23, 24 or
+  this file: that blocks the `run.app` URL for every caller outside the VPC, so the audience
+  group of EH-7.1 could not have reached the console at all, and a blocked-ingress request
+  returns 404 where this step's VERIFY expected IAP's refusal. The IAP attachment used here is
+  **on the service**; if a later file puts a load balancer in front, it must remove `--iap`
+  here and attach IAP on the backend service instead, as a dated change.
+- **VERIFY:** When unblocked: `gcloud run services describe eve-console --project="$EVE_PROJECT" --region="$REGION" --format="yaml(spec.template.spec.serviceAccountName,spec.template.spec.containers[0].image,metadata.annotations)"` shows `eve-console@`, the image **by digest**, the `binary-authorization: default` annotation and the IAP annotation; `gcloud run services describe eve-console --project="$EVE_PROJECT" --region="$REGION" --format="value(metadata.annotations['run.googleapis.com/ingress'])"` prints `all` or nothing (the default); `curl -s -o /dev/null -w '%{http_code}\n' "$EVE_CONSOLE_URL"` **unauthenticated** returns the IAP sign-in redirect (`302`) or `403`, never `200` and never `404` — the page body is never served. The functional proof, a member signing in and a non-member refused, is EH-7.5's.
 - **ROLLBACK:** `gcloud run services delete eve-console --project="$EVE_PROJECT" --region="$REGION"`.
 - **EVIDENCE:** Until unblocked, the BLOCKED line. Then the describe output and the `curl` result as `${R}-7.3-console-v1`. E-08. TISAX 5.2.1, 4.2.1.
 
@@ -1597,8 +1713,10 @@ need EVE_PROJECT REGION GRP_EVE_CONSOLE_READERS
 gcloud iap web add-iam-policy-binding --project="$EVE_PROJECT" --region="$REGION" --resource-type=cloud-run --service=eve-console --member="group:${GRP_EVE_CONSOLE_READERS}" --role=roles/iap.httpsResourceAccessor
 ```
 
-  `--resource-type` accepts `cloud-run` (verified 2026-09-16). The member is the named group and
-  never `walle-operators@`.
+  `--resource-type` accepts `cloud-run` and the command is on the GA track (verified
+  2026-09-16). **`--region` is required** when `--resource-type=cloud-run` — the reference says
+  so in those words — so it is not optional here and is never dropped. The member is the named
+  group and never `walle-operators@`.
 - **VERIFY:** When unblocked:
 
 ```bash
@@ -1619,7 +1737,7 @@ gcloud iap web get-iam-policy --project="$EVE_PROJECT" --region="$REGION" --reso
 - **ACTION:**
 
 ```bash
-need EVE_PROJECT SA_EVE_CONSOLE REGION
+need EVE_PROJECT SA_EVE_CONSOLE REGION EVE_DS
 gcloud projects get-iam-policy "$EVE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:${SA_EVE_CONSOLE}" --format="table(bindings.role,bindings.condition.title)"
 gcloud run services describe eve-console --project="$EVE_PROJECT" --region="$REGION" --format="value(spec.template.spec.containers[0].env)"
 bq --project_id="$EVE_PROJECT" show --format=prettyjson "${EVE_PROJECT}:${EVE_DS}" | jq -r --arg c "$SA_EVE_CONSOLE" '.access[] | select(.userByEmail==$c) | .role'
@@ -1641,67 +1759,151 @@ and the witness alarms on any change (27, `WITNESS_ALERT_FINGERPRINT`).
 
 - **WHO:** Eve owner writes; the second human approves as code owner of `eve/config`.
 - **WHERE:** `eve-config`, branch `fingerprint`.
-- **ACTION:** The definition is committed so the fingerprint cannot be quietly narrowed either.
+- **ACTION:** The definition **and the computation** are committed together, so neither can be
+  quietly narrowed and so the value is reproducible by anyone with read access to
+  `EVE_PROJECT` — the second human in particular (EH-8.3). An earlier draft committed the
+  component list and computed the value with an ad-hoc inline block run by the monitored
+  subject; the second human was asked to keep a 64-character string she could not recompute.
 
 | Component | Read from | Why it is in the hash |
 |---|---|---|
 | Sink filter and destination | `gcloud logging sinks describe "$EVE_SINK" --organization="$ORG_ID"` | a narrowed filter is the classic self-silencing move |
-| Job specifications | each `run jobs describe`: image digest, service account, args, max-retries, env keys (never values) | a swapped image or a changed entrypoint |
-| Scheduler states | `scheduler jobs list`: name, schedule, state, target uri, body | a paused schedule, a retargeted body |
-| `eve@`'s role privileges | `roleAssignments.list` and `roles.get` for `EVE_ROLE_NAME` | a trimmed privilege set |
+| Job specifications | each `run jobs describe`: image digest, service account, args, max-retries, env **keys** (never values), the Binary Authorization annotation | a swapped image or a changed entrypoint |
+| Console service specification | `run services describe eve-console`: image digest, service account, IAP annotation | a console re-pointed or IAP turned off |
+| Scheduler states | `scheduler jobs list`: name, schedule, state, target uri, body, OAuth service account | a paused schedule, a retargeted body |
+| `eve@`'s role privileges | `roleAssignments.list` for `eve@` and `roles.list` filtered to `EVE_ROLE_NAME` | a trimmed privilege set |
 | Roster hash | SHA-256 of `ROSTER_FILE` at its current commit | a quietly edited roster |
-| Config commit | `EVE_CONFIG_COMMIT` and the catalogue's rule ids | a removed rule |
+| Config commit and rule ids | `EVE_CONFIG_COMMIT` and the catalogue's rule ids | a removed rule |
 | Dataset access arrays | the four `bq show` access arrays | a reader or writer added |
-| Policy states | Binary Authorization policy, the two Monitoring policies, the log metrics | enforcement turned off |
+| Binary Authorization policy, Monitoring policies, log metrics | `binauthz policy export`, `monitoring policies list`, `logging metrics list` | enforcement turned off |
+| **Notification channels** | `gcloud beta monitoring channels list`: type, display name, enabled, and the label values (the number, the address) | the edit that redirects every page to the monitored administrator without touching a policy or a metric — invisible to the earlier component set, and the reason `SI-12` exists |
+| **Secret version states** | `gcloud secrets versions list … --location` and each secret's IAM policy, for the two Eve secrets | a silently added version or a new `secretAccessor` (`SI-10`) |
+| **Project liens** | `gcloud alpha resource-manager liens list --project` | the lien whose removal is the first step of deleting Eve's project (`SI-11`) |
 
 ```bash
 git switch main && git pull --ff-only && git switch -c fingerprint
+mkdir -p tools
 cat > fingerprint.yaml <<'YAML'
-fingerprint_version: "eve-h-1"
-algorithm: "sha256 over the canonical JSON of the components below, sorted by key"
+fingerprint_version: "eve-h-2"
+algorithm: "sha256 over tools/fingerprint.sh's canonical input: one JSON object keyed by component name, keys sorted, each component projected to the fields named in the script (volatile fields are never read, so none need stripping)"
+computed_by: "tools/fingerprint.sh in this repository; the heartbeat entrypoint reproduces it field for field (EH-4.4); any difference between the two is a code defect, never a configuration change"
 emit: "every heartbeat pass, into eve.config_fingerprint, and in the witness heartbeat row (setup 26)"
 alarm: "the witness alarms on any change of the value (setup 27 WITNESS_ALERT_FINGERPRINT); a change is legitimate only with a merged eve/config change or a recorded deploy"
-components: [sink_filter_and_destination, job_specs_with_digests, scheduler_states, eve_role_privileges, roster_sha256, eve_config_commit, catalogue_rule_ids, dataset_access_arrays, binauthz_policy, monitoring_policies, log_metrics]
-excluded: ["any secret value", "any token", "row counts (carried separately as cumulative counts)"]
+attests: "continuity, not correctness: the baseline proves the configuration has not changed since it was taken; that it was right when taken is proven by the second human's reads (setup 28 EV-3.3, EV-3.4)"
+components: [sink_filter_and_destination, job_specs_with_digests, console_service_spec, scheduler_states, eve_role_privileges, roster_sha256, eve_config_commit, catalogue_rule_ids, dataset_access_arrays, binauthz_policy, monitoring_policies, log_metrics, notification_channels, secret_version_states, project_liens]
+excluded: ["any secret value", "any token", "row counts (carried separately as cumulative counts)", "timestamps, etags, generations, resourceVersions, lastModifier annotations"]
 YAML
-git add fingerprint.yaml && git commit -m "eve/config: what the configuration fingerprint covers (setup 25 EH-8.1)" && git push -u origin fingerprint
+cat > tools/fingerprint.sh <<'SH'
+#!/usr/bin/env bash
+# Eve configuration fingerprint (setup 25 EH-8.1). Reads only; prints nothing secret.
+# Usage: tools/fingerprint.sh <output-directory>   -> writes fingerprint-input.json and fingerprint.sha256 there, prints the hash.
+set -euo pipefail
+for V in EVE_PROJECT ORG_ID EVE_SINK REGION ROSTER_FILE PLATFORM_REPO_DIR EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_QUALITY_DS EVE_OAUTH_CLIENT_SECRET_NAME EVE_REFRESH_TOKEN_SECRET_NAME EVE_ROBOT EVE_ROLE_NAME DIRECTORY_CUSTOMER_ID EVE_CONFIG_COMMIT; do : "${!V:?$V is unset}"; done
+OUT="${1:?output directory}"; mkdir -p "$OUT"
+F="$(mktemp -d)"; trap 'rm -rf "$F"' EXIT
+gcloud logging sinks describe "$(basename "$EVE_SINK")" --organization="$ORG_ID" --format=json | jq '{name, filter, destination, writerIdentity, disabled}' > "$F/sink_filter_and_destination.json"
+for J in eve-reports-poll eve-roster-check eve-detect eve-heartbeat; do gcloud run jobs describe "$J" --region="$REGION" --project="$EVE_PROJECT" --format=json | jq '{job: .metadata.name, service_account: .spec.template.spec.template.spec.serviceAccountName, image: .spec.template.spec.template.spec.containers[0].image, args: .spec.template.spec.template.spec.containers[0].args, max_retries: .spec.template.spec.template.spec.maxRetries, env_keys: ([.spec.template.spec.template.spec.containers[0].env[]?.name] | sort), binauthz: .metadata.annotations["run.googleapis.com/binary-authorization"]}'; done | jq -s 'sort_by(.job)' > "$F/job_specs_with_digests.json"
+gcloud run services describe eve-console --region="$REGION" --project="$EVE_PROJECT" --format=json | jq '{service: .metadata.name, service_account: .spec.template.spec.serviceAccountName, image: .spec.template.spec.containers[0].image, env_keys: ([.spec.template.spec.containers[0].env[]?.name] | sort), iap: (.metadata.annotations | with_entries(select(.key | test("iap|binary-authorization|ingress"))))}' > "$F/console_service_spec.json"
+gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format=json | jq 'map({name, schedule, timeZone, state, uri: .httpTarget.uri, body: .httpTarget.body, oauth_sa: .httpTarget.oauthToken.serviceAccountEmail}) | sort_by(.name)' > "$F/scheduler_states.json"
+T="$(gcloud auth application-default print-access-token)"
+curl -sf -H "Authorization: Bearer $T" "https://admin.googleapis.com/admin/directory/v1/customer/${DIRECTORY_CUSTOMER_ID}/roles?maxResults=100" | jq --arg n "$EVE_ROLE_NAME" '{role: ([.items[] | select(.roleName==$n) | {roleName, privileges: (.rolePrivileges | sort_by(.privilegeName))}])}' > "$F/eve_role_privileges.json"
+curl -sf -H "Authorization: Bearer $T" "https://admin.googleapis.com/admin/directory/v1/customer/${DIRECTORY_CUSTOMER_ID}/roleassignments?userKey=${EVE_ROBOT}" | jq '{assignments: ([.items[]? | {roleId, scopeType, orgUnitId}] | sort_by(.roleId))}' > "$F/eve_role_assignments.json"
+jq -s 'add' "$F/eve_role_privileges.json" "$F/eve_role_assignments.json" > "$F/eve_role_privileges.tmp" && mv "$F/eve_role_privileges.tmp" "$F/eve_role_privileges.json" && rm "$F/eve_role_assignments.json"
+unset T
+jq -n --arg h "$(shasum -a 256 "$PLATFORM_REPO_DIR/$ROSTER_FILE" | cut -d' ' -f1)" '{roster_sha256: $h}' > "$F/roster_sha256.json"
+jq -n --arg c "$EVE_CONFIG_COMMIT" '{eve_config_commit: $c}' > "$F/eve_config_commit.json"
+python3 -c "import yaml, json, sys; print(json.dumps({'catalogue_rule_ids': sorted(r['id'] for r in yaml.safe_load(open(sys.argv[1]))['rules'])}))" "$(dirname "$0")/../detections/catalogue.yaml" > "$F/catalogue_rule_ids.json"
+for DS in "$EVE_DS" "$EVE_WS_LOGS_DS" "$EVE_WS_REPORTS_DS" "$EVE_QUALITY_DS"; do bq --project_id="$EVE_PROJECT" show --format=prettyjson "${EVE_PROJECT}:${DS}" | jq '{dataset: .datasetReference.datasetId, access: (.access | sort_by(tostring))}'; done | jq -s 'sort_by(.dataset)' > "$F/dataset_access_arrays.json"
+gcloud container binauthz policy export --project="$EVE_PROJECT" --format=json | jq 'del(.updateTime, .etag)' > "$F/binauthz_policy.json"
+gcloud monitoring policies list --project="$EVE_PROJECT" --format=json | jq 'map({displayName, enabled, combiner, conditions, notificationChannels}) | sort_by(.displayName)' > "$F/monitoring_policies.json"
+gcloud logging metrics list --project="$EVE_PROJECT" --format=json | jq 'map({name, filter}) | sort_by(.name)' > "$F/log_metrics.json"
+gcloud beta monitoring channels list --project="$EVE_PROJECT" --format=json | jq 'map({name, type, displayName, enabled, labels}) | sort_by(.name)' > "$F/notification_channels.json"
+for S in "$EVE_OAUTH_CLIENT_SECRET_NAME" "$EVE_REFRESH_TOKEN_SECRET_NAME"; do jq -n --arg s "$S" --argjson v "$(gcloud secrets versions list "$S" --location="$REGION" --project="$EVE_PROJECT" --format=json | jq 'map({name, state}) | sort_by(.name)')" --argjson p "$(gcloud secrets get-iam-policy "$S" --location="$REGION" --project="$EVE_PROJECT" --format=json | jq '[.bindings[]? | {role, members: (.members | sort)}] | sort_by(.role)')" '{secret: $s, versions: $v, bindings: $p}'; done | jq -s 'sort_by(.secret)' > "$F/secret_version_states.json"
+gcloud alpha resource-manager liens list --project="$EVE_PROJECT" --format=json | jq 'map({name, origin, reason, restrictions: (.restrictions | sort)}) | sort_by(.name)' > "$F/project_liens.json"
+for f in "$F"/*.json; do jq -n --arg k "$(basename "$f" .json)" --slurpfile v "$f" '{($k): $v[0]}'; done | jq -s -S 'add' > "$OUT/fingerprint-input.json"
+shasum -a 256 "$OUT/fingerprint-input.json" | cut -d' ' -f1 | tee "$OUT/fingerprint.sha256"
+SH
+chmod +x tools/fingerprint.sh
+printf '/tools/ @<second-human-handle> @<security-reviewer-handle>\n' >> CODEOWNERS
+git add fingerprint.yaml tools/fingerprint.sh CODEOWNERS && git commit -m "eve/config: fingerprint definition and the committed script that computes it (setup 25 EH-8.1)" && git push -u origin fingerprint
 ```
 
-- **VERIFY:** Merged with the second human's approval; the eleven components are the ones the heartbeat entrypoint reads (the Eve owner confirms against the code at `EVE_CODE_COMMIT`); no component is a secret.
+  Three properties of the script matter and are what the second human reviews. It **projects**
+  each object to named fields rather than deleting volatile ones, so a timestamp, an etag, a
+  `resourceVersion` or a `lastModifier` annotation can never enter the input; it never prints
+  a secret — secret **states** and **bindings** are read, values never; and it writes a single
+  JSON object keyed by component name, so the VERIFY of EH-8.2 can compare the keys with the
+  `components` list mechanically. The Directory reads use the operator's Application Default
+  Credentials with the read-only scopes `admin.directory.rolemanagement.readonly` (granted
+  once with `gcloud auth application-default login --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/admin.directory.rolemanagement.readonly`
+  and revoked with `gcloud auth application-default revoke` at the end of the sitting); a
+  super admin's read of role definitions is itself an `admin` event the poll retrieves, which
+  is expected and allow-listed under `VIEW`-class names only.
+- **VERIFY:** Merged with the second human's approval as code owner of `/tools/`; the fifteen components are the ones the heartbeat entrypoint reads (the Eve owner confirms, component by component, against the code at `EVE_CODE_COMMIT`); `grep -nE 'print-access-token|versions access' tools/fingerprint.sh` shows the one Directory token, unset after use, and **no** `secrets versions access`; no component is a secret value.
 - **ROLLBACK:** A reverting pull request; removing a component is itself a fingerprint change.
 - **EVIDENCE:** The merge commit as `${R}-8.1-fingerprint-definition-v1`. E-05. TISAX 5.2.4.
+- *Assumption:* the Directory API paths `customer/{customerId}/roles` and `customer/{customerId}/roleassignments?userKey=` and their `rolePrivileges` and `roleId` fields are current on the day; the Eve owner re-reads the Directory API reference at the merge. `gcloud alpha resource-manager liens list` is alpha only (checked 2026-09-16; no beta or GA variant is documented) and `gcloud beta monitoring channels list` is beta only (the GA path is a 404); both are pinned as such in the script and revisited when a GA track appears.
 
-### EH-8.2 Record the first fingerprint by hand, as the baseline — BLOCKED
+### EH-8.2 Record the first fingerprint with the committed script, as the baseline — BLOCKED
 
-- **WHO:** Platform owner computes; the second human keeps a copy **outside** the tenant (their witness account's own store, 08).
-- **WHERE:** Shell; `EVE_PROJECT`.
-- **ACTION:** > **BLOCKED**: Needs: EH-4.4, EH-5.5, EH-6.2 and EH-7.5 `DONE`, so that there is a configuration to fingerprint. Until then: `checkpoint EH-8.2 BLOCKED - - "needs section 4, 5, 6, 7"`.
+- **WHO:** Platform owner runs the committed script; the second human recomputes it independently in EH-8.3 before anything is recorded.
+- **WHERE:** Shell; `EVE_PROJECT`; the `eve-config` checkout at `EVE_CONFIG_COMMIT` (EH-8.1 merged).
+- **ACTION:** > **BLOCKED**: Needs: EH-4.4, EH-5.5, EH-6.2 and EH-7.5 `DONE`, so that there is a configuration to fingerprint, and EH-8.1 merged. Until then: `checkpoint EH-8.2 BLOCKED - - "needs section 4, 5, 6, 7 and EH-8.1"`.
 
-  The first value is taken by hand, before any pass runs, so that 26's first automatic value can
-  be compared with something the second human already holds. If they differ, something changed
+  The first value is taken before any pass runs, so that 26's first automatic value can be
+  compared with something the second human already holds. If they differ, something changed
   between this sitting and the first run, and that is exactly what the pair of values is for.
+  **The baseline attests to continuity, not correctness**: a configuration that is already
+  wrong when the baseline is taken is not detected by any later comparison (27 WG-3.8 compares
+  each heartbeat with the one before). Correctness is what the second human's reads in 28
+  (EV-3.3, EV-3.4) establish; this step makes sure that what she read is what stays.
 
 ```bash
-need EVE_PROJECT ORG_ID EVE_SINK REGION ROSTER_FILE PLATFORM_REPO_DIR EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_QUALITY_DS
-F="$(mktemp -d)"
-gcloud logging sinks describe "$(basename "$EVE_SINK")" --organization="$ORG_ID" --format=json > "$F/sink.json"
-for J in eve-reports-poll eve-roster-check eve-detect eve-heartbeat; do gcloud run jobs describe "$J" --region="$REGION" --project="$EVE_PROJECT" --format=json > "$F/job-$J.json"; done
-gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format=json > "$F/schedules.json"
-gcloud container binauthz policy export --project="$EVE_PROJECT" --format=json > "$F/binauthz.json"
-gcloud monitoring policies list --project="$EVE_PROJECT" --format=json > "$F/monitoring.json"
-gcloud logging metrics list --project="$EVE_PROJECT" --format=json > "$F/metrics.json"
-for DS in "$EVE_DS" "$EVE_WS_LOGS_DS" "$EVE_WS_REPORTS_DS" "$EVE_QUALITY_DS"; do bq --project_id="$EVE_PROJECT" show --format=prettyjson "${EVE_PROJECT}:${DS}" | jq '{dataset: .datasetReference.datasetId, access: (.access | sort_by(tostring))}' > "$F/ds-$DS.json"; done
-shasum -a 256 "$PLATFORM_REPO_DIR/$ROSTER_FILE" | cut -d' ' -f1 > "$F/roster.sha256"
-jq -s -S 'map(del(.etag, .creationTime, .lastModifiedTime, .updateTime, .createTime, .status))' "$F"/*.json > "$F/canonical.json"
-shasum -a 256 "$F/canonical.json" | cut -d' ' -f1 | tee "${R}-8.2-fingerprint.txt"
-cp "$F/canonical.json" "${R}-8.2-fingerprint-input.json"; rm -rf "$F"
+need EVE_PROJECT ORG_ID EVE_SINK REGION ROSTER_FILE PLATFORM_REPO_DIR EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_QUALITY_DS EVE_OAUTH_CLIENT_SECRET_NAME EVE_REFRESH_TOKEN_SECRET_NAME EVE_ROBOT EVE_ROLE_NAME DIRECTORY_CUSTOMER_ID EVE_CONFIG_COMMIT
+cd "$HOME/work/eve-config" && git switch main && git pull --ff-only && test "$(git rev-parse HEAD)" = "$EVE_CONFIG_COMMIT" || { echo "STOP: checkout is not at EVE_CONFIG_COMMIT; re-run EH-2.5 after the EH-8.1 merge"; exit 1; }
+O1="$(mktemp -d)"; O2="$(mktemp -d)"
+tools/fingerprint.sh "$O1"
+tools/fingerprint.sh "$O2"
+diff <(jq -r 'keys[]' "$O1/fingerprint-input.json") <(python3 -c "import yaml; print('\n'.join(sorted(yaml.safe_load(open('fingerprint.yaml'))['components'])))") && echo "input names every committed component"
+test "$(cat "$O1/fingerprint.sha256")" = "$(cat "$O2/fingerprint.sha256")" && echo "two consecutive runs agree" || { echo "FAIL: the script is not deterministic; a volatile field leaked in"; diff "$O1/fingerprint-input.json" "$O2/fingerprint-input.json"; exit 1; }
+grep -cE '(1//|ya29\.|GOCSPX-)' "$O1/fingerprint-input.json" | grep -qx 0 && echo "no credential-shaped value in the input"
+cp "$O1/fingerprint-input.json" "${R}-8.2-fingerprint-input.json"; cp "$O1/fingerprint.sha256" "${R}-8.2-fingerprint.txt"; rm -rf "$O1" "$O2"
+cat "${R}-8.2-fingerprint.txt"
 ```
 
-  Volatile fields are stripped before hashing, so the value changes when the **configuration**
-  changes and not when a timestamp moves. The Eve owner confirms the code strips the same set.
-- **VERIFY:** When unblocked: a 64-character value; the second human records it in their own store and in the witness record of 08; the input file is in the build log so a later difference can be explained rather than argued about.
+- **VERIFY:** When unblocked: `input names every committed component` (the `diff` is empty — all fifteen keys of EH-8.1, no more, no fewer); `two consecutive runs agree`; `no credential-shaped value in the input`; the value is 64 hexadecimal characters. Nothing is recorded as the baseline until EH-8.3 has matched it.
 - **ROLLBACK:** None; read only.
-- **EVIDENCE:** The value and the input as `${R}-8.2-fingerprint-v1`, `evidence_add EH-8.2 fingerprint E-06 5.2.4 …`. E-06. TISAX 5.2.4, 1.5.1.
+- **EVIDENCE:** The value and the input as `${R}-8.2-fingerprint-v1`, `evidence_add EH-8.2 fingerprint E-06 5.2.4 …`, marked `provisional` until EH-8.3. E-06. TISAX 5.2.4, 1.5.1.
+
+### EH-8.3 The second human recomputes the baseline from their own session, and only then is it recorded — BLOCKED
+
+- **WHO:** The second human, from their own workstation and account (`sa-2-admin@`), with the platform owner **not** at the keyboard; the platform owner reads the comparison.
+- **WHERE:** The second human's shell, with their own `~/.platform-env` (01) and their own checkout of `eve-config` at `EVE_CONFIG_COMMIT`.
+- **ACTION:** > **BLOCKED**: Needs: EH-8.2 `DONE`. Until then: `checkpoint EH-8.3 BLOCKED - - "needs EH-8.2"`.
+
+  A baseline computed only by the person it constrains is a number, not evidence. The second
+  human holds read access to `EVE_PROJECT` through the viewer half of `ENT_PROJECT_REPAIR_EVE`'s
+  approver role (23) — enough for every read the script makes — and runs the **same committed
+  script**, not a copy.
+
+```bash
+need EVE_PROJECT ORG_ID EVE_SINK REGION ROSTER_FILE PLATFORM_REPO_DIR EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_QUALITY_DS EVE_OAUTH_CLIENT_SECRET_NAME EVE_REFRESH_TOKEN_SECRET_NAME EVE_ROBOT EVE_ROLE_NAME DIRECTORY_CUSTOMER_ID EVE_CONFIG_COMMIT
+git clone "$EVE_CONFIG_REPO" "$HOME/work/eve-config-verify" && cd "$HOME/work/eve-config-verify" && git checkout "$EVE_CONFIG_COMMIT"
+O="$(mktemp -d)"; tools/fingerprint.sh "$O"
+printf 'second human: %s\nplatform owner: %s\n' "$(cat "$O/fingerprint.sha256")" "<the value the platform owner reads out from ${R}-8.2-fingerprint.txt>"
+```
+
+  The platform owner reads their value aloud from the build log; the second human types it
+  into the second line. The two must be identical. If they differ, the two input files are
+  diffed (`diff "$O/fingerprint-input.json" <the owner's ${R}-8.2-fingerprint-input.json>`): a
+  difference in a **configuration** field means the configuration changed between the two runs
+  or one of them read a different project, and the sitting stops until it is explained; a
+  difference in a field the script should have projected away is a script defect, fixed by a
+  reviewed merge and both runs repeated.
+- **VERIFY:** When unblocked: the two values are identical; the second human records the value in their own store outside the tenant (their witness account's record, 08) and in the witness record; only then is the EH-8.2 evidence row changed from `provisional` to `baseline`. 26's first automatic value and 27's `WITNESS_ALERT_FINGERPRINT` are compared against **this** value.
+- **ROLLBACK:** None; read only.
+- **EVIDENCE:** The second human's value, the comparison line and the store reference as `${R}-8.3-baseline-confirmed-v1`, signed by the second human. E-06, E-08. TISAX 5.2.4, 1.5.1.
+- *Assumption:* the second human's read access covers `gcloud beta monitoring channels list`, `gcloud secrets versions list`, `gcloud secrets get-iam-policy` and `gcloud alpha resource-manager liens list` on `EVE_PROJECT` (23's approver-viewer binding). If any read is refused, the missing viewer role is granted to the second human under `ENT_PROJECT_REPAIR_EVE` with the platform owner as the requester and the refusal recorded — never by widening the platform owner's own rights.
 
 ## 9. Nonprod Eve in `EVE_TWIN_PROJECT`
 
@@ -1709,76 +1911,162 @@ The twin exists so that 28's sandbox drills can fire real rules without touching
 without ever contacting the witness (SD-26). It runs the **same image digest**: a twin built
 from different code proves nothing about production.
 
-### EH-9.1 Deploy the four jobs on the twin — BLOCKED
+**The twin's identity, and the twin's own `actAs` window.** An earlier draft deployed the twin
+jobs as `eve-verifier@<twin project>` and attached that address to the twin's schedulers, but
+no step in 23, 24 or this file created that account, every grant of §1 was made in
+`EVE_PROJECT` only, and EH-5.5 had already removed the human's `actAs` before §9 ran — so the
+deploy would have failed on a non-existent account, and `gcloud scheduler jobs create http
+--oauth-service-account-email` (which needs `iam.serviceAccounts.actAs` on the named identity)
+would have been refused. §9 therefore creates the twin's identity and repeats §1's grants in
+the twin (EH-9.0), opens its **own** time-boxed window under the twin entitlement (EH-9.2) and
+closes it with an EH-5.5-shaped proof (EH-9.3). Production's window, closed in EH-5.5, is not
+reopened.
 
-- **WHO:** Platform owner in a `twin_shell`.
+**The twin guard.** Every twin block checks it is in the twin with an exact comparison of the
+project id against `EVE_TWIN_PROJECT`, never with a substring: the twin's id is `*tbd*` in the
+variables table and nothing guarantees it contains the word "twin". *Assumption:* `twin_shell`
+(01) maps `EVE_PROJECT` onto the twin's id and leaves `EVE_TWIN_PROJECT` itself set; a helper
+that mapped a variable onto a value it then unset would be defective, and the guard would
+then stop every block, which is the safe failure.
+
+### EH-9.0 Create the twin's `eve-verifier@`, keyless, and repeat §1's grants in the twin
+
+- **WHO:** Platform owner in a `twin_shell`, under the twin's repair entitlement (approver the second human, as for production: the twin is where 28's drills seed real events).
 - **WHERE:** Shell; `EVE_TWIN_PROJECT`.
-- **ACTION:** > **BLOCKED**: Needs: EH-3.4 and EH-4.4 `DONE`, and 24's `EVE_TWIN_ROBOT` with its own consent and `EVE_TWIN_TOKEN_VERSION`. Until then: `checkpoint EH-9.1 BLOCKED - - "needs EH-4.4, twin robot (24)"`.
-
-  When unblocked. `twin_shell` maps `EVE_PROJECT` to `EVE_TWIN_PROJECT`, `EVE_ROBOT` to
-  `EVE_TWIN_ROBOT`, `EVE_TOKEN_VERSION` to `EVE_TWIN_TOKEN_VERSION`, `DOMAIN` to
-  `SANDBOX_DOMAIN` and `DIRECTORY_CUSTOMER_ID` to `SANDBOX_CUSTOMER_ID`, so the commands below
-  are the production ones with no edit — which is the point of the helper.
+- **ACTION:**
 
 ```bash
 twin_shell
 source ~/.platform-env
 penv_guard
-need EVE_PROJECT EVE_PROJECT_NUMBER REGION EVE_RECONCILER_IMAGE EVE_ROBOT EVE_TOKEN_VERSION
-printenv EVE_PROJECT | grep -q twin && echo "in the twin shell" || { echo "STOP: not a twin shell"; exit 1; }
-TWIN_COMMON="^;^EVE_PROJECT=${EVE_PROJECT};EVE_DS=${EVE_DS};EVE_WS_LOGS_DS=${EVE_WS_LOGS_DS};EVE_WS_REPORTS_DS=${EVE_WS_REPORTS_DS};EVE_ROBOT=${EVE_ROBOT};SECRET_REGION=${REGION};REFRESH_TOKEN_SECRET=${EVE_REFRESH_TOKEN_SECRET_NAME};REFRESH_TOKEN_VERSION=${EVE_TOKEN_VERSION};HALT_TARGET=pending;ENV=nonprod;WITNESS=disabled"
-for SPEC in "eve-reports-poll reports_poll 1" "eve-roster-check roster_check 0" "eve-detect detect 0" "eve-heartbeat heartbeat 0"; do set -- $SPEC; gcloud run jobs deploy "$1" --project="$EVE_PROJECT" --region="$REGION" --image="$EVE_RECONCILER_IMAGE" --service-account="eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" --binary-authorization=default --args="$2" --tasks=1 --parallelism=1 --max-retries="$3" --task-timeout=1800s --set-env-vars="$TWIN_COMMON" --labels=agp-component=eve,agp-env=nonprod; done
+need EVE_PROJECT EVE_TWIN_PROJECT REGION CICD_PROJECT EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_QUALITY_DS EVE_OAUTH_CLIENT_SECRET_NAME EVE_REFRESH_TOKEN_SECRET_NAME ENT_PROJECT_REPAIR_EVE_TWIN
+test "$(printenv EVE_PROJECT)" = "$EVE_TWIN_PROJECT" && echo "in the twin shell: $EVE_PROJECT" || { echo "STOP: not a twin shell (EVE_PROJECT=$(printenv EVE_PROJECT), EVE_TWIN_PROJECT=$EVE_TWIN_PROJECT)"; exit 1; }
+gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_EVE_TWIN" --requested-duration=7200s --justification="setup 25 EH-9.0: twin runtime identity and grants" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT"
+gcloud iam service-accounts create eve-verifier --project="$EVE_PROJECT" --display-name="Eve reconciler (nonprod twin)" --description="Runs the four twin jobs; no witness grant, ever (setup 25 EH-9.0)"
+TWIN_SA="eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com"
+penv_set SA_EVE_TWIN_VERIFIER "$TWIN_SA"
+gcloud iam service-accounts keys list --iam-account="$TWIN_SA" --project="$EVE_PROJECT" --managed-by=user --format="value(name)"
+gcloud iam roles describe eveTableWriter --project="$EVE_PROJECT" --format="value(name)"     # Assumption: 23's FM-VERIFIER run for the twin created the same SD-43 roles; stop and re-run 23 if not
+WRITE_TABLES='resource.type == "bigquery.googleapis.com/Table" && (resource.name == "projects/'"$EVE_PROJECT"'/datasets/'"$EVE_DS"'/tables/findings" || resource.name == "projects/'"$EVE_PROJECT"'/datasets/'"$EVE_DS"'/tables/incidents" || resource.name == "projects/'"$EVE_PROJECT"'/datasets/'"$EVE_DS"'/tables/pages")'
+gcloud projects add-iam-policy-binding "$EVE_PROJECT" --member="serviceAccount:${TWIN_SA}" --role="projects/${EVE_PROJECT}/roles/eveTableWriter" --condition="expression=${WRITE_TABLES},title=eve-writer-three-tables,description=SD-43 append path, twin (setup 25 EH-9.0)"
+gcloud projects add-iam-policy-binding "$EVE_PROJECT" --member="serviceAccount:${TWIN_SA}" --role=roles/bigquery.jobUser --condition=None
+# paste the eve_ds_access helper of EH-1.3 here, unchanged: it reads EVE_PROJECT, which the twin shell has mapped
+eve_ds_access "$EVE_WS_LOGS_DS"    READER "$TWIN_SA"
+eve_ds_access "$EVE_WS_REPORTS_DS" WRITER "$TWIN_SA"
+for S in "$EVE_OAUTH_CLIENT_SECRET_NAME" "$EVE_REFRESH_TOKEN_SECRET_NAME"; do gcloud secrets add-iam-policy-binding "$S" --location="$REGION" --project="$EVE_PROJECT" --member="serviceAccount:${TWIN_SA}" --role=roles/secretmanager.secretAccessor; done
+```
+
+  There is no `ladder/` grant: the twin has no evidence bucket and the reconciler reads the
+  ladder only when `EVIDENCE_BUCKET` is set, which `TWIN_COMMON` (EH-9.1) leaves out. The twin's
+  two secrets are the ones 24 created for `EVE_TWIN_ROBOT`, at `EVE_TWIN_TOKEN_VERSION`, and the
+  twin shell maps their names.
+- **VERIFY:** The account exists and the user-managed key list is empty; `gcloud projects get-iam-policy "$EVE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:${TWIN_SA}" --format="table(bindings.role,bindings.condition.title)"` shows `eveTableWriter` with `eve-writer-three-tables` and `roles/bigquery.jobUser` and nothing else; two `ACCESS MATCHES` lines; each secret's policy shows `secretAccessor` for `TWIN_SA` and for no `user:` member; `gcloud asset search-all-iam-policies --scope="projects/${EVE_PROJECT}" --query="policy:${TWIN_SA}"` returns only the twin project, its two secrets and nothing in any other project (the EH-1.7 mirror); the grant is revoked at the end of the step (the EH-1.7 loop, with `ENT_PROJECT_REPAIR_EVE_TWIN`).
+- **ROLLBACK:** Delete the account before any job names it; the dataset entries with the helper's `del` form.
+- **EVIDENCE:** The outputs as `${R}-9.0-twin-identity-v1`. E-08. TISAX 4.1.1, 4.2.1, 5.2.2.
+- *Assumption:* 23's FM-VERIFIER run for `EVE_TWIN_PROJECT` instantiated `ENT_PROJECT_REPAIR_EVE_TWIN` and `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE_TWIN` as it did the production pair, and created the twin's `eve`, `eve_workspace_logs` and `eve_workspace_reports` datasets and the SD-43 roles. If any is missing, this step stops with a `PENDING` line against 23 (`exists_or_pending --pending "ENT_PROJECT_REPAIR_EVE_TWIN (file 23)" EH-9.0 "23: instantiate the twin entitlements and roles, then re-run EH-9.0"`) and §9 waits; nothing is created in the twin by hand that the module would have made.
+
+### EH-9.1 Deploy the four jobs on the twin — BLOCKED
+
+- **WHO:** Platform owner in a `twin_shell`, under `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE_TWIN` (approver the second human).
+- **WHERE:** Shell; `EVE_TWIN_PROJECT`.
+- **ACTION:** > **BLOCKED**: Needs: EH-3.4 and EH-4.4 `DONE`, EH-9.0 `DONE`, and 24's `EVE_TWIN_ROBOT` with its own consent and `EVE_TWIN_TOKEN_VERSION`. Until then: `checkpoint EH-9.1 BLOCKED - - "needs EH-4.4, EH-9.0, twin robot (24)"`.
+
+  When unblocked. `twin_shell` maps `EVE_PROJECT` to `EVE_TWIN_PROJECT`, `EVE_ROBOT` to
+  `EVE_TWIN_ROBOT`, `EVE_TOKEN_VERSION` to `EVE_TWIN_TOKEN_VERSION`, `DOMAIN` to
+  `SANDBOX_DOMAIN` and `DIRECTORY_CUSTOMER_ID` to `SANDBOX_CUSTOMER_ID`, so the commands below
+  are the production ones with no edit — which is the point of the helper. The twin's
+  environment is composed here from the mapped variables, not read from EH-4.1's production
+  file: two values differ and the project, robot and token version are the twin's.
+
+```bash
+twin_shell
+source ~/.platform-env
+penv_guard
+need EVE_PROJECT EVE_TWIN_PROJECT EVE_PROJECT_NUMBER REGION EVE_RECONCILER_IMAGE EVE_ROBOT EVE_TOKEN_VERSION EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_REFRESH_TOKEN_SECRET_NAME EVE_OAUTH_CLIENT_SECRET_NAME EVE_CONFIG_REPO EVE_CONFIG_COMMIT PLATFORM_REPO_REMOTE SA_EVE_TWIN_VERIFIER CICD_PROJECT ENT_DEPLOY_CREDENTIAL_HOLDER_EVE_TWIN
+test "$(printenv EVE_PROJECT)" = "$EVE_TWIN_PROJECT" && echo "in the twin shell: $EVE_PROJECT" || { echo "STOP: not a twin shell"; exit 1; }
+test "$SA_EVE_TWIN_VERIFIER" = "eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" || { echo "STOP: SA_EVE_TWIN_VERIFIER is not the twin's account"; exit 1; }
+gcloud pam grants create --entitlement="$ENT_DEPLOY_CREDENTIAL_HOLDER_EVE_TWIN" --requested-duration=7200s --justification="setup 25 section 9: deploy the twin's four jobs by digest" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT"
+TWIN_COMMON="^;^EVE_PROJECT=${EVE_PROJECT};EVE_DS=${EVE_DS};EVE_WS_LOGS_DS=${EVE_WS_LOGS_DS};EVE_WS_REPORTS_DS=${EVE_WS_REPORTS_DS};EVE_ROBOT=${EVE_ROBOT};SECRET_REGION=${REGION};REFRESH_TOKEN_SECRET=${EVE_REFRESH_TOKEN_SECRET_NAME};REFRESH_TOKEN_VERSION=${EVE_TOKEN_VERSION};OAUTH_CLIENT_SECRET=${EVE_OAUTH_CLIENT_SECRET_NAME};EVE_CONFIG_REPO=${EVE_CONFIG_REPO};EVE_CONFIG_COMMIT=${EVE_CONFIG_COMMIT};ROSTER_SOURCE=${PLATFORM_REPO_REMOTE};LADDER_PREFIX=ladder/;HALT_TARGET=pending;ENV=nonprod;WITNESS=disabled"
+for SPEC in "eve-reports-poll reports_poll 1" "eve-roster-check roster_check 0" "eve-detect detect 0" "eve-heartbeat heartbeat 0"; do set -- $SPEC; gcloud run jobs deploy "$1" --project="$EVE_PROJECT" --region="$REGION" --image="$EVE_RECONCILER_IMAGE" --service-account="$SA_EVE_TWIN_VERIFIER" --binary-authorization=default --args="$2" --tasks=1 --parallelism=1 --max-retries="$3" --task-timeout=1800s --set-env-vars="$TWIN_COMMON" --labels=agp-component=eve,agp-env=nonprod; done
 ```
 
   `ENV=nonprod` and `WITNESS=disabled` are the two environment values that differ from
-  production. A twin finding tagged `env=nonprod` must never reach a production channel or the
-  witness (X-ORG-15, SD-26).
-- **VERIFY:** When unblocked: each twin job's image digest equals `EVE_RECONCILER_IMAGE` exactly (`gcloud run jobs describe … --format='value(spec.template.spec.template.spec.containers[0].image)'` compared with `printenv EVE_RECONCILER_IMAGE`); the environment carries `ENV=nonprod`; the twin's service account is the twin project's own.
+  production, and `EVIDENCE_BUCKET` is absent. A twin finding tagged `env=nonprod` must never
+  reach a production channel or the witness (X-ORG-15, SD-26).
+- **VERIFY:** When unblocked: each twin job's image digest equals `EVE_RECONCILER_IMAGE` exactly (`gcloud run jobs describe … --format='value(spec.template.spec.template.spec.containers[0].image)'` compared with `printenv EVE_RECONCILER_IMAGE`); for each job the EH-4.2 `jq -e` prints `env ok` and the same read shows `ENV=nonprod` and `WITNESS=disabled`; each job's service account is `SA_EVE_TWIN_VERIFIER`; and, mirroring EH-1.7, `gcloud projects get-iam-policy "$EVE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:${SA_EVE_TWIN_VERIFIER}" --format="value(bindings.role)"` and the two `bq show` access arrays show exactly EH-9.0's grants.
 - **ROLLBACK:** `gcloud run jobs delete` per job in the twin project.
-- **EVIDENCE:** Until unblocked, the BLOCKED line. Then the four describes as `${R}-9.1-twin-jobs-v1`. E-06. TISAX 5.2.2 (environments separated).
+- **EVIDENCE:** Until unblocked, the BLOCKED line. Then the four describes and the grant reads as `${R}-9.1-twin-jobs-v1`. E-06. TISAX 5.2.2 (environments separated).
 
-### EH-9.2 The twin's schedules, also paused — BLOCKED
+### EH-9.2 Open the twin's `actAs` window, create the twin's five schedules, pause them — BLOCKED
 
-- **WHO:** Platform owner in the same `twin_shell`.
+- **WHO:** Platform owner in the same `twin_shell`, inside EH-9.1's grant; the second human notes the window's start.
 - **WHERE:** Shell; `EVE_TWIN_PROJECT`.
 - **ACTION:** > **BLOCKED**: Needs: EH-9.1 `DONE`. Until then: `checkpoint EH-9.2 BLOCKED - - "needs EH-9.1"`.
 
   The twin's schedules are created and paused for a different reason from production's: not
   because there is no recipient, but because the twin runs **only during a drill** (28). A
   twin that runs continuously burns quota and fills the nonprod tables with noise that hides
-  the seeded events a drill needs to find.
+  the seeded events a drill needs to find. Attaching `SA_EVE_TWIN_VERIFIER` to a scheduler job
+  needs `actAs` on it, exactly as EH-5.1 did in production; the window is the twin's own.
 
 ```bash
-for J in eve-reports-poll eve-detect eve-heartbeat eve-roster-check; do
-  gcloud scheduler jobs create http "${J}-schedule" --project="$EVE_PROJECT" --location="$REGION" --schedule="0 3 * * *" --time-zone="Etc/UTC" --description="nonprod Eve: run only during a drill (setup 25 EH-9.2)" --uri="https://run.googleapis.com/v2/projects/${EVE_PROJECT}/locations/${REGION}/jobs/${J}:run" --http-method=POST --oauth-service-account-email="eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" --headers="Content-Type=application/json" --message-body="{\"overrides\":{\"containerOverrides\":[{\"args\":[\"$(case $J in *reports*) echo reports_poll;; *roster*) echo roster_check;; *detect*) echo detect;; *) echo heartbeat;; esac)\"]}}" --attempt-deadline=60s --max-retry-attempts=0
-  gcloud run jobs add-iam-policy-binding "$J" --region="$REGION" --project="$EVE_PROJECT" --member="serviceAccount:eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" --role=roles/run.jobsExecutorWithOverrides
-  gcloud scheduler jobs pause "${J}-schedule" --location="$REGION" --project="$EVE_PROJECT"
+need EVE_PROJECT EVE_TWIN_PROJECT REGION SA_EVE_TWIN_VERIFIER SA_1_ADMIN
+test "$(printenv EVE_PROJECT)" = "$EVE_TWIN_PROJECT" || { echo "STOP: not a twin shell"; exit 1; }
+EXPIRY="$(python3 -c "import datetime;print((datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M:%SZ'))")"
+gcloud iam service-accounts add-iam-policy-binding "$SA_EVE_TWIN_VERIFIER" --project="$EVE_PROJECT" --member="user:${SA_1_ADMIN}" --role=roles/iam.serviceAccountUser --condition="expression=request.time < timestamp(\"${EXPIRY}\"),title=twin-job-create-window,description=setup 25 EH-9.2; removed in EH-9.3"
+echo "twin actAs window closes at $EXPIRY"
+for SPEC in "eve-reports-poll-schedule eve-reports-poll [\"reports_poll\"]" "eve-detect-fast-schedule eve-detect [\"detect\",\"--fast\"]" "eve-detect-schedule eve-detect [\"detect\"]" "eve-heartbeat-schedule eve-heartbeat [\"heartbeat\"]" "eve-roster-check-schedule eve-roster-check [\"roster_check\"]"; do set -- $SPEC
+  gcloud scheduler jobs create http "$1" --project="$EVE_PROJECT" --location="$REGION" --schedule="0 3 * * *" --time-zone="Etc/UTC" --description="nonprod Eve: run only during a drill (setup 25 EH-9.2)" --uri="https://run.googleapis.com/v2/projects/${EVE_PROJECT}/locations/${REGION}/jobs/$2:run" --http-method=POST --oauth-service-account-email="$SA_EVE_TWIN_VERIFIER" --headers="Content-Type=application/json" --message-body="{\"overrides\":{\"containerOverrides\":[{\"args\":$3}]}}" --attempt-deadline=60s --max-retry-attempts=0
+  gcloud scheduler jobs pause "$1" --location="$REGION" --project="$EVE_PROJECT"
 done
+for J in eve-reports-poll eve-detect eve-heartbeat eve-roster-check; do gcloud run jobs add-iam-policy-binding "$J" --region="$REGION" --project="$EVE_PROJECT" --member="serviceAccount:${SA_EVE_TWIN_VERIFIER}" --role=roles/run.jobsExecutorWithOverrides; done
 gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format="value(name.basename(),state)"
-exit   # leave the twin shell
 ```
 
-- **VERIFY:** When unblocked: four schedules, all `PAUSED`; each twin job carries exactly one `roles/run.jobsExecutorWithOverrides` binding; after `exit`, `printenv EVE_PROJECT` is the production id again and `penv_guard` is silent.
-- **ROLLBACK:** Delete the twin schedules.
-- **EVIDENCE:** Until unblocked, the BLOCKED line. Then the listing as `${R}-9.2-twin-schedules-v1`. E-06. TISAX 5.2.2.
+- **VERIFY:** When unblocked: five schedules, all `PAUSED`, each with `httpTarget.oauthToken.serviceAccountEmail` equal to `SA_EVE_TWIN_VERIFIER`; each twin job carries exactly one `roles/run.jobsExecutorWithOverrides` binding; the `twin-job-create-window` binding exists with its expiry, and the second human holds the time.
+- **ROLLBACK:** Delete the twin schedules; EH-9.3 removes the window regardless.
+- **EVIDENCE:** Until unblocked, the BLOCKED line. Then the listing and the window as `${R}-9.2-twin-schedules-v1`. E-06, E-08. TISAX 5.2.2, 4.1.3.
 
-### EH-9.3 Prove the twin cannot reach production or the witness — BLOCKED
+### EH-9.3 Close the twin's `actAs` window, prove it is closed, leave the twin shell — BLOCKED
 
-- **WHO:** Platform owner; the second human reads the result.
-- **WHERE:** Shell.
+- **WHO:** Platform owner in the same `twin_shell`; the second human confirms the removal from their own account.
+- **WHERE:** Shell; `EVE_TWIN_PROJECT`.
 - **ACTION:** > **BLOCKED**: Needs: EH-9.2 `DONE`. Until then: `checkpoint EH-9.3 BLOCKED - - "needs EH-9.2"`.
 
 ```bash
-need EVE_PROJECT EVE_TWIN_PROJECT EVE_WITNESS_PROJECT REGION EVE_DS
+need EVE_PROJECT EVE_TWIN_PROJECT SA_EVE_TWIN_VERIFIER SA_1_ADMIN CICD_PROJECT ENT_DEPLOY_CREDENTIAL_HOLDER_EVE_TWIN
+test "$(printenv EVE_PROJECT)" = "$EVE_TWIN_PROJECT" || { echo "STOP: not a twin shell"; exit 1; }
+COND="$(gcloud iam service-accounts get-iam-policy "$SA_EVE_TWIN_VERIFIER" --project="$EVE_PROJECT" --format=json | jq -r '.bindings[] | select(.role=="roles/iam.serviceAccountUser" and .condition.title=="twin-job-create-window") | .condition.expression')"
+test -n "$COND" && gcloud iam service-accounts remove-iam-policy-binding "$SA_EVE_TWIN_VERIFIER" --project="$EVE_PROJECT" --member="user:${SA_1_ADMIN}" --role=roles/iam.serviceAccountUser --condition="expression=${COND},title=twin-job-create-window,description=setup 25 EH-9.2; removed in EH-9.3"
+gcloud pam grants list --entitlement="$ENT_DEPLOY_CREDENTIAL_HOLDER_EVE_TWIN" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | while read -r G; do gcloud pam grants revoke "$G" --reason="setup 25 section 9 complete" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT"; done
+gcloud iam service-accounts get-iam-policy "$SA_EVE_TWIN_VERIFIER" --project="$EVE_PROJECT" --format=json | jq -r '.bindings[]? | select(.role=="roles/iam.serviceAccountUser" or .role=="roles/iam.serviceAccountTokenCreator") | [.role, (.members|join(","))] | @tsv'
+gcloud asset search-all-iam-policies --scope="projects/${EVE_PROJECT}" --query='policy:(serviceAccountUser OR serviceAccountTokenCreator)' --format="value(resource,policy.bindings.role,policy.bindings.members)"
+exit   # leave the twin shell
+```
+
+- **VERIFY:** When unblocked: the policy read and the search print **nothing** — no `user:` member holds `serviceAccountUser` or `serviceAccountTokenCreator` on the twin's account or anywhere in the twin project; no twin PAM grant is active; the second human confirms in writing; after `exit`, `printenv EVE_PROJECT` is the production id again and `penv_guard` is silent. As in EH-5.5, this is a gate: the sitting does not end while a human holds `actAs` on either Eve account in either project.
+- **ROLLBACK:** None: removing the window is the end state.
+- **EVIDENCE:** Until unblocked, the BLOCKED line. Then the two reads and the confirmation as `${R}-9.3-twin-actas-closed-v1`. E-08. TISAX 4.1.3, 4.2.1.
+
+### EH-9.4 Prove the twin cannot reach production or the witness — BLOCKED
+
+- **WHO:** Platform owner in the production shell; the second human reads the result.
+- **WHERE:** Shell.
+- **ACTION:** > **BLOCKED**: Needs: EH-9.3 `DONE`. Until then: `checkpoint EH-9.4 BLOCKED - - "needs EH-9.3"`.
+
+```bash
+need EVE_PROJECT EVE_TWIN_PROJECT EVE_WITNESS_PROJECT REGION EVE_DS SA_EVE_TWIN_VERIFIER ORG_ID
+test "$(printenv EVE_PROJECT)" != "$EVE_TWIN_PROJECT" || { echo "STOP: still in the twin shell"; exit 1; }
 gcloud asset search-all-iam-policies --scope="projects/${EVE_PROJECT}" --query="policy:${EVE_TWIN_PROJECT}" --format="value(resource,policy.bindings.role)"
 gcloud projects get-iam-policy "$EVE_TWIN_PROJECT" --flatten="bindings[].members" --filter="bindings.members:${EVE_PROJECT}" --format="value(bindings.role,bindings.members)"
 bq --project_id="$EVE_PROJECT" show --format=prettyjson "${EVE_PROJECT}:${EVE_DS}" | grep -c "$EVE_TWIN_PROJECT"
 gcloud run jobs describe eve-heartbeat --region="$REGION" --project="$EVE_TWIN_PROJECT" --format=json | grep -c "$EVE_WITNESS_PROJECT"
+gcloud asset search-all-iam-policies --scope="organizations/${ORG_ID}" --query="policy:${SA_EVE_TWIN_VERIFIER}" --format="value(resource)" | grep -v "$EVE_TWIN_PROJECT" | grep -c .
 ```
 
-- **VERIFY:** When unblocked: the first two reads print nothing (no principal of either project holds anything in the other); the third and fourth print `0`. The twin has no witness grant and never will: only production `eve-export@` holds the two cross-organisation grants (SD-26).
+- **VERIFY:** When unblocked: the first two reads print nothing (no principal of either project holds anything in the other); the third, fourth and fifth print `0`. The twin has no witness grant and never will: only production `eve-export@` holds the two cross-organisation grants (SD-26).
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** Until unblocked, the BLOCKED line. Then the four outputs as `${R}-9.3-twin-isolation-v1`. E-06. TISAX 5.2.2, 4.2.1.
+- **EVIDENCE:** Until unblocked, the BLOCKED line. Then the five outputs as `${R}-9.4-twin-isolation-v1`. E-06. TISAX 5.2.2, 4.2.1.
 
 ## 10. Close
 
@@ -1790,14 +2078,14 @@ gcloud run jobs describe eve-heartbeat --region="$REGION" --project="$EVE_TWIN_P
 
 ```bash
 need EVE_PROJECT REGION DEVIATION_REGISTER BUILD_LOG_DIR
-printf '| BD-25-2 | %s | 25 EH-4, EH-5, EH-7 | DEV | Eve runtime deployed by hand instead of by the factory and CI (SD-01) | project %s | register/eve.yaml | four Cloud Run jobs and four schedules by digest %s; eve-console behind IAP | build-log:records/%s | - | PAM %s | terraform import of the jobs, schedules and service, plus an empty plan, when the factory exists | open |\n' \
+printf '| BD-25-2 | %s | 25 EH-4, EH-5, EH-7 | DEV | Eve runtime deployed by hand instead of by the factory and CI (SD-01) | project %s | register/eve.yaml | four Cloud Run jobs and five schedules by digest %s; eve-console behind IAP; the twin likewise (EH-9) | build-log:records/%s | - | PAM %s | terraform import of the jobs, schedules and service, plus an empty plan, when the factory exists | open |\n' \
   "$(date -u +%F)" "$EVE_PROJECT" "${EVE_RECONCILER_IMAGE:-tbd}" "$(basename "${R}-5.5-actas-closed-v1.txt" 2>/dev/null || echo pending)" "ENT_DEPLOY_CREDENTIAL_HOLDER_EVE" >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-25-2 Eve runtime by hand (setup 25 EH-10.1)"
 gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format="value(name.basename(),state)"
 gcloud projects get-iam-policy "$EVE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:user:" --format="value(bindings.role,bindings.members)"
 ```
 
-- **VERIFY:** `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-25-2` (and `BD-25-1` earlier if EH-0.4 ran); all four production schedules are `PAUSED`; no `user:` member holds any role on `EVE_PROJECT`. The second human initials both readings.
+- **VERIFY:** `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-25-2` (and `BD-25-1` earlier if EH-0.4 ran); all five production schedules are `PAUSED`; no `user:` member holds any role on `EVE_PROJECT`. The second human initials both readings.
 - **ROLLBACK:** Append-only register.
 - **EVIDENCE:** The register commit and the two readings as `${R}-10.1-close-state-v1`. E-05, E-08. TISAX 1.4.1, 4.2.1.
 
@@ -1810,12 +2098,13 @@ gcloud projects get-iam-policy "$EVE_PROJECT" --flatten="bindings[].members" --f
 ```bash
 awk -F'\t' '$2 ~ /^EH-/ {s[$2]=$3} END {for (k in s) print k"\t"s[k]}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -V
 grep -E $'\tEH-(1\\.4|4\\.6|5\\.2|6\\.2)\t' "$BUILD_LOG_DIR/rerun-index.tsv" | cut -f2,4
-for V in SA_EVE_CONSOLE EVE_CONFIG_REPO EVE_RECONCILER_IMAGE EVE_JOB_REPORTS_POLL EVE_JOB_ROSTER EVE_JOB_DETECT EVE_JOB_HEARTBEAT EVE_CONSOLE_URL GRP_EVE_CONSOLE_READERS EVE_CODE_COMMIT; do printf '%s=%s\n' "$V" "$(printenv "$V")"; done
-checkpoint EH-10.2 DONE - - "25 handover: four jobs deployed and PAUSED; eve/config merged; console behind IAP; no human holds actAs; 26 resumes the schedules after the route test"
+for V in SA_EVE_CONSOLE EVE_CONFIG_REPO EVE_CONFIG_COMMIT EVE_RECONCILER_IMAGE EVE_JOB_REPORTS_POLL EVE_JOB_ROSTER EVE_JOB_DETECT EVE_JOB_HEARTBEAT EVE_CONSOLE_URL GRP_EVE_CONSOLE_READERS EVE_CODE_COMMIT SA_EVE_TWIN_VERIFIER; do printf '%s=%s\n' "$V" "$(printenv "$V")"; done
+gcloud auth application-default revoke --quiet 2>/dev/null || true   # the Directory read-only scope granted for tools/fingerprint.sh (EH-8.1) does not outlive the sitting
+checkpoint EH-10.2 DONE - - "25 handover: four jobs deployed, five schedules PAUSED; eve/config merged; console behind IAP; no human holds actAs in either project; 26 resumes the schedules after the route test"
 sitting_end
 ```
 
-- **VERIFY:** Every `EH-` step shows `DONE` or `BLOCKED` (only the steps listed in the Status block, each indexed under README B-08, B-09 or B-11); the four `PENDING` lines are present; the ten produced variables have values or are listed as BLOCKED; `sitting_end` prints `SITTING-END OK`.
+- **VERIFY:** Every `EH-` step shows `DONE` or `BLOCKED` (only the steps listed in the Status block, each indexed under README B-08, B-09, B-11 or B-12); the `PENDING` lines are present (EH-1.4 if B-12 stands, EH-4.0 if a quota increase was requested, EH-4.6 twice, EH-5.2 if `BUSINESS_TZ` is unsigned, EH-6.2); the twelve produced variables have values or are listed as BLOCKED; `sitting_end` prints `SITTING-END OK`.
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** The listing as `${R}-10.2-handover-v1`. E-05. TISAX 1.4.1.
 
@@ -1825,14 +2114,14 @@ sitting_end
 - [ ] EH-0.2: the SD-11 DPO record exists and names purpose, data, subjects, retention, recipients and the worker-information date. **No poll job is deployed without it.**
 - [ ] EH-0.3: `EVE_CODE_COMMIT` set with green CI and the fourteen paths present, or `BLOCKED` on B-08; no entrypoint names Firestore or `walle_audit`.
 - [ ] EH-1.1 to EH-1.7: `eve-console@` keyless; the SD-43 writer roles bound by condition on `findings`, `incidents`, `pages` and `grades_blind`, with a `NOT_GRANTED` proof on a fourth table; `READER`/`WRITER` access entries on the four datasets read back identical; row 40 `READER` on `platform_logs_views` and nothing on `platform_logs`; `jobUser` per identity in `EVE_PROJECT` only; `objectViewer` conditioned to `ladder/`; no `user:` member, no `aiplatform` role.
-- [ ] EH-2.1 to EH-2.5: `eve-config` created with code-owner review, `enforce_admins`, no force-push; `thresholds.yaml` with sixteen lag-budget rows and `halt_target: pending`; the catalogue with eighteen rules, each with a fixture, `SA-*` widened to the actor union and `SI-01`…`SI-09` present; the roster held by reference and hash, never copied; no Eve identity and no machine account on the repository.
-- [ ] EH-3.1 to EH-3.4: five CI gates passed; both images built from a **named source path** in `CICD_PROJECT`, attested against their digests; both service agents hold `artifactregistry.reader` on the repository; `EVE_RECONCILER_IMAGE` pinned by digest.
-- [ ] EH-4.1 to EH-4.6: four jobs by digest, each as `eve-verifier@`, each with `--binary-authorization=default`; `--max-retries=0` on the three passes that page; no secret value in any environment; `roles/run.jobsExecutorWithOverrides` on each job for `eve-verifier@` and no Cloud Run role at project level; `halt_target_pending` recorded with its two re-run lines.
-- [ ] EH-5.1 to EH-5.5: the `actAs` window opened with an expiry and **closed**; four schedules created with `selftest`, proven with `gcloud scheduler jobs run` and a new execution each, switched to their real arguments, and left `PAUSED`; no `user:` member holds `serviceAccountUser` or `serviceAccountTokenCreator` on either Eve account, confirmed by the second human.
-- [ ] EH-6.1 to EH-6.4: the success metric filters the `ok` line only; the absence policy is `3600s` with an empty channel list and a `PENDING` line for 26; the committed freshness check merged; the alarm **observed** firing on a schedule pause (in the 26 sitting), with the delay recorded.
-- [ ] EH-7.1 to EH-7.6: `eve-console-readers@` a security group owned by `eve-owners@`, in `CONTROL_GROUPS_FILE`; the IAP service agent created on the beta track; the console deployed by digest, IAP on, unauthenticated access refused; exactly one `run.invoker` binding (the IAP agent); exactly one `iap.httpsResourceAccessor` binding (the group); `walle-operators@` nowhere.
-- [ ] EH-8.1, EH-8.2: the fingerprint's eleven components committed; the first value computed by hand and held by the second human outside the tenant.
-- [ ] EH-9.1 to EH-9.3: the twin runs the **same digest**, `ENV=nonprod`, schedules paused, no principal shared with production and no witness reference.
+- [ ] EH-2.1 to EH-2.5: `eve-config` created with code-owner review, `enforce_admins`, no force-push; `thresholds.yaml` with sixteen integer lag-budget rows, `halt_target: pending`, `retrieval_mode: user_key_all`, an hourly `roster.check_cron` and `detect_to_page_minutes: 25`; the catalogue with twenty-three rules, each with event names, sources and a fixture, `SA-*` widened to the actor union, `SA-10` over the data-export applications, `SI-01`…`SI-13` present with `SI-02`…`SI-07` and `SI-10`…`SI-12` `blocked: b12` until 14's view exists; the SA-01 allow-list committed; the roster held by reference and hash, never copied; `EVE_CONFIG_COMMIT` in the variables file; no Eve identity and no machine account on the repository.
+- [ ] EH-3.1 to EH-3.4: five CI gates passed; both images built from a **named source path** in `CICD_PROJECT`, attested against their digests; both service agents hold `artifactregistry.reader` on the repository named by `AR_PLATFORM`; `EVE_RECONCILER_IMAGE` pinned by digest.
+- [ ] EH-4.0 to EH-4.6: the Admin SDK quota read and the poll sized inside 250 filter queries a minute with `userKey=all`; four jobs by digest, each as `eve-verifier@`, each with `--binary-authorization=default`, each proven to carry `EVE_CONFIG_COMMIT`, `EVE_ROBOT` and `LADDER_PREFIX`; `--max-retries=0` on the three passes that page; no secret value in any environment; `roles/run.jobsExecutorWithOverrides` on each job for `eve-verifier@` and no Cloud Run role at project level; `halt_target_pending` recorded with its two re-run lines.
+- [ ] EH-5.1 to EH-5.5: the `actAs` window opened with an expiry and **closed**; five schedules (the detection job carrying `detect --fast` every five minutes and the full pass hourly; the roster check hourly, matching `thresholds.yaml`) created with `selftest`, proven with `gcloud scheduler jobs run` and a new execution each, switched to their real arguments, and left `PAUSED`; no `user:` member holds `serviceAccountUser` or `serviceAccountTokenCreator` on either Eve account, confirmed by the second human.
+- [ ] EH-6.1 to EH-6.4: the success metric filters the `ok` line only and was created before the first pass; the throttling metric and its policy exist; the absence policy is `3600s` with an empty channel list and a `PENDING` line for 26; the committed freshness check merged; the alarm **observed** firing on a schedule pause (in the 26 sitting), with the delay recorded.
+- [ ] EH-7.1 to EH-7.6: `eve-console-readers@` a security group owned by `eve-owners@`, in `CONTROL_GROUPS_FILE`; the IAP service agent created on the beta track; the console deployed by digest with IAP on the service, ingress left at `all`, unauthenticated access answered by IAP and never by the page; exactly one `run.invoker` binding (the IAP agent); exactly one `iap.httpsResourceAccessor` binding (the group, bound with `--region`); `walle-operators@` nowhere.
+- [ ] EH-8.1 to EH-8.3: the fingerprint's fifteen components **and the script that computes them** committed under the second human's code ownership; the first value computed with that script, deterministic across two runs, naming every component; **recomputed by the second human from their own session** and matched before being recorded as the baseline; the baseline stated to attest continuity, not correctness.
+- [ ] EH-9.0 to EH-9.4: the twin's own `eve-verifier@`, keyless, with §1's grants repeated in the twin; the twin runs the **same digest**, `ENV=nonprod`, `WITNESS=disabled`; five schedules paused; the twin's `actAs` window opened and **closed** with the second human's confirmation; no principal shared with production and no witness reference.
 - [ ] EH-10.1, EH-10.2: `BD-25-2` written; all schedules paused; no active grant; `SITTING-END OK`.
 - [ ] Every EVIDENCE line registered in `EVIDENCE_REGISTER`.
 
@@ -1840,15 +2129,16 @@ sitting_end
 
 | File | Needs | From |
 |---|---|---|
-| 26 | `EVE_JOB_REPORTS_POLL`, `EVE_JOB_ROSTER`, `EVE_JOB_DETECT`, `EVE_JOB_HEARTBEAT` deployed and paused; the two Monitoring policies with empty channel lists to attach `NOTIF_CH_EVE_EMAIL_SECOND_HUMAN` and `NOTIF_CH_EVE_SMS_SECOND_HUMAN` to; the catalogue's `subject` field and the sole-recipient routing it implies; `thresholds.yaml`'s `reporting` block; the fingerprint definition and its first value; `SA_EVE_CONSOLE` for the `eve_quality` reader set; EH-6.4 to execute after the first run | §4, §5, EH-2.2, EH-2.3, EH-6.2, EH-8.1, EH-8.2 |
-| 27 | The fingerprint's shape, so `WITNESS_ALERT_FINGERPRINT` alarms on the right field; the cumulative-count convention that pairs with `SI-07` | EH-8.1, EH-2.3 |
-| 28 | The catalogue rule the second human seeds against (`SA-02` or `SA-03` on a test OU); the lag budget the proof is measured against; `EVE_CONFIG_REPO`'s branch protection, whose refusal of an unreviewed merge is the anti-silencing drill; the twin jobs and schedules to resume for the sandbox part; the first fingerprint as the baseline of the anti-silencing drill | EH-2.2, EH-2.3, EH-2.1, §9, EH-8.2 |
+| 26 | `EVE_JOB_REPORTS_POLL`, `EVE_JOB_ROSTER`, `EVE_JOB_DETECT`, `EVE_JOB_HEARTBEAT` deployed and the five schedules paused; the three Monitoring policies with empty channel lists to attach `NOTIF_CH_EVE_EMAIL_SECOND_HUMAN` and `NOTIF_CH_EVE_SMS_SECOND_HUMAN` to; the catalogue's `subject` field and the sole-recipient routing it implies; `thresholds.yaml`'s `reporting` block; the fingerprint definition, its committed script and the baseline confirmed by the second human; `SA_EVE_CONSOLE` for the `eve_quality` reader set; EH-6.4 to execute after the first run. **Asked of 26:** ER-3.8's channel inventory is to become a scheduled check, not a one-off, because the channels are now a fingerprint component and `SI-12` is blocked on B-12 | §4, §5, EH-2.2, EH-2.3, EH-6.2, EH-8.1 to EH-8.3 |
+| 27 | The fingerprint's shape (fifteen components, one JSON object keyed by name), so `WITNESS_ALERT_FINGERPRINT` alarms on the right field; the cumulative-count convention that pairs with `SI-07` | EH-8.1, EH-2.3 |
+| 28 | The catalogue rule the second human seeds against (`SA-02` or `SA-03` on a test OU); **`reporting.detect_to_page_minutes` (25) as the wait in EV-2.3 — not the 15-minute admin lag budget, which clocks freshness and not paging**; `SA-10` in EV-1.3's coverage grep; the residual watched-set window of EH-2.2 for EV-8.2's residual-risk section; `EVE_CONFIG_REPO`'s branch protection, whose refusal of an unreviewed merge is the anti-silencing drill; the twin jobs, `SA_EVE_TWIN_VERIFIER` and the five twin schedules to resume for the sandbox part; the confirmed baseline of EH-8.3 for the anti-silencing drill; EV-3.3 and EV-3.4 as the correctness reads the baseline relies on | EH-2.2, EH-2.3, EH-2.1, §9, EH-8.3 |
+| 14 | The second authorised view `platform_logs_views.eve_self_integrity` (precondition above, README B-12): until it exists, nine self-integrity rules are committed blocked | EH-1.4, EH-2.3 |
 | 29 | `SA_EVE_CONSOLE` and the `eve_quality` access array; the REST pause form for transfer configs, never a `bq` flag | EH-1.3, EH-6.4 |
 | 36 | The two `halt_target_pending` re-run lines: the halt endpoint replaces `pending` in `thresholds.yaml` and the catalogue, and one halting rule is re-tested | EH-4.6 |
 | 38 | `walle@` added to `ROSTER_FILE`, which the roster reference's hash rule then requires a reviewed merge for; `SA-04` and `SA-08` already live against the robot actor set on gate day | EH-2.4, EH-2.3 |
 | 15 part B | The `agp_reports_privilege_holders` list, generated from EH-4.2's output; the catalogue, so the SIEM's and Eve's evaluators can be compared | EH-4.2, EH-2.3 |
 | 42 | `BD-25-1` (if EH-0.4 ran) and `BD-25-2`; evidence rows EH-0.1 to EH-10.1 | §0 to §10 |
-| Design corrections | `eve/03-lld.md` §7's `evidence.reports_poll.lag_budget_minutes` rows are no longer `*tbd*` (EH-2.2); §14's catalogue gains `SI-01`…`SI-09`; §15's console audience is named `eve-console-readers@`; `eve/07`'s Phase 5 and Phase 10 are superseded | EH-2.2, EH-2.3, EH-7.1 |
+| Design corrections | `eve/03-lld.md` §7's `evidence.reports_poll.lag_budget_minutes` rows are no longer `*tbd*` and the poll is `userKey=all` per application (EH-2.2, EH-4.0); §14's catalogue gains `SA-10` and `SI-01`…`SI-13`, each with an event-name predicate; §15's console audience is named `eve-console-readers@` and the console has no load balancer; the fingerprint has fifteen components and a committed script; `eve/07`'s Phase 5 and Phase 10 are superseded | EH-2.2, EH-2.3, EH-7.1, EH-8.1 |
 
 ## 13. Findings closed and deferred
 
@@ -1871,7 +2161,15 @@ catalogue fixtures for B-09 (Eve owner); the SD-11 DPO record for B-11 (DPO with
 owner; unblocks EH-0.2 and therefore the whole of §3 to §9); the halt endpoint (36, two
 re-run lines from EH-4.6); the notification channels (26, one `PENDING` line from EH-6.2);
 `BUSINESS_TZ` if unsigned (03, one `PENDING` line from EH-5.2); the row 40 re-run if
-`eve-verifier@` did not exist at 14's run (closed here, EH-1.4).
+`eve-verifier@` did not exist at 14's run (closed here, EH-1.4); the Cloud Audit Log view
+`platform_logs_views.eve_self_integrity` for B-12 (the platform owner as the owner of
+`LOGGING_PROJECT`, to be added to 14; until then `SI-02`…`SI-07` and `SI-10`…`SI-12` are
+committed blocked and the monitored administrator's silencing moves on Eve's plumbing are
+caught only by the fingerprint, EH-8, and the witness alarms of 27); the Admin SDK quota
+increase if EH-4.0 requested one (the platform owner, one `PENDING` line); the twin
+entitlements and roles if 23 did not instantiate them (23, one `PENDING` line from EH-9.0).
+Two asks are placed on later files and recorded in §12 rather than deferred: 26's channel
+inventory as a scheduled check, and 28's blind-proof wait quoting `detect_to_page_minutes`.
 
 ## 14. Unverified on 2026-09-15, to settle at the step
 
@@ -1880,7 +2178,8 @@ re-run lines from EH-4.6); the notification channels (26, one `PENDING` line fro
 - Whether BigQuery `data_access` entries identify the DML statement type precisely enough for `SI-07` on the target table. The fields exist — `protoPayload.metadata.jobChange.job.jobConfig.queryConfig.statementType` and `tableDataChange` — but whether a `MERGE` that deletes rows is distinguishable from one that only inserts is settled when the first fixture is run (28).
 - The regional Secret Manager endpoint and resource form the job uses to read `eve@`'s token. Cloud Run does not support regional secrets in `--set-secrets` (verified 2026-09-16), so the job must call the API itself; the exact regional endpoint host is confirmed by the Eve owner against the code at `EVE_CODE_COMMIT`.
 - Whether `EVE_PROJECT`'s Binary Authorization policy, as 17's module writes it, admits an image attested in `CICD_PROJECT` by an attestor that lives there (a cross-project attestor reference). EH-0.1 reads the policy; the first deploy (EH-4.1) is the proof, and a refusal is a defect in 17, not a reason to use `--breakglass`.
-- Whether `gcloud iap web add-iam-policy-binding --resource-type=cloud-run` requires `--region` in every gcloud version (the reference calls `--region` required only for regional backend services). The step passes it; if it is refused, drop it and record the version.
+- Whether the Directory API's `roles` and `roleassignments` resources, as `tools/fingerprint.sh` reads them (EH-8.1), still carry `rolePrivileges[].privilegeName` and `roleId` under those names on the day, and whether the operator's Application Default Credentials accept the `admin.directory.rolemanagement.readonly` scope for a super admin without a further Admin console setting. Settled at the EH-8.1 merge by the Eve owner's re-read; a refusal is recorded and the component is read through `eve@`'s credential in the heartbeat only, with the script's component marked `unavailable-by-hand`.
+- Whether the structured field names the poll logs on throttling are `reason` and `http_status` (EH-6.1's `Assumption:`), settled against the code at `EVE_CODE_COMMIT`.
 - Whether the Cloud Run service agent address `service-<number>@serverless-robot-prod.iam.gserviceaccount.com` is still the pull identity on the day (EH-3.3), and whether `gcloud beta services identity create --service=run.googleapis.com` is needed first.
 - `groups_enterprise`'s published lag time: Google's lag table does not list it. EH-2.2 uses the `groups` figure as an `Assumption:`, reviewed at S2.
 - Whether an `EVE_PROJECT` Monitoring absence policy can be created with an empty `notificationChannels` list in every gcloud version (EH-6.2 relies on it, so that 26 attaches the channels). If creation is refused, create with a placeholder channel that 26 replaces, and record it.
@@ -1888,7 +2187,7 @@ re-run lines from EH-4.6); the notification channels (26, one `PENDING` line fro
 
 ## 15. Sources
 
-Read on 2026-09-15 and re-read on 2026-09-16: [gcloud run jobs deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/deploy) (`--binary-authorization` must be `default`, `--breakglass`, `--max-retries`, `--task-timeout`, `--tasks`, `--parallelism`, `--service-account`, `--set-env-vars`, `--set-secrets`, `--image`, `--labels`); [gcloud run deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy) (`--[no-]iap`, `--no-allow-unauthenticated`, `--ingress`, `--min-instances`, `--concurrency`, `--timeout`); [gcloud run jobs add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/add-iam-policy-binding); [Cloud Run IAM roles](https://docs.cloud.google.com/run/docs/reference/iam/roles) (`roles/run.jobsExecutorWithOverrides` = `run.executions.cancel` + `run.jobs.run` + `run.jobs.runWithOverrides`; `roles/run.invoker` has `run.jobs.run` only); [Cloud Run container contract](https://docs.cloud.google.com/run/docs/container-contract) (`CLOUD_RUN_EXECUTION`, `CLOUD_RUN_TASK_INDEX`, `CLOUD_RUN_TASK_ATTEMPT`, `CLOUD_RUN_TASK_COUNT`, `CLOUD_RUN_JOB`); [Run jobs on a schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule); [projects.locations.jobs.run](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs/run) (`RunJobRequest`: `overrides`, `validateOnly`, `etag`); [gcloud scheduler jobs create http](https://docs.cloud.google.com/sdk/gcloud/reference/scheduler/jobs/create/http) (`--schedule`, `--uri`, `--http-method`, `--oauth-service-account-email`, `--headers`, `--message-body`, `--attempt-deadline`, `--max-retry-attempts` 0-5, `--time-zone` default `Etc/UTC`; **no** flag creates a paused job); [gcloud scheduler jobs run](https://docs.cloud.google.com/sdk/gcloud/reference/scheduler/jobs/run) and the `pause`/`resume` siblings; [Cloud Scheduler HTTP target authentication](https://docs.cloud.google.com/scheduler/docs/http-target-auth) (attaching a service account needs `roles/iam.serviceAccountUser`; the service agent is created when the API is enabled); [gcloud beta services identity create](https://docs.cloud.google.com/sdk/gcloud/reference/beta/services/identity/create) (the GA path `/sdk/gcloud/reference/services/identity/create` returns 404); [Enable IAP for Cloud Run](https://docs.cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run) (`--iap`, then `run.invoker` for `service-PROJECT_NUMBER@gcp-sa-iap.iam.gserviceaccount.com`); [IAP for Cloud Run overview](https://docs.cloud.google.com/iap/docs/enabling-cloud-run) (disable the default URL or restrict ingress so traffic cannot bypass IAP); [gcloud iap web add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/iap/web/add-iam-policy-binding) (`--resource-type` must be one of `app-engine`, `backend-services`, `forwarding-rule`, `cloud-run`, `agent-registry`); [gcloud builds submit](https://docs.cloud.google.com/sdk/gcloud/reference/builds/submit) (`[SOURCE]`, `--config`, `--region`, `--service-account`, `--substitutions`, `--default-buckets-behavior`); [Artifact Registry access control](https://docs.cloud.google.com/artifact-registry/docs/access-control) (cross-project pulls need `roles/artifactregistry.reader` on the repository for the consuming service's agent); [Binary Authorization for Cloud Run](https://docs.cloud.google.com/binary-authorization/docs/run/overview) (supported for services and jobs; a job's policy check happens at execution); [gcloud logging metrics create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/metrics/create) (`--description` with `--log-filter`, or `--config-from-file`, exactly one); [Log-based metrics](https://docs.cloud.google.com/logging/docs/logs-based-metrics) (user metrics are `logging.googleapis.com/user/NAME`; data comes only from entries received after creation); [BigQuery IAM Conditions](https://docs.cloud.google.com/bigquery/docs/conditions) (conditions on `bigquery.googleapis.com/Table` and `/Dataset` by `resource.name`, attachable at project level); [BigQuery audit logs overview](https://docs.cloud.google.com/bigquery/docs/reference/auditlogs) and [BigQueryAuditMetadata](https://docs.cloud.google.com/bigquery/docs/reference/auditlogs/rest/Shared.Types/BigQueryAuditMetadata) (`jobChange.job.jobConfig.queryConfig.statementType`, `tableDataChange`, in the `data_access` stream); [Reports API activities.list](https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list) (the `applicationName` enum including `admin`, `login`, `token`, `saml`, `groups`, `groups_enterprise`, `user_accounts`, `rules`, `context_aware_access`, `gcp`, `drive`, `vault`, `takeout`, `admin_data_action`, `data_studio`, `access_transparency`; `userKey` accepts a primary email; scope `admin.reports.audit.readonly`); [Data retention and lag times](https://knowledge.workspace.google.com/admin/reports/data-retention-and-lag-times) (the per-log lag figures EH-2.2's budgets are built on, and the six-month Reports retention that makes `eve_workspace_reports` the longer copy); [Configure secrets for Cloud Run](https://docs.cloud.google.com/run/docs/configuring/services/secrets) ("Cloud Run does not support regional secrets"). Relied on through 01, 10, 11, 12, 14, 17, 18 and 23 and their sources: PAM grant and revoke, deny policies, `gcloud beta container binauthz attestations sign-and-create` (beta only), attestor and note creation, dataset access-array edits with the etag comparison, regional secrets with `--location`, and the group-creation console path of 06.
+Read on 2026-09-15 and re-read on 2026-09-16: [gcloud run jobs deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/deploy) (`--binary-authorization` must be `default`, `--breakglass`, `--max-retries`, `--task-timeout`, `--tasks`, `--parallelism`, `--service-account`, `--set-env-vars`, `--set-secrets`, `--image`, `--labels`); [gcloud run deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy) (`--[no-]iap`, `--no-allow-unauthenticated`, `--ingress`, `--min-instances`, `--concurrency`, `--timeout`); [gcloud run jobs add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/add-iam-policy-binding); [Cloud Run IAM roles](https://docs.cloud.google.com/run/docs/reference/iam/roles) (`roles/run.jobsExecutorWithOverrides` = `run.executions.cancel` + `run.jobs.run` + `run.jobs.runWithOverrides`; `roles/run.invoker` has `run.jobs.run` only); [Cloud Run container contract](https://docs.cloud.google.com/run/docs/container-contract) (`CLOUD_RUN_EXECUTION`, `CLOUD_RUN_TASK_INDEX`, `CLOUD_RUN_TASK_ATTEMPT`, `CLOUD_RUN_TASK_COUNT`, `CLOUD_RUN_JOB`); [Run jobs on a schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule); [projects.locations.jobs.run](https://docs.cloud.google.com/run/docs/reference/rest/v2/projects.locations.jobs/run) (`RunJobRequest`: `overrides`, `validateOnly`, `etag`); [gcloud scheduler jobs create http](https://docs.cloud.google.com/sdk/gcloud/reference/scheduler/jobs/create/http) (`--schedule`, `--uri`, `--http-method`, `--oauth-service-account-email`, `--headers`, `--message-body`, `--attempt-deadline`, `--max-retry-attempts` 0-5, `--time-zone` default `Etc/UTC`; **no** flag creates a paused job); [gcloud scheduler jobs run](https://docs.cloud.google.com/sdk/gcloud/reference/scheduler/jobs/run) and the `pause`/`resume` siblings; [Cloud Scheduler HTTP target authentication](https://docs.cloud.google.com/scheduler/docs/http-target-auth) (attaching a service account needs `roles/iam.serviceAccountUser`; the service agent is created when the API is enabled); [gcloud beta services identity create](https://docs.cloud.google.com/sdk/gcloud/reference/beta/services/identity/create) (the GA path `/sdk/gcloud/reference/services/identity/create` returns 404); [Enable IAP for Cloud Run](https://docs.cloud.google.com/run/docs/securing/identity-aware-proxy-cloud-run) (`--iap`, then `run.invoker` for `service-PROJECT_NUMBER@gcp-sa-iap.iam.gserviceaccount.com`; enabling IAP on the service secures traffic "from all ingress paths, including default `run.app` URLs and load balancers", no load balancer is required, and IAP cannot be configured on both a load balancer and the service — which is why EH-7.3 leaves ingress at the default `all`); [gcloud iap web add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/iap/web/add-iam-policy-binding) and [get-iam-policy](https://docs.cloud.google.com/sdk/gcloud/reference/iap/web/get-iam-policy) (GA; `--resource-type` one of `app-engine`, `backend-services`, `forwarding-rule`, `cloud-run`, `agent-registry`; `--region` "Required when resource-type=cloud-run"); [Reports API usage limits](https://developers.google.com/workspace/admin/reports/v1/limits) (2,400 queries per minute per user per project; **250 filter queries per minute, 15,000 per hour** for `activities.list`; a request carrying `userKey`, `actorIpAddress`, `eventName`, `filters`, `orgUnitID` or `groupIdFilter` is a filter query; increases through the Admin SDK API quotas page of the project); [gcloud quotas info list](https://docs.cloud.google.com/sdk/gcloud/reference/quotas/info/list) (`--service`, `--project`; GA); [Policy Troubleshooter access states](https://docs.cloud.google.com/policy-intelligence/docs/troubleshoot-access) (`GRANTED`, `NOT_GRANTED`, `UNKNOWN_CONDITIONAL`, `UNKNOWN_INFO`; conditions need request context the CLI call does not supply — EH-1.2's functional fallback); [gcloud beta monitoring channels list](https://docs.cloud.google.com/sdk/gcloud/reference/beta/monitoring/channels/list) (beta; the GA path returns 404 on 2026-09-16); [gcloud alpha resource-manager liens list](https://docs.cloud.google.com/sdk/gcloud/reference/alpha/resource-manager/liens/list) (alpha only); [gcloud secrets versions list](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/versions/list) (`--location` for regional secrets; version `state`); [Directory API roles.list and roleAssignments.list](https://developers.google.com/workspace/admin/directory/reference/rest/v1/roles/list) (`customer/{customerId}/roles`, `rolePrivileges`; `roleassignments?userKey=`); [gcloud builds submit](https://docs.cloud.google.com/sdk/gcloud/reference/builds/submit) (`[SOURCE]`, `--config`, `--region`, `--service-account`, `--substitutions`, `--default-buckets-behavior`); [Artifact Registry access control](https://docs.cloud.google.com/artifact-registry/docs/access-control) (cross-project pulls need `roles/artifactregistry.reader` on the repository for the consuming service's agent); [Binary Authorization for Cloud Run](https://docs.cloud.google.com/binary-authorization/docs/run/overview) (supported for services and jobs; a job's policy check happens at execution); [gcloud logging metrics create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/metrics/create) (`--description` with `--log-filter`, or `--config-from-file`, exactly one); [Log-based metrics](https://docs.cloud.google.com/logging/docs/logs-based-metrics) (user metrics are `logging.googleapis.com/user/NAME`; data comes only from entries received after creation); [BigQuery IAM Conditions](https://docs.cloud.google.com/bigquery/docs/conditions) (conditions on `bigquery.googleapis.com/Table` and `/Dataset` by `resource.name`, attachable at project level); [BigQuery audit logs overview](https://docs.cloud.google.com/bigquery/docs/reference/auditlogs) and [BigQueryAuditMetadata](https://docs.cloud.google.com/bigquery/docs/reference/auditlogs/rest/Shared.Types/BigQueryAuditMetadata) (`jobChange.job.jobConfig.queryConfig.statementType`, `tableDataChange`, in the `data_access` stream); [Reports API activities.list](https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list) (the `applicationName` enum including `admin`, `login`, `token`, `saml`, `groups`, `groups_enterprise`, `user_accounts`, `rules`, `context_aware_access`, `gcp`, `drive`, `vault`, `takeout`, `admin_data_action`, `data_studio`, `access_transparency`; `userKey` "can be `all` for all information" or a primary email — the `all` form EH-4.0 and EH-4.1 rely on; scope `admin.reports.audit.readonly`); [Data retention and lag times](https://knowledge.workspace.google.com/admin/reports/data-retention-and-lag-times) (the per-log lag figures EH-2.2's budgets are built on, and the six-month Reports retention that makes `eve_workspace_reports` the longer copy); [Configure secrets for Cloud Run](https://docs.cloud.google.com/run/docs/configuring/services/secrets) ("Cloud Run does not support regional secrets"). Relied on through 01, 10, 11, 12, 14, 17, 18 and 23 and their sources: PAM grant and revoke, deny policies, `gcloud beta container binauthz attestations sign-and-create` (beta only), attestor and note creation, dataset access-array edits with the etag comparison, regional secrets with `--location`, and the group-creation console path of 06.
 
 ## Related
 

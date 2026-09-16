@@ -1574,7 +1574,7 @@ sitting_end
 | Whether a billing account's budgets are inside or outside a PAB rule of Resource Manager resources | OP-7.10 step 2 |
 | PAB propagation time (no figure on Google's pages) | OP-7.10's 30-minute wait, re-read if needed |
 | Whether `gcp.restrictTLSVersion` is observable from a local `curl` against Cloud Storage | OP-8.5 (3) |
-| That a deny-policy condition accepts one `resource.matchTag` call per rule (the deny page says only tag functions are supported, and does not show `||`) | OP-7.6's create call; each rule uses a single call |
+| That a deny-policy condition accepts one `resource.matchTag` call per rule (the deny page says only tag functions are supported, and does not show `\|\|`) | OP-7.6's create call; each rule uses a single call |
 | That `gcloud iam policy-bindings create` accepts `--project` for a project parent (its reference lists `--folder` and `--organization`; the create-and-apply page names resource type `project`). `search-target-policy-bindings`, by contrast, is confirmed to take only `--organization` or `--folder`, which is why OP-1.4 searches project targets from the organisation | OP-7.9's create call |
 | Which enforcement version first blocks the Resource Manager permissions OP-7.10 reads (version 4 is a superset of the default 3, but the per-version tables were not read line by line on 2026-09-15) | OP-7.10's output: if `pab-core-ci` does not block `resourcemanager.organizations.get`, the pin is re-decided by pull request |
 | Whether `constraints/run.allowedVPCEgress` refuses a Cloud Run service that sets no VPC egress at all (Google documents it as restricting the *value*) | OP-5.6's second deploy, recorded either way; a custom constraint goes to 18's spike list if it does not |

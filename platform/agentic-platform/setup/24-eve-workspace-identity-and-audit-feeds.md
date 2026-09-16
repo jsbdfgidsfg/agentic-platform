@@ -6,14 +6,14 @@
 - Last reviewed: 2026-09-15
 - Last executed: never
 - Stage: review §2 stage 30, the identity part (the superseded Eve runbook's Phases 7, 8 and 9 identity half), pulled before Wall-E by SD-10. This file is **Eve-H part 2**. It opens gate line **G-3** (`eve@` holds no Super Admin role and exactly the E-16 privilege set). It runs after [23](23-eve-project-and-evidence-stores.md) and after [21](21-sandbox-tenant-and-nonprod-foundation.md); [22](22-mo-foundations.md) is not a precondition of any step here.
-- Step prefix: `EW`. Steps: 65. BLOCKED steps: EW-6.1, EW-6.2, EW-6.3, EW-6.5, EW-8.1, EW-9.5 and EW-9.6, all on one piece of code — Eve's consent command (README BLOCKED index row *Eve: the consent command*, `B-10`; if README §8 numbers it differently, the id is corrected here in the same pull request). Steps that record `PENDING` rather than `BLOCKED`: EW-3.9 (`walle-protected@` does not exist until 30), EW-2.8 (the drift inventory, whose job is `B-02`), EW-4.6 (the security reviewer's signature while nobody is appointed).
+- Step prefix: `EW`. Steps: 66. BLOCKED steps: EW-6.1, EW-6.2, EW-6.3, EW-6.5, EW-8.1, EW-9.5 and EW-9.6, all on one piece of code — Eve's consent command (README BLOCKED index row *Eve: the consent command*, `B-10`; if README §8 numbers it differently, the id is corrected here in the same pull request); and EW-2.2, blocked not on code but on [23](23-eve-project-and-evidence-stores.md) EP-3.8 and EP-4.5 (the twin key and the twin dataset, which this file reads back and never creates), which holds the rest of §2 with it. EW-6.4 is blocked on EW-7.1 by ordering only and runs in the same sitting. Steps that record `PENDING` rather than `BLOCKED`: EW-3.9 (`walle-protected@` does not exist until 30), EW-2.8 (the drift inventory, whose job is `B-02`), EW-4.6 (the security reviewer's signature while nobody is appointed).
 - Gated **IRREVERSIBLE** steps: EW-1.5 (the sink's filter at creation time — a filter widened later does not backfill, so the history Eve never captured cannot be recovered), EW-3.3 (`eve@` as a permanent address on the roster), EW-5.3 (the OAuth client id, which is frozen with its scope set at consent).
 - Replaces: Phase 7, Phase 8 and the identity, secret and service-account half of Phase 9 of [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md). That page is not executed. It also removes `EVE_ROBOT` from anything Wall-E's procedures or `walle_setup.py` do: **this file is the only creator of `eve@` and of Eve's read-only role** (SD-32, S088).
 - Salvaged: Phase 7's six-stream sink filter, its dataset-before-sink order, the `--use-partitioned-tables` reasoning and verifies 1, 2, 3 and 5; Phase 8's ten-scope list and the exact-ten scope verify; Phase 9's piped secret-creation commands, the regional `--location` rule and the "never `versions/latest`" pin.
 - Not copied: the sink created under a standing organisation `logging.configWriter` (S142 — here it is `ENT_ORG_SINK`, approved by the second human); `eve@` created inside the enforced service-identity OU (S038); the improvised consent with no command, no `userinfo` check and a token file on disk (S040); `shred` (S139 — macOS ships neither `shred` nor a meaningful `rm -P`); Phase 7 check 4's pre-grant expectation of robot-attributed admin activity (S141); the Phase 8 verify placed before the secrets exist (S031); `apps.licensing` and any reliance on `walle_setup.py`'s `EVE_SCOPES` (S060).
 - Applies decisions (signed in [03](03-decisions-and-people.md) before the step that needs them): SD-05, SD-10, SD-11, SD-12, SD-31, SD-32, SD-06, SD-25, SD-18, SD-38, SD-43, SD-44, plus Eve's own E-14, E-16 and topology decision 44 or CC-33.
 - Closes: S031, S035, S038, S040, S060, S088, S139, S140, S141 (the pre-grant half; the post-grant half is a named re-run point in [39](39-wall-e-stage-0.md)), S142, S203, X-ORG-02 (Eve's half). Defers none without a named owner (§13).
-- Consumes: `EVE_PROJECT`, `EVE_PROJECT_NUMBER`, `EVE_WS_LOGS_DS`, `EVE_TWIN_PROJECT`, `EVE_TWIN_PROJECT_NUMBER`, `EVE_EVIDENCE_KEY_EU` (23); `ENT_ORG_SINK`, `ENT_FACTORY_SINGLETON_CTL_NONPROD`, `ENT_PROJECT_REPAIR_EVE`, `pam/tools/pam.sh` (12, 23); `SANDBOX_DOMAIN`, `SANDBOX_CUSTOMER_ID`, `SANDBOX_ORG_ID`, `SANDBOX_SA_1_EMAIL`, `SANDBOX_SA_2_EMAIL`, `sandbox/sandbox.yaml` (21); `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `SA_1_ADMIN`, `SA_2_ADMIN`, `GRP_EVE_OWNERS`, `ADMIN_OU` (06); `SECOND_HUMAN_EMAIL`, `SECURITY_REVIEWER_EMAIL`, `INCIDENT_COMMANDER_EMAIL`, `DPO_CONTACT`, SD-05, SD-10, SD-11, SD-12, SD-31, SD-32 (03); `SINK_S_ORG`, `SINK_S_FOLDER` and the expected-sink inventory (14); `DOMAIN`, `DIRECTORY_CUSTOMER_ID`, `ORG_ID`, `REGION`, `BQ_LOCATION` and every helper (01).
+- Consumes: `EVE_PROJECT`, `EVE_PROJECT_NUMBER`, `EVE_WS_LOGS_DS`, `EVE_TWIN_PROJECT`, `EVE_TWIN_PROJECT_NUMBER`, `EVE_EVIDENCE_KEY_EU`, `IDENTITY_RETENTION_DAYS`, the twin repair entitlement's resource name in 23 EP-2.4's record (23); `ENT_ORG_SINK`, `ENT_PROJECT_REPAIR_EVE`, `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE`, `pam/tools/pam.sh` and its one helper `pam_request ENT JUSTIFICATION DURATION` (12, 23); `SANDBOX_DOMAIN`, `SANDBOX_CUSTOMER_ID`, `SANDBOX_ORG_ID`, `SANDBOX_SA_1_EMAIL`, `SANDBOX_SA_2_EMAIL`, `sandbox/sandbox.yaml` (21); `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `SA_1_ADMIN`, `SA_2_ADMIN`, `GRP_EVE_OWNERS`, `ADMIN_OU` (06); `SECOND_HUMAN_EMAIL`, `SECURITY_REVIEWER_EMAIL`, `INCIDENT_COMMANDER_EMAIL`, `DPO_CONTACT`, SD-05, SD-10, SD-11, SD-12, SD-31, SD-32 (03); `SINK_S_ORG`, `SINK_S_FOLDER` and the expected-sink inventory (14); `DOMAIN`, `DIRECTORY_CUSTOMER_ID`, `ORG_ID`, `REGION`, `BQ_LOCATION` and every helper (01).
 - Produces: `EVE_ROBOT`, `EVE_STAGING_OU`, `SERVICE_IDENTITY_OU`, `EVE_ROLE_NAME`, `EVE_SINK`, `EVE_TWIN_SINK`, `EVE_OAUTH_CLIENT_SECRET_NAME`, `EVE_REFRESH_TOKEN_SECRET_NAME`, `EVE_TOKEN_VERSION`, `SA_EVE_VERIFIER`, `EVE_TWIN_ROBOT`, `EVE_TWIN_TOKEN_VERSION`.
 - Every console path, command, flag, role, API and constraint below was read on Google's pages on 2026-09-15 (§12). What could not be settled that day is in §13. Nothing was run against a live tenant while writing.
 
@@ -39,7 +39,7 @@ What this file deliberately does **not** do:
 - It does not create `eve-controller@`, `eve-console@` or `eve-export@`. Those belong to [36](36-wall-e-joins-to-eve-and-mo.md), [25](25-eve-human-super-admin-detections.md) and [26](26-eve-reporting-and-witness-export.md), each with its own grants. Only `eve-verifier@` is needed before a job exists.
 - It grants no role in `WALLE_PROJECT`, which does not exist. Every such grant is [31](31-wall-e-project-and-data-plane.md)'s and [36](36-wall-e-joins-to-eve-and-mo.md)'s.
 - It deploys nothing, schedules nothing and writes no detection. Eve makes no report until 26.
-- It creates **no** key ring and **no** dataset in `EVE_PROJECT`: 23 made them, with `EVE_EVIDENCE_KEY_EU` on the datasets and the 400-day default partition expiry already set (E-14). This file only checks that order held before the first sink write.
+- It creates **no** key ring and **no** dataset in `EVE_PROJECT` or in `EVE_TWIN_PROJECT`: 23 made them (EP-4.2 and EP-4.5), with the CMEK key on each and the default partition expiry already set to `IDENTITY_RETENTION_DAYS` — the ceiling 23 EP-0.2 signed for Workspace identity data, which is what both Workspace-log datasets hold. `EVIDENCE_RETENTION_DAYS` is a different ceiling, for the evidence class, and is used nowhere in this file. This file only checks that order held before the first sink write (EW-1.1, EW-2.2).
 - It authorises **no** domain-wide delegation. If a delegation client is found on `eve@`'s client id, it is reported to the second human and never used (01 PR-6.4).
 
 What the old text got wrong, and must not come back:
@@ -82,11 +82,11 @@ flowchart TD
 
 - [ ] **23 complete**: `EVE_PROJECT`, `EVE_PROJECT_NUMBER`, `EVE_WS_LOGS_DS` (the dataset exists, in `BQ_LOCATION`, CMEK `EVE_EVIDENCE_KEY_EU`, **default partition expiry already set and nothing written into it yet**), `EVE_TWIN_PROJECT`, `EVE_TWIN_PROJECT_NUMBER`, `ENT_PROJECT_REPAIR_EVE` and `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` set; Eve's register row and manifest merged; `restrictServiceUsage` on `EVE_PROJECT` denies `aiplatform` and admits `admin`.
 - [ ] **21 complete**: `SANDBOX_CUSTOMER_ID`, `SANDBOX_ORG_ID`, `SANDBOX_DOMAIN`, `SANDBOX_OPERATORS_GROUP` set in the tenant copy; "Share data with Google Cloud services" on since a recorded time (SB-6.4) and proven at organisation scope (SB-6.5); `/Automation/Service Identities` exists and is empty in the sandbox; `sandbox/sandbox.yaml` carries the twin OAuth client rule; `fld-controllers-nonprod` admits `SANDBOX_CUSTOMER_ID` with an accepted grant proven (SB-7.5).
-- [ ] **12 complete**: `ENT_ORG_SINK` (organisation `roles/logging.configWriter`, 1 h, requester `platform-owners@`, approver the second human) `AVAILABLE` with its one-grant test done (PA-3.3); `ENT_FACTORY_SINGLETON_CTL_NONPROD` available; `pam/tools/pam.sh` sourced; PA-9.3 `DONE` (the platform owner holds no standing `actAs` on Eve identities, SD-12 item 2).
+- [ ] **12 complete**: `ENT_ORG_SINK` (organisation `roles/logging.configWriter`, 1 h, requester `platform-owners@`, approver the second human) `AVAILABLE` with its one-grant test done (PA-3.3); the twin repair entitlement (carrying `roles/bigquery.admin` in `EVE_TWIN_PROJECT`) recorded by 23 EP-2.4 — `ENT_FACTORY_SINGLETON_CTL_NONPROD` is the project-creation entitlement and no step here uses it; `pam/tools/pam.sh` sourced; PA-9.3 `DONE` (the platform owner holds no standing `actAs` on Eve identities, SD-12 item 2).
 - [ ] **14 complete**: `SINK_S_ORG` and `SINK_S_FOLDER` exist and are enabled; the expected-sink inventory file is merged, so EW-1.9 adds one row rather than inventing the file; no interim organisation sink exists (SD-40).
 - [ ] **06 complete**: `ROSTER_FILE` merged with `eve@<domain>` in `expected_later[]`; `GRP_EVE_OWNERS` owned by the second human; the interim Admin console activity rule still live; `ADMIN_OU`, `SA_1_ADMIN`, `SA_2_ADMIN` set.
 - [ ] **03 signed**: SD-05, SD-10, SD-11, SD-12, SD-31, SD-32, SD-18, SD-38, SD-44, plus `NAMES`; `SECOND_HUMAN_EMAIL` set; `SECURITY_REVIEWER_EMAIL` and `INCIDENT_COMMANDER_EMAIL` set (at least one of the two must be a real address — see EW-0.6); `DPO_CONTACT` set.
-- [ ] **Eve's own decisions**: **E-14** signed (the retention value the 23 dataset already carries); **E-16** signed, with the privilege set and the ten scopes committed at a named commit; **topology decision 44 or CC-33** closed (SD-31). EW-0.2 to EW-0.4 refuse to go on without all three.
+- [ ] **Eve's own decisions**: **E-14** signed, and `IDENTITY_RETENTION_DAYS` set as an integer in `~/.platform-env` (23 EP-0.2 refuses to start without it; it is the ceiling the 23 datasets already carry, and the value EW-1.1 and EW-2.2 read back — never a number typed here); **E-16** signed, with the privilege set and the ten scopes committed at a named commit; **topology decision 44 or CC-33** closed (SD-31). EW-0.2 to EW-0.4 refuse to go on without all three.
 - [ ] **SD-11's data-protection record** exists and is dated: purpose, data categories, retention, recipients, and the works-council information where required (EW-0.2). Eve processes the activity metadata of named human administrators; no step in this file runs without it.
 - [ ] Hardware keys in hand: two for `eve@` (04 PU-8.1), held by the two custodians named in EW-3.5, plus two for the twin robot **only if** SD-29 decided hardware-key 2SV for twin robots.
 - [ ] One Workspace licence free for `eve@` and one on the sandbox tenant for the twin (04).
@@ -188,7 +188,7 @@ R="$BUILD_LOG_DIR/records/$(date -u +%F)-EW"
 
 ```bash
 checkpoint EW-0.1 START
-need DOMAIN DIRECTORY_CUSTOMER_ID ORG_ID REGION BQ_LOCATION WORKSPACE_EDITION PLATFORM_REPO_DIR BUILD_LOG_DIR EVIDENCE_REGISTER DEVIATION_REGISTER DRILL_CALENDAR EVE_PROJECT EVE_PROJECT_NUMBER EVE_WS_LOGS_DS EVE_TWIN_PROJECT EVE_TWIN_PROJECT_NUMBER IDENTITY_RETENTION_DAYS ENT_ORG_SINK ENT_PROJECT_REPAIR_EVE ENT_DEPLOY_CREDENTIAL_HOLDER_EVE ENT_FACTORY_SINGLETON_CTL_NONPROD SANDBOX_DOMAIN SANDBOX_CUSTOMER_ID SANDBOX_ORG_ID SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL ROSTER_FILE CONTROL_GROUPS_FILE SA_1_ADMIN SA_2_ADMIN GRP_EVE_OWNERS SECOND_HUMAN_EMAIL DPO_CONTACT LOGGING_PROJECT CICD_PROJECT
+need DOMAIN DIRECTORY_CUSTOMER_ID ORG_ID REGION BQ_LOCATION WORKSPACE_EDITION PLATFORM_REPO_DIR BUILD_LOG_DIR EVIDENCE_REGISTER DEVIATION_REGISTER DRILL_CALENDAR EVE_PROJECT EVE_PROJECT_NUMBER EVE_WS_LOGS_DS EVE_TWIN_PROJECT EVE_TWIN_PROJECT_NUMBER IDENTITY_RETENTION_DAYS ENT_ORG_SINK ENT_PROJECT_REPAIR_EVE ENT_DEPLOY_CREDENTIAL_HOLDER_EVE SANDBOX_DOMAIN SANDBOX_CUSTOMER_ID SANDBOX_ORG_ID SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL ROSTER_FILE CONTROL_GROUPS_FILE SA_1_ADMIN SA_2_ADMIN GRP_EVE_OWNERS SECOND_HUMAN_EMAIL DPO_CONTACT LOGGING_PROJECT CICD_PROJECT
 case "$IDENTITY_RETENTION_DAYS" in ''|*[!0-9]*) echo "STOP: IDENTITY_RETENTION_DAYS is not an integer; 23 EP-0.2 refuses too, so 23 did not finish"; false;; *) echo "IDENTITY_RETENTION_DAYS=${IDENTITY_RETENTION_DAYS}d = $(( IDENTITY_RETENTION_DAYS * 86400 ))s = $(( IDENTITY_RETENTION_DAYS * 86400000 ))ms";; esac
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES SD-05 SD-10 SD-11 SD-12 SD-18 SD-31 SD-32 SD-38 SD-44 E-14 E-16
 awk -F'\t' '$2 ~ /^(EP-|SB-|CL-6\.2|PA-3\.3|PA-9\.3)/ && $3=="DONE" {print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u | tail -40
@@ -207,7 +207,7 @@ test -z "$(gcloud config get project 2>/dev/null)" && echo "no default project"
 
   1. **Purpose:** detection of misuse of tenant-wide privilege.
   2. **Data:** admin, login, token, SAML, groups and Reports activity metadata for the accounts on `ROSTER_FILE` and for every live admin-role holder. **No content.**
-  3. **Retention:** `eve_workspace_*` at the E-14 value (400 days unless E-14 signed another), and the witness copy.
+  3. **Retention:** `eve_workspace_*` at `IDENTITY_RETENTION_DAYS` — the ceiling 23 EP-0.2 signed for Workspace identity data and 23 EP-4.2 set on the dataset; the record's number and the variable's must agree — and the witness copy.
   4. **Recipients:** the second human; the security reviewer; the incident commander. Never the subject of a report.
   5. **Works-council or employee-representative information** given where the jurisdiction requires it, with a date.
 
@@ -357,7 +357,7 @@ git -C "$PLATFORM_REPO_DIR" commit -m "eve: the six-stream organisation sink fil
 git -C "$PLATFORM_REPO_DIR" push -u origin ew-1-2-eve-sink-filter
 ```
 
-  The mapping, read on Google's Workspace-audit-logs page on 2026-09-15: Admin Audit is `admin.googleapis.com`; Enterprise Groups Audit is `cloudidentity.googleapis.com`; **Login Audit and SAML Audit are both `login.googleapis.com`**; OAuth Token Audit is `oauth2.googleapis.com`; Access Transparency has no service name of its own on that page and is matched by its log id. `Assumption:` the Access Transparency clause is correct; EW-1.7 reads the first rows and the clause is corrected before anything relies on it. OAuth token, SAML and Access Transparency are edition-conditional; `WORKSPACE_EDITION` decides which of them ever arrive, and a stream the edition carries but that is absent is a finding, not a pass.
+  The mapping, read on Google's Workspace-audit-logs page on 2026-09-15: Admin Audit is `admin.googleapis.com`; Enterprise Groups Audit is `cloudidentity.googleapis.com`; **Login Audit and SAML Audit are both `login.googleapis.com`**; OAuth Token Audit is `oauth2.googleapis.com`; Access Transparency has no service name of its own on that page and is matched by its log id. `Assumption:` the Access Transparency clause is correct; EW-1.7 reads the first rows and the clause is corrected before anything relies on it. OAuth token, SAML and Access Transparency are edition-conditional; `WORKSPACE_EDITION` is pinned at EW-1.7 and decides which of them ever arrive; a stream the edition carries but that is absent is a **stop** at EW-1.8, and a stream the edition does not carry is a declared residual in the "What Eve does not see" table, never a silent omission.
 
   **Do not copy Wall-E's actor exclusion.** `walle-workspace-audit` excludes the robot and must, or every write Wall-E makes triggers a run that writes again. Eve's sink excludes nothing: the robot's own events, and the administrators', are exactly what Eve exists to see.
 - **VERIFY:** `no actor exclusion`; the pull request carries two approvals, one the second human's; the merged file is one line.
@@ -395,14 +395,14 @@ gcloud pam grants describe "$g_sink" --billing-project="$CICD_PROJECT" --format=
 ```
 
 - **VERIFY:** `STATE ACTIVE`; the grant record names the second human as approver, the duration as `3600s` and the justification above. A grant that activates with no approver is a stop: re-read 12 PA-8.1's catalogue and correct `ent-org-sink` before going on.
-- **ROLLBACK:** `pam_revoke "$g_sink"`.
+- **ROLLBACK:** `gcloud pam grants revoke "$g_sink" --reason="24 EW-1.4: sitting stopped before the sink was created" --billing-project="$CICD_PROJECT"` (the EW-1.11 form, with a reason that says why).
 - **EVIDENCE:** `${R}-1.4-grant-v1.yaml`; `evidence_add EW-1.4 org-sink-grant E-08 4.1.3 build-log:records/ "${R}-1.4-grant-v1.yaml"`. TISAX 4.1.3, 5.2.4. Closes S142 for Eve.
 
 ### EW-1.5 Create the sink — **IRREVERSIBLE** as history
 
 - **WHO:** Platform owner under the EW-1.4 grant; the second human watches the command and the read-back.
 - **WHERE:** Shell.
-- **ACTION:** **IRREVERSIBLE.** A filter widened after creation does not backfill. Whatever this filter omits is lost for the window between now and the correction, and the loss is not recoverable from Google. Before running, confirm aloud with the second human: the merged commit is the one in EW-1.2; the filter has no actor exclusion; `--include-children` and `--use-partitioned-tables` are both present; the destination project and dataset are Eve's, not the platform's logging project. The gate is the merged filter file and the signed E-14 retention value.
+- **ACTION:** **IRREVERSIBLE.** A filter widened after creation does not backfill. Whatever this filter omits is lost for the window between now and the correction, and the loss is not recoverable from Google. Before running, confirm aloud with the second human: the merged commit is the one in EW-1.2; the filter has no actor exclusion; `--include-children` and `--use-partitioned-tables` are both present; the destination project and dataset are Eve's, not the platform's logging project. The gate is the merged filter file and EW-1.1's `EXPIRY MATCHES THE SIGNED IDENTITY CEILING` line (the dataset carries `IDENTITY_RETENTION_DAYS` and its CMEK key, and is empty).
 
 ```bash
 need ORG_ID EVE_PROJECT EVE_WS_LOGS_DS
@@ -557,11 +557,16 @@ PY
 - **ACTION:**
 
 ```bash
-pam_revoke "$(cat "${R}-1.4-grant-name-v1.txt")"
+need CICD_PROJECT ORG_ID
+g_sink="$(cat "${R}-1.4-grant-name-v1.txt")"
+case "$g_sink" in */grants/*) :;; *) echo "STOP: ${R}-1.4-grant-name-v1.txt does not hold a grant name; list the entitlement's ACTIVE grants by hand"; false;; esac
+# Not 12's pam_revoke: its reason is hard-coded to "setup 12 one-grant test complete", and the PAM audit record of this revocation must say what it was.
+gcloud pam grants revoke "$g_sink" --reason="24 EW-1.11: eve-workspace-audit created and verified; organisation configWriter no longer needed" --billing-project="$CICD_PROJECT"
+gcloud pam grants describe "$g_sink" --billing-project="$CICD_PROJECT" --format='value(state)'
 gcloud organizations get-iam-policy "$ORG_ID" --format=json | jq -r '[.bindings[] | select(.role=="roles/logging.configWriter") | {members, condition}]'
 ```
 
-- **VERIFY:** The grant state is `REVOKED` (or already `EXPIRED`); the organisation policy holds **no** unconditioned `roles/logging.configWriter` binding for any human, group or domain. Any standing binding found here is a severity 1 drift finding and is removed before the sitting ends.
+- **VERIFY:** `describe` prints `REVOKED` (or `ENDED` if the hour had already elapsed); the organisation policy holds **no** unconditioned `roles/logging.configWriter` binding for any human, group or domain. Any standing binding found here is a severity 1 drift finding and is removed before the sitting ends.
 - **ROLLBACK:** Not applicable.
 - **EVIDENCE:** The policy extract as `${R}-1.11-org-configwriter-v1.json`. TISAX 4.1.3.
 
@@ -765,11 +770,15 @@ exit
 - **ACTION:**
 
 ```bash
-gcloud organizations remove-iam-policy-binding "$SANDBOX_ORG_ID" --member="user:${SANDBOX_SA_1_EMAIL}" --role="roles/logging.configWriter" --condition="expression=request.time < timestamp(\"<the same timestamp as EW-2.3>\"),title=ew-2-sandbox-sink,description=setup 24 EW-2.3"
+need SANDBOX_ORG_ID SANDBOX_SA_1_EMAIL
+# A conditional binding is removed only with its identical condition: read the live expression back rather than retyping the timestamp.
+COND_EXPR="$(gcloud organizations get-iam-policy "$SANDBOX_ORG_ID" --format=json | jq -r '.bindings[] | select(.role=="roles/logging.configWriter" and .condition.title=="ew-2-sandbox-sink") | .condition.expression')"
+case "$COND_EXPR" in ''|null) echo "STOP: no ew-2-sandbox-sink binding found; read the policy by hand before removing anything"; false;; *) printf 'condition: %s\n' "$COND_EXPR";; esac
+gcloud organizations remove-iam-policy-binding "$SANDBOX_ORG_ID" --member="user:${SANDBOX_SA_1_EMAIL}" --role="roles/logging.configWriter" --condition="expression=${COND_EXPR},title=ew-2-sandbox-sink,description=setup 24 EW-2.3"
 gcloud organizations get-iam-policy "$SANDBOX_ORG_ID" --format=json | jq -r '[.bindings[] | select(.role=="roles/logging.configWriter")] | length'
 ```
 
-- **VERIFY:** The length prints `0`. A conditional binding must be removed with the identical condition string; if the removal is refused, read the policy, copy the exact condition and retry. Close `BD-24-3` in `DEVIATION_REGISTER` with the removal time.
+- **VERIFY:** `condition:` prints the EW-2.3 expression; the length prints `0`. If the removal is refused, the condition differs from what was read: stop and read the policy by hand rather than guessing a string. Close `BD-24-3` in `DEVIATION_REGISTER` with the removal time.
 - **ROLLBACK:** Not applicable.
 - **EVIDENCE:** The read-back and the closed deviation row. TISAX 4.1.3.
 
@@ -870,7 +879,7 @@ checkpoint EW-3.3 DONE "$SECOND_HUMAN_EMAIL" - "eve@ created in EVE_STAGING_OU, 
 
   Write the custody records on paper, signed by the custodian and the other-line witness, scan them the same day to `EVIDENCE_INTERIM_LOCATION`, and hand them to a witness administrator for upload under `custody/` (08 WO-3.3, SD-27).
 
-  **If the security reviewer is appointed later**, the key B envelope is re-custodied at appointment: opened in front of the second human and the new custodian, the key re-labelled if needed, a fresh `v2` custody record signed by both and by an other-line witness, and the interim custodian's record closed. This is a named re-run line (EW-10.3).
+  **If the security reviewer is appointed later**, the key B envelope is re-custodied at appointment: opened in front of the second human and the new custodian, the key re-labelled if needed, a fresh `v2` custody record signed by both and by an other-line witness, and the interim custodian's record closed. This is a named re-run line (recorded at EW-4.6, put on `DRILL_CALENDAR` at EW-10.1).
 - **VERIFY:** The account's 2-Step Verification page lists exactly two security keys with the two labels. Two sealed envelopes exist with two signed records naming two different custodians, neither of whom is the platform owner.
 - **ROLLBACK:** Remove a key from the account and destroy its envelope record, with a dated incident note. Never leave the account with one key.
 - **EVIDENCE:** The two custody records (paper, scanned, then in the witness bucket); the 2SV page screenshot as `${R}-3.5-eve-keys-v1`; `evidence_add EW-3.5 eve-key-custody E-08 3.1 witness:custody/`. TISAX 3.1, 4.1.2.
@@ -1618,7 +1627,7 @@ Nothing is deferred without an owner. What is not closed **here** and where it g
 ## 12. Verification checklist for the whole part
 
 - [ ] `eve-workspace-audit` exists at the organisation, `includeChildren: true`, destination `EVE_PROJECT:EVE_WS_LOGS_DS`, filter identical to the merged `eve/workspace-audit-filter.txt`, **no** `principalEmail!=` clause (EW-1.7).
-- [ ] The destination is one DAY-partitioned table plus a data-access table, not a date-sharded series, and `expirationMs` is the E-14 value; the partitioning column is written down (EW-1.7).
+- [ ] The destination is one DAY-partitioned table plus a data-access table, not a date-sharded series, and `expirationMs` equals `IDENTITY_RETENTION_DAYS * 86400000` (never `EVIDENCE_RETENTION_DAYS`); the partitioning column and `WORKSPACE_EDITION` are written down (EW-1.7).
 - [ ] The sink's writer identity holds `WRITER` on `eve_workspace_logs` and no project-level role (EW-1.6).
 - [ ] Rows from all the streams the edition carries are arriving, with human actors and no exclusion (EW-1.8, EW-8.3).
 - [ ] No standing organisation `logging.configWriter` binding exists for any human, group or domain (EW-1.11).
@@ -1683,7 +1692,7 @@ Nothing is deferred without an owner. What is not closed **here** and where it g
 |---|---|---|
 | The Access Transparency clause of the sink filter. Google's Workspace-audit-logs page gives no service name for that stream, so the filter matches it by log id. | EW-1.2, EW-1.7 | EW-1.8's per-service count on an edition that carries the stream; the clause is corrected by pull request before anything relies on it |
 | The partitioning column BigQuery reports on the sink's table (`timestamp` or none, meaning `_PARTITIONTIME`). | Every query in 25, 26, 28, 36 | EW-1.7 writes it down on the day; until then no query in this set hard-codes either |
-| Whether this tenant's edition carries the OAuth token, SAML and Access Transparency streams. `WORKSPACE_EDITION` is read in 01 but the per-stream mapping is edition-conditional. | EW-1.8's "a stream the edition carries but that is absent is a finding" | The edition read against the sharing page's table, recorded in EW-1.10 |
+| Whether this tenant's edition carries the OAuth token, SAML and Access Transparency streams. `WORKSPACE_EDITION` is read in 01 but the per-stream mapping is edition-conditional. | EW-1.7 item 5 and EW-1.8: a stream the edition carries but that is absent is a **stop**; a stream the edition does not carry is a declared residual (the "What Eve does not see" table) | The edition pinned in EW-1.7's record and read against the sharing page's table at EW-1.10 |
 | Whether the Cloud organisation's customer and the Workspace tenant's customer are the same, which is what makes the production client's **Internal** audience cover `eve@`. | EW-5.1, EW-6.2 | EW-6.2: an `org_internal` refusal would prove otherwise, and the answer is recorded either way |
 | The exact `privilegeName` and `serviceId` values of the eight read privileges on this tenant, and whether the licence privileges are `isOuScopable`. | EW-4.1, EW-4.2, EW-8.2 | EW-4.1's `privileges.list` output; the licence question is a permanent declared limit on F7 (`licence_event_only`) either way |
 | Whether Google's admin 2SV enforcement rollout has brought this tenant into scope, which would add a 30-day web lockout on an unenrolled robot. | EW-3.5's seven-day key delay | The edition and rollout read of 06 OB-2.6, repeated here if the sitting slips |

@@ -3,7 +3,7 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-16 (fix round against the 2026-09-15 procedure review; commands added that day re-checked, §9 and §10)
 - Last executed: never
 - Stage: review §2 stage 30 (Eve Phase 10b step 5 — the `eve_quality` authorised views and their two readers) and the Eve half of stage 25 (the Eve-pack queries of the superseded Mo-4). It has two halves with two performers and one join: Eve's side gives the reads, Mo's side computes on them.
 - **This file gates nothing in Wall-E.** It may start while [30](30-wall-e-workspace-side.md) runs and finish after it. Nothing in files 30 to 39 waits on `MO_EVE_PACK_CONFIGS` (plan SD-45; [README](README.md) §3.4).
@@ -14,8 +14,8 @@
 - Applies decisions (signed in [03](03-decisions-and-people.md) before the step that needs them): SD-01, SD-33, SD-43, SD-44, SD-45, P30, E-21, M-1, A10, NAMES.
 - Closes: S037 (the step 5 half; steps 1 to 4 are [26](26-eve-reporting-and-witness-export.md)), S055 (the row 29, `grades_eve` source and assertion half; the custodian's own resources are [11](11-keys-and-validator-custodian.md), row 21 is [31](31-wall-e-project-and-data-plane.md), the S4 re-point and the CI recompute are [40](40-mo-after-stage-0.md)). Defers none without an owner (§7).
 - Consumes: `SA_MO_METRICS`, `MO_PROJECT`, `MO_METRICS_DS`, `MO_INPUTS_COMMIT`, `ENT_PROJECT_REPAIR_MO`, `ENT_DEPLOY_CREDENTIAL_HOLDER_MO` ([22](22-mo-foundations.md)); `EVE_PROJECT`, `EVE_DS`, `EVE_WS_LOGS_DS`, `EVE_WS_REPORTS_DS`, `EVE_QUALITY_DS`, `EVE_SCHEMAS_COMMIT`, `ENT_PROJECT_REPAIR_EVE` ([23](23-eve-project-and-evidence-stores.md)); `SA_VALIDATOR_CUSTODIAN`, `GRADES_EVE_DS`, `VALIDATOR_PROJECT` ([11](11-keys-and-validator-custodian.md)); `EVE_CONFIG_REPO` ([25](25-eve-human-super-admin-detections.md)); `SECOND_HUMAN_EMAIL`, `MO_OWNER_EMAIL`, `VALIDATOR_CUSTODIAN_EMAIL` ([03](03-decisions-and-people.md)).
-- Produces: `MO_EVE_PACK_CONFIGS` (the transfer-config resource names of the Eve pack); the `eve_quality` views and their two dataset readers; the ten `schema29` tables in `MO_METRICS_DS`; Eve detection-quality and time-to-report metrics, each carrying its source and its computability label.
-- Two names are new against plan §5 and are handed to README's variable list: `EVE_CONFIG_DIR` (the local clone of `EVE_CONFIG_REPO`, which 25 names only as a remote) and `EVE_CONFIG_COMMIT` (the commit the view definitions and the column allow-list were read at, recorded so 40's recompute and 42's control run against the same text). Both are set in MQ-1.1.
+- Produces: `MO_EVE_PACK_CONFIGS` (the transfer-config resource names of the Eve pack: three pack queries and the assertion); `MO_EVE_PROBE_CONFIGS` (two on-demand probes pinned to `mo-metrics@`, the only principal that can prove the authorised-view seam); the `eve_quality` views and their two dataset readers; the ten `schema29` tables in `MO_METRICS_DS`; Eve detection-quality and time-to-report metrics, each carrying its source and its computability label.
+- Three names are new against plan §5 and are handed to README's variable list: `EVE_CONFIG_DIR` (the local clone of `EVE_CONFIG_REPO`, which 25 names only as a remote) and `EVE_CONFIG_COMMIT` (the commit the view definitions and the column allow-list were read at, recorded so 40's recompute and 42's control run against the same text), both set in MQ-1.1; and `MO_EVE_PROBE_CONFIGS`, set in MQ-3.3.
 - Commands checked against Google's documentation on 2026-09-15 (§9). What could not be settled that day is in §8.
 
 ## What this part builds
@@ -24,8 +24,8 @@ Mo measures Eve as well as Wall-E. This file builds the one seam between them, i
 
 1. **The six authorised views in `eve_quality`** (§1), created on Eve's side from Eve's committed view definitions, and authorised on the `eve` dataset one view at a time.
 2. **The two dataset readers** (§2): `mo-metrics@` (topology row 28) and the validator custodian's identity (topology row 29, platform decision P30), both `READER` on `eve_quality` only, both gated on the identity existing, with the negative check that neither appears anywhere else in `EVE_PROJECT`.
-3. **The ten Eve-pack tables and the three Eve-pack queries** (§3), in `MO_PROJECT`, pinned to `mo-metrics@`, reading `eve_quality` and `grades_eve` fully qualified, with the `ownerInfo` check that actually proves the pinning.
-4. **The source rule as a running assertion** (§3.5): a number about Eve that cites no independent source can never be marked evidence-eligible, and the pack fails outright when `grades_eve` is unreadable.
+3. **The ten Eve-pack tables, the four Eve-pack configs and the two probes** (§3), in `MO_PROJECT`, all pinned to `mo-metrics@` inside one deploy-credential grant, reading `eve_quality` and `grades_eve` fully qualified, with the `ownerInfo` check that actually proves the pinning. The two on-demand probes are the only functional proof of §1's authorisation: run as `mo-metrics@`, one reads the view (must succeed) and one reads the source table directly (must fail).
+4. **The source rule as a running assertion** (§3.5): a number about Eve that cites no independent source can never be marked evidence-eligible, and the pack fails outright when `grades_eve` is unreadable. Both halves are proved before they are trusted: the `ASSERT` construct on a deliberate pass and a deliberate failure, and A10 itself on a seeded self-reported row.
 5. **An honest register of what cannot be computed yet** (§4): every cell that needs Wall-E's `walle_audit` is labelled `not_computable` here and re-run in [36](36-wall-e-joins-to-eve-and-mo.md); every Eve figure stays advisory until the custodian's `READER` exists.
 
 What the superseded text got wrong, and must not come back:
@@ -53,10 +53,10 @@ flowchart TD
   H --> I["MQ-2.5 Eve-side grant closed, BD-29-1"]
   F --> J["MQ-3.1 Eve-pack inputs gate"]
   J --> K["MQ-3.2 Ten schema29 tables"]
-  K --> L["MQ-3.3 Three configs pinned to mo-metrics@"]
-  L --> M["MQ-3.4 ownerInfo proves the pinning"]
-  L --> N["MQ-3.5 A10 and the grades_eve assertion"]
-  M --> O["MQ-3.6 First run read back"]
+  K --> L["MQ-3.3 Four configs and two probes pinned to mo-metrics@"]
+  L --> M["MQ-3.4 ownerInfo proves the pinning of all six"]
+  M --> N["MQ-3.5 ASSERT and A10 proved; grades_eve assertion checked"]
+  M --> O["MQ-3.6 Probes prove the seam; first run read back"]
   N --> O
   O --> P["MQ-4 not_computable register, advisory limit"]
   I --> Q["MQ-5 Close and hand over"]
@@ -266,7 +266,14 @@ bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --location="$BQ_LOCA
 
   **This count is a smoke test only. It is not evidence that the view is authorised.** The platform owner runs it inside `g_eve`, which carries `roles/bigquery.admin` on `EVE_PROJECT` and therefore direct read on the source dataset `eve`; an authorised view's entry only matters to a caller that *lacks* access to the source, so this query returns the same number whether or not the six `view` entries were ever written ([Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views): the view lets a principal "run queries on it, but they can't access the source dataset directly"). A permission error here means the *view* is broken, not that the authorisation is missing.
 
-  **The authorisation is proven in [MQ-3.6](#mq-36-run-once-by-hand-and-read-the-rows-back)**, as MQ-2.2's pending proof, by `mo-metrics@` — the one principal that has `READER` on `eve_quality` and, by MQ-2.4's negative check, no role whatever on `eve` or on `EVE_PROJECT`. Its read of `eve_quality` can only come through these entries, so MQ-3.6 is simultaneously the positive and the negative control: before the entries exist that read fails with a permission error naming the source table, and after they exist it returns rows. Record MQ-3.6's outcome against this step.
+  **The authorisation is proven in [MQ-3.6](#mq-36-run-the-probes-then-the-pack-once-by-hand-and-read-the-rows-back)**, as MQ-2.2's pending proof, by `mo-metrics@` — the one principal that has `READER` on `eve_quality` and, by MQ-2.4's negative check, no role whatever on `eve` or on `EVE_PROJECT`. The Mo owner cannot borrow that identity's token (no `roles/iam.serviceAccountTokenCreator` is granted anywhere in this file), so the query is run *as* `mo-metrics@` the one way the deploy-credential grant allows: two on-demand transfer configs pinned to it (MQ-3.3, `MO_EVE_PROBE_CONFIGS`), each a one-line `ASSERT` over a count:
+
+  | Probe | Reads | Expected | What it proves |
+  |---|---|---|---|
+  | `mo-probe-eve-quality-view` | `` `${EVE_PROJECT}.${EVE_QUALITY_DS}.incidents` `` | run `SUCCEEDED` | the positive control: `mo-metrics@` reads the view |
+  | `mo-probe-eve-source-direct` | `` `${EVE_PROJECT}.${EVE_DS}.incidents` `` | run `FAILED`, `Access Denied` naming `${EVE_DS}.incidents` (or `bq mk` itself refused at creation with that error) | the negative control: `mo-metrics@` has no access to the source, so its success on the view can come only through this step's `view` entries |
+
+  Both outcomes together are the proof; either alone is not. A view probe that succeeds while the source probe also succeeds means `mo-metrics@` holds a read on `eve` it must not have (MQ-2.4 is then wrong and is a finding). A view probe that fails with `Access Denied` naming `${EVE_DS}.<table>` means the entries of this step are not in effect (retry once after five minutes, then stop). Record MQ-3.6's two run states against this step, MQ-2.2 and MQ-2.4. The "before the entries" half of the negative control is not run in this sitting order — §3 needs §2's row 28 first, and a removed authorisation takes up to 24 hours to propagate, so it cannot be toggled for a test; the source probe is the equivalent statement, and 42 keeps it as a recurring control.
 
   Optional direct form, when the Mo owner holds `roles/iam.serviceAccountTokenCreator` on `mo-metrics@` (neither `ENT_PROJECT_REPAIR_MO` nor `ENT_DEPLOY_CREDENTIAL_HOLDER_MO` grants it, so it is normally **unavailable** and recorded as such rather than granted for a test):
 
@@ -278,7 +285,7 @@ curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token --im
 
   Revoking an authorisation can take up to 24 hours to take effect (Authorized datasets page); granting one is immediate in practice, but a permission error on the first try is retried once after five minutes before it is treated as a failure.
 - **ROLLBACK:** `bq --project_id="$EVE_PROJECT" update --source "${R}-1.4-eve-before-v1.json" "${EVE_PROJECT}:${EVE_DS}"`, then the same read-back diff. Note the propagation delay above before concluding that a removal failed.
-- **EVIDENCE:** Before, read-back and the query result as `${R}-1.4-authorised-views-v1`; `evidence_add MQ-1.4 authorised-views E-07 4.2.1 build-log:records/<file> <file>`. E-07. TISAX 4.2.1, 1.3.1.
+- **EVIDENCE:** Before, read-back and the smoke-test result as `${R}-1.4-authorised-views-v1`, plus MQ-3.6's two probe run states appended as `${R}-1.4-authorised-views-v2` when they exist; `evidence_add MQ-1.4 authorised-views E-07 4.2.1 build-log:records/<file> <file>`. E-07. TISAX 4.2.1, 1.3.1.
 
 ### MQ-1.5 Prove the blindness and the column allow-list
 
@@ -438,20 +445,34 @@ for TB in eve_scorecard agg_eve_false_refusal agg_eve_wrong_accept agg_eve_agree
 done
 ```
 
-- **VERIFY:** `bq --project_id="$MO_PROJECT" ls --format=json "${MO_PROJECT}:${MO_METRICS_DS}" | jq '[.[] | select(.type=="TABLE")] | length'` prints ten more than MO-6.5's count. `bq show --format=prettyjson "${MO_PROJECT}:${MO_METRICS_DS}.eve_scorecard" | jq '[.schema.fields[].name]'` includes `agent_id`, `as_of`, `source_tables` and `evidence_eligible` — the three columns A10 depends on. A missing one is a stop and a reviewed schema fix, not a hand `bq update`.
+- **VERIFY:** `bq --project_id="$MO_PROJECT" ls --format=json "${MO_PROJECT}:${MO_METRICS_DS}" | jq '[.[] | select(.type=="TABLE")] | length'` prints ten more than MO-6.5's count. Then the six columns that MQ-3.5, MQ-3.6, MQ-4.1 and A10 depend on, asserted rather than eyeballed:
+
+```bash
+bq --project_id="$MO_PROJECT" show --format=prettyjson "${MO_PROJECT}:${MO_METRICS_DS}.eve_scorecard" | jq -e '[.schema.fields[].name] as $f | ["agent_id","as_of","cell","computability","source_tables","evidence_eligible"] | all(. as $c | $f | index($c))' >/dev/null && echo "eve_scorecard: six required columns present" || { echo "STOP: eve_scorecard is missing a required column"; false; }
+```
+
+  `agent_id` and `as_of` are the key and partition; `cell` and `computability` are what MQ-3.6 reads back and MQ-4.1 compares row for row; `source_tables` and `evidence_eligible` are what A10 asserts over. A missing one is a stop and a reviewed schema fix, not a hand `bq update` — found here, before any config is pinned, not two steps later as a column-not-found error.
 - **ROLLBACK:** `bq --project_id="$MO_PROJECT" rm -f -t "${MO_PROJECT}:${MO_METRICS_DS}.<table>"` while empty; after the first run, only with a decision record.
 - **EVIDENCE:** The listing as `${R}-3.2-eve-tables-v1.txt`. E-07. TISAX 1.3.1.
 
-### MQ-3.3 Create the three Eve-pack transfer configs, pinned to `mo-metrics@`
+### MQ-3.3 Create the four Eve-pack transfer configs and the two probes, pinned to `mo-metrics@`
 
 - **WHO:** Mo owner, inside `g_mo` and a grant of `ENT_DEPLOY_CREDENTIAL_HOLDER_MO`.
-- **WHERE:** Shell.
+- **WHERE:** Shell, the same shell as MQ-3.1 (`$T29`) — a sitting resumed after a break re-runs MQ-3.1 first.
 - **ACTION:** **BLOCKED with MQ-3.1.** A scheduled query calls no model, has no network egress and cannot be prompted: the identity that reads Eve's quality surface is structurally incapable of talking to anything, which is the seam Mo's design rests on. Pinning needs two rights the Mo owner does not hold standing: `bigquery.transfers.update` on `MO_PROJECT` (in `ENT_PROJECT_REPAIR_MO`'s `roles/bigquery.admin`) and Service Account User on `mo-metrics@` (`ENT_DEPLOY_CREDENTIAL_HOLDER_MO`'s `roles/iam.serviceAccountUser`) — "iam.serviceAccountUser to assign a service account to a scheduled query" ([Scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries)).
 
-  The schedule is `:07` past the hour because queries "running exactly on the hour (for example, 09:00) might trigger multiple times, which can cause unintended results like data duplication from INSERT operations" (same page); every pack write is additionally a `MERGE` keyed on `(agent_id, as_of_hour, cell, fingerprint_sha)`, so a double fire is a no-op.
+  **Every pinned config is created in this one step, inside one deploy-credential grant.** The grant is the only source of `actAs` on `mo-metrics@` and it ends at its requested duration; a `bq mk --transfer_config` run after that with `--service_account_name` does not fail loudly — it can leave a config running under the Mo owner's own credentials, which MQ-3.4 would catch only if it were re-run. So the assertion config and the two probes are made here, beside the three pack queries, and the grant's state is checked immediately before the first create.
+
+  The schedule is `:07` past the hour because queries "running exactly on the hour (for example, 09:00) might trigger multiple times, which can cause unintended results like data duplication from INSERT operations" (same page); every pack write is additionally a `MERGE` keyed on `(agent_id, as_of_hour, cell, fingerprint_sha)`, so a double fire is a no-op. The assertion runs at `:37`, half an hour behind the pack, so it asserts over rows the pack has written. The probes have no schedule at all (`--no_auto_scheduling`, "Disables automatic scheduling of data transfer runs for this configuration", bq reference): they run only when MQ-3.6 or 42 starts them.
 
 ```bash
-g_dep="$(pam_request "$ENT_DEPLOY_CREDENTIAL_HOLDER_MO" "setup-29 MQ-3.3: pin the Eve-pack transfer configs to mo-metrics@" 3600)"; echo "$g_dep"
+need MO_INPUTS_COMMIT SA_MO_METRICS MO_PROJECT MO_METRICS_DS BQ_LOCATION EVE_PROJECT EVE_DS EVE_QUALITY_DS VALIDATOR_PROJECT
+test -d "${T29:-/nonexistent}/mo/config/metrics" || { echo "STOP: T29 is not set; re-run MQ-3.1 in this shell"; false; }
+A="$T29/mo/config/metrics/assert_eve_source_rule.sql"
+test -s "$A" || { echo "BLOCKED 29/MQ-3.3: assert_eve_source_rule.sql (B-14)"; false; }
+grep -qE "${VALIDATOR_PROJECT//./\\.}\.${GRADES_EVE_DS:-eve_grades}\.grades_eve" "$A" || { echo "STOP: the assertion does not read grades_eve"; false; }
+g_dep="$(pam_request "$ENT_DEPLOY_CREDENTIAL_HOLDER_MO" "setup-29 MQ-3.3: pin the Eve-pack configs and probes to mo-metrics@" 3600)"; echo "$g_dep"
+[ "$(gcloud pam grants describe "$g_dep" --billing-project="$CICD_PROJECT" --format='value(state)')" = ACTIVE ] || { echo "STOP: g_dep is not ACTIVE; nothing below may run"; false; }
 create_eve_metric () {   # create_eve_metric <name> <sql-file> <minute>
   bq mk --transfer_config \
     --project_id="$MO_PROJECT" \
@@ -463,22 +484,38 @@ create_eve_metric () {   # create_eve_metric <name> <sql-file> <minute>
     --schedule="every 60 mins from 00:$3 to 23:$3" \
     --params="$(python3.12 -c 'import json,sys;print(json.dumps({"query": open(sys.argv[1]).read()}))' "$2")"
 }
+create_eve_probe () {    # create_eve_probe <name> <query-string>: on-demand, no schedule, pinned
+  bq mk --transfer_config \
+    --project_id="$MO_PROJECT" \
+    --location="$BQ_LOCATION" \
+    --target_dataset="$MO_METRICS_DS" \
+    --data_source=scheduled_query \
+    --display_name="mo-probe-$1" \
+    --service_account_name="$SA_MO_METRICS" \
+    --no_auto_scheduling \
+    --params="$(python3.12 -c 'import json,sys;print(json.dumps({"query": sys.argv[1]}))' "$2")"
+}
 create_eve_metric eve-quality-pack "$T29/mo/config/metrics/eve_quality_pack.sql" 07
 create_eve_metric eve-divergence   "$T29/mo/config/metrics/eve_divergence.sql"   07
 create_eve_metric eve-scorecard    "$T29/mo/config/metrics/eve_scorecard.sql"    07
+create_eve_metric eve-pack-assert  "$A"                                          37
+create_eve_probe  eve-quality-view   "ASSERT ((SELECT COUNT(*) FROM \`${EVE_PROJECT}.${EVE_QUALITY_DS}.incidents\`) >= 0) AS 'mo-metrics@ reads eve_quality.incidents through the authorised view';"
+create_eve_probe  eve-source-direct  "ASSERT ((SELECT COUNT(*) FROM \`${EVE_PROJECT}.${EVE_DS}.incidents\`) >= 0) AS 'DIRECT READ OF ${EVE_DS}.incidents MUST NOT SUCCEED';" || echo "source probe refused at creation: if the error is Access Denied on ${EVE_DS}.incidents, that refusal is MQ-3.6's negative control — record it verbatim"
 ```
 
-  `--target_dataset` is `MO_METRICS_DS` because "the destination dataset and table for a scheduled query must be in the same project as the scheduled query", while "queries can reference tables from different projects and different datasets"; for a `MERGE` the written table is named in the SQL itself, fully qualified. The `eve_quality` and `grades_eve` references are templated into the committed SQL at commit time from one committed variable each, so a project rename is one reviewed edit (rule 3 of the superseded Mo-4, kept).
+  `--target_dataset` is `MO_METRICS_DS` because "the destination dataset and table for a scheduled query must be in the same project as the scheduled query", while "queries can reference tables from different projects and different datasets"; for a `MERGE` the written table is named in the SQL itself, fully qualified. The `eve_quality` and `grades_eve` references are templated into the committed SQL at commit time from one committed variable each, so a project rename is one reviewed edit (rule 3 of the superseded Mo-4, kept). The two probe queries are the only query text this file writes by hand; they compute nothing and write nothing, and are recorded verbatim in the evidence.
 - **VERIFY:**
 
 ```bash
-bq ls --transfer_config --transfer_location="$BQ_LOCATION" --project_id="$MO_PROJECT" --format=prettyjson | jq -r '.[] | select(.displayName | startswith("mo-metric-eve-")) | [.displayName, .schedule, .name] | @tsv'
+bq ls --transfer_config --transfer_location="$BQ_LOCATION" --project_id="$MO_PROJECT" --format=prettyjson | jq -r '.[] | select(.displayName | test("^mo-(metric|probe)-eve-")) | [.displayName, (.schedule // "-"), (.scheduleOptions.disableAutoScheduling // false | tostring), .name] | @tsv'
 penv_set MO_EVE_PACK_CONFIGS "$(bq ls --transfer_config --transfer_location="$BQ_LOCATION" --project_id="$MO_PROJECT" --format=json | jq -r '[.[] | select(.displayName | startswith("mo-metric-eve-")) | .name] | join(",")')"
+penv_set MO_EVE_PROBE_CONFIGS "$(bq ls --transfer_config --transfer_location="$BQ_LOCATION" --project_id="$MO_PROJECT" --format=json | jq -r '[.[] | select(.displayName | startswith("mo-probe-eve-")) | .name] | join(",")')"
+echo "$MO_EVE_PACK_CONFIGS" | tr ',' '\n' | grep -c transferConfigs; echo "$MO_EVE_PROBE_CONFIGS" | tr ',' '\n' | grep -c transferConfigs
 ```
 
-  Three rows, each `every 60 mins from 00:07 to 23:07`, each name ending `/transferConfigs/<id>`; `MO_EVE_PACK_CONFIGS` holds the three names. The pinning is **not** verified here — see MQ-3.4, which is the whole point of S148.
-- **ROLLBACK:** `bq rm -f --transfer_config "<one name from MO_EVE_PACK_CONFIGS>"`, one at a time. Never the loop of the superseded Mo-4 rollback, which deletes every transfer config in `MO_PROJECT` in that location, including 36's Wall-E pack and 40's snapshot.
-- **EVIDENCE:** The listing as `${R}-3.3-eve-configs-v1.tsv`; `evidence_add MQ-3.3 eve-pack-configs E-05 5.3.1 build-log:records/<file> <file>`. E-05. TISAX 5.3.1, 4.2.1.
+  Six rows: three `every 60 mins from 00:07 to 23:07`, one `mo-metric-eve-pack-assert` at `every 60 mins from 00:37 to 23:37`, two `mo-probe-eve-*` with `disableAutoScheduling` `true` (one if the source probe was refused at creation; record which). The two counts print `4` and `2` (or `1`). Every name ends `/transferConfigs/<id>`. The pinning is **not** verified here — see MQ-3.4, which is the whole point of S148 and which runs before either MQ-3.5 or MQ-3.6.
+- **ROLLBACK:** `bq rm -f --transfer_config "<one name from MO_EVE_PACK_CONFIGS or MO_EVE_PROBE_CONFIGS>"`, one at a time. Never the loop of the superseded Mo-4 rollback, which deletes every transfer config in `MO_PROJECT` in that location, including 36's Wall-E pack and 40's snapshot. A config found unpinned after the grant ended is not repaired by re-creation outside a grant: open a new `ENT_DEPLOY_CREDENTIAL_HOLDER_MO` grant and use MQ-3.4's `--update_credentials` remedy inside it.
+- **EVIDENCE:** The listing and both probe query strings as `${R}-3.3-eve-configs-v1.tsv`; `evidence_add MQ-3.3 eve-pack-configs E-05 5.3.1 build-log:records/<file> <file>`. E-05. TISAX 5.3.1, 4.2.1.
 
 ### MQ-3.4 Prove the pinning with `ownerInfo` (S148)
 
@@ -488,14 +525,14 @@ penv_set MO_EVE_PACK_CONFIGS "$(bq ls --transfer_config --transfer_location="$BQ
 
 ```bash
 need MO_EVE_PACK_CONFIGS SA_MO_METRICS
-echo "$MO_EVE_PACK_CONFIGS" | tr ',' '\n' | while read -r C; do
+printf '%s\n%s\n' "$MO_EVE_PACK_CONFIGS" "${MO_EVE_PROBE_CONFIGS:-}" | tr ',' '\n' | grep -v '^$' | while read -r C; do
   printf '%s\t' "$C"
   bq show --format=prettyjson --transfer_config "$C" | jq -r '.ownerInfo.email // "NO OWNERINFO"'
 done | tee "${R}-3.4-ownerinfo-v1.tsv"
-awk -F'\t' -v sa="$SA_MO_METRICS" '$2 != sa {print "STOP not pinned: " $0; bad=1} END {exit bad+0}' "${R}-3.4-ownerinfo-v1.tsv" && echo "ALL THREE PINNED TO mo-metrics@"
+awk -F'\t' -v sa="$SA_MO_METRICS" '$2 != sa {print "STOP not pinned: " $0; bad=1} END {exit bad+0}' "${R}-3.4-ownerinfo-v1.tsv" && echo "ALL $(wc -l < "${R}-3.4-ownerinfo-v1.tsv" | tr -d ' ') CONFIGS PINNED TO mo-metrics@"
 ```
 
-- **VERIFY:** `ALL THREE PINNED TO mo-metrics@`. A row showing a human's address is the audit-independence defect this step exists to find: the fix is `bq update --transfer_config --update_credentials --service_account_name="$SA_MO_METRICS" "<name>"`, re-run this check, and record both outputs. `NO OWNERINFO` means the field was not populated — re-read the reference at the step and record what was seen before concluding anything; it is never read as "pinned".
+- **VERIFY:** `ALL 6 CONFIGS PINNED TO mo-metrics@` (`5` if the source probe was refused at creation in MQ-3.3), and the TSV lists every name of `MO_EVE_PACK_CONFIGS` and `MO_EVE_PROBE_CONFIGS` — the four pack configs including `mo-metric-eve-pack-assert`, and both probes. A row showing a human's address is the audit-independence defect this step exists to find: the fix is `bq update --transfer_config --update_credentials --service_account_name="$SA_MO_METRICS" "<name>"` inside an `ENT_DEPLOY_CREDENTIAL_HOLDER_MO` grant, re-run this check, and record both outputs. `NO OWNERINFO` means the field was not populated — re-read the reference at the step and record what was seen before concluding anything; it is never read as "pinned". **This step must have printed its success line before MQ-3.5 or MQ-3.6 start**: both run the configs, and a run under a human's credentials would be an Eve number computed by the monitored line.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** The TSV as `${R}-3.4-ownerinfo-v1.tsv`; `evidence_add MQ-3.4 eve-pack-pinning E-09 4.2.1 build-log:records/<file> <file>`. E-09. TISAX 4.2.1, 1.4.1.
 
@@ -505,15 +542,19 @@ awk -F'\t' -v sa="$SA_MO_METRICS" '$2 != sa {print "STOP not pinned: " $0; bad=1
 - **WHERE:** Shell.
 - **ACTION:** "Numbers about Eve come from `grades_eve`, `seeded_fault_runs`, golden-replay results and Wall-E's passive `eve_last_seen` — never from `eve.verdicts` alone" ([../../mo/03-metrics-contract.md](../../mo/03-metrics-contract.md) §7.3, A10). A compromised Eve writes false receipts; a Mo that scored self-reported verdicts would be scoring Eve's own account of itself. The rule is enforced by a committed assertion that runs after the pack and fails its transfer run, not by the reviewer's memory.
 
-  `assert_eve_source_rule.sql` carries two assertions. The first is A10 as the contract writes it, over `eve_scorecard`. The second is the S055 addition: the pack fails when `grades_eve` cannot be read, so an unreadable source is a loud failure and never a silently self-reported number.
+  `assert_eve_source_rule.sql` carries two assertions. The first is A10 as the contract writes it, over `eve_scorecard`. The second is the S055 addition: the pack fails when `grades_eve` cannot be read, so an unreadable source is a loud failure and never a silently self-reported number. The config that runs it, `mo-metric-eve-pack-assert` at `:37`, was created and pinned in MQ-3.3 inside the deploy-credential grant; this step creates nothing. It proves, before the assertion is trusted, that the construct fails when it should and that A10 fires on the row it is written to catch.
+
+  Precondition check, before anything below:
 
 ```bash
-test -s "$T29/mo/config/metrics/assert_eve_source_rule.sql" || { echo "BLOCKED 29/MQ-3.5: assert_eve_source_rule.sql (B-14)"; false; }
-grep -qE "${VALIDATOR_PROJECT//./\\.}\.${GRADES_EVE_DS:-eve_grades}\.grades_eve" "$T29/mo/config/metrics/assert_eve_source_rule.sql" || { echo "STOP: the assertion does not read grades_eve"; false; }
-create_eve_metric eve-pack-assert "$T29/mo/config/metrics/assert_eve_source_rule.sql" 37
+need MO_EVE_PACK_CONFIGS
+A="$T29/mo/config/metrics/assert_eve_source_rule.sql"; test -s "$A" || { echo "BLOCKED 29/MQ-3.5: assert_eve_source_rule.sql (B-14)"; false; }
+grep -q 'mo-metric-eve-pack-assert' <(bq ls --transfer_config --transfer_location="$BQ_LOCATION" --project_id="$MO_PROJECT" --format=json | jq -r '.[].displayName') || { echo "STOP: the assert config does not exist; it is made in MQ-3.3, never here"; false; }
+for C in $(echo "$MO_EVE_PACK_CONFIGS" | tr ',' ' '); do grep -q "$C" "${R}-3.4-ownerinfo-v1.tsv" || { echo "STOP: MQ-3.4 did not cover ${C}; re-run MQ-3.4 over all six first"; false; }; done
+awk -F'\t' -v sa="$SA_MO_METRICS" '$2 != sa {bad=1} END {exit bad+0}' "${R}-3.4-ownerinfo-v1.tsv" || { echo "STOP: MQ-3.4 lists a config not pinned to mo-metrics@"; false; }
 ```
 
-  Scheduled at `:37`, half an hour behind the pack, so it asserts over rows the pack has written. `Assumption:` the committed file's two assertions read as:
+  `Assumption:` the committed file's two assertions read as:
 
 ```sql
 -- 1. A10, the source rule
@@ -532,34 +573,65 @@ ASSERT (
 ) AS 'grades_eve is not readable: every Eve number would be self-reported';
 ```
 
-  The second assertion does not need a row to exist; a permission error or a missing table fails the job, which fails the transfer run, which is the intended behaviour. While row 46 is PENDING (11 KV-8.11), that failure is expected, is recorded against B-13 in §4, and is the reason Eve figures stay advisory.
-- **VERIFY:** A fourth config, `mo-metric-eve-pack-assert`, at `:37`, pinned (re-run MQ-3.4 over all four). Then one deliberate proof, in a scratch copy of the SQL against a non-existent dataset, that the assertion fails rather than returning zero rows:
+  The second assertion does not need a row to exist; a permission error or a missing table fails the job, which fails the transfer run, which is the intended behaviour. While row 46 is PENDING (11 KV-8.11), that failure is expected, is recorded against B-13 in §4, and is the reason Eve figures stay advisory. Note that a missing dataset fails a query at name resolution, before any `ASSERT` is evaluated — so "point the assertion at a dataset that does not exist" proves only that BigQuery errors on a missing name, and is not used here.
+
+  **Proof (a): the `ASSERT` construct.** "If expression evaluates to FALSE or NULL, the statement generates an error. If AS description is present, description will appear in the error message" ([Debugging statements](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/debugging-statements)). Both directions are exercised, as the Mo owner inside `g_mo`:
 
 ```bash
-bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --location="$BQ_LOCATION" 'ASSERT (SELECT COUNT(*) >= 0 FROM `'"${VALIDATOR_PROJECT}"'.no_such_dataset.grades_eve`) AS "fails closed"'; echo "exit=$?"
+bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --location="$BQ_LOCATION" 'ASSERT (SELECT 1 = 0) AS "deliberate failure"'; echo "exit-a-fail=$?"
+bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --location="$BQ_LOCATION" 'ASSERT (SELECT 1 = 1) AS "deliberate pass"'; echo "exit-a-pass=$?"
 ```
 
-  `exit=1` or another non-zero value with a not-found error. `exit=0` means the assertion form is wrong and the step stops.
-- **ROLLBACK:** `bq rm -f --transfer_config "<the assert config name>"`. The assertion file itself is changed only by a reviewed pull request.
-- **EVIDENCE:** Both outputs as `${R}-3.5-source-rule-v1.txt`; `evidence_add MQ-3.5 eve-source-rule E-04 5.3.1 build-log:records/<file> <file>`. E-04, E-09. TISAX 5.3.1.
-
-### MQ-3.6 Run once by hand and read the rows back
-
-- **WHO:** Mo owner.
-- **WHERE:** Shell.
-- **ACTION:** Do not wait an hour for the schedule. Start one run of the pack and read what it wrote; this is also the first proof that `mo-metrics@` can actually read `eve_quality` (MQ-2.2's pending proof).
+  **Proof (b): assertion 1 fires.** A seeded row that A10 must reject — `evidence_eligible = true` with a `source_tables` array naming only `eve_quality.verdicts` — is inserted into a temporary copy of `eve_scorecard` inside one script, and the committed assertion text is run against that copy. The committed file is not edited: the script is assembled from it, and only the table reference is redirected. Nothing is written to `MO_METRICS_DS`; a `TEMP` table lives and dies with the script.
 
 ```bash
-bq mk --transfer_run --run_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(echo "$MO_EVE_PACK_CONFIGS" | cut -d, -f1)"
-sleep 120
-bq ls --transfer_run --run_attempt=LATEST --max_results=5 "$(echo "$MO_EVE_PACK_CONFIGS" | cut -d, -f1)" --format=prettyjson | jq -r '.[] | [.runTime, .state, (.errorStatus.message // "-")] | @tsv'
+P="$(mktemp)"
+{ printf 'CREATE TEMP TABLE scratch_eve_scorecard AS SELECT * FROM `%s.%s.eve_scorecard` WHERE FALSE;\n' "$MO_PROJECT" "$MO_METRICS_DS"
+  printf "INSERT INTO scratch_eve_scorecard (agent_id, as_of, cell, computability, source_tables, evidence_eligible) VALUES ('eve', CURRENT_DATE(), 'E1', 'computable', ['%s.%s.verdicts'], TRUE);\n" "$EVE_PROJECT" "$EVE_QUALITY_DS"
+  sed -n '1,/;/p' "$A" | sed "s/\`${MO_PROJECT}\.${MO_METRICS_DS}\.eve_scorecard\`/scratch_eve_scorecard/g"
+} > "$P"
+grep -q 'scratch_eve_scorecard' <(sed -n '3,$p' "$P") || { echo "STOP: the first statement of ${A##*/} does not reference eve_scorecard as expected; read the file"; false; }
+bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --location="$BQ_LOCATION" < "$P" 2>&1 | tee "${R}-3.5-a10-fires-v1.txt"; echo "exit-b=${PIPESTATUS[0]}"
+rm -f "$P"
+```
+
+  `Assumption:` the first statement of the committed file is assertion 1 and ends at the file's first `;`; `as_of` is a `DATE` and the other `schema29` columns of `eve_scorecard` are `NULLABLE`. If the `INSERT` is refused on a `REQUIRED` column or a type, supply that column's throwaway value in the `INSERT` line, record the change, and re-run; the assertion text itself is never touched. `bq query` reads the script from standard input, the form the reference documents for scripts.
+- **VERIFY:** Proof (a): `exit-a-fail` is non-zero and the error text contains `deliberate failure`; `exit-a-pass=0`. Proof (b): `exit-b` is non-zero **and** the error text contains the A10 description (`an evidence-eligible number about Eve has no independent source`). A non-zero exit with any other message — a `grades_eve` permission error, a column not found — is not a pass: assertion 1 did not fire and the step stops. `exit-b=0` means A10 accepted a self-reported number as evidence-eligible; the committed SQL is wrong and is fixed by a reviewed pull request, never here. Record all three exit codes. Mandatory before leaving this step: MQ-3.4's TSV lists `mo-metric-eve-pack-assert` with `mo-metrics@` as `ownerInfo.email`; if MQ-3.4 was run before that config existed, re-run MQ-3.4 now over all six and file it as `-v2`.
+- **ROLLBACK:** Read only on Mo's data (the temporary table is dropped by BigQuery at the end of the script; `bq --project_id="$MO_PROJECT" ls "${MO_PROJECT}:${MO_METRICS_DS}" | grep -c scratch` prints `0`). The assert config's rollback is MQ-3.3's, one name at a time. The assertion file itself is changed only by a reviewed pull request.
+- **EVIDENCE:** All outputs and the three exit codes as `${R}-3.5-source-rule-v1.txt` and `${R}-3.5-a10-fires-v1.txt`; `evidence_add MQ-3.5 eve-source-rule E-04 5.3.1 build-log:records/<file> <file>`. E-04, E-09. TISAX 5.3.1.
+
+### MQ-3.6 Run the probes, then the pack once by hand, and read the rows back
+
+- **WHO:** Mo owner; **the second human reads the two probe outcomes**, because they are the proof of Eve's side (MQ-1.4, MQ-2.2, MQ-2.4).
+- **WHERE:** Shell.
+- **ACTION:** Precondition: MQ-3.4 printed its success line over every config, probes included. Do not wait an hour for the schedule. First the two probes, which are the only functional proof of §1's authorisation that can exist — `mo-metrics@` is the one principal with `READER` on `eve_quality` and no role on `eve`, and a transfer run is the one way this sitting can run a query as it. Then one run of the pack. `bq mk --transfer_run --run_time=<RFC 3339 UTC> CONFIG` "creates a data transfer run at the specified time" (bq reference); the console fallback is **BigQuery > Scheduled queries > the config > Schedule backfill**.
+
+```bash
+need MO_EVE_PACK_CONFIGS MO_EVE_PROBE_CONFIGS
+run_once () {   # run_once <config-name>: start one run now, wait, print its state and error
+  bq mk --transfer_run --run_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" >/dev/null || { echo "STOP: could not start a run of $1"; return 1; }
+  sleep 120
+  bq ls --transfer_run --run_attempt=LATEST --max_results=1 "$1" --format=prettyjson | jq -r --arg c "$1" '.[] | [$c, .runTime, .state, (.errorStatus.message // "-")] | @tsv'
+}
+for C in $(echo "$MO_EVE_PROBE_CONFIGS" | tr ',' ' '); do run_once "$C"; done | tee "${R}-3.6-probes-v1.tsv"
+grep -q 'STOP\|PENDING\|RUNNING' "${R}-3.6-probes-v1.tsv" && echo "a probe has not finished: wait and list its runs again before reading the result"
+run_once "$(echo "$MO_EVE_PACK_CONFIGS" | cut -d, -f1)" | tee "${R}-3.6-pack-run-v1.tsv"
 bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --location="$BQ_LOCATION" \
   'SELECT cell, computability, evidence_eligible, ARRAY_TO_STRING(source_tables, ",") AS sources FROM `'"${MO_PROJECT}"'.'"${MO_METRICS_DS}"'.eve_scorecard` WHERE agent_id = "eve" ORDER BY cell'
 ```
 
-- **VERIFY:** The run state is `SUCCEEDED`, or `FAILED` with an error message that is read and recorded — a `grades_eve` permission error while row 46 is PENDING is the expected failure and is recorded as such, not retried blindly. The query returns one row per Eve cell; every row has `evidence_eligible = false` while the custodian's `READER` does not exist (P30), and the `not_computable` cells of §4 say so in `computability`. A `true` in `evidence_eligible` at this point means the source rule is not wired, and is a stop.
-- **ROLLBACK:** The rows are recomputable; a wrong run is superseded by the next `MERGE` on the same key. Nothing is deleted by hand.
-- **EVIDENCE:** Both outputs as `${R}-3.6-first-run-v1.txt`; `evidence_add MQ-3.6 eve-pack-first-run E-09 1.4.1 build-log:records/<file> <file>`. E-09. TISAX 1.4.1.
+- **VERIFY:** The probes, read together and only together:
+
+  | Probe | Required state | Required error text | If otherwise |
+  |---|---|---|---|
+  | `mo-probe-eve-quality-view` | `SUCCEEDED` | `-` | `FAILED` with `Access Denied` naming `${EVE_DS}.<table>`: MQ-1.4's entries are not in effect — retry once after five minutes, then stop and re-read MQ-1.4's read-back. `FAILED` naming `${EVE_QUALITY_DS}.incidents`: MQ-2.2's `READER` is not in effect. |
+  | `mo-probe-eve-source-direct` | `FAILED` (or refused at creation, MQ-3.3) | `Access Denied` naming `${EVE_DS}.incidents` | `SUCCEEDED`: `mo-metrics@` reads Eve's source dataset directly, which MQ-2.4 said it could not — stop; this is a finding on Eve's side, and the view probe's success proves nothing until it is fixed. |
+
+  With both as required, the read of `eve_quality` by `mo-metrics@` can come only through the six `view` entries of MQ-1.4: record the two lines against MQ-1.4 (`-v2`), MQ-2.2 and MQ-2.4, initialled by the second human. Any other error text — a `grades_eve` name, a column — is not what a probe can produce and is read as a fault in the probe query, recorded, and fixed in MQ-3.3 under a new grant.
+
+  The pack run state is `SUCCEEDED`, or `FAILED` with an error message that is read and recorded — a `grades_eve` permission error while row 46 is PENDING is the expected failure and is recorded as such, not retried blindly; an `Access Denied` naming `${EVE_DS}.` in the pack run when the view probe succeeded means the pack reads a view the probe did not, and is a stop. The query returns one row per Eve cell; every row has `evidence_eligible = false` while the custodian's `READER` does not exist (P30), and the `not_computable` cells of §4 say so in `computability`. A `true` in `evidence_eligible` at this point means the source rule is not wired, and is a stop.
+- **ROLLBACK:** The probes write nothing. The pack rows are recomputable; a wrong run is superseded by the next `MERGE` on the same key. Nothing is deleted by hand.
+- **EVIDENCE:** The probe TSV, the pack-run TSV and the query output as `${R}-3.6-first-run-v1.txt`, with the probe TSV copied to `${R}-1.4-authorised-views-v2`; `evidence_add MQ-3.6 eve-pack-first-run E-09 1.4.1 build-log:records/<file> <file>` and `evidence_add MQ-1.4 authorised-views-proof E-07 4.2.1 build-log:records/<file> <file>`. E-07, E-09. TISAX 1.4.1, 4.2.1.
 
 ## 4. What cannot be computed yet
 
@@ -623,7 +695,7 @@ git -C "$PLATFORM_REPO_DIR" add decisions/ && git -C "$PLATFORM_REPO_DIR" commit
 - **ACTION:**
 
 ```bash
-printf '| BD-29-2 | %s | 29 MQ-3 | DEV | Eve-pack tables and transfer configs (hand, SD-01) | project %s | mo/config/metrics at %s | ten schema29 tables; four configs pinned to %s | build-log:records/%s | - | PAM %s + %s | terraform import of the tables and transfer configs + empty plan | open |\n' \
+printf '| BD-29-2 | %s | 29 MQ-3 | DEV | Eve-pack tables and transfer configs (hand, SD-01) | project %s | mo/config/metrics at %s | ten schema29 tables; four scheduled configs and two on-demand probes pinned to %s | build-log:records/%s | - | PAM %s + %s | terraform import of the tables and transfer configs + empty plan | open |\n' \
   "$(date -u +%F)" "$MO_PROJECT" "${MO_INPUTS_COMMIT:-tbd}" "$SA_MO_METRICS" "$(basename "${R}-3.4-ownerinfo-v1.tsv")" "ENT_PROJECT_REPAIR_MO" "ENT_DEPLOY_CREDENTIAL_HOLDER_MO" >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-29-2 Eve pack (setup 29 MQ-5.1)"
 pam_revoke "$g_dep"; pam_revoke "$g_mo"
@@ -659,16 +731,16 @@ sitting_end
 - [ ] MQ-0.3, MQ-2.5: the Eve-side work done inside one grant the second human approved, and the grant closed; no human holds a standing role on `EVE_PROJECT` afterwards.
 - [ ] MQ-1.1: six view definitions and the column allow-list merged in `EVE_CONFIG_REPO` at `EVE_CONFIG_COMMIT`; no `SELECT *`, no blind table, no `narrative`; or BLOCKED on B-09.
 - [ ] MQ-1.3: exactly six `VIEW` objects in `eve_quality` and no `TABLE`.
-- [ ] MQ-1.4: six `view` entries on the `eve` dataset; the read-back diff matches; a count query over `eve_quality.incidents` returns a number.
+- [ ] MQ-1.4: six `view` entries on the `eve` dataset; the read-back diff matches (the structural proof); the platform owner's count query is recorded as a smoke test only; the functional proof is MQ-3.6's two probe outcomes, filed as `-v2` against this step.
 - [ ] MQ-1.5: live definitions clean; the live column list equals the committed allow-list; the second human initialled it.
 - [ ] MQ-2.1 to MQ-2.3: row 28 written with an email guard and a read-back; row 29 written or PENDING against B-13; two separate writes.
 - [ ] MQ-2.4: neither reader appears on `eve`, `eve_workspace_logs` or `eve_workspace_reports`; `mo-metrics@` holds no project-level role in `EVE_PROJECT`; no Eve identity appears in `MO_PROJECT`'s policy.
 - [ ] MQ-3.1: the four `sql29` and ten `schema29` files present at `MO_INPUTS_COMMIT`; no query reads `eve.verdicts` directly, a blind table, or `walle_metrics`; every query stamps `source_tables`; or BLOCKED on B-14.
-- [ ] MQ-3.2: ten tables partitioned on `as_of` with M-5's expiry; `eve_scorecard` carries `agent_id`, `as_of`, `source_tables`, `evidence_eligible`.
-- [ ] MQ-3.3: three configs at `:07`, `MO_EVE_PACK_CONFIGS` set; rollback names one config at a time, never the whole project.
-- [ ] MQ-3.4: `ownerInfo.email` equals `mo-metrics@` on every config — the check that `bq ls` cannot perform.
-- [ ] MQ-3.5: `assert_eve_source_rule.sql` reads `grades_eve` and is scheduled at `:37`; the fail-closed proof returns a non-zero exit.
-- [ ] MQ-3.6: one hand run; rows per cell with `computability` and `source_tables`; nothing `evidence_eligible` while P30 is unmet.
+- [ ] MQ-3.2: ten tables partitioned on `as_of` with M-5's expiry; `eve_scorecard` carries `agent_id`, `as_of`, `cell`, `computability`, `source_tables`, `evidence_eligible` (asserted by `jq -e`).
+- [ ] MQ-3.3: `g_dep` `ACTIVE` before the first create; three configs at `:07`, the assert config at `:37`, two on-demand probes, all made in this one step; `MO_EVE_PACK_CONFIGS` and `MO_EVE_PROBE_CONFIGS` set; rollback names one config at a time, never the whole project.
+- [ ] MQ-3.4: `ownerInfo.email` equals `mo-metrics@` on every config and probe — the check that `bq ls` cannot perform — and it ran before MQ-3.5 and MQ-3.6.
+- [ ] MQ-3.5: `assert_eve_source_rule.sql` reads `grades_eve`; the `ASSERT` construct proved on a deliberate failure (non-zero, message present) and a deliberate pass (`0`); A10 proved to fire on a seeded self-reported row, with its own description in the error; three exit codes recorded.
+- [ ] MQ-3.6: view probe `SUCCEEDED`, source probe `FAILED` with `Access Denied` on `eve.incidents` (or refused at creation), both initialled by the second human; one hand run of the pack; rows per cell with `computability` and `source_tables`; nothing `evidence_eligible` while P30 is unmet.
 - [ ] MQ-4.1: E2, E5, E7 and E9 `not_computable` with the 36 re-run line; E1 and E3 with the row 46 line; E8 with the 41 line.
 - [ ] MQ-4.2: the dated advisory limit committed and countersigned.
 - [ ] MQ-5.1, MQ-5.2: `BD-29-1` and `BD-29-2` written; every grant closed; no standing `actAs` on `mo-metrics@`; `SITTING-END OK`.
@@ -683,7 +755,7 @@ sitting_end
 | [36](36-wall-e-joins-to-eve-and-mo.md) | `MO_EVE_PACK_CONFIGS`, so the Wall-E pack is created beside it and neither rollback deletes the other; the `not_computable` lines of MQ-4.1 to close for E2, E5, E7 and E9; the `eve_quality.findings` view for the A11 differential check | MQ-3.3, MQ-4.1, MQ-1.3 |
 | [40](40-mo-after-stage-0.md) | The advisory limit of MQ-4.2 and what lifts it; `MO_EVE_PACK_CONFIGS` for the reporter's Eve scorecard; the custodian's recompute path (`eve_quality` at `EVE_CONFIG_COMMIT`, `grades_eve` at its schema commit) | MQ-4.2, MQ-3.3, MQ-1.1 |
 | [41](41-eve-s3-and-s4.md) | `eve_quality.seeded_fault_runs` and `eve_quality.verdicts` existing before the S3 harness writes; the rule that the S4 mirror read is a new dataset, never a widening of this one | MQ-1.3, MQ-1.4 |
-| [42](42-gates-drills-and-evidence.md) | `BD-29-1`, `BD-29-2`; the MQ-1.5 blindness check as a recurring control; evidence rows MQ-0.1 to MQ-5.1 | §1 to §5 |
+| [42](42-gates-drills-and-evidence.md) | `BD-29-1`, `BD-29-2`; the MQ-1.5 blindness check as a recurring control; the two probes of `MO_EVE_PROBE_CONFIGS` as a recurring control (the view probe must keep succeeding, the source probe must keep failing); evidence rows MQ-0.1 to MQ-5.1 | §1 to §5 |
 | [11](11-keys-and-validator-custodian.md) re-run | Confirmation that row 29 is made (MQ-2.3), so KV-8's checklist row closes | MQ-2.3 |
 
 ## 8. Findings closed and deferred
@@ -696,6 +768,8 @@ sitting_end
 | S160 | minor | Closed for this file's edits | Every access-array edit uses a fresh `mktemp -d`, returns non-zero on a read failure, compares the etag immediately before the write, de-duplicates with `unique` and diffs the read-back (MQ-1.4, MQ-2.2) |
 | S147 | major | Closed for this file's direction | This file **is** the Eve-owner step the Mo runbook wrongly inlined: the `eve_quality` grant is made here, on Eve's side, inside a grant the second human approved, and Mo's file 22 carries it only as a "made elsewhere" row |
 
+Fix round of 2026-09-16 (findings on this file from the procedure review's second pass, all applied): MQ-1.4's count query is named a smoke test that succeeds through the platform owner's own grant, and the functional proof — positive and negative — moved to MQ-3.6 as two probes run as `mo-metrics@` (blocking); MQ-3.5's "non-existent dataset" test, which failed at name resolution before any `ASSERT` ran, replaced by a deliberate pass and failure of the construct and a seeded row that makes A10 fire (major); the assert config's creation moved into MQ-3.3 beside the other pinned configs, inside the one `g_dep` grant, with the grant's state checked before the first create and MQ-3.4 made mandatory before MQ-3.5 and MQ-3.6 (major); MQ-0.3's `gcloud pam grants describe` takes the fully qualified name alone, with the bare-id form given as the fallback (major); MQ-1.4's etag guard split into three handlers so an update failure is never reported as a race (minor); MQ-3.2 asserts all six columns the later steps read (minor).
+
 Deferred: none without an owner. Recorded items with an owner and a file: Eve's view definitions and column allow-list (Eve owner, B-09); Eve's nine schemas (Eve owner, B-07); Mo's `sql29` and `schema29` files (Mo owner, B-14); the validator custodian's appointment (security reviewer's line, B-13, which holds row 29, E1, E3 and every evidence-eligible Eve number); E2, E5, E7 and E9 (Mo owner, file 36); E8's first rows (Eve owner, file 41).
 
 ## 9. Unverified on 2026-09-15, to settle at the step
@@ -704,13 +778,16 @@ Deferred: none without an owner. Recorded items with an owner and a file: Eve's 
 - The exact default access entries BigQuery writes on `eve_quality` at creation (23), and whether `bq update --source` normalises a `view` entry's field order on read-back (MQ-1.4 records the normalised form rather than treating it as a difference).
 - Whether `INFORMATION_SCHEMA.COLUMNS` in a dataset of views returns one row per exposed column with no extra system rows (MQ-1.5); the allow-list diff is the check, and a systematic extra row is recorded and added to the committed allow-list by a reviewed change.
 - Whether granting a dataset `READER` is visible to the grantee immediately; the documented delay is on revocation (up to 24 hours). MQ-1.4 and MQ-3.6 retry once after five minutes before treating a permission error as a failure.
-- Whether `bq mk --transfer_run` is the current spelling for starting a manual run in the installed bq version (MQ-3.6); if not, the console path **BigQuery > Scheduled queries > the query > Schedule backfill** is the fallback, recorded as used.
+- Settled 2026-09-16: `bq mk --transfer_run [--run_time=RUN_TIME | --start_time=START_TIME --end_time=END_TIME] CONFIG` is the documented form (MQ-3.6); the console path **BigQuery > Scheduled queries > the query > Schedule backfill** stays as the fallback if the installed bq refuses it.
+- Whether the Data Transfer Service validates a scheduled query against the pinned service account at `bq mk --transfer_config` time. If it does, `mo-probe-eve-source-direct` is refused at creation with the `Access Denied` that MQ-3.6 would otherwise see at run time; MQ-3.3 records the refusal as the negative control and MQ-3.4 then lists five configs.
+- Whether a scheduled query whose text is a single `ASSERT` (the probes) or an `ASSERT`-only script (the assert config) is accepted with `--target_dataset` and no destination table; the scheduling page makes the destination optional for DDL and DML and says nothing about `ASSERT`. If it is refused, wrap the probe as `SELECT COUNT(*) ... ` with a `--params` `destination_table_name_template` of `zz_probe_{run_time|"%Y%m%d%H%M"}` in `MO_METRICS_DS`, record it, and add the resulting table names to MQ-3.6's rollback.
+- Whether `INSERT` into a `CREATE TEMP TABLE ... AS SELECT * ... WHERE FALSE` copy of `eve_scorecard` accepts the six named columns alone (MQ-3.5 proof (b)); depends on `schema29`'s `REQUIRED` columns and the type of `as_of`, both unknown until B-14 is committed.
 - The value name `MO_PARTITION_EXPIRY_DAYS` in the M-5 record (MQ-3.2), inherited from 22 MO-6.5.
 - Whether Eve's committed `pages` schema carries the acknowledgement columns by the time this file runs (E6 in §4); [26](26-eve-reporting-and-witness-export.md) settles it.
 
 ## 10. Sources
 
-Read on 2026-09-15: [Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views) (the view must be in a different dataset from its source; source and view dataset must share a regional location; the access entry's three fields); [Authorized datasets](https://docs.cloud.google.com/bigquery/docs/authorized-datasets) (the `dataset` entry shape and `target_types`; revocation can take up to 24 hours; the 2,500 authorized-resource limit per dataset); [Scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries) (`bq mk --transfer_config` with `--target_dataset`, `--display_name`, `--params`, `--data_source=scheduled_query`, `--project_id`, `--schedule`, `--service_account_name`, `--location`; `iam.serviceAccounts.list` and `iam.serviceAccountUser` to pin a config; queries on the exact hour may trigger twice; the destination dataset must be in the same project and a query may reference tables in other projects; `bq ls --transfer_config --transfer_location`, `bq show --transfer_config`); [TransferConfig reference](https://docs.cloud.google.com/bigquery/docs/reference/datatransfer/rest/v1/projects.locations.transferConfigs) (`ownerInfo` is output-only and populated only for get requests; `serviceAccountName` is a create and patch parameter); [BigQuery IAM roles and permissions](https://docs.cloud.google.com/bigquery/docs/access-control) (`READER` is `roles/bigquery.dataViewer`; `roles/bigquery.jobUser` is granted on projects, folders or organisations, never on a dataset); [Run a query](https://docs.cloud.google.com/bigquery/docs/running-queries) (`bigquery.jobs.create` is needed on the project the query runs from, regardless of where the data is stored); [VIEWS view](https://docs.cloud.google.com/bigquery/docs/information-schema-views) (`table_name`, `view_definition`; a query must carry a dataset or region qualifier); [COLUMNS view](https://docs.cloud.google.com/bigquery/docs/information-schema-columns); [bq command-line tool reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference) (`mk --view --use_legacy_sql`, `mk --table --time_partitioning_*`, `mk --transfer_config`, `mk --transfer_run`, `ls --transfer_config --transfer_run`, `rm -f --transfer_config`, `show --format=prettyjson`, `update --source`, `update --transfer_config --update_credentials`; `add-iam-policy-binding` does not support datasets). Relied on through [01](01-prerequisites-and-conventions.md) §8.1 (the access-array pattern), [11](11-keys-and-validator-custodian.md) (the custodian and `eve_grades`), [12](12-privileged-access-catalogue.md) (`pam_request`, `pam_revoke`, the repair and deploy templates) and [22](22-mo-foundations.md) (`mo/INPUTS.tsv`, `mo_ds_access`, the M-5 expiry).
+Read on 2026-09-15: [Authorized views](https://docs.cloud.google.com/bigquery/docs/authorized-views) (the view must be in a different dataset from its source; source and view dataset must share a regional location; the access entry's three fields); [Authorized datasets](https://docs.cloud.google.com/bigquery/docs/authorized-datasets) (the `dataset` entry shape and `target_types`; revocation can take up to 24 hours; the 2,500 authorized-resource limit per dataset); [Scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries) (`bq mk --transfer_config` with `--target_dataset`, `--display_name`, `--params`, `--data_source=scheduled_query`, `--project_id`, `--schedule`, `--service_account_name`, `--location`; `iam.serviceAccounts.list` and `iam.serviceAccountUser` to pin a config; queries on the exact hour may trigger twice; the destination dataset must be in the same project and a query may reference tables in other projects; `bq ls --transfer_config --transfer_location`, `bq show --transfer_config`); [TransferConfig reference](https://docs.cloud.google.com/bigquery/docs/reference/datatransfer/rest/v1/projects.locations.transferConfigs) (`ownerInfo` is output-only and populated only for get requests; `serviceAccountName` is a create and patch parameter); [BigQuery IAM roles and permissions](https://docs.cloud.google.com/bigquery/docs/access-control) (`READER` is `roles/bigquery.dataViewer`; `roles/bigquery.jobUser` is granted on projects, folders or organisations, never on a dataset); [Run a query](https://docs.cloud.google.com/bigquery/docs/running-queries) (`bigquery.jobs.create` is needed on the project the query runs from, regardless of where the data is stored); [VIEWS view](https://docs.cloud.google.com/bigquery/docs/information-schema-views) (`table_name`, `view_definition`; a query must carry a dataset or region qualifier); [COLUMNS view](https://docs.cloud.google.com/bigquery/docs/information-schema-columns); [bq command-line tool reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference) (`mk --view --use_legacy_sql`, `mk --table --time_partitioning_*`, `mk --transfer_config`, `mk --transfer_run`, `ls --transfer_config --transfer_run`, `rm -f --transfer_config`, `show --format=prettyjson`, `update --source`, `update --transfer_config --update_credentials`; `add-iam-policy-binding` does not support datasets). Re-read on 2026-09-16 for the fix round: the same bq reference (`--no_auto_scheduling={true|false}`, "Disables automatic scheduling of data transfer runs for this configuration"; `bq mk --transfer_run [--run_time=RUN_TIME | --start_time=START_TIME --end_time=END_TIME] CONFIG`, timestamps in RFC 3339 UTC; `ls --transfer_run --run_attempt=LATEST`; `bq query --use_legacy_sql=false < query.sql` for a script on standard input); [Debugging statements](https://docs.cloud.google.com/bigquery/docs/reference/standard-sql/debugging-statements) (`ASSERT expression [AS description]`; an expression that is FALSE or NULL "generates an error" and the description "will appear in the error message"; the description is a STRING literal); [gcloud pam grants describe](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/describe) (the positional is "ID of the grant or fully qualified identifier for the grant"; `--entitlement` and `--location` are needed only with a bare id); [Scheduling queries](https://docs.cloud.google.com/bigquery/docs/scheduling-queries) (the console's **On-demand** repeat, the `Schedule backfill` button, `bq mk --transfer_run` with `--start_time` and `--end_time`; the destination table is optional for DDL and DML). Relied on through [01](01-prerequisites-and-conventions.md) §8.1 (the access-array pattern), [11](11-keys-and-validator-custodian.md) (the custodian and `eve_grades`), [12](12-privileged-access-catalogue.md) (`pam_request`, `pam_revoke`, the repair and deploy templates) and [22](22-mo-foundations.md) (`mo/INPUTS.tsv`, `mo_ds_access`, the M-5 expiry).
 
 ## 11. Links
 
