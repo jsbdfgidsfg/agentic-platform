@@ -3,7 +3,7 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-16
 - Part of: the setup procedure set whose only entry point is [README.md](README.md). This page
   supports every stage. It is the platform prerequisites page the review calls M2
   ([../13-setup-procedure-review.md](../13-setup-procedure-review.md) §3), and it fixes the
@@ -15,9 +15,13 @@
 - Step prefix: `PR`. 20 steps, none BLOCKED.
 - Consumes: nothing from any other file. Decisions SD-01, SD-37 and SD-38 are applied here as
   pending; their signatures are recorded in `03-decisions-and-people.md`.
-- Commands checked against Google's documentation on 2026-09-15 (§14). The helper code in §5
+- Commands checked against Google's documentation on 2026-09-15, and the PAM, organisation-list
+  and `gcloud config get` pages re-read on 2026-09-16 (§14). The helper code in §5
   was run under bash 3.2 (the macOS system shell) and zsh on 2026-09-15 against a throwaway
   copy. That run is a check of the helpers, not evidence that any Google command works (S177).
+  The helper changes made on 2026-09-16 (`penv_guard`'s exit-status check, `sitting_end`'s
+  `CLOUDSDK_CONFIG` guard, `checkpoint`'s placeholder refusal, the removal of `_PENV_MAPPED`) are
+  re-checked by PR-2.5 on the day; §13 lists the second-round findings this revision closes.
 
 ## What this part builds
 
@@ -68,7 +72,37 @@ Every step in files 01 to 42 has these fields, in this order.
 | ACTION | Commands in bash fences, one command per line of effect. A `need` line comes first and lists every variable the block reads | When `need` prints `MISSING`, stop. Do not run the rest of the block |
 | VERIFY | A command or console read whose output proves the step worked, with the expected output | "It returned no error" is never a verify |
 | ROLLBACK | The undo, or **IRREVERSIBLE** in bold (below) | A rollback that cannot be proven says "none documented" |
-| EVIDENCE | Record id, location, the E-xx id of [../10-eu-ai-act.md](../10-eu-ai-act.md) §5 and the TISAX control id of [../11-tisax.md](../11-tisax.md) §5 and §13 | "E-xx: none" or "TISAX: none" is written, never left out |
+| EVIDENCE | Record id, location, the E-xx id of [../10-eu-ai-act.md](../10-eu-ai-act.md) §5 and the TISAX control id of [../11-tisax.md](../11-tisax.md) §5 and §13 | "E-xx: none" or "TISAX: none" is written, never left out. `evidence_add` takes the E-id as its third positional argument, so a step with no E-xx field leaves the operator nothing to type and no rule saying whether to pass `-` or to stop |
+
+**The EVIDENCE convention is checked mechanically, not by eye.** Run this over the whole set; it
+prints every EVIDENCE field that carries neither an `E-xx` id nor a TISAX control id within its
+own three lines. A hit is a defect in the file it names, closed by that file's owner:
+
+```bash
+need WIKI_DIR
+cat > "$BUILD_LOG_DIR/evidence-ids.awk" <<'AWK'
+/^-? *\*\*EVIDENCE:?\*\*/ { b=$0; n=NR; inev=1; next }
+inev && (/^$/ || /^#/ || /^- \*\*/ || /^\*\*/) {
+  if (b !~ /E-[0-9]+/ && b !~ /E-xx: *none/) printf "%s:%d: no E-xx\n", FILENAME, n
+  else if (b !~ /TISAX/) printf "%s:%d: no TISAX\n", FILENAME, n
+  inev=0; next }
+inev { b = b " " $0 }
+END { if (inev && b !~ /E-[0-9]+/ && b !~ /E-xx: *none/) printf "%s:%d: no E-xx\n", FILENAME, n }
+AWK
+awk -f "$BUILD_LOG_DIR/evidence-ids.awk" "$WIKI_DIR"/platform/agentic-platform/setup/[0-4][0-9]-*.md
+```
+
+Expected for this page: no output. The check is deliberately lenient — any `E-<digits>` anywhere
+in the field satisfies it, as does the literal `E-xx: none` — so every hit is a real omission.
+`42-gates-drills-and-evidence.md` runs it at every quarterly review, and it is the CI rule to add
+when the platform repository gets content tests.
+
+Run on 2026-09-16 it reproduces the review's counts on the files that feed the EU AI Act
+technical documentation index: 07 fourteen of sixteen fields with no E-xx, 10 twenty-seven of
+thirty-nine, 13 thirty-nine of fifty-three, 17 thirty-three of seventy-four, with 02, 05, 19, 20,
+34 and 35 worse still. Each of those files sweeps its own EVIDENCE fields against §7.2's mapping
+table; this page supplies the rule and the check, not the sweep (§13, Deferred). This page's
+twenty steps all carry both ids.
 
 **Checkpoint lines.** Every step writes `START` before its ACTION and `DONE` when its VERIFY
 passes, with `checkpoint` (§5) or by hand in the same tab-separated field order:
@@ -174,7 +208,7 @@ log; the files named in "Needed by" close them.
 | Id | Requirement | Why | How to verify | Needed by | Holder | Lead time |
 |---|---|---|---|---|---|---|
 | P-01 | Workstation built to §4 | Every command runs here | PR-1.1 to PR-1.3 VERIFY outputs in the build log | 02 | Platform owner | 1 day |
-| P-02 | `OWNER_DAILY_ACCOUNT` holds Super Admin today | Only admin able to create the roster in 06 | Admin console → Account → Admin roles → Super Admin → Admins lists it | 06 | Platform owner | none |
+| P-02 | `OWNER_DAILY_ACCOUNT` holds Super Admin today | Only admin able to create the roster in 06 | PR-2.6: Admin console → Account → Admin roles → Super Admin → **View admins** lists it; screenshot `<date>-PR-2.6-super-admin-roster-v1`. 03 DC-4.4 repeats the read for the full inventory | 06 | Platform owner | none |
 | P-03 | The Cloud organisation exists and is bound to the Workspace customer | Trust domain, organisation sinks, "Share data with Google Cloud services" | PR-3.3: `owner.directoryCustomerId` of `ORG_ID` equals `DIRECTORY_CUSTOMER_ID` | 05, 06 | Platform owner | none |
 | P-04 | Workspace edition supports multi-party approval, activity rules and Context-Aware Access (Enterprise Standard or Plus, or another edition Google lists) | Interim activity rule (06), gate line G4 (38) | Admin console → Billing → Subscriptions; `WORKSPACE_EDITION` recorded | 06, 38 | Platform owner | procurement if not |
 | P-05 | Second human named, IT security | Eve-H recipient and approver (SD-10, SD-12); every two-person step from 06 | Signed people record in `03-decisions-and-people.md`; `SECOND_HUMAN_EMAIL` set | 03 (gates 06) | IT security | weeks |
@@ -198,7 +232,7 @@ log; the files named in "Needed by" close them.
 | P-23 | Chrome Enterprise Premium licences | P63; Context-Aware Access for operators | Admin console → Billing → Subscriptions lists the SKU | *tbd* by 03 | IT security | weeks |
 | P-24 | Gemini Enterprise licences for operators; Gmail-bearing seats for `walle@`, `eve@` and any licensed twin robot | 24, 30, 37 | Seat count in 04 | 24 | Platform owner | weeks |
 | P-25 | Hardware keys in the count of §3.2, a safe, tamper-evident envelopes | Key-only 2SV; custody | Keys in hand, serials in custody records only (never in the variables file) | 06, 08, 21, 24, 30 | Platform owner, IT security | weeks |
-| P-26 | Organisation roles for the bootstrap exception: Organization Administrator, Folder Creator, Project Creator, Privileged Access Manager Admin to `sa-1-admin@`, dated with an expiry (SD-01) | First privileged acts before PAM exists (S002) | 06: `testIamPermissions` on the organisation echoes `resourcemanager.folders.create`, `resourcemanager.projects.create`, `resourcemanager.organizations.setIamPolicy`, `privilegedaccessmanager.entitlements.create` | 06, 09 | Platform owner under the exception | none |
+| P-26 | Organisation roles for the bootstrap exception, all five to `sa-1-admin@`, dated with an expiry (SD-01): `roles/resourcemanager.organizationAdmin`, `roles/resourcemanager.folderCreator`, `roles/resourcemanager.projectCreator`, `roles/privilegedaccessmanager.admin` **and `roles/iam.securityAdmin`**. Google requires **both** the Privileged Access Manager Admin role and the Security Admin role to create, update or delete an entitlement at organisation level; Organization Administrator does not contain the Security Admin permission set. The analogues for entitlements created lower down are `roles/resourcemanager.folderAdmin` (folder) and `roles/resourcemanager.projectIamAdmin` (project); 12 says which level each entitlement is created at | First privileged acts before PAM exists (S002); every entitlement create of 12 | 06 reads the bindings back, then probes the permissions — see §3.3 | 06, 09, 12 | Platform owner under the exception | none |
 | P-27 | Every located service used is offered in `europe-west1` (Agent Runtime, Agent Gateway, regional Agent Registry, Model Armor templates, Firestore, regional Secret Manager, Cloud KMS HSM, Cloud Run, Scheduler, Tasks), BigQuery in `EU`, SecOps in its Europe locations | R9; X-RQB-02 | Re-read Google's agent-locations page on the day of 18 and 35; once a project exists, `gcloud network-services agent-gateways list --location=europe-west1 --project=<project>` returns without a location error. Recorded on 2026-09-15 by the review: Agent Gateway is not supported only in asia-east2, asia-northeast3 and asia-southeast2 | 18, 20, 35 | Platform owner | none |
 | P-28 | Agent Runtime quotas recorded in the quota register | X-RQB-02; HLD §3.4 | `gcloud beta quotas info list --service=aiplatform.googleapis.com --project=<agent project>`. Recorded on 2026-09-15 by the review: 90 query or streamQuery per minute, 10 create, update or delete per minute, 100 engines per project and region, 100 session writes per minute, 950 revisions per agent and 6,000 per project and region (the last two not adjustable) | 35 | Platform owner | days per increase |
 | P-29 | Model Armor quotas sized from the right consumers | X-RQB-02 | `gcloud beta quotas info list --service=modelarmor.googleapis.com --project=<project>`. Defaults read 2026-09-15: 1,200 API queries per minute per project (adjustable), 600 ExternalProcessor requests per minute per project (adjustable from 0 to 1,200), filter token limits 65,536 and 130,000 (fixed). Needed: sanitize QPM ≈ 2 × model calls per minute + direct calls; ExternalProcessor QPM = gateway requests per minute. The 120 Admin SDK reads per minute are not a Model Armor consumer | 18, 19, 34 | Platform owner | days per increase |
@@ -222,10 +256,50 @@ share only. The platform count, from [../04-identity-and-privileged-access.md](.
 | `WITNESS_SA_1`, `WITNESS_SA_2` | 2 each, 4 | each witness administrator, spare with the other | IT security's own safe (`Assumption:` not the tenant safe) |
 | `SANDBOX_SA_1_EMAIL`, `SANDBOX_SA_2_EMAIL` | 2 each, 4 | each sandbox super admin, spare with the other | safe |
 | Twin robots `EVE_TWIN_ROBOT`, `WALLE_TWIN_ROBOT` | 0, or 2 each (4) only if SD-29 decides hardware-key 2SV for them | as the production robots | safe |
-| Unenrolled spares | *tbd* (04) | platform owner and second human | safe |
-| **Total** | **18**, or **22** with twin-robot keys, plus spares | | |
+| Unenrolled spares | 4 (one replacement per custodian group, [04-purchases-and-lead-times.md](04-purchases-and-lead-times.md) §4) | incident commander, in the safe | safe |
+| **Subtotal, firm** | **18**, or **22** with twin-robot keys | | |
+| **Order** | **22**, or **26** with twin-robot keys | | |
+
+[04-purchases-and-lead-times.md](04-purchases-and-lead-times.md) §4 is the single source for the
+count; this table repeats it so that the order figure is the same in both places. Order 22 (26
+with twin-robot keys). 06's first sitting needs six of them and the lead time is days to weeks,
+so the order is raised on day one (04 row 9, step PU-4.1).
 
 Serial numbers live in custody records, never in `~/.platform-env` or the wiki.
+
+### 3.3 How P-26 is checked (the bootstrap organisation roles)
+
+06 runs both checks below as the platform owner, before the first privileged act. The first is
+deterministic (it reads the bindings that were granted); the second proves the permissions
+resolve. `testIamPermissions` alone is not enough, because a role list missing
+`roles/iam.securityAdmin` still echoes the four permissions the earlier draft of this row asked
+for, and every entitlement create in
+[12-privileged-access-catalogue.md](12-privileged-access-catalogue.md) then fails with
+`PERMISSION_DENIED` after the dated exception has been signed and consumed.
+
+```bash
+need ORG_ID DOMAIN
+gcloud organizations get-iam-policy "$ORG_ID" --format=json \
+  | jq -r --arg m "user:sa-1-admin@$DOMAIN" '.bindings[] | select(.members[]? == $m) | .role' | sort
+```
+
+Expected, exactly these five lines: `roles/iam.securityAdmin`,
+`roles/privilegedaccessmanager.admin`, `roles/resourcemanager.folderCreator`,
+`roles/resourcemanager.organizationAdmin`, `roles/resourcemanager.projectCreator`. A missing
+`roles/iam.securityAdmin` stops 06 and 12.
+
+```bash
+gcloud organizations get-iam-policy "$ORG_ID" >/dev/null   # proves the read half of Security Admin
+gcloud iam roles describe roles/iam.securityAdmin --format='value(includedPermissions)' \
+  | tr ';' '\n' | grep -E '^(iam\.roles\.create|resourcemanager\.projects\.setIamPolicy)$'
+```
+
+The second command reads Google's own definition of the role rather than asserting its contents
+here, so the probe permission 06 passes to `testIamPermissions` is taken from the role as Google
+publishes it on the day. `Assumption:` at least one of `iam.roles.create` and
+`resourcemanager.projects.setIamPolicy` is in `roles/iam.securityAdmin` and in neither
+`roles/resourcemanager.organizationAdmin` nor the two creator roles; if the output is empty,
+06 uses the binding read above as the only gate and records a deviation row.
 
 ## 4. The workstation
 
@@ -308,7 +382,7 @@ workstation, each named after its account and signed in to nothing else:
 | Profile | Account | Created in |
 |---|---|---|
 | `daily` | `OWNER_DAILY_ACCOUNT` (the existing profile; Admin console reads until 06) | now |
-| `sa-1-admin` | `SA_1_ADMIN` | now, empty until 06 |
+| `sa-1-admin` | `sa-1-admin@$DOMAIN`, the account [06-organisation-bootstrap-and-roster.md](06-organisation-bootstrap-and-roster.md) creates. No variable holds it in files 01 to 05; 06 sets `SA_1_ADMIN` when the account exists | now, empty until 06 |
 | `consent-eve` | none: used once for `eve@`'s consent by the second human on the second human's own workstation | 24, not here |
 | `consent-walle` | none: used once for Wall-E's consent sitting | 32 |
 
@@ -384,7 +458,8 @@ cat > "$PLATFORM_REPO_DIR/env/platform-env.template" <<'PLATFORM_ENV_TEMPLATE'
 if [ -n "${ZSH_VERSION-}" ]; then setopt pipefail; else set -o pipefail; fi
 _PENV_NL="$(printf '\n_')"; _PENV_NL="${_PENV_NL%_}"
 _PENV_TAB="$(printf '\t')"
-_PENV_MAPPED="WALLE_PROJECT WALLE_PROJECT_NUMBER EVE_PROJECT EVE_PROJECT_NUMBER DOMAIN DIRECTORY_CUSTOMER_ID WALLE_OPERATORS_GROUP EVE_ROBOT ROBOT EVE_TOKEN_VERSION REFRESH_TOKEN_VERSION SUPER_REFRESH_TOKEN_VERSION ORG_ID"
+# The names a twin shell rewrites are listed once, in _penv_apply_mode below. There is no second
+# list: a second one would drift from the code that does the work.
 : "${PLATFORM_ENV_FILE:=$HOME/.platform-env}"
 export PLATFORM_ENV_FILE
 
@@ -551,8 +626,21 @@ penv_guard() {
   [ -z "${CLOUDSDK_CORE_PROJECT-}" ] || { echo "GUARD: CLOUDSDK_CORE_PROJECT is exported" >&2; _gf=1; }
   if [ "${PLATFORM_SHELL_MODE-}" != walle ] && [ -n "${PROJECT-}" ]; then echo "GUARD: PROJECT is set outside walle_shell" >&2; _gf=1; fi
   command -v gcloud >/dev/null 2>&1 || { echo "GUARD: gcloud is not on PATH" >&2; return 1; }
-  _gp="$(gcloud config get project 2>/dev/null)"
-  case "$_gp" in ''|'(unset)') ;; *) echo "GUARD: configuration $GCLOUD_CONFIG_NAME has project '$_gp'; run: gcloud config unset project" >&2; _gf=1;; esac
+  # The exit status is checked separately: a hidden failure (no named configuration yet, a broken
+  # install, an unreadable CLOUDSDK_CONFIG) also prints nothing on standard output, and must not
+  # be read as "no project is set". Assumption: an unset property prints '' or '(unset)'.
+  _gerr="$(mktemp "${TMPDIR:-/tmp}/penv-guard.XXXXXX")" || { echo "GUARD: cannot create a temporary file" >&2; return 1; }
+  if _gp="$(gcloud config get project 2>"$_gerr")"; then
+    case "$_gp" in
+      ''|'(unset)') ;;
+      *) echo "GUARD: configuration $GCLOUD_CONFIG_NAME has project '$_gp'; run: gcloud config unset project" >&2; _gf=1;;
+    esac
+  elif [ ! -f "${CLOUDSDK_CONFIG-}/configurations/config_${GCLOUD_CONFIG_NAME}" ]; then
+    echo "GUARD: configuration $GCLOUD_CONFIG_NAME does not exist yet; 01 PR-3.1 creates it" >&2; _gf=1
+  else
+    echo "GUARD: could not read the active configuration; stop and read:" >&2; cat "$_gerr" >&2; _gf=1
+  fi
+  rm -f "$_gerr"
   if [ -f "$HOME/.bigqueryrc" ] && grep -q 'project_id' "$HOME/.bigqueryrc"; then echo "GUARD: ~/.bigqueryrc sets project_id; delete that line" >&2; _gf=1; fi
   return $_gf
 }
@@ -564,6 +652,7 @@ checkpoint() {
   need BUILD_LOG_DIR || return 2
   case "$2" in START|DONE|BLOCKED|PENDING|ROLLED-BACK|N/A) ;; *) echo "checkpoint: bad status '$2'" >&2; return 2;; esac
   case "$1${3-}${4-}${5-}" in *"$_PENV_TAB"*|*"$_PENV_NL"*) echo "checkpoint: no tab or newline allowed" >&2; return 2;; esac
+  case "$1${3-}${4-}${5-}" in *'<'*'>'*) echo "checkpoint: an unreplaced <placeholder> would be written verbatim into the log; type the real value" >&2; return 2;; esac
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" "$2" "$(git -C "$BUILD_LOG_DIR" config user.email)" "${3:--}" "${4:--}" "${5-}" >> "$BUILD_LOG_DIR/checkpoints.tsv" \
     && git -C "$BUILD_LOG_DIR" add checkpoints.tsv && git -C "$BUILD_LOG_DIR" commit -q -m "checkpoint $1 $2"
 }
@@ -585,12 +674,17 @@ evidence_add() {
 # sitting_end: revokes every gcloud credential and proves none is left.
 sitting_end() {
   command -v gcloud >/dev/null 2>&1 || { echo "sitting_end: gcloud not on PATH" >&2; return 1; }
+  # Checked before anything is revoked: without CLOUDSDK_CONFIG the ADC path below would be the
+  # absolute "/application_default_credentials.json", a file that can never exist, and sitting_end
+  # would print OK while the real ADC file in $HOME/.config/gcloud-$GCLOUD_CONFIG_NAME/ was left in
+  # place. Failing first also keeps an unsourced shell from revoking the daily account.
+  [ -n "${CLOUDSDK_CONFIG-}" ] || { echo "SITTING-END FAIL: CLOUDSDK_CONFIG is not set; source ~/.platform-env first, then run sitting_end again. Nothing was revoked" >&2; return 1; }
   gcloud auth revoke --all --quiet 2>/dev/null
   gcloud auth application-default revoke --quiet 2>/dev/null
   _sa="$(gcloud auth list --format='value(account)' 2>/dev/null)"
   _sfail=0
   [ -z "$_sa" ] || { echo "SITTING-END FAIL: still credentialed: $_sa" >&2; _sfail=1; }
-  for _sfile in "${CLOUDSDK_CONFIG-}/application_default_credentials.json" "$HOME/.walle/operator-token.json"; do
+  for _sfile in "$CLOUDSDK_CONFIG/application_default_credentials.json" "$HOME/.walle/operator-token.json"; do
     [ ! -e "$_sfile" ] || { echo "SITTING-END FAIL: $_sfile exists" >&2; _sfail=1; }
   done
   [ ! -e "$HOME/.config/gcloud/application_default_credentials.json" ] || echo "SITTING-END WARN: default-directory ADC file exists; it must not belong to an admin account" >&2
@@ -624,7 +718,7 @@ What the helpers do:
 | `twin_shell [--sandbox-org]` | Opens a child shell; after `source ~/.platform-env` inside it, `WALLE_PROJECT`, `EVE_PROJECT`, their numbers, `DOMAIN`, `DIRECTORY_CUSTOMER_ID`, `WALLE_OPERATORS_GROUP`, `EVE_ROBOT`, `ROBOT` and `EVE_TOKEN_VERSION` resolve to the twin or sandbox names; every other value containing the production project id is rewritten to the twin id; `REFRESH_TOKEN_VERSION` and `SUPER_REFRESH_TOKEN_VERSION` are blanked; `ORG_ID` becomes `SANDBOX_ORG_ID` only with `--sandbox-org`, for sandbox-organisation sink steps | Opening without the twin names set; nesting. A twin name that is not set resolves to empty, so `need` fails instead of falling back to production |
 | `walle_shell` | Opens a child shell in which `PROJECT=$WALLE_PROJECT`, for the Wall-E helper script only (SD-37) | Any `penv_set`; nesting |
 | `penv_guard` | Runs at every source; silent when clean | A gcloud project in the active configuration, `CLOUDSDK_CORE_PROJECT` exported, `PROJECT` outside `walle_shell`, `project_id` in `~/.bigqueryrc`, a different active configuration |
-| `checkpoint STEP STATUS [WITNESS] [EVIDENCE] [NOTE]` | Appends a tab-separated line to `BUILD_LOG_DIR/checkpoints.tsv` and commits it | Unknown statuses; tabs or newlines |
+| `checkpoint STEP STATUS [WITNESS] [EVIDENCE] [NOTE]` | Appends a tab-separated line to `BUILD_LOG_DIR/checkpoints.tsv` and commits it. `WITNESS` and `EVIDENCE` default to `-`, so a step whose WHO names a witness must pass a real value | Unknown statuses; tabs or newlines; an unreplaced `<placeholder>` in any field |
 | `evidence_add STEP SLUG E-ID TISAX LOCATION [FILE]` | Appends a row named `<date>-<step>-<slug>-v<n>` to `EVIDENCE_REGISTER`, with the file's SHA-256, and commits it | A pipe, tab or newline; a slug outside `a-z0-9-` |
 | `sitting_end` | Revokes every gcloud credential and ADC, then proves none is left | Exits non-zero while an account, the platform ADC file or `~/.walle/operator-token.json` remains |
 
@@ -656,7 +750,11 @@ E-05. TISAX: 5.3.1.
 **ACTION:**
 
 ```bash
-test ! -e "$HOME/.platform-env" && install -m 600 "$PLATFORM_REPO_DIR/env/platform-env.template" "$HOME/.platform-env"
+if [ -e "$HOME/.platform-env" ]; then
+  echo "STOP: ~/.platform-env already exists. It may be a stale file from an aborted run or from other work: a different template, retired names, or another tenant's values. Check it holds no secret, move it to \"$BUILD_LOG_DIR/records/retired/\", then re-run this step. Do not source it."
+else
+  install -m 600 "$PLATFORM_REPO_DIR/env/platform-env.template" "$HOME/.platform-env"
+fi
 source "$HOME/.platform-env"
 penv_set PLATFORM_ENV_FILE "$HOME/.platform-env"
 penv_set GCLOUD_CONFIG_NAME platform-bootstrap
@@ -673,6 +771,13 @@ penv_set DRILL_CALENDAR "$BUILD_LOG_DIR/registers/drill-calendar.md"
 source "$PLATFORM_ENV_FILE"
 ```
 
+Expect one line on the second `source`: once `GCLOUD_CONFIG_NAME` is set, `~/.platform-env` runs
+`penv_guard` at every source, and the named gcloud configuration does not exist until PR-3.1
+creates it. The guard prints
+`GUARD: configuration platform-bootstrap does not exist yet; 01 PR-3.1 creates it` and returns
+non-zero. That is the expected state here and only here; from PR-3.1 onwards the guard is silent,
+and any other guard line is a stop.
+
 Retired files: `~/.walle-env`, `~/.eve-env` and `~/.mo-env` are not created. If the Wall-E
 helper script is ever used (SD-37), file 30 generates the file it reads from `~/.platform-env`
 inside `walle_shell` and deletes it afterwards; nobody maintains a second variables file (S165).
@@ -683,12 +788,15 @@ the start of a sitting, and a twin shell depends on it.
 
 ```bash
 ls -l "$PLATFORM_ENV_FILE" | cut -c1-10
+diff <(sed -n '/^# ---- helpers/,/^# ---- values/p' "$PLATFORM_REPO_DIR/env/platform-env.template") <(sed -n '/^# ---- helpers/,/^# ---- values/p' "$PLATFORM_ENV_FILE") && echo "template identity OK"
 need PLATFORM_ENV_FILE GCLOUD_CONFIG_NAME PLATFORM_REPO_DIR BUILD_LOG_DIR WIKI_DIR REGION BQ_LOCATION GE_LOCATION MODEL_LOCATION DEVIATION_REGISTER EVIDENCE_REGISTER DRILL_CALENDAR && echo "values OK"
 penv_set REGION europe-west4; echo "exit $?"
 ls "$HOME/.walle-env" "$HOME/.eve-env" "$HOME/.mo-env" 2>/dev/null || echo "no retired variables files"
 ```
 
-Expected: `-rw-------`; `values OK`; `penv_set: REFUSED: REGION is already 'europe-west1'…`
+Expected: `-rw-------`; `template identity OK` (the helper block of the installed file is
+byte-identical to the committed template, so a stale file from earlier work cannot pass
+unnoticed); `values OK`; `penv_set: REFUSED: REGION is already 'europe-west1'…`
 and `exit 1`; `no retired variables files`. If a retired file exists from earlier work, move it
 out of `$HOME` into the build log's `records/retired/` after checking it holds no secret; do not
 source it again.
@@ -706,23 +814,53 @@ TISAX: 5.3.1.
 
 **ACTION:**
 
+This step is re-runnable. Every creation below is guarded, because the resume rule of §1
+restarts at the first step without a `DONE` line and PR-2.4 has none until it finishes: a run cut
+between the header writes and the final `checkpoint` is resumed by re-running PR-2.4, and an
+unguarded `>` would destroy every checkpoint, re-run and `penv_set --force` line already written.
+`variables-changes.tsv` is the most exposed, because PR-2.6's ROLLBACK tells the operator to use
+`penv_set --force`, which appends to it.
+
 ```bash
 need BUILD_LOG_DIR
-printf 'utc_timestamp\tstep_id\tstatus\toperator\twitness\tevidence\tnote\n' > "$BUILD_LOG_DIR/checkpoints.tsv"
-printf 'date\tstep_id\tmember\twhat_to_rerun\tstatus\tdetail\n' > "$BUILD_LOG_DIR/rerun-index.tsv"
-printf 'utc_timestamp\taction\tname\told_value\tnew_value\n' > "$BUILD_LOG_DIR/variables-changes.tsv"
+[ -e "$BUILD_LOG_DIR/checkpoints.tsv" ] || printf 'utc_timestamp\tstep_id\tstatus\toperator\twitness\tevidence\tnote\n' > "$BUILD_LOG_DIR/checkpoints.tsv"
+[ -e "$BUILD_LOG_DIR/rerun-index.tsv" ] || printf 'date\tstep_id\tmember\twhat_to_rerun\tstatus\tdetail\n' > "$BUILD_LOG_DIR/rerun-index.tsv"
+[ -e "$BUILD_LOG_DIR/variables-changes.tsv" ] || printf 'utc_timestamp\taction\tname\told_value\tnew_value\n' > "$BUILD_LOG_DIR/variables-changes.tsv"
+head -n 1 "$BUILD_LOG_DIR/checkpoints.tsv" | grep -q '^utc_timestamp' || echo "STOP: checkpoints.tsv exists without its header; prepend it by hand. Nothing was overwritten"
+head -n 1 "$BUILD_LOG_DIR/rerun-index.tsv" | grep -q '^date' || echo "STOP: rerun-index.tsv exists without its header; prepend it by hand. Nothing was overwritten"
+head -n 1 "$BUILD_LOG_DIR/variables-changes.tsv" | grep -q '^utc_timestamp' || echo "STOP: variables-changes.tsv exists without its header; prepend it by hand. Nothing was overwritten"
 git -C "$BUILD_LOG_DIR" add checkpoints.tsv rerun-index.tsv variables-changes.tsv records/tools.txt
-git -C "$BUILD_LOG_DIR" commit -m "build log: headers and PR-1.1 tools record"
-for step in PR-1.1 PR-1.2 PR-1.3 PR-2.1 PR-2.2 PR-2.3; do checkpoint "$step" DONE - - "backfilled at PR-2.4; performed before the log existed"; done
-checkpoint PR-2.4 DONE - "build-log:checkpoints.tsv" "log started"
+git -C "$BUILD_LOG_DIR" diff --cached --quiet || git -C "$BUILD_LOG_DIR" commit -m "build log: headers and PR-1.1 tools record"
+for step in PR-1.1 PR-1.2 PR-1.3 PR-2.1 PR-2.2 PR-2.3; do
+  awk -F'\t' -v s="$step" '$2==s && $3=="DONE"{f=1} END{exit !f}' "$BUILD_LOG_DIR/checkpoints.tsv" \
+    || checkpoint "$step" DONE - - "backfilled at PR-2.4; performed before the log existed"
+done
+awk -F'\t' '$2=="PR-2.4" && $3=="DONE"{f=1} END{exit !f}' "$BUILD_LOG_DIR/checkpoints.tsv" \
+  || checkpoint PR-2.4 DONE - "build-log:checkpoints.tsv" "log started"
 ```
+
+The three headers are written only when the file does not exist; a file that exists without its
+header prints a `STOP:` line instead of being overwritten (`penv_set --force` can append to
+`variables-changes.tsv` before PR-2.4 ever runs). The backfill loop and the closing `checkpoint`
+run only when no `DONE` line for that step exists. A second run of PR-2.4 therefore adds nothing
+and destroys nothing.
 
 The re-run index is append-only: a re-run that has been made adds a second line with the same
 member and status `DONE`, naming the step whose VERIFY closed it. README §9 is the planned list;
 this file is the live list.
 
-**VERIFY:** `awk -F'\t' '$3=="DONE"{print $2}' "$BUILD_LOG_DIR/checkpoints.tsv"` prints PR-1.1 to
-PR-2.4, one per line; `head -n 1 "$BUILD_LOG_DIR/rerun-index.tsv"` prints the header.
+**VERIFY:**
+
+```bash
+awk -F'\t' '$3=="DONE"{print $2}' "$BUILD_LOG_DIR/checkpoints.tsv"
+awk -F'\t' '$3=="DONE"{print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort | uniq -d
+head -n 1 "$BUILD_LOG_DIR/rerun-index.tsv"
+head -n 1 "$BUILD_LOG_DIR/variables-changes.tsv"
+```
+
+Expected: PR-1.1 to PR-2.4, one per line; the `uniq -d` line prints nothing (no step was
+backfilled twice by a resumed run); the two headers. Run the whole ACTION block a second time and
+repeat this VERIFY: the output must be identical.
 
 **ROLLBACK:** `git -C "$BUILD_LOG_DIR" revert HEAD`; never rewrite history once pushed.
 
@@ -740,14 +878,23 @@ PR-2.4, one per line; `head -n 1 "$BUILD_LOG_DIR/rerun-index.tsv"` prints the he
 T="$(mktemp -d)"
 install -m 600 "$(sed -n 's/^export PLATFORM_REPO_DIR="\(.*\)"$/\1/p' "$HOME/.platform-env")/env/platform-env.template" "$T/env"
 mkdir "$T/log" && git -C "$T/log" init -q && git -C "$T/log" config user.email check@invalid && git -C "$T/log" config user.name check
-bash -c 'export PLATFORM_ENV_FILE="$1/env"; . "$1/env"; penv_set BUILD_LOG_DIR "$1/log"; penv_set WALLE_PROJECT prod-x; penv_set WALLE_TWIN_PROJECT twin-x; penv_set EVE_PROJECT eve-p; penv_set EVE_TWIN_PROJECT eve-n; penv_set SANDBOX_DOMAIN sb.invalid; penv_set SANDBOX_CUSTOMER_ID C0sb; penv_set SA_ACTIONS walle-actions@prod-x.iam.gserviceaccount.com; penv_set WALLE_PROJECT other; penv_set REFRESH_TOKEN_VERSION 3; penv_set EVE_REFRESH_TOKEN x; ( PLATFORM_SHELL_MODE=twin; . "$1/env"; echo "twin: $WALLE_PROJECT $SA_ACTIONS [$REFRESH_TOKEN_VERSION]" ); ( PLATFORM_SHELL_MODE=walle; . "$1/env"; echo "walle: PROJECT=$PROJECT" ); need NOTSET; exists_or_pending --pending serviceAccount:x@eve-p.iam.gserviceaccount.com PR-2.5 check; cat "$1/log/rerun-index.tsv"' _ "$T"
+bash -c 'export PLATFORM_ENV_FILE="$1/env"; . "$1/env"; penv_set BUILD_LOG_DIR "$1/log"; penv_set WALLE_PROJECT prod-x; penv_set WALLE_TWIN_PROJECT twin-x; penv_set EVE_PROJECT eve-p; penv_set EVE_TWIN_PROJECT eve-n; penv_set SANDBOX_DOMAIN sb.invalid; penv_set SANDBOX_CUSTOMER_ID C0sb; penv_set SA_ACTIONS walle-actions@prod-x.iam.gserviceaccount.com; penv_set WALLE_PROJECT other; penv_set REFRESH_TOKEN_VERSION 3; penv_set EVE_REFRESH_TOKEN x; ( PLATFORM_SHELL_MODE=twin; . "$1/env"; echo "twin: $WALLE_PROJECT $SA_ACTIONS [$REFRESH_TOKEN_VERSION]" ); ( PLATFORM_SHELL_MODE=walle; . "$1/env"; echo "walle: PROJECT=$PROJECT" ); need NOTSET; exists_or_pending --pending serviceAccount:x@eve-p.iam.gserviceaccount.com PR-2.5 check; cat "$1/log/rerun-index.tsv"; checkpoint PR-2.5 DONE "<witness or ->" - "placeholder check"; echo "checkpoint exit $?"; ( unset CLOUDSDK_CONFIG; sitting_end >/dev/null 2>"$1/se.err"; echo "sitting_end exit $?"; cat "$1/se.err" )' _ "$T"
 rm -rf "$T"
 ```
 
 **VERIFY:** The output contains, in order: `REFUSED: WALLE_PROJECT is already 'prod-x'`;
 `EVE_REFRESH_TOKEN names a secret`; `twin: twin-x walle-actions@twin-x.iam.gserviceaccount.com []`;
 `walle: PROJECT=prod-x`; `MISSING NOTSET`; `PENDING serviceAccount:x@eve-p…` and one
-`rerun-index.tsv` line. Repeat the `bash -c` line with `zsh -c` for the same output.
+`rerun-index.tsv` line; then
+`checkpoint: an unreplaced <placeholder> would be written verbatim into the log` with
+`checkpoint exit 2`; then `sitting_end exit 1` with
+`SITTING-END FAIL: CLOUDSDK_CONFIG is not set` — proving that an unsourced shell cannot report a
+clean sitting close, and that nothing was revoked when it failed. Repeat the `bash -c` line with
+`zsh -c` for the same output.
+
+The `sitting_end` check is safe to run because the guard is the first thing in the function,
+before `gcloud auth revoke`: no credential of any account is touched. Never run `sitting_end`
+inside a check any other way.
 
 **ROLLBACK:** None; the copy is deleted.
 
@@ -760,10 +907,17 @@ written, and no gate may cite it (S177). E-xx: none. TISAX: none.
 **WHO:** Platform owner.
 
 **WHERE:** Chrome profile `daily`. Admin console → Account → Account settings → Profile (Customer
-ID); Admin console → Billing → Subscriptions (edition); Google Cloud console → project picker →
-the organisation → More → Settings (Organization ID). Shell with `~/.platform-env` sourced.
+ID); Admin console → Billing → Subscriptions (edition); Admin console → Account → Admin roles →
+Super Admin → View admins (P-02); Google Cloud console → project picker → the organisation →
+More → Settings (Organization ID). Shell with `~/.platform-env` sourced.
 
-**ACTION:** Type the three values read on screen, and the two known ones:
+**ACTION:** Read the four console pages, then type the three values read on screen and the two
+known ones. The fourth page is the P-02 read: open Admin console → Account → Admin roles, select
+**Super Admin**, click **View admins**, and confirm `OWNER_DAILY_ACCOUNT` is listed. Screenshot
+that page as `<date>-PR-2.6-super-admin-roster-v1`; it is the only evidence that closes P-02, and
+without it PR-5.2 would record a prerequisite as proven with nothing behind it.
+[03-decisions-and-people.md](03-decisions-and-people.md) DC-4.4 reads the same path again, with
+the second human present, for the full roster inventory; this read is the narrow one P-02 needs.
 
 ```bash
 penv_set OWNER_DAILY_ACCOUNT "<daily account email>"
@@ -777,15 +931,18 @@ The angle-bracket text is replaced on the day; `need` refuses a value still cont
 Never `my_customer` for `DIRECTORY_CUSTOMER_ID`.
 
 **VERIFY:** `need OWNER_DAILY_ACCOUNT DOMAIN DIRECTORY_CUSTOMER_ID WORKSPACE_EDITION ORG_ID && echo OK`
-prints `OK`; `case "$ORG_ID" in *[!0-9]*) echo "FAIL: not numeric";; esac` prints nothing; PR-3.3
-proves the binding.
+prints `OK`; `case "$ORG_ID" in *[!0-9]*) echo "FAIL: not numeric";; esac` prints nothing; the
+Super Admin → View admins list shows `OWNER_DAILY_ACCOUNT` (P-02, screenshot taken); PR-3.3
+proves the binding (P-03).
 
 **ROLLBACK:** `penv_set --force NAME value` for a typing error, before any later file has used
-the value.
+the value. The `--force` write appends the old and new values to
+`BUILD_LOG_DIR/variables-changes.tsv`; PR-2.4 never truncates that file.
 
-**EVIDENCE:** A screenshot of each of the three console pages as
-`<date>-PR-2.6-tenant-identifiers-v1` (PDF) in `EVIDENCE_INTERIM_LOCATION` once PR-4.4 exists;
-until then in `BUILD_LOG_DIR/records/`. E-xx: E-05. TISAX: 1.3.1.
+**EVIDENCE:** A screenshot of each of the four console pages, as
+`<date>-PR-2.6-tenant-identifiers-v1` and `<date>-PR-2.6-super-admin-roster-v1` (PDF) in
+`EVIDENCE_INTERIM_LOCATION` once PR-4.4 exists; until then in `BUILD_LOG_DIR/records/`. E-xx:
+E-05; E-06 for the roster read. TISAX: 1.3.1; 4.1.3 for the roster read.
 
 ## 6. Shell and credential rules
 
@@ -794,11 +951,11 @@ until then in `BUILD_LOG_DIR/records/`. E-xx: E-05. TISAX: 1.3.1.
 | Rule | How it is enforced |
 |---|---|
 | One dedicated gcloud configuration, `GCLOUD_CONFIG_NAME`, in its own configuration directory `$HOME/.config/gcloud-$GCLOUD_CONFIG_NAME`, activated per shell by `CLOUDSDK_ACTIVE_CONFIG_NAME` | Set by `~/.platform-env` at every source; the daily gcloud directory is never used for the platform |
-| The configuration has no project. `gcloud config set project` is never run, and `CLOUDSDK_CORE_PROJECT` is never exported (S071) | `penv_guard` fails when `gcloud config get project` returns a value or the variable is exported |
+| The configuration has no project. `gcloud config set project` is never run, and `CLOUDSDK_CORE_PROJECT` is never exported (S071) | `penv_guard` fails when `gcloud config get project` returns a value, when the variable is exported, **and when the `gcloud config get` call itself fails** — a hidden failure prints nothing on standard output and must never be read as "clean" |
 | Every gcloud command passes `--project`, `--folder`, `--organization` or `--billing-account`; every bq command passes `--project_id` and fully qualified `project:dataset` names | Written into every ACTION; `~/.bigqueryrc` holds no `project_id` (guard) |
 | `PROJECT` exists only inside `walle_shell` | `penv_set` refuses it; sourcing unsets it outside `walle_shell`; guard |
-| No admin OAuth refresh token stays on the laptop between sittings. Each sitting signs in, works and ends with `sitting_end` (`gcloud auth revoke --all`, `gcloud auth application-default revoke`) | PR-3.2 VERIFY; the first check of every later sitting is `gcloud auth list` showing no account before sign-in |
-| Application Default Credentials are created only by a step that needs them, and revoked in the same sitting | `sitting_end` fails while the platform ADC file exists |
+| No admin OAuth refresh token stays on the laptop between sittings. Each sitting signs in, works and ends with `sitting_end` (`gcloud auth revoke --all`, `gcloud auth application-default revoke`) | PR-3.2 VERIFY: the START and DONE lines must carry the **same** sitting id, computed once in `SITTING_ID` and carried to the end; the first check of every later sitting is `gcloud auth list` showing no account before sign-in |
+| Application Default Credentials are created only by a step that needs them, and revoked in the same sitting | `sitting_end` fails while the platform ADC file exists, and refuses to run at all — revoking nothing — when `CLOUDSDK_CONFIG` is unset, so an unsourced shell cannot report a clean close |
 | The Wall-E script's operator token cache is never enabled (S087) | `sitting_end` fails while `~/.walle/operator-token.json` exists |
 | Machine secrets go straight into Secret Manager with `--data-file=-`; human account passwords go straight into the corporate vault; nothing is echoed, printed, pasted into chat, or written to a temporary file; `shred` is never used (macOS has none, and overwriting does not erase on APFS SSDs) (S139) | §8.2 pattern; the only on-disk secret ever tolerated is a file the browser itself downloaded, piped in and deleted at once |
 | No step creates, authorises or uses a domain-wide delegation client. One found is reported to the second human and recorded, never used, never deleted by the platform owner alone | 06 lists the clients (Admin console → Security → Access and data control → API controls → Manage Domain Wide Delegation, super admin only); 25 raises on any addition; 32 and 38 re-check |
@@ -856,26 +1013,50 @@ without signing in.
 
 Start of a sitting:
 
+The sitting id is computed **once**, at the start, and carried to the end in `SITTING_ID`. It is
+never recomputed: `date -u +%Y%m%d%H%M` changes within the minute, so a second computation gives
+a different id and the START and DONE lines can never be paired — and the pairing is what
+enforces §6.1's "no admin OAuth refresh token stays on the laptop between sittings".
+
+Start of a sitting:
+
 ```bash
 source "$HOME/.platform-env"
 penv_guard && echo "guard clean"
 gcloud auth list --format='value(account)'
-checkpoint "SITTING-$(date -u +%Y%m%d%H%M)" START "<witness or ->" - "<who is present>"
+SITTING_ID="SITTING-$(date -u +%Y%m%d%H%M)"; export SITTING_ID
+checkpoint "$SITTING_ID" START - - "present: platform owner alone"
 ```
 
-End of a sitting:
+A witnessed sitting passes the witness instead of the first `-`, and names who is present in the
+note, for example:
+`checkpoint "$SITTING_ID" START "$SECOND_HUMAN_EMAIL" - "present: platform owner, second human"`.
+Type a real value: the literal `<witness or ->` would be written verbatim into the log.
+
+End of the same sitting, in the same shell:
 
 ```bash
 sitting_end
-checkpoint "SITTING-$(date -u +%Y%m%d%H%M)" DONE - - "credentials revoked"
+checkpoint "$SITTING_ID" DONE - - "credentials revoked"
 ```
+
+If the shell was lost, read the id back rather than recomputing it:
+`SITTING_ID="$(awk -F'\t' '$2 ~ /^SITTING-/ {i=$2} END{print i}' "$BUILD_LOG_DIR/checkpoints.tsv")"`,
+and confirm it has no `DONE` line before closing it.
 
 A sign-in inside a sitting is always `gcloud auth login <account> --no-launch-browser`, with the
 URL opened in the account's own browser profile. The admin browser profile signs out of the
 Admin console and the Cloud console at the end of the sitting.
 
-**VERIFY:** `sitting_end` prints `SITTING-END OK`; `tail -n 2 "$BUILD_LOG_DIR/checkpoints.tsv"`
-shows the START and DONE lines.
+**VERIFY:**
+
+```bash
+awk -F'\t' '$2 ~ /^SITTING-/ {print $2, $3}' "$BUILD_LOG_DIR/checkpoints.tsv" | tail -n 2
+```
+
+Expected: two lines carrying the **same** sitting id, the first `START` and the second `DONE`.
+Two different ids is a failure of this step, not a closed sitting. `sitting_end` printed
+`SITTING-END OK` before the DONE line was written.
 
 **ROLLBACK:** None.
 
@@ -894,20 +1075,33 @@ shows the START and DONE lines.
 need GCLOUD_CONFIG_NAME ORG_ID DIRECTORY_CUSTOMER_ID OWNER_DAILY_ACCOUNT
 penv_guard && echo "guard clean"
 gcloud auth login "$OWNER_DAILY_ACCOUNT" --no-launch-browser
-gcloud organizations list --format=json > "$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-PR-3.3-organizations-v1.json"
-jq -r --arg o "organizations/$ORG_ID" '.[] | select(.name == $o) | (.owner.directoryCustomerId // .directoryCustomerId)' "$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-PR-3.3-organizations-v1.json"
+R="$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-PR-3.3-organizations-v1.json"
+gcloud organizations list --format=json > "$R"
+jq -r 'length' "$R"
+jq -r --arg o "organizations/$ORG_ID" '[.[] | select(.name == $o)] | length' "$R"
+jq -r --arg o "organizations/$ORG_ID" '.[] | select(.name == $o) | (.owner.directoryCustomerId // .directoryCustomerId)' "$R"
 sitting_end
 ```
 
-`gcloud organizations list` is a read. `jq` handles both the v1 (`owner.directoryCustomerId`)
-and v3 (`directoryCustomerId`) field forms.
+`gcloud organizations list` is a read; Google documents it as listing "all organizations to which
+the active account has access". `jq` handles both the v1 (`owner.directoryCustomerId`) and v3
+(`directoryCustomerId`) field forms.
 
-**VERIFY:** The `jq` line prints exactly the value of `DIRECTORY_CUSTOMER_ID`. `sitting_end`
-prints `SITTING-END OK`.
+**VERIFY:** read the three `jq` outputs in order. They separate three failure modes that all
+produce the same empty screen if they are collapsed into one filter:
 
-**ROLLBACK:** None needed; a read. If the customer ids differ, stop: the Workspace customer and
-the Cloud organisation are not bound, and 06, 14 and 24 cannot work as designed. Record it and
-open a decision in 03.
+| Output | Means | What to do |
+|---|---|---|
+| First `jq` prints `0` | No organisation is **visible to this account**. This is a permission symptom, not proof that the organisation is unbound. Google assigns Organization Administrator only to the super administrator who created the organisation resource, and recommends delegating it away; the default domain-wide Project Creator grant that also supplies `resourcemanager.organizations.get` is routinely removed for hygiene | Do not conclude anything about the binding. Have an account that holds `roles/resourcemanager.organizationAdmin` (or the organisation-level Project Creator grant) run the read, or read the Organization ID and customer id from the consoles as in PR-2.6 and record that the API half could not be run. Note that P-26's organisation roles go to `sa-1-admin@`, which [06-organisation-bootstrap-and-roster.md](06-organisation-bootstrap-and-roster.md) creates **after** this step, so `sa-1-admin@` cannot be used here |
+| First prints a number, second prints `0` | The account sees organisations, but not `organizations/$ORG_ID` | Re-read the Organization ID (PR-2.6). If it is right, the account has access to a different organisation: stop and record |
+| Second prints `1`, third prints a value ≠ `DIRECTORY_CUSTOMER_ID` | The Workspace customer and the Cloud organisation are **not bound** | Stop. 06, 14 and 24 cannot work as designed. Record it and open a decision in 03 |
+| Second prints `1`, third prints exactly `DIRECTORY_CUSTOMER_ID` | P-03 is closed | Continue |
+
+`sitting_end` prints `SITTING-END OK`.
+
+**ROLLBACK:** None needed; a read. Nothing was changed, so nothing is undone. The action on
+failure is in the VERIFY table above: an empty list is a missing-permission finding, a differing
+customer id is an unbound-organisation finding, and the two are never recorded as the same thing.
 
 **EVIDENCE:** `<date>-PR-3.3-organizations-v1` in the build log. E-xx: E-05. TISAX: 1.3.1.
 
@@ -917,11 +1111,38 @@ open a decision in 03.
 
 | Kind of record | Home during the build | Copied to | When |
 |---|---|---|---|
-| Checkpoint lines, command outputs, exports, text records | Build-log repository `BUILD_LOG_DIR` under `records/`, named by record id; pushed to the git host once 03 creates the remote | Platform evidence bucket `records/` prefix | After 14 creates it |
+| Checkpoint lines, command outputs, exports, text records | Build-log repository `BUILD_LOG_DIR` under `records/`, named by record id. **Local only today** — see the residual risk below | Platform evidence bucket `records/` prefix | After 14 creates it |
 | Scans, signed documents, screenshots | `EVIDENCE_INTERIM_LOCATION` (a restricted shared drive), same day, PDF | Platform evidence bucket | After 14 |
 | Custody, rota and drill records | Paper in the safe plus a same-day scan in `EVIDENCE_INTERIM_LOCATION` (SD-27) | Witness bucket `custody/`, `rota/`, `drills/` | Uploaded by the witness administrators at W-2 (08); direct to the witness after that |
 | Decision records | Platform repository `decisions/<date>-<name>.md`, append-only | Evidence bucket | After 14 |
 | The three registers and the re-run index | `BUILD_LOG_DIR/registers/` and `BUILD_LOG_DIR/rerun-index.tsv` | Consolidated by 42 | Standing |
+
+**Residual risk: the build log has no remote.** `03-decisions-and-people.md` §12 (DC-9.2 to
+DC-9.6) creates **one** repository on the git host — the platform repository — sets one remote
+variable, `PLATFORM_REPO_REMOTE`, and protects one branch. No step in the set creates a build-log
+repository, a `BUILD_LOG_REMOTE` variable, or force-push and deletion protection on it. So from
+PR-2.1 until that gap is closed, every checkpoint line, register, re-run line and evidence record
+lives on one laptop — the laptop of the administrator Eve exists to monitor — with no off-machine
+copy and no protection against a rewrite of history. That defeats the anti-silencing intent of
+the set, and it is recorded here rather than papered over.
+
+Until it is closed:
+
+- 03 must add a step (proposed id **DC-9.11**) that creates the build-log repository (private,
+  wiki disabled), grants write to the same named humans as DC-9.3, sets `allow_force_pushes:false`
+  and `allow_deletions:false` on `main` through `gh api -X PUT repos/<build-log>/branches/main/protection`,
+  runs `penv_set BUILD_LOG_REMOTE`, pushes, and adds the repository to 03 §14's handover table.
+  §12 below carries this as a requirement on 03, and README's open-items list carries it until a
+  dated revision of 03 lands.
+- Interim control, owned by the platform owner, from the day PR-4.4 exists: at the end of every
+  sitting, `git -C "$BUILD_LOG_DIR" bundle create` a bundle of `main` and upload it to
+  `EVIDENCE_INTERIM_LOCATION`, where the second human is Manager and the platform owner is only
+  Contributor and so cannot delete it. One bundle per sitting, named
+  `<date>-build-log-bundle-v<n>`. This is a copy, not protection: a rewritten local history still
+  produces a valid bundle, and only the second human comparing two bundles would see it. State
+  that limit when the control is cited.
+- The gap is a `DEV` row in `DEVIATION_REGISTER`, opened by the first step of
+  `02-toil-baseline.md` that writes to the build log, with 03 named as the closing file.
 
 **Record naming.** `<date>-<step-id>-<record>-v<n>`: UTC date `YYYY-MM-DD`, the step id, a
 lower-case hyphenated slug, and a version starting at 1. A record is never overwritten; a
@@ -1230,13 +1451,20 @@ TISAX: 1.4.1.
 **WHERE:** Shell, `~/.platform-env` sourced.
 
 **ACTION:** Write one line per row of §3.1 with its state today. Rows P-01 to P-03 are closed by
-this file's steps; the rest are open with the file that closes them.
+this file's steps and each names the step that closed it, so no row is written `closed` without
+an evidence record behind it: P-01 by PR-1.1 to PR-1.3, P-02 by PR-2.6's Super Admin → View
+admins read and its screenshot, P-03 by PR-3.3. The rest are open with the file that closes them.
 
 ```bash
-need BUILD_LOG_DIR
+need BUILD_LOG_DIR EVIDENCE_REGISTER
+grep -q -- '-PR-2.6-super-admin-roster-v' "$EVIDENCE_REGISTER" || echo "STOP: P-02 is not proven. Register PR-2.6's Super Admin roster screenshot first, then re-run: evidence_add PR-2.6 super-admin-roster E-06 4.1.3 \"interim:<file name>.pdf\""
 F="$BUILD_LOG_DIR/prerequisites-status.tsv"
 printf 'date\tid\tstate\tclosed_by_file\tnote\n' > "$F"
-for id in P-01 P-02 P-03; do printf '%s\t%s\tclosed\t01\t\n' "$(date -u +%Y-%m-%d)" "$id" >> "$F"; done
+while read -r id step; do printf '%s\t%s\tclosed\t01\t%s\n' "$(date -u +%Y-%m-%d)" "$id" "$step" >> "$F"; done <<'CLOSED'
+P-01 PR-1.1,PR-1.2,PR-1.3
+P-02 PR-2.6
+P-03 PR-3.3
+CLOSED
 while read -r id file; do printf '%s\t%s\topen\t%s\t\n' "$(date -u +%Y-%m-%d)" "$id" "$file" >> "$F"; done <<'ROWS'
 P-04 06
 P-05 03
@@ -1274,7 +1502,16 @@ checkpoint PR-5.2 DONE - "build-log:prerequisites-status.tsv"
 P-14 closes at PR-4.4. Later files append a `closed` line for their rows;
 the file is append-only.
 
-**VERIFY:** `cut -f2 "$BUILD_LOG_DIR/prerequisites-status.tsv" | grep -c '^P-'` prints `30`.
+**VERIFY:**
+
+```bash
+cut -f2 "$BUILD_LOG_DIR/prerequisites-status.tsv" | grep -c '^P-'
+awk -F'\t' '$3=="closed"{print $2, $5}' "$BUILD_LOG_DIR/prerequisites-status.tsv"
+```
+
+Expected: `30`; then exactly three `closed` rows, `P-01 PR-1.1,PR-1.2,PR-1.3`, `P-02 PR-2.6` and
+`P-03 PR-3.3`, each naming a step with a `DONE` line in `checkpoints.tsv` and, for P-02, a row in
+`EVIDENCE_REGISTER`. No `STOP:` line was printed by the ACTION.
 
 **ROLLBACK:** `git -C "$BUILD_LOG_DIR" revert HEAD`.
 
@@ -1304,8 +1541,17 @@ location.
 ```bash
 evidence_add PR-6.1 roles-and-evidence-review E-08 1.2.2 "interim:<file name>.pdf" "$HOME/Downloads/<file name>.pdf"
 rm -f "$HOME/Downloads/<file name>.pdf"
-checkpoint PR-6.1 DONE "$SECOND_HUMAN_EMAIL" "interim:<file name>.pdf"
+checkpoint PR-6.1 DONE "${SECOND_HUMAN_EMAIL:-<second human name>}" "interim:<file name>.pdf"
 ```
+
+`SECOND_HUMAN_EMAIL` is set by `03-decisions-and-people.md` DC-2.1, which runs **after** this
+file. Until then, type the second human's name in place of `<second human name>`; do not leave
+the variable to expand to nothing. `checkpoint` substitutes `-` for an empty third argument, so
+an unset variable would silently record the one step in file 01 that a second person performs as
+having had no witness, and PR-6.2's VERIFY would pass on that line. The same applies to PR-4.4.
+03 backfills both witness fields with the real address once `SECOND_HUMAN_EMAIL` exists, by
+appending a correcting line to `checkpoints.tsv` (the log is append-only; a line is never
+edited).
 
 **VERIFY:** The record exists in the interim location with the second human as its owner (file
 details panel), and its SHA-256 in `EVIDENCE_REGISTER` matches the downloaded copy. Any
@@ -1327,13 +1573,19 @@ correction listed is applied to this page before 03 records SD-38.
 need PLATFORM_ENV_FILE BUILD_LOG_DIR EVIDENCE_REGISTER DEVIATION_REGISTER DRILL_CALENDAR EVIDENCE_INTERIM_LOCATION DOMAIN DIRECTORY_CUSTOMER_ID ORG_ID WORKSPACE_EDITION OWNER_DAILY_ACCOUNT
 penv_guard && echo "guard clean"
 awk -F'\t' '$3=="DONE"{print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u
+awk -F'\t' '($2=="PR-4.4" || $2=="PR-6.1") && $3=="DONE" {print $2, $5}' "$BUILD_LOG_DIR/checkpoints.tsv"
+grep -n '<[^>]*>' "$BUILD_LOG_DIR/checkpoints.tsv" && echo "FAIL: an unreplaced placeholder is in the log" || echo "no placeholder in the log"
 git -C "$BUILD_LOG_DIR" status --short
 sitting_end
 checkpoint PR-6.2 DONE - - "part 01 complete"
 ```
 
 **VERIFY:** `need` is silent; `guard clean`; the DONE list contains every step id from PR-1.1 to
-PR-6.1 (PR-1.1 to PR-2.3 carry the backfilled lines of PR-2.4); `git status` prints nothing; `SITTING-END OK`.
+PR-6.1 (PR-1.1 to PR-2.3 carry the backfilled lines of PR-2.4) with no id twice; the two
+two-person steps PR-4.4 and PR-6.1 each print a witness field that is **not** `-` — a `-` there
+means the witness was lost to an unset `SECOND_HUMAN_EMAIL` and the line must be corrected by an
+appended line before 02 starts; `no placeholder in the log`; `git status` prints nothing;
+`SITTING-END OK`.
 
 **ROLLBACK:** None.
 
@@ -1353,7 +1605,15 @@ PR-6.1 (PR-1.1 to PR-2.3 carry the backfilled lines of PR-2.4); `git status` pri
 - [ ] `gcloud auth list` shows no account; no ADC file; no Wall-E operator token cache.
 - [ ] The organisation's directory customer id equals `DIRECTORY_CUSTOMER_ID`.
 - [ ] `checkpoints.tsv`, `rerun-index.tsv`, `variables-changes.tsv`, `prerequisites-status.tsv`
-      and the three registers exist and are committed.
+      and the three registers exist and are committed; PR-2.4 re-run twice leaves them unchanged,
+      and no step id is backfilled twice.
+- [ ] The last two `SITTING-` lines in `checkpoints.tsv` carry the same id, `START` then `DONE`.
+- [ ] No `<placeholder>` string appears anywhere in `checkpoints.tsv`; the PR-4.4 and PR-6.1 lines
+      carry a real witness, not `-`.
+- [ ] P-02 is closed by PR-2.6's Super Admin → View admins read, and its screenshot has a row in
+      `EVIDENCE_REGISTER`.
+- [ ] The build log's lack of a remote is recorded as a residual risk (§7.1), with the sitting
+      bundle in `EVIDENCE_INTERIM_LOCATION` as the interim copy and 03 named as the closing file.
 - [ ] The interim evidence location has exactly the second human (Manager) and the platform owner
       (Contributor).
 - [ ] The second human's review record is registered.
@@ -1364,7 +1624,7 @@ PR-6.1 (PR-1.1 to PR-2.3 carry the backfilled lines of PR-2.4); `git status` pri
 | File | Needs |
 |---|---|
 | `02-toil-baseline.md` | `PLATFORM_REPO_DIR` (local repository), `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER`, `checkpoint` |
-| `03-decisions-and-people.md` | The roles table and pairs (§2) to name people against; the four-human exception question (§2.3); SD-01, SD-37, SD-38 as pending with the PR-6.1 review; both local repositories, for which it creates remotes (the build log with no force-push and no deletion) |
+| `03-decisions-and-people.md` | The roles table and pairs (§2) to name people against; the four-human exception question (§2.3); SD-01, SD-37, SD-38 as pending with the PR-6.1 review; the platform repository, for which DC-9.2 to DC-9.6 create the remote. **Two gaps 03 must close**, both recorded here: (1) the build-log repository has no remote — 03 needs a step (proposed DC-9.11) creating it with `allow_force_pushes:false`, `allow_deletions:false`, `penv_set BUILD_LOG_REMOTE` and a §14 row (§7.1 residual risk); (2) once DC-2.1 sets `SECOND_HUMAN_EMAIL`, 03 backfills the witness field of the PR-4.4 and PR-6.1 checkpoint lines, which were written with the second human's name because the variable did not exist yet, by appending a correcting line |
 | `04-purchases-and-lead-times.md` | §3.1 rows P-16 to P-25 and the key count of §3.2 |
 | `05-gemini-enterprise-inventory.md` | `DOMAIN`, `ORG_ID`, `GE_LOCATION`, the sitting rules |
 | `06-organisation-bootstrap-and-roster.md` | `DOMAIN`, `ORG_ID`, `DIRECTORY_CUSTOMER_ID`, `OWNER_DAILY_ACCOUNT`, `EVIDENCE_INTERIM_LOCATION` (custody scans), `DEVIATION_REGISTER` (the EXC row), `DRILL_CALENDAR` (DR-06-1), the browser profile `sa-1-admin`, the domain-wide delegation rule; it adds `platform-security@` to the interim location |
@@ -1393,9 +1653,29 @@ PR-6.1 (PR-1.1 to PR-2.3 carry the backfilled lines of PR-2.4); `git status` pri
 | S178 | No source-time warning on empty values; `need` per step; values written to the file, so re-sourcing never wipes them |
 | X-RQB-02 | Regional availability and quota rows with verify commands and the correct Model Armor consumers (P-27 to P-29) |
 
-Deferred: none.
+Second-round findings closed on 2026-09-16:
 
-## 14. Sources checked on 2026-09-15
+| Finding | What this page now does |
+|---|---|
+| P-26 missed `roles/iam.securityAdmin` | P-26 lists all five organisation roles and the folder and project analogues; §3.3 gates on a binding read plus a permission probe taken from Google's own role definition, so the gate cannot pass without Security Admin |
+| PR-2.4 truncated the logs on a resumed run | Every creation is guarded by `[ -s … ] ||`, the backfill loop and the closing checkpoint are guarded on an existing `DONE` line, and the VERIFY asks for a second run with identical output |
+| PR-3.2's sitting id computed twice | `SITTING_ID` is computed once and exported; the VERIFY asserts two lines with the same id; the literal placeholders are replaced and `checkpoint` now refuses any `<placeholder>` |
+| `penv_guard` passed vacuously on a hidden `gcloud` failure | The exit status is checked separately, with "configuration does not exist yet" told apart from "gcloud failed"; the `(unset)` case is marked as an assumption |
+| PR-5.2 wrote P-02 `closed` with no evidence | PR-2.6 performs the Super Admin → View admins read and its screenshot; PR-5.2 refuses to write the snapshot without a register row and records the closing step for each closed row |
+| The build log's remote does not exist in 03 | §7.1 states the residual risk, names the interim bundle control and its limit, and §12 carries the requirement on 03 (proposed DC-9.11) |
+| PR-6.1's witness lost to an unset variable | The fallback is written at the step, `checkpoint` refuses placeholders, PR-6.2's VERIFY asserts a non-`-` witness on PR-4.4 and PR-6.1, and §12 asks 03 to backfill |
+| PR-3.3 misdiagnosed three failure modes as one | The ACTION prints three separate `jq` results and the VERIFY table separates "not visible to this account" from "not in the list" from "customer ids differ" |
+| `sitting_end` checked a path that can never exist | The `CLOUDSDK_CONFIG` guard runs first, before any revoke, and PR-2.5 proves it |
+| PR-2.3 silently accepted a stale `~/.platform-env` | The branch is explicit and loud, and the VERIFY diffs the installed helper block against the committed template |
+| `SA_1_ADMIN` and `_PENV_MAPPED` dangled | The profile table names `sa-1-admin@$DOMAIN` and says 06 sets the variable; `_PENV_MAPPED` is deleted, leaving one list in `_penv_apply_mode` |
+| §3.2's key total disagreed with 04 | §3.2 gives the order figure 22 (26 with twin-robot keys), spares fixed at four, with 04 §4 named as the single source |
+| EVIDENCE fields without an E-xx across the set | §1 adds the mechanical check and names the files the review found broken; this page's twenty steps all carry both ids |
+
+Deferred: the sweep of the EVIDENCE fields of 02, 05, 07, 10, 13, 17 and 42 is the work of those
+files' owners, not of this page; this page supplies the rule, the mapping table (§7.2) and the
+check that finds every hit. Owner: each file's owner, before 42's first quarterly review.
+
+## 14. Sources checked on 2026-09-15, and on 2026-09-16 where noted
 
 - gcloud configurations, `CLOUDSDK_ACTIVE_CONFIG_NAME`, `CLOUDSDK_CONFIG`, `gcloud config unset`:
   https://docs.cloud.google.com/sdk/docs/configurations
@@ -1428,6 +1708,30 @@ Deferred: none.
   https://docs.cloud.google.com/bigquery/docs/control-access-to-resources-iam
 - bq `--project_id` and `.bigqueryrc`: https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference
 - PAM Admin role and entitlement creation: https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup
+  — re-read 2026-09-16. To work with entitlements at the organisation level a principal needs
+  **both** `roles/privilegedaccessmanager.admin` and `roles/iam.securityAdmin`; at folder level
+  `roles/resourcemanager.folderAdmin`; at project level `roles/resourcemanager.projectIamAdmin`.
+  The supporting role is what supplies get and set of the IAM policy on the parent resource.
+  Requesters and approvers of grants need no PAM-specific permission (P-26, §3.3)
+- `gcloud organizations list` — read 2026-09-16: it "lists all organizations to which the active
+  account has access", in an unspecified order, and the list may be incomplete for a service
+  account. An empty list is therefore a permission symptom, never proof that an organisation does
+  not exist or is unbound (PR-3.3):
+  https://docs.cloud.google.com/sdk/gcloud/reference/organizations/list
+- Organization Administrator is assigned by default only to the super administrator who created
+  the organisation resource, and Google recommends delegating it away — read 2026-09-16 (PR-3.3):
+  https://docs.cloud.google.com/resource-manager/docs/creating-managing-organization
+- `gcloud organizations get-iam-policy`, used by §3.3's binding read:
+  https://docs.cloud.google.com/sdk/gcloud/reference/organizations/get-iam-policy
+- `gcloud iam roles describe`, used by §3.3 to read Google's own definition of
+  `roles/iam.securityAdmin` rather than asserting its contents here:
+  https://docs.cloud.google.com/sdk/gcloud/reference/iam/roles/describe. The per-role permission
+  index pages did not render for automated reading on 2026-09-16, which is why §3.3 reads the
+  role on the day instead of naming a permission from memory
+- `gcloud config get`: the behaviour when a property is unset is not documented on
+  https://docs.cloud.google.com/sdk/gcloud/reference/config/get (re-read 2026-09-16), so
+  `penv_guard`'s `(unset)` case is written as an assumption and the exit status is checked
+  separately
 - Customer ID path: https://knowledge.workspace.google.com/admin/getting-started/find-your-customer-id
 - Edition path: https://knowledge.workspace.google.com/admin/billing/which-edition-and-payment-plan-do-i-have
 - Domain-wide delegation path, super admin only:
