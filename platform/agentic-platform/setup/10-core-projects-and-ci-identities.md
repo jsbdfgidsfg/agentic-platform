@@ -56,8 +56,8 @@ flowchart TD
 - [ ] File 07 is complete: `BILLING_ACCOUNT_ID` and `BILLING_CURRENCY` are set; `sa-1-admin@` holds Billing Account User and Billing Account Costs Manager on that account only; the project-quota request of BA-6 is filed (about 20 projects) or approved.
 - [ ] File 06 is complete: `SA_1_ADMIN`, `SA_2_ADMIN`, `GRP_PLATFORM_OWNERS`, `GRP_PLATFORM_SECURITY`, `ROSTER_FILE` and `BOOTSTRAP_EXCEPTION_EXPIRY` are set; `sa-1-admin@` holds Organization Administrator and Project Creator at the organisation under the dated exception, and the exception has not expired.
 - [ ] File 03 has signed: the topology §6 names record with the five core project ids (the gate of every **IRREVERSIBLE** create in CP-1.1); P22 and SD-14 (git host), with `GIT_HOST`, `GIT_OIDC_ISSUER` and `PLATFORM_REPO_REMOTE` set and the repository created with branch protection and CODEOWNERS (the second human a required reviewer on `ROSTER_FILE`); SD-01, SD-16, SD-17, SD-18 and SD-34; `SECOND_HUMAN_EMAIL` and `BILLING_ADMIN_EMAIL` named.
-- [ ] File 01's `~/.platform-env` holds `ORG_ID`, `REGION` (`europe-west1`), `PLATFORM_REPO_DIR`, `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER` and the helpers `penv_set`, `need` and `exists_or_pending`; the gcloud configuration `GCLOUD_CONFIG_NAME` has no default project.
-- [ ] The platform owner's workstation has the gcloud `alpha` and `beta` components (CP-1.3 and CP-1.8 use them), `jq`, and the git host's CLI (`gh` for GitHub, `glab` for GitLab) signed in as a repository administrator.
+- [ ] File 01's `~/.platform-env` holds `PLATFORM_ENV_FILE` (its own path, read back by CP-1.2, CP-4.1 and CP-5.5), `ORG_ID`, `REGION` (`europe-west1`), `PLATFORM_REPO_DIR`, `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER` and the helpers `penv_set`, `need` and `exists_or_pending`; the gcloud configuration `GCLOUD_CONFIG_NAME` has no default project.
+- [ ] The platform owner's workstation has the gcloud `alpha` and `beta` components (CP-1.3 uses `alpha`; CP-1.8's read-back uses `beta`), `curl` (CP-1.8 creates the `_Trace` bucket through the Observability REST API, which has no gcloud command), `jq` (CP-3.2, CP-5.2, CP-6.1 and CP-8.1 test IAM members with it, because the gcloud filter grammar cannot), and the git host's CLI (`gh` for GitHub, `glab` for GitLab) signed in as a repository administrator.
 - [ ] A 45-minute slot is booked with the second human for §7 (they must be present or on a shared screen), and with the billing administrator for CP-5.6.
 
 ## People
@@ -88,7 +88,8 @@ checkpoint CP-0.1 START
 penv_guard
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES SD-01 SD-14 SD-16 SD-17 SD-18 SD-34 P22
 for v in CICD_PROJECT CORE_PROJECT LOGGING_PROJECT KMS_PROJECT VALIDATOR_PROJECT TF_STATE_BUCKET; do printf '%s=%s\n' "$v" "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES "$v")"; done
-need ORG_ID REGION FLD_PLATFORM_CORE TAG_KEY_TIER TAG_KEY_TISAX BILLING_ACCOUNT_ID BILLING_CURRENCY SA_1_ADMIN SA_2_ADMIN GRP_PLATFORM_OWNERS GRP_PLATFORM_SECURITY ROSTER_FILE BOOTSTRAP_EXCEPTION_EXPIRY GIT_HOST GIT_OIDC_ISSUER PLATFORM_REPO_REMOTE PLATFORM_REPO_DIR BUILD_LOG_DIR EVIDENCE_INTERIM_LOCATION EVIDENCE_REGISTER DEVIATION_REGISTER SECOND_HUMAN_EMAIL BILLING_ADMIN_EMAIL
+need PLATFORM_ENV_FILE ORG_ID REGION FLD_PLATFORM_CORE TAG_KEY_TIER TAG_KEY_TISAX BILLING_ACCOUNT_ID BILLING_CURRENCY SA_1_ADMIN SA_2_ADMIN GRP_PLATFORM_OWNERS GRP_PLATFORM_SECURITY ROSTER_FILE BOOTSTRAP_EXCEPTION_EXPIRY GIT_HOST GIT_OIDC_ISSUER PLATFORM_REPO_REMOTE PLATFORM_REPO_DIR BUILD_LOG_DIR EVIDENCE_INTERIM_LOCATION EVIDENCE_REGISTER DEVIATION_REGISTER SECOND_HUMAN_EMAIL BILLING_ADMIN_EMAIL
+test -f "$PLATFORM_ENV_FILE" || { echo "PLATFORM_ENV_FILE does not point at a file: stop"; false; }
 test -z "$(gcloud config get project 2>/dev/null)" || { echo "a default project is set: stop"; false; }
 test "$(gcloud config get account 2>/dev/null)" = "$SA_1_ADMIN" || { echo "not signed in as sa-1-admin@: stop"; false; }
 test "$(date -u +%F)" \< "$BOOTSTRAP_EXCEPTION_EXPIRY" || { echo "bootstrap exception expired: stop"; false; }
@@ -97,7 +98,7 @@ gcloud resource-manager folders describe "$FLD_PLATFORM_CORE" --format="value(di
 gcloud projects list --filter="parent.type=folder AND parent.id=${FLD_PLATFORM_CORE}" --format="value(projectId)"
 ```
 
-  `tools/decision-need.sh` and `tools/decision-value.sh` are 03's: the first refuses an unsigned or altered record, the second reads a value only from the signed NAMES register (03 DC-5.1). Copy the five project ids and the state bucket name into the table of §1 and CP-2.1; nothing is typed from memory. Each id matches `agp-core-<purpose>` (02 §3.6; for example `agp-core-logging`), is 6 to 30 characters of lowercase letters, digits and hyphens, starts with a letter and does not end with a hyphen (Create projects page, read 2026-09-15).
+  `PLATFORM_ENV_FILE` is 01's own variable naming the path of the variables file (`~/.platform-env`); CP-1.2, CP-4.1 and CP-5.5 read it back with `grep`, so it is checked here rather than failing three steps later. `tools/decision-need.sh` and `tools/decision-value.sh` are 03's: the first refuses an unsigned or altered record, the second reads a value only from the signed NAMES register (03 DC-5.1). Copy the five project ids and the state bucket name into the table of §1 and CP-2.1; nothing is typed from memory. Each id matches `agp-core-<purpose>` (02 §3.6; for example `agp-core-logging`), is 6 to 30 characters of lowercase letters, digits and hyphens, starts with a letter and does not end with a hyphen (Create projects page, read 2026-09-15).
 - **VERIFY:** `penv_guard` prints nothing; `decision-need.sh` exits 0; `decision-value.sh` prints six non-empty values, none `*tbd*`; every `need` passes; no default project; the account is `sa-1-admin@`; today is before `BOOTSTRAP_EXCEPTION_EXPIRY`; the folder describe prints `fld-platform-core` and `folders/<FLD_AGENTIC_PLATFORM>`; the project list under the folder is empty (or holds only core projects from an earlier, resumed sitting whose checkpoints say so). The five ids in the signed record are distinct and well-formed.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** Checkpoint line `CP-0.1 DONE`; the folder describe output as `<date>-CP-0.1-folder-core-describe-v1` in `BUILD_LOG_DIR`. TISAX 1.3.1 (asset inventory: the parent is known before any asset exists).
@@ -108,16 +109,17 @@ Run CP-1.1 to CP-1.12 as one pass per row of the table below, **in row order**. 
 
 | Row | Variable | Id (from the signed record) | Display name | `agent` label | `owner` label | `recovery_class` | APIs enabled | Budget (EUR/month, 02 §2.2) | `_Trace` |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `CICD_PROJECT` | *tbd* (form `agp-core-cicd`) | `Platform CICD core prod` | `platform-cicd` | `platform-owners` | `r-d` | `serviceusage`, `cloudresourcemanager`, `iam`, `iamcredentials`, `sts`, `logging`, `monitoring`, `storage`, `cloudbuild`, `artifactregistry`, `containeranalysis`, `containerscanning`, `binaryauthorization`, `billingbudgets`, `essentialcontacts`, `observability` | 300 | yes |
+| 1 | `CICD_PROJECT` | *tbd* (form `agp-core-cicd`) | `Platform CICD core prod` | `platform-cicd` | `platform-owners` | `r-d` | `serviceusage`, `cloudresourcemanager`, `iam`, `iamcredentials`, `sts`, `logging`, `monitoring`, `storage`, `cloudbuild`, `artifactregistry`, `containeranalysis`, `containerscanning`, `binaryauthorization`, `cloudkms`, `billingbudgets`, `essentialcontacts`, `observability` | 300 | yes |
 | 2 | `CORE_PROJECT` | *tbd* (form `agp-core-core`) | `Platform core prod` | `platform-core` | `platform-owners` | `r-d` | `serviceusage`, `cloudresourcemanager`, `iam`, `iamcredentials`, `logging`, `monitoring`, `storage`, `bigquery`, `pubsub`, `run`, `cloudscheduler`, `binaryauthorization`, `agentregistry`, `apphub`, `cloudasset`, `policyanalyzer`, `orgpolicy`, `iap`, `observability` | 300 | yes |
 | 3 | `LOGGING_PROJECT` | *tbd* (form `agp-core-logging`) | `Platform logging core prod` | `platform-logging` | `platform-owners` | `r-d` | `serviceusage`, `cloudresourcemanager`, `iam`, `logging`, `monitoring`, `storage`, `bigquery`, `pubsub`, `dlp`, `observability` | 300 | yes |
-| 4 | `KMS_PROJECT` | *tbd* (form `agp-core-kms`) | `Platform KMS core prod` | `platform-kms` | `platform-owners` | `r-k` | `cloudkms`, `logging` | 300 | **no** |
-| 5 | `VALIDATOR_PROJECT` | *tbd* (form `agp-core-validator`) | `Platform validator core prod` | `platform-validator` | `platform-security` | `r-d` | `serviceusage`, `cloudresourcemanager`, `iam`, `logging`, `monitoring`, `storage`, `bigquery`, `observability` | 300 | yes |
+| 4 | `KMS_PROJECT` | *tbd* (form `agp-core-kms`) | `Platform KMS core prod` | `platform-kms` | `platform-owners` | `r-k` | `cloudresourcemanager`, `cloudkms`, `logging` | 300 | **no** |
+| 5 | `VALIDATOR_PROJECT` | *tbd* (form `agp-core-validator`) | `Platform validator core prod` | `platform-validator` | `platform-security` | `r-d` | `serviceusage`, `cloudresourcemanager`, `iam`, `logging`, `monitoring`, `storage`, `bigquery`, `cloudkms`, `observability` | 300 | yes |
 
 All service names are `<name>.googleapis.com`. Why these and nothing more:
 - Every name except `observability` is on the `fld-platform-core` allow-list of 02 §4.2; a project enables only the subset its later steps call (11 to 18). A later file that needs another allow-listed service enables it at its own step and records it. `cloudapis` is not on the allow-list, so CP-1.1 passes `--no-enable-cloud-apis`.
 - `observability.googleapis.com` is required to create `_Trace` by hand ("Enable the Observability API", Cloud Trace create-observability-buckets page, read 2026-09-15) and is **not** on 02 §4.2's core list. Recorded as a deviation in CP-8.2 and handed to 13, which adds it to the core allow-list by pull request before the allow-list is applied.
-- `KMS_PROJECT` keeps its own "cloudkms only" list (02 §4.2, P118). Logging is enabled because the `_Default` redirect is a Logging API call; Google states that Logging cannot be restricted by `gcp.restrictServiceUsage` (restricting-resources page as cited by 02 §4.2). No `_Trace` is created there: nothing that emits spans ever runs in the key project, and creating one would need `observability`, which that list excludes. Recorded as a dated deviation in CP-8.2 against SD-17's "every project".
+- `cloudkms.googleapis.com` is on three rows, not one. Row 4 is the key project. Row 1 is added because 11 KV-5.1 creates the key ring `supply-chain` and KV-5.2 the two attestor keys **in `CICD_PROJECT`**, and Google requires the API on the project that holds the key ring: "Enable the Cloud KMS API on your key project" (Create a key ring, read 2026-09-15). Row 5 is added because 11 KV-8.6 asks Autokey for a key handle with `VALIDATOR_PROJECT` as the quota project, and Autokey needs the API "on each project where you want to use Autokey" (Enable Autokey, read 2026-09-15). Enabling it here, rather than as a remedy inside 11, keeps CP-1.6's VERIFY ("any extra name … is disabled") and 02 §4.2's allow-list honest: 11 finds the API already on and only checks it. Both additions are recorded in CP-8.2's `BD-10-7` and handed to 13 for the core allow-list.
+- `KMS_PROJECT`'s list is `cloudresourcemanager`, `cloudkms`, `logging`, which amends 02 §4.2's P118 "cloudkms only" by one name. Cloud Resource Manager is **not** enabled by default: it is absent from the default-enabled table of the Service Usage "Enabled services" page (read 2026-09-15), and `gcloud projects create --no-enable-cloud-apis` enables nothing anyway, yet this project's own pass calls Resource Manager against it in CP-1.3 (lien create), CP-1.5 (tag bindings list), CP-1.11 and CP-8.1 (get-iam-policy) and CP-1.12 (describe). Without the row the file would contradict its own rule that a project enables only the subset its later steps call. The amendment to P118 is recorded in CP-8.2's `BD-10-7` and handed to 13. Logging is enabled because the `_Default` redirect is a Logging API call; Google states that Logging cannot be restricted by `gcp.restrictServiceUsage` (restricting-resources page as cited by 02 §4.2). No `_Trace` is created there: nothing that emits spans ever runs in the key project, and creating one would need `observability`, which that list excludes. Recorded as a dated deviation in CP-8.2 against SD-17's "every project".
 - `recovery_class` for `KMS_PROJECT` is `r-k` and for the others `r-d` (09 §3.1 classes R-D shared services and R-K keys). 02 §3.6 lists only `r-a r-b r-c`; *Assumption:* the vocabulary gains `r-d` and `r-k`, corrected in 02 §3.6 by the pass that 17 makes.
 - `VALIDATOR_PROJECT` is owned by the security reviewer's line (11); until that person is named, the owner label is `platform-security`.
 - Display names follow the Project resource rule: 4 to 30 characters of "lowercase and uppercase letters, numbers, hyphen, single-quote, double-quote, space, and exclamation point" (Resource Manager v3 `Project` reference, read 2026-09-15). 02 §3.6's pattern `<Agent> (<tier>, <env>)` uses parentheses and a comma, which that rule does not allow; the correction is recorded in CP-8.2 for 17.
@@ -250,10 +252,13 @@ gcloud services enable artifactregistry.googleapis.com --project="$P_ID"
 gcloud services enable containeranalysis.googleapis.com --project="$P_ID"
 gcloud services enable containerscanning.googleapis.com --project="$P_ID"
 gcloud services enable binaryauthorization.googleapis.com --project="$P_ID"
+gcloud services enable cloudkms.googleapis.com --project="$P_ID"
 gcloud services enable billingbudgets.googleapis.com --project="$P_ID"
 gcloud services enable essentialcontacts.googleapis.com --project="$P_ID"
 gcloud services enable observability.googleapis.com --project="$P_ID"
 ```
+
+  `cloudkms` is enabled here, not in 11: 11 KV-5.1 creates the key ring `supply-chain` in this project and KV-5.2 the attestor keys in it, and the key ring create refuses a project whose Cloud KMS API is off.
 
   Row 2, `CORE_PROJECT`:
 
@@ -297,9 +302,12 @@ gcloud services enable observability.googleapis.com --project="$P_ID"
   Row 4, `KMS_PROJECT`:
 
 ```bash
+gcloud services enable cloudresourcemanager.googleapis.com --project="$P_ID"
 gcloud services enable cloudkms.googleapis.com --project="$P_ID"
 gcloud services enable logging.googleapis.com --project="$P_ID"
 ```
+
+  `cloudresourcemanager` is first because CP-1.3, CP-1.5, CP-1.11, CP-1.12 and CP-8.1 call Resource Manager against this project and it is not enabled by default (§1). If the enable itself is refused because Resource Manager is disabled on the project it must act on, enable it from the console instead: **APIs & Services > Enabled APIs & services > + Enable APIs and services**, search `Cloud Resource Manager API`, **Enable**, with the project selector on `KMS_PROJECT`; record the console route in `BD-10-7`.
 
   Row 5, `VALIDATOR_PROJECT`:
 
@@ -311,8 +319,11 @@ gcloud services enable logging.googleapis.com --project="$P_ID"
 gcloud services enable monitoring.googleapis.com --project="$P_ID"
 gcloud services enable storage.googleapis.com --project="$P_ID"
 gcloud services enable bigquery.googleapis.com --project="$P_ID"
+gcloud services enable cloudkms.googleapis.com --project="$P_ID"
 gcloud services enable observability.googleapis.com --project="$P_ID"
 ```
+
+  `cloudkms` is enabled here, not in 11: 11 KV-8.6 creates an Autokey key handle with this project as the quota project, and Autokey requires the Cloud KMS API on every resource project where it is used.
 
 - **VERIFY:**
 
@@ -321,8 +332,24 @@ gcloud services list --enabled --project="$P_ID" --format="value(config.name)" |
 cat "${BUILD_LOG_DIR}/$(date -u +%F)-CP-1.6-${P_VAR}-services-v1.txt"
 ```
 
-  Every service of the row is listed. Enabling a service can enable its dependencies; each extra name is classified in the record as either (a) on 02 §4.2's core allow-list, or (b) a dependency Google enabled with a named parent (read from the service's page on the day). Any extra name that is neither is disabled with `gcloud services disable <name> --project="$P_ID"` and the list re-read. The (b) names are handed to 13 so the allow-list does not refuse a dependency the core needs. `compute.googleapis.com` must not appear on any row; if it does, disable it and find which service pulled it in before continuing, because its default service account is what §3 avoids.
-- **ROLLBACK:** `gcloud services disable <name> --project="$P_ID"` per service. Nothing depends on them yet.
+  Every service of the row is listed. Enabling a service can enable its dependencies; each extra name is classified in the record as either (a) on 02 §4.2's core allow-list, or (b) a dependency Google enabled with a named parent (read from the service's page on the day). The (b) names are handed to 13 so the allow-list does not refuse a dependency the core needs.
+
+  Any extra name that is neither (a) nor (b) is disabled — but **not blindly**. `gcloud services disable` refuses a service that other enabled services depend on unless `--force` is passed, and `--force` "will proceed even if there are enabled services which depend on the service to be disabled … the services which depend on the service to be disabled will also be disabled" (`gcloud services disable` reference, read 2026-09-15). So a forced disable can silently switch off a service of the row. The rule at this step:
+
+```bash
+gcloud services disable <name> --project="$P_ID"
+```
+
+  If that is refused naming dependants, **do not add `--force` yet**: record the refusal and the dependants it names, work out which enabled service pulled the name in (read that service's own page on the day), and only then either classify it as a (b) dependency and keep it, or run:
+
+```bash
+gcloud services disable <name> --force --project="$P_ID"
+```
+
+  and immediately re-read the enabled list to prove every service of the row is still on. A forced disable is recorded in `BD-10-7` with the dependants it took with it.
+
+  `compute.googleapis.com` must not appear on any row. If it does, **do not disable it as a reflex**: Google warns that the Compute Engine default service account it carries must not be deleted, because "Deleting this service account is irreversible and can have unintended consequences either on Cloud Build or other services" (Cloud Build service-account-updates page, read 2026-09-15), and on row 1 Cloud Build and, later, Cloud Run depend on it. Instead record it, identify the parent service that enabled it, and decide with the second human before disabling anything Cloud Build or Cloud Run depends on; the decision and its outcome go in `BD-10-7`. On rows 2 to 5, where no build runs, disabling it after the parent is identified is the normal outcome. Either way, `--service-account` on every build (§3) is what keeps the Compute default account out of use, not the absence of the API.
+- **ROLLBACK:** `gcloud services disable <name> --project="$P_ID"` per service, in the reverse of the row's order so a dependency is disabled after its dependants; add `--force` only when the refusal has been read and the dependants it names are themselves services this step enabled. Nothing outside this file depends on them yet.
 - **EVIDENCE:** The services file named above; a line in `EVIDENCE_REGISTER`. TISAX 5.2.1 (change management: the enabled set is recorded), 1.3.1.
 
 ### CP-1.7 Route `_Default` to a regional bucket; leave `_Required` global
@@ -360,23 +387,26 @@ gcloud logging read 'logName:"cp-1-7-routing-test"' --project="$P_ID" --bucket=d
 ### CP-1.8 Create the `_Trace` bucket in `europe-west1` (rows 1, 2, 3 and 5)
 
 - **WHO:** Platform owner.
-- **WHERE:** Shell (gcloud `beta` component). Row 4 (`KMS_PROJECT`): write `CP-1.8@KMS_PROJECT N/A` with the reason from §1 and go to CP-1.9.
-- **ACTION:**
+- **WHERE:** Shell (`curl` for the create; gcloud `beta` component for the read-back). Row 4 (`KMS_PROJECT`): write `CP-1.8@KMS_PROJECT N/A` with the reason from §1 and go to CP-1.9.
+- **ACTION:** There is **no gcloud create command** for observability buckets. Under `gcloud beta observability buckets` only `describe` and `list` (plus the `datasets` group) are defined (gcloud reference, read 2026-09-15), and the Cloud Trace page creates the bucket through the Observability REST API. Create it with the documented REST call:
 
 ```bash
-gcloud beta observability buckets create _Trace --location="$REGION" --project="$P_ID"
+need REGION
+curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -H "x-goog-user-project: ${P_ID}" -d '{}' "https://observability.googleapis.com/v1/projects/${P_ID}/locations/${REGION}/buckets?bucketId=_Trace"
 ```
 
-  From the Cloud Trace create-observability-buckets page (read 2026-09-15): the bucket id must be `_Trace`, retention is fixed at 30 days, the Observability API must be enabled (CP-1.6) and the role is `roles/observability.editor` (the creator's Owner covers it). Cloud Run span data does not cause the bucket to be created, so without this step the spans of the drift and K7 jobs would be dropped (X-RQB-03 verdict, storage-overview page). File 09 set the folder's observability default location to `europe-west1`; creating the bucket explicitly removes any doubt about which location was inherited.
+  The method is `POST https://observability.googleapis.com/v1/{parent=projects/*/locations/*}/buckets` with the required query parameter `bucketId` and a `Bucket` body (`projects.locations.buckets.create` reference, read 2026-09-15). Read that reference again on the day and add any field it has made required; an empty body is sent here because every field of `Bucket` is optional and `name` is derived from `parent` and `bucketId`. From the Cloud Trace create-observability-buckets page (read 2026-09-15): "The BUCKET_ID must be `_Trace`"; "Data is stored for 30 days. You must either omit the retention period or set it to `30`" — so no retention field is sent; the Observability API must be enabled (CP-1.6) and the role is Observability Editor (`roles/observability.editor`), which the creator's Owner covers. `x-goog-user-project` makes `P_ID` the quota project, which matters because the caller has no default project (CP-0.1).
+
+  The response is the created `Bucket` resource; a non-2xx response prints an error object instead, and the step stops there. Cloud Run span data does not cause the bucket to be created, so without this step the spans of the drift and K7 jobs would be dropped (X-RQB-03 verdict, storage-overview page). File 09 set the folder's observability default location to `europe-west1`; creating the bucket explicitly removes any doubt about which location was inherited. The REST form is recorded in `BD-10-7`, because it is the one place in this file where a console or gcloud path does not exist.
 - **VERIFY:**
 
 ```bash
 gcloud beta observability buckets list --location="$REGION" --project="$P_ID"
 ```
 
-  One bucket `_Trace` in `europe-west1`. If the create is refused because a `_Trace` bucket already exists (a project holds at most one), describe where it is: a `_Trace` outside `europe-west1` is a residency deviation for 13 and 42, recorded in CP-8.2, because an observability bucket's location cannot be changed.
-- **ROLLBACK:** None documented for moving the location. A wrong location is recorded as a dated residency exception; the project does not emit traces before 16 or 18, so the exposure is nil until then.
-- **EVIDENCE:** The list output as `<date>-CP-1.8-${P_VAR}-trace-bucket-v1`. TISAX 7.1 (residency). Closes X-RQB-03's `_Trace` half for this project.
+  `gcloud beta observability buckets list` does exist (it is one of the two commands in that group) and is the read-back for the REST create: one bucket `_Trace` in `europe-west1`, and the project's `_Trace` appears nowhere else. If the create is refused because a `_Trace` bucket already exists (a project holds at most one), list without `--location` filtering to find where it is: a `_Trace` outside `europe-west1` is a residency deviation for 13 and 42, recorded in CP-8.2, because an observability bucket's location cannot be changed.
+- **ROLLBACK:** None. Neither `gcloud beta observability buckets` nor the Cloud Trace page documents a delete, and an observability bucket's location cannot be changed. A wrong location is recorded as a dated residency exception instead; the project does not emit traces before 16 or 18, so the exposure is nil until then. Confirm `REGION` is `europe-west1` and `P_ID` is this row's project before running the POST.
+- **EVIDENCE:** The REST response body and the list output as `<date>-CP-1.8-${P_VAR}-trace-bucket-v1` (the access token is never written to the record: `gcloud auth print-access-token` is substituted inside the command and appears in no output). TISAX 7.1 (residency). Closes X-RQB-03's `_Trace` half for this project.
 
 ### CP-1.9 Create the project budget
 
@@ -397,7 +427,7 @@ gcloud billing budgets create --billing-account="$BILLING_ACCOUNT_ID" --display-
 gcloud billing budgets list --billing-account="$BILLING_ACCOUNT_ID" --billing-project="$CICD_PROJECT" --filter="displayName=${P_ID}-budget" --format="yaml(displayName,amount,budgetFilter.projects,thresholdRules)"
 ```
 
-  One budget; `budgetFilter.projects` is `projects/<project number>` (the API stores the number although the create takes the id; *Assumption:* read back as the number) for this project only, never empty (an empty filter scopes the whole account); four threshold rules.
+  One budget; four threshold rules; and `budgetFilter.projects` holds exactly one entry for this project and is **never empty** — an empty filter scopes the budget to the whole billing account, which is the real failure this check exists to catch. Accept the entry as either `projects/<id>` or `projects/<number>`: the documented form is the id ("Set of projects in the form `projects/{project_id}`", `gcloud billing budgets create` reference, read 2026-09-15), and a read-back of the project number is the API's own normalisation, not a failure. Whichever form comes back, resolve it and confirm it names this project and no other.
 - **ROLLBACK:** `gcloud billing budgets delete <BUDGET_ID> --billing-account="$BILLING_ACCOUNT_ID" --billing-project="$CICD_PROJECT"`.
 - **EVIDENCE:** The YAML as `<date>-CP-1.9-${P_VAR}-budget-v1`. TISAX 1.3.3. Closes S023's budget contract for the core projects (with 07).
 
@@ -484,24 +514,37 @@ gcloud storage buckets describe "$TF_STATE_BUCKET" --format="default(location,un
 - **ROLLBACK:** `gcloud storage buckets delete "$TF_STATE_BUCKET"` while empty. A deleted bucket name can be claimed by anyone, so do not delete it once 17 refers to it.
 - **EVIDENCE:** The describe output as `<date>-CP-2.1-tf-state-bucket-v1`. TISAX 5.3 (continuity), 7.1 (residency). EU AI Act E-05.
 
-### CP-2.2 Add the unlocked 30-day retention policy and prove state writes still work
+### CP-2.2 Test 09 §3.4's retention policy, then clear it
 
 - **WHO:** Platform owner.
 - **WHERE:** Shell.
 - **ACTION:**
 
 ```bash
+need TF_STATE_BUCKET
 gcloud storage buckets update "$TF_STATE_BUCKET" --retention-period=30d
 printf 'v1\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate"
 printf 'v2\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate"
 printf 'lock\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tflock"
 gcloud storage rm "${TF_STATE_BUCKET}/cp-2-2-test/default.tflock"
+gcloud storage ls --all-versions "${TF_STATE_BUCKET}/cp-2-2-test/"
+gcloud storage buckets update "$TF_STATE_BUCKET" --clear-retention-period
 ```
 
-  09 §3.4 asks for "a retention policy (unlocked, 30 days — locking would block state rewrites)". Google's Bucket Lock page (read 2026-09-15) says objects under a retention policy "can only be deleted or replaced once their age is greater than the retention period", locked or not, and also that "a live object version that has a retention expiration date in the future can still be made noncurrent" in a versioned bucket. So the design's reason is wrong (an unlocked policy blocks the same operations), and whether Terraform's overwrite of the state file and its create-and-delete of the lock file still work depends on versioning. The four test writes above answer that before any state exists.
-- **VERIFY:** All four commands succeed. `gcloud storage ls --all-versions "${TF_STATE_BUCKET}/cp-2-2-test/"` lists two generations of `default.tfstate` and one noncurrent `default.tflock`. `gcloud storage buckets describe "$TF_STATE_BUCKET" --format="default(retention_policy)"` shows a 2592000-second period and no `isLocked: true`. If any write or the delete fails with `retentionPolicyNotMet`, run the ROLLBACK, record the failure, and hand the choice (versioning plus soft delete only) to 17 as a correction of 09 §3.4. **Never lock this policy.**
-- **ROLLBACK:** `gcloud storage buckets update "$TF_STATE_BUCKET" --clear-retention-period` (possible because the policy is not locked). The test objects stay until their age passes 30 days; they are harmless.
-- **EVIDENCE:** Command output and the version listing as `<date>-CP-2.2-tf-state-retention-test-v1`. TISAX 5.3, 5.2.1. Records a correction to 09 §3.4's wording for 17.
+  Read the last line before running the block: **the step ends with no retention policy on the state bucket, and that is the intended end state, not a fallback.** 09 §3.4 asks for "a retention policy (unlocked, 30 days — locking would block state rewrites)". Its reason is wrong twice over. Google's Bucket Lock page (read 2026-09-15) says that under a retention policy, locked or not, "Attempts to delete or replace objects whose age is less than the retention period fail with a `403 - retentionPolicyNotMet` error" — so the documented outcome of lines 3 and 5 of the block (the replace of `default.tfstate` and the delete of a seconds-old `default.tflock`) is **failure**, and an unlocked policy blocks exactly what a locked one blocks. The same page's versioning sentence — "In buckets that use Object Versioning, a live object version that has a retention expiration date in the future can still be made noncurrent" — covers only the noncurrent transition, and is the one reason the two operations might instead succeed here. Rather than leave a policy in place whose behaviour under Terraform is settled by a sentence that could be read either way, the step runs the test for the record and then clears the policy, so that every state write from 17 onwards is protected by versioning plus the 30-day soft delete of CP-2.1 and by nothing that can refuse a write. **This policy is never locked, and never re-applied.**
+- **VERIFY:** The two writes of `v1` and of `default.tflock` succeed (new objects, not replacements). The **documented result** of the replace (`v2`) and of the `rm` is `403 - retentionPolicyNotMet`; record whichever occurs verbatim. Then, after the last line:
+
+```bash
+gcloud storage buckets describe "$TF_STATE_BUCKET" --format="default(retention_policy,versioning_enabled,soft_delete_policy)"
+printf 'v3\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate"
+gcloud storage rm "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate"
+```
+
+  `retention_policy` is absent or empty; `versioning_enabled: true`; the soft delete policy is 2592000 seconds. The post-clear replace and delete both succeed — that is the proof that Terraform's state rewrite and lock-file delete work on this bucket. Pass condition: the bucket ends with versioning and soft delete and **no** retention policy, and the two post-clear operations succeeded. Record which of the two branches the in-policy test took:
+  - `retentionPolicyNotMet` on either operation — the documented branch. `BD-10-7` item (8) reads `retention policy refused the state rewrite; cleared`, and 17 corrects 09 §3.4 to "versioning plus 30-day soft delete, no retention policy".
+  - all four succeeded — the versioning-noncurrent branch. The policy is still cleared (it protects nothing Terraform needs and would refuse a rewrite the day versioning is ever turned off), `BD-10-7` item (8) reads `versioning absorbed the rewrite; policy cleared anyway`, and 17 makes the same correction to 09 §3.4 with that note.
+- **ROLLBACK:** Nothing to undo: the step's own last line removes the only change it makes to the bucket's configuration, and it is possible because the policy was never locked. The test objects under `cp-2-2-test/` are removed by the VERIFY block; any generation left behind is harmless and is cleaned up by 42. If the clear is somehow refused, stop: a locked policy on the state bucket cannot be removed, and 17 must be told before any state is written.
+- **EVIDENCE:** The command output including the error text of any `retentionPolicyNotMet`, the version listing, and the post-clear describe as `<date>-CP-2.2-tf-state-retention-test-v1`. TISAX 5.3, 5.2.1. Records the correction to 09 §3.4 for 17 as `BD-10-7` item (8).
 
 ### CP-2.3 Create the shared Artifact Registry repository `platform`
 
@@ -554,7 +597,15 @@ gcloud artifacts repositories add-iam-policy-binding platform --location="$REGIO
 gcloud projects add-iam-policy-binding "$CICD_PROJECT" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/logging.logWriter"
 ```
 
-  The bucket name is the one Cloud Build uses with `REGIONAL_USER_OWNED_BUCKET`: "`gs://[PROJECT_ID]_[builds/region]_cloudbuild/source`" (`gcloud builds submit` reference, read 2026-09-15). Pre-creating it keeps its location and settings ours. A user-specified build account needs `logging.logWriter` to write build logs (configure-user-specified-service-accounts page, read 2026-09-15), and Storage access to the staged source (S022 verdict). `artifactregistry.writer` is granted on the `platform` repository only, never on the project (09 §1.3 "writers").
+  The bucket name is the one Cloud Build uses for **source staging** with `REGIONAL_USER_OWNED_BUCKET`: "`gs://[PROJECT_ID]_[builds/region]_cloudbuild/source`" (`gcloud builds submit` reference, read 2026-09-15). Pre-creating it keeps its location and settings ours. A user-specified build account needs `logging.logWriter` to write build logs (configure-user-specified-service-accounts page, read 2026-09-15), and Storage access to the staged source (S022 verdict). `artifactregistry.writer` is granted on the `platform` repository only, never on the project (09 §1.3 "writers").
+
+  The same flag also changes the **logs** default, to a different bucket: "`gs://[PROJECT_NUMBER]-[builds/region]-cloudbuild-logs`" (same reference). This file's builds set `options.logging: CLOUD_LOGGING_ONLY` (CP-3.4, CP-3.5), so logs go to Cloud Logging and that bucket should never be needed. If CP-3.5's bucket list shows it anyway, it is Cloud Build's, not a US bucket, and it is regional: accept it, and grant the build identity access to it so a build cannot fail on log upload:
+
+```bash
+gcloud storage buckets add-iam-policy-binding "gs://${CICD_PROJECT_NUMBER}-${REGION}-cloudbuild-logs" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/storage.objectUser"
+```
+
+  Run that only if the bucket exists (`need CICD_PROJECT_NUMBER` first, from CP-1.2), and record it in `BD-10-7`.
 - **VERIFY:**
 
 ```bash
@@ -595,8 +646,8 @@ mkdir -p "${PLATFORM_REPO_DIR}/ci"
 cat > "${PLATFORM_REPO_DIR}/ci/BUILD-CONTRACT.md" <<'EOF'
 # Build contract (file 10, CP-3.4)
 - Builds run only in CICD_PROJECT, never in an agent, controller or improver project (S006).
-- gcloud builds submit always passes: --project, --region=europe-west1, --default-buckets-behavior=regional-user-owned-bucket, --service-account=projects/CICD_PROJECT/serviceAccounts/<named build account>.
-- Every cloudbuild.yaml sets options.logging: CLOUD_LOGGING_ONLY and options.defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET.
+- gcloud builds submit always passes: --project, --region=europe-west1, --default-buckets-behavior=regional-user-owned-bucket, --service-account=projects/CICD_PROJECT/serviceAccounts/<named build account>. That flag is for the SOURCE staging bucket (gs://[PROJECT_ID]_europe-west1_cloudbuild/source), pre-created in CP-3.2.
+- Every cloudbuild.yaml sets options.logging: CLOUD_LOGGING_ONLY, and sets no options.defaultLogsBucketBehavior. The two are alternatives, not a pair: with CLOUD_LOGGING_ONLY the build writes no logs bucket at all, so naming a logs-bucket behaviour alongside it is contradictory. A build that must keep a logs bucket instead drops CLOUD_LOGGING_ONLY, sets defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET, and its build account is granted roles/storage.objectUser on gs://[PROJECT_NUMBER]-europe-west1-cloudbuild-logs before the first run.
 - Every trigger names its service account; no build uses the Compute Engine default account.
 - Images are pushed through the images: field to Artifact Registry in europe-west1, and deployed by digest (09 §1.2, §1.5).
 EOF
@@ -630,23 +681,27 @@ images:
 - '${AR_PLATFORM}/cp-3-5-smoke:${SMOKE_TAG}'
 options:
   logging: CLOUD_LOGGING_ONLY
-  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
   requestedVerifyOption: VERIFIED
 EOF
-gcloud builds submit "$SMOKE" --config="${SMOKE}/cloudbuild.yaml" --region="$REGION" --default-buckets-behavior=regional-user-owned-bucket --service-account="projects/${CICD_PROJECT}/serviceAccounts/${SA_CI_BUILD}" --project="$CICD_PROJECT"
+BUILD_ID="$(gcloud builds submit "$SMOKE" --config="${SMOKE}/cloudbuild.yaml" --region="$REGION" --default-buckets-behavior=regional-user-owned-bucket --service-account="projects/${CICD_PROJECT}/serviceAccounts/${SA_CI_BUILD}" --project="$CICD_PROJECT" --format='value(id)')"
+printf 'BUILD_ID=%s\n' "$BUILD_ID"
 ```
 
-  `requestedVerifyOption: VERIFIED` is what makes Cloud Build produce provenance and the `built-by-cloud-build` attestation when a region is set (09 §1.2). The builder image is pulled from Google's `gcr.io/cloud-builders`; the virtual repositories that will be the only pull path (09 §1.3) do not exist yet, recorded as a deviation for 18.
+  `options.logging: CLOUD_LOGGING_ONLY` is set **alone**: with it the build writes no logs bucket, so `defaultLogsBucketBehavior` (which names one) would be a contradictory second setting in the same block. `--default-buckets-behavior=regional-user-owned-bucket` stays on the submit, where it governs the *source* staging bucket pre-created in CP-3.2. `requestedVerifyOption: VERIFIED` is what makes Cloud Build produce provenance and the `built-by-cloud-build` attestation when a region is set (09 §1.2). The builder image is pulled from Google's `gcr.io/cloud-builders`; the virtual repositories that will be the only pull path (09 §1.3) do not exist yet, recorded as a deviation for 18.
+
+  `BUILD_ID` is captured **from the submit itself**, never from `gcloud builds list --limit=1`: that list is ordered by create time and carries no link to this invocation, so a retried submit, a concurrent build, or a build another operator started in the same sitting would be described instead and the evidence would belong to a different build. *Assumption:* the synchronous submit honours the global `--format` on the returned Build resource; if it prints nothing, re-run with `--async --format='value(id)'`, record that id, and poll `gcloud builds describe` until the status is terminal.
 - **VERIFY:**
 
 ```bash
-BUILD_ID="$(gcloud builds list --region="$REGION" --project="$CICD_PROJECT" --limit=1 --format='value(id)')"
-gcloud builds describe "$BUILD_ID" --region="$REGION" --project="$CICD_PROJECT" --format="yaml(status,serviceAccount,options.logging,options.defaultLogsBucketBehavior,source.storageSource.bucket,results.images)"
+need BUILD_ID
+gcloud builds describe "$BUILD_ID" --region="$REGION" --project="$CICD_PROJECT" --format="yaml(id,status,serviceAccount,options.logging,source.storageSource.bucket,results.images)"
 gcloud storage buckets list --project="$CICD_PROJECT" --format="value(name,location)"
 gcloud artifacts docker images list "$AR_PLATFORM" --include-tags --format="value(package,tags,version)"
 ```
 
-  `status: SUCCESS`; `serviceAccount` ends `serviceAccounts/platform-build@<CICD_PROJECT>.iam.gserviceaccount.com`; logging `CLOUD_LOGGING_ONLY`; the source bucket is `<CICD_PROJECT>_europe-west1_cloudbuild`; the image is listed. The bucket list shows only the state bucket and `<CICD_PROJECT>_europe-west1_cloudbuild`, both `EUROPE-WEST1`: no `<CICD_PROJECT>_cloudbuild` US bucket exists. This is S022's failure scenario, proven absent.
+  `id` equals the `BUILD_ID` the submit printed; `status: SUCCESS`; `serviceAccount` ends `serviceAccounts/platform-build@<CICD_PROJECT>.iam.gserviceaccount.com`; logging `CLOUD_LOGGING_ONLY`; the source bucket is `<CICD_PROJECT>_europe-west1_cloudbuild`; the image is listed.
+
+  The bucket list is checked by name, not by count. Expected: the state bucket, `<CICD_PROJECT>_europe-west1_cloudbuild`, and — permitted, though `CLOUD_LOGGING_ONLY` should prevent it — `<CICD_PROJECT_NUMBER>-europe-west1-cloudbuild-logs`, the regional logs bucket the `--default-buckets-behavior` flag names. Every bucket listed is `EUROPE-WEST1`. The pass condition is that **no `<CICD_PROJECT>_cloudbuild` bucket exists** (the US source staging bucket of S022's failure scenario) and no bucket is outside `EUROPE-WEST1`. If the logs bucket is present, run CP-3.2's conditional `objectUser` grant on it now and record it in `BD-10-7`; any other unexpected bucket stops the step until it is explained.
 - **ROLLBACK:** Delete the smoke image (the step's own clean-up, run after VERIFY):
 
 ```bash
@@ -677,8 +732,15 @@ gh api "repos/${REPO_PATH}" --jq '"repo_id=\(.id) owner_id=\(.owner.id) default_
 glab api "projects/<URL-encoded group%2Frepository>" | jq -r '"project_id=\(.id) namespace_id=\(.namespace.id) default_branch=\(.default_branch)"'
 ```
 
-  Record the two numbers in the shell as `WIF_REPO_ID` and `WIF_OWNER_ID` (local variables of this sitting; they are public identifiers, not secrets, and CP-4.3's provider stores them). Google recommends numeric ids over names "because names can be re-registered" (02 §3.4 citing the deployment-pipelines page).
-- **VERIFY:** Both values are digit strings; `default_branch` is `main`; the repository shows branch protection on `main` requiring two reviews (`gh api "repos/${REPO_PATH}/branches/main/protection" --jq '.required_pull_request_reviews.required_approving_review_count'` prints `2` on GitHub; on GitLab read **Settings > Repository > Protected branches** and the project's merge request approval rules). `GIT_OIDC_ISSUER` is `https://token.actions.githubusercontent.com` for GitHub (the issuer in GitHub's OIDC reference, read 2026-09-15; Google's page writes it with a trailing slash) or `https://gitlab.com` for GitLab SaaS. If the host is Azure DevOps or HCP Terraform, stop: this file gives no provider form for them, and 03 is re-opened.
+  Write the two numbers into the variables file, not just into this shell:
+
+```bash
+penv_set WIF_REPO_ID "<repo_id or project_id read above>"
+penv_set WIF_OWNER_ID "<owner_id or namespace_id read above>"
+```
+
+  They are public identifiers, not secrets — the provider created in CP-4.3 stores them in an attribute condition anyone with `iam.viewer` can read — and CP-4.3 and CP-5.2 consume them two and three steps later, so keeping them as variables of one sitting would break the file's own resume rule: a sitting cut after CP-4.1 would resume into a `need WIF_REPO_ID` failure with no instruction to go back to the git host. `penv_set` refuses a different value for a name already written, so a resumed sitting that re-runs CP-4.1 also proves the ids have not changed under the repository. Google recommends numeric ids over names "because names can be re-registered" (02 §3.4 citing the deployment-pipelines page).
+- **VERIFY:** `grep -E '^export (WIF_REPO_ID|WIF_OWNER_ID)=' "$PLATFORM_ENV_FILE"` prints exactly two lines. Both values are digit strings; `default_branch` is `main`; the repository shows branch protection on `main` requiring two reviews (`gh api "repos/${REPO_PATH}/branches/main/protection" --jq '.required_pull_request_reviews.required_approving_review_count'` prints `2` on GitHub; on GitLab read **Settings > Repository > Protected branches** and the project's merge request approval rules). `GIT_OIDC_ISSUER` is `https://token.actions.githubusercontent.com` for GitHub (the issuer in GitHub's OIDC reference, read 2026-09-15; Google's page writes it with a trailing slash) or `https://gitlab.com` for GitLab SaaS. If the host is Azure DevOps or HCP Terraform, stop: this file gives no provider form for them, and 03 is re-opened.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** The id output and the protection read as `<date>-CP-4.1-repo-ids-v1`; the path of the signed P22/SD-14 record. TISAX 5.2.1 (change control on the source of infrastructure). Closes S051 for the WIF half.
 
@@ -797,7 +859,7 @@ jobs:
 
   The inputs `workload_identity_provider` and `service_account`, the `id-token: write` permission and the v3 major version are from the action's README (read 2026-09-15); pinning to a commit SHA instead of the tag is the supply-chain rule of 09 §1.7. The three values in angle brackets are identifiers, not secrets. Merge by pull request, then on the host: **Actions > wif-smoke > Run workflow**, branch `main`. Then create a branch `cp-5-3-negative` from `main` and run the same workflow on that branch.
   GitLab SaaS: a job with `id_tokens: GCP_ID_TOKEN: aud: "https://iam.googleapis.com/<WIF_PROVIDER>"` that writes the token to a file, runs `gcloud iam workload-identity-pools create-cred-config "<WIF_PROVIDER>" --service-account="<SA_FACTORY_APPLY>" --credential-source-file=<token file> --output-file=<cred file>`, `gcloud auth login --cred-file=<cred file>` and the same `gcloud storage ls`; *Assumption:* the job form follows GitLab's ID-token page and the `create-cred-config` reference (both read 2026-09-15); run it as a manual job on `main`, then on the negative branch.
-- **VERIFY:** The `main` run succeeds and lists `cp-2-2-test/`. The branch run fails at the token exchange (an STS error saying the credential is rejected by the attribute condition). Then read the Data Access proof that the exchange happened only once:
+- **VERIFY:** The `main` run succeeds: the `gcloud storage ls` step exits 0 against the state bucket, which proves the exchange and the `objectAdmin` grant. It lists nothing, because CP-2.2's test objects were removed there and no state exists before 17; an empty listing with exit 0 is the pass, a permission or credential error is the failure. The branch run fails at the token exchange (an STS error saying the credential is rejected by the attribute condition). Then read the Data Access proof that the exchange happened only once:
 
 ```bash
 gcloud logging read 'protoPayload.serviceName="sts.googleapis.com"' --project="$CICD_PROJECT" --freshness=1h --format="table(timestamp,protoPayload.methodName,protoPayload.status.code)"
@@ -880,7 +942,13 @@ penv_set SA_K7_EXECUTOR "k7-executor@${CORE_PROJECT}.iam.gserviceaccount.com"
 ```
 
   02 §3.6 lists the platform's service account as `k7-kill@`; 04 §9, topology row 35 and plan §5 name `k7-executor@`, which is used here. 02 §3.6 is corrected by 17's rename pass. No role is granted: `platform-drift@`'s folder-level `iam.securityReviewer` and P73 roles are file 16's (with the security reviewer's signature), and `k7-executor@` holds nothing standing by design; it is the requester of `ent-k7-executor` (12).
-- **VERIFY:** For each account: `gcloud iam service-accounts get-iam-policy <email> --project="$CORE_PROJECT" --format=json` shows no bindings; `gcloud iam service-accounts keys list --iam-account=<email> --managed-by=user --project="$CORE_PROJECT"` prints nothing. `gcloud projects get-iam-policy "$CORE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:(platform-drift@ OR k7-executor@)" --format="value(bindings.role)"` prints nothing.
+- **VERIFY:** For each account: `gcloud iam service-accounts get-iam-policy <email> --project="$CORE_PROJECT" --format=json` shows no bindings; `gcloud iam service-accounts keys list --iam-account=<email> --managed-by=user --project="$CORE_PROJECT"` prints nothing. Then prove neither account holds a project role:
+
+```bash
+gcloud projects get-iam-policy "$CORE_PROJECT" --format=json | jq -r --arg d "$SA_PLATFORM_DRIFT" --arg k "$SA_K7_EXECUTOR" '.bindings[] | .role as $r | .members[] | select(. == "serviceAccount:\($d)" or . == "serviceAccount:\($k)") | "\($r) \(.)"'
+```
+
+  This prints nothing. The check is done in `jq` on the full member string, not with `--filter="bindings.members:(platform-drift@ OR k7-executor@)"`: in the gcloud filter grammar `:` is the has operator and matches whole words, so an `@`-suffixed fragment does not match a full member string such as `serviceAccount:platform-drift@<CORE_PROJECT>.iam.gserviceaccount.com`, and the check would print nothing whether or not a role were held (filters topic, read 2026-09-15). To prove the expression is live rather than vacuous, run it once with `--arg d "$SA_1_ADMIN"` and `serviceAccount:` replaced by `user:` in the `select`: it must then print the Owner line. Restore the command before recording its output.
 - **ROLLBACK:** `gcloud iam service-accounts delete <email> --project="$CORE_PROJECT"` before 12 names them.
 - **EVIDENCE:** Outputs as `<date>-CP-6.1-core-identities-v1`. TISAX 4.1.1. EU AI Act E-08 (K7 oversight lever's identity exists).
 
@@ -976,11 +1044,13 @@ for P in "$CICD_PROJECT" "$CORE_PROJECT" "$LOGGING_PROJECT" "$KMS_PROJECT" "$VAL
   gcloud projects describe "$P" --format="value(parent.id,labels.tier,lifecycleState)"
   gcloud iam service-accounts list --project="$P" --format="value(email)"
   for SA in $(gcloud iam service-accounts list --project="$P" --format="value(email)"); do gcloud iam service-accounts keys list --iam-account="$SA" --managed-by=user --project="$P" --format="value(name)"; done
-  gcloud projects get-iam-policy "$P" --flatten="bindings[].members" --filter="bindings.members:(user: OR group: OR domain: OR allUsers OR allAuthenticatedUsers)" --format="table(bindings.role,bindings.members)"
+  gcloud projects get-iam-policy "$P" --format=json | jq -r '.bindings[] | .role as $r | .members[] | select(startswith("user:") or startswith("group:") or startswith("domain:") or . == "allUsers" or . == "allAuthenticatedUsers") | "\($r) \(.)"'
 done
 ```
 
-- **VERIFY:** Every project: parent `FLD_PLATFORM_CORE`, tier `core`, `ACTIVE`. Service accounts: `CICD_PROJECT` holds exactly `platform-build@`, `factory-apply@`, `factory-groups@`, `walle-deployer@`; `CORE_PROJECT` holds exactly `platform-drift@`, `k7-executor@`; the others hold none (Google-managed service agents do not appear in this list). No user-managed key anywhere. The only human member in any project policy is `user:<SA_1_ADMIN>` with `roles/owner`; no `domain:`, `allUsers` or `allAuthenticatedUsers`.
+  The member test is done in `jq`, not in a gcloud `--filter`. `--filter="bindings.members:(user: OR group: OR domain: OR ...)"` does not work: in the gcloud filter grammar `:` is the has operator and matches whole words, so `user:` inside a parenthesised value list is an operator character in an unquoted value with nothing on its right, and the expression either fails to parse or matches nothing (filters topic, read 2026-09-15). A sweep that is meant to **prove** no human principal holds a project role must not be able to pass vacuously. `jq`'s `startswith` is exact prefix matching on the full member string and is the form 12 PA-9.1 already uses for the same check. A `--filter="bindings.members ~ ^(user|group|domain):"` regex comparison is the gcloud-only alternative if `jq` is unavailable, with `allUsers` and `allAuthenticatedUsers` checked separately.
+
+- **VERIFY:** Every project: parent `FLD_PLATFORM_CORE`, tier `core`, `ACTIVE`. Service accounts: `CICD_PROJECT` holds exactly `platform-build@`, `factory-apply@`, `factory-groups@`, `walle-deployer@`; `CORE_PROJECT` holds exactly `platform-drift@`, `k7-executor@`; the others hold none (Google-managed service agents do not appear in this list). No user-managed key anywhere. The `jq` line prints exactly one line per project — `roles/owner user:<SA_1_ADMIN>` — and nothing else: no other `user:`, no `group:`, no `domain:`, no `allUsers`, no `allAuthenticatedUsers`. An empty output from the `jq` line is a **failure**, not a pass: the creator's Owner is known to be there (CP-1.11), so an empty result means the read or the expression is wrong, and the step is re-run before anything is concluded from it.
 - **ROLLBACK:** Read only; any surplus is removed and the sweep re-run.
 - **EVIDENCE:** Output as `<date>-CP-8.1-core-sweep-v1`. TISAX 4.2.1, 1.3.1.
 
@@ -994,13 +1064,14 @@ done
 need DEVIATION_REGISTER BOOTSTRAP_EXCEPTION_EXPIRY SA_1_ADMIN CICD_PROJECT CORE_PROJECT LOGGING_PROJECT KMS_PROJECT VALIDATOR_PROJECT
 d=$(date -u +%Y-%m-%d)
 printf '| BD-10-6 | %s | 10 CP-1.11, CP-8.1 | EXC | creator roles/owner kept on the five core projects (SD-01 exception of 06) | projects %s, %s, %s, %s, %s | CP-1.11 IAM snapshots | user:%s roles/owner on each; residual: the Owner of CICD_PROJECT can impersonate factory-apply@, factory-groups@ (Groups Admin) and walle-deployer@, no escalation beyond the super admin already held | BUILD_LOG_DIR/records/<date>-CP-1.11-*-iam-v1.json | not removed: 11 needs it (key rings, attestor, custodian dataset); removed in 12 after ENT_PROJECT_REPAIR_CORE is proven | none: SD-01; second human read the row at CP-7.4 | 12, no later than %s | open |\n' "$d" "$CICD_PROJECT" "$CORE_PROJECT" "$LOGGING_PROJECT" "$KMS_PROJECT" "$VALIDATOR_PROJECT" "$SA_1_ADMIN" "$BOOTSTRAP_EXCEPTION_EXPIRY" >> "$DEVIATION_REGISTER"
-printf '| BD-10-7 | %s | 10 CP-1.6 to CP-3.5 | DEV | recorded differences from the design during the core hand run | the five core projects | CP-1.6 services files; CP-2.2 test; CP-3.5 build | (1) observability enabled though not on the 02 4.2 core list (13 adds it); (2) no _Trace in KMS_PROJECT (42 reviews); (3) display names differ from 02 3.6 pattern, which the Project resource refuses (17 corrects 02); (4) recovery_class values r-d, r-k (17 corrects 02); (5) label keys used: <underscore or hyphen>; (6) dependency services <list or none> (13); (7) smoke build pulled gcr.io/cloud-builders/docker directly (18 builds virtual repositories); (8) 09 3.4 retention-policy reason corrected by the CP-2.2 result <passed or cleared> (17); (9) budgets email default recipients until 15; (10) KMS_PROJECT contacts <project or folder fallback> | as inputs | n/a | none: SD-01 | each item closed by the file named | open |\n' "$d" >> "$DEVIATION_REGISTER"
+printf '| BD-10-7 | %s | 10 CP-1.6 to CP-3.5 | DEV | recorded differences from the design during the core hand run | the five core projects | CP-1.6 services files; CP-1.8 REST response; CP-2.2 test; CP-3.5 build | (1) observability enabled though not on the 02 4.2 core list (13 adds it); (2) no _Trace in KMS_PROJECT (42 reviews); (3) display names differ from 02 3.6 pattern, which the Project resource refuses (17 corrects 02); (4) recovery_class values r-d, r-k (17 corrects 02); (5) label keys used: <underscore or hyphen>; (6) dependency services <list or none>, forced disables <list or none> and the dependants each took with it (13); (7) smoke build pulled gcr.io/cloud-builders/docker directly (18 builds virtual repositories); (8) 09 3.4 retention policy tested then cleared: <retentionPolicyNotMet, the documented branch | versioning absorbed the rewrite>; state bucket ends with versioning plus 30-day soft delete and no retention policy (17 corrects 09 3.4); (9) budgets email default recipients until 15; (10) KMS_PROJECT contacts <project or folder fallback>; (11) cloudkms enabled on CICD_PROJECT and VALIDATOR_PROJECT, not only KMS_PROJECT, because 11 KV-5.1 puts the supply-chain key ring in CICD_PROJECT and 11 KV-8.6 asks Autokey against VALIDATOR_PROJECT (13 adds both to the core allow-list); (12) cloudresourcemanager added to KMS_PROJECT, amending 02 4.2 P118 cloudkms-only, because CP-1.3, CP-1.5, CP-1.11, CP-1.12 and CP-8.1 call Resource Manager against it and it is not enabled by default (13 amends the allow-list); (13) _Trace created by REST POST to observability.googleapis.com, no gcloud create command exists (42 re-checks whether one has shipped); (14) regional Cloud Build logs bucket <present and granted to SA_CI_BUILD | absent> | as inputs | n/a | none: SD-01 | each item closed by the file named | open |\n' "$d" >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" commit -m "registers: BD-10-6, BD-10-7 (setup 10)"
 ```
 
-  Then add to README's re-run index, if not already there: "12: remove the creator's Owner on the five core projects after `ENT_PROJECT_REPAIR_CORE`; close BD-10-6; lien removal on a core project becomes an `ENT_PROJECT_REPAIR_CORE` act"; "13: `observability` on the core allow-list and any CP-1.6 dependency; propose `constraints/cloudbuild.disableCreateDefaultServiceAccount` at `fld-platform-core`; B19 value equals `GIT_OIDC_ISSUER` as used in CP-4.3"; "15 part A: add the `platform-budgets` channel to the five core budgets"; "17: `factory-apply@` folder roles and `roles/cloudbuild.builds.builder` at the factory's first run"; "18: virtual and remote repositories before the first image; `SA_CI_BUILD` impersonation by the pipeline".
-- **VERIFY:** `grep -c '^| BD-10-' "$DEVIATION_REGISTER"` prints `7`, and both commits are in `BUILD_LOG_DIR`. `BD-10-6` names an end condition and a date. The README re-run index holds the five lines above.
+  Then add to README's re-run index, if not already there: "12: remove the creator's Owner on the five core projects after `ENT_PROJECT_REPAIR_CORE`; close BD-10-6; lien removal on a core project becomes an `ENT_PROJECT_REPAIR_CORE` act"; "13: `observability` on the core allow-list and any CP-1.6 dependency; `cloudkms` on the core allow-list for `CICD_PROJECT` and `VALIDATOR_PROJECT`, and `cloudresourcemanager` for `KMS_PROJECT`, amending 02 §4.2's P118 `cloudkms`-only row; propose `constraints/cloudbuild.disableCreateDefaultServiceAccount` at `fld-platform-core`; B19 value equals `GIT_OIDC_ISSUER` as used in CP-4.3";
+"11: `cloudkms` is already enabled on `KMS_PROJECT`, `CICD_PROJECT` and `VALIDATOR_PROJECT` by CP-1.6, so KV-1.1 checks it as a precondition and stops if it is off, rather than enabling it as a remedy"; "15 part A: add the `platform-budgets` channel to the five core budgets"; "17: `factory-apply@` folder roles and `roles/cloudbuild.builds.builder` at the factory's first run"; "18: virtual and remote repositories before the first image; `SA_CI_BUILD` impersonation by the pipeline".
+- **VERIFY:** `grep -c '^| BD-10-' "$DEVIATION_REGISTER"` prints `7`, and both commits are in `BUILD_LOG_DIR`. `BD-10-6` names an end condition and a date. `BD-10-7` has no `<...>` placeholder left unreplaced (`grep '^| BD-10-7 |' "$DEVIATION_REGISTER" | grep -c '<'` prints `0`). The README re-run index holds the six lines above.
 - **ROLLBACK:** Append-only: a superseding row, never an edit.
 - **EVIDENCE:** The commits. E-xx: E-05. TISAX 1.4.1 (deviation record), 4.1.3. Closes S018 for this file's scope.
 
@@ -1042,16 +1113,16 @@ These are parts of the design's `platform-core` and `CICD_PROJECT` rows that thi
 
 - [ ] Five projects under `fld-platform-core` with the signed ids; `CICD_PROJECT`, `CORE_PROJECT`, `LOGGING_PROJECT`, `KMS_PROJECT`, `VALIDATOR_PROJECT` and their `_NUMBER` variables set (CP-1.1, CP-1.2).
 - [ ] Each has a deletion lien, a billing link (the linking test passed on `CICD_PROJECT`), ten labels, inherited `agp-tier=core` and `agp-tisax-scope=in` and no project-level tag (CP-1.3 to CP-1.5).
-- [ ] Each enables only its row's services; no `compute.googleapis.com` anywhere; dependencies recorded for 13 (CP-1.6).
+- [ ] Each enables only its row's services, including `cloudkms` on `CICD_PROJECT`, `KMS_PROJECT` and `VALIDATOR_PROJECT` (11 needs all three) and `cloudresourcemanager` on `KMS_PROJECT`; no `compute.googleapis.com` anywhere, or its presence explained and decided with the second human; dependencies and any forced disable recorded for 13 (CP-1.6).
 - [ ] Each routes `_Default` to `default-europe-west1` (30 days), keeps `_Required` in `global`, and the routing test read back (CP-1.7).
-- [ ] `_Trace` exists in `europe-west1` on four projects; `KMS_PROJECT` recorded N/A (CP-1.8).
+- [ ] `_Trace` exists in `europe-west1` on four projects, created by the Observability REST call and read back with `gcloud beta observability buckets list`; `KMS_PROJECT` recorded N/A (CP-1.8).
 - [ ] A 300-per-month budget filtered on each project, four thresholds, created with `--billing-project="$CICD_PROJECT"` (CP-1.9).
 - [ ] Essential Contacts to `platform-owners@` and `platform-security@` (CP-1.10).
 - [ ] IAM snapshot per project: only `sa-1-admin@` Owner plus service agents (CP-1.11); `MOD` rows `BD-10-1` to `BD-10-5` (CP-1.12).
-- [ ] `TF_STATE_BUCKET` in `europe-west1`, uniform access, public access prevention, versioning, 30-day soft delete, unlocked 30-day retention with the write test passed or cleared with a recorded correction (CP-2.1, CP-2.2).
+- [ ] `TF_STATE_BUCKET` in `europe-west1`, uniform access, public access prevention, versioning, 30-day soft delete, and **no retention policy**: 09 §3.4's policy was applied, tested, recorded and cleared, and a post-clear replace and delete both succeeded (CP-2.1, CP-2.2).
 - [ ] `AR_PLATFORM` Docker repository with immutable tags in `europe-west1` (CP-2.3).
-- [ ] `SA_CI_BUILD` with exactly three grants; regional staging bucket; build contract merged; smoke build succeeded as `platform-build@` with no US bucket, image deleted (CP-3.1 to CP-3.5).
-- [ ] `WIF_POOL` `wif-factory` and one `WIF_PROVIDER` with the issuer of 03 and the numeric-id and `main` condition (CP-4.1 to CP-4.3).
+- [ ] `SA_CI_BUILD` with exactly three grants (four if the regional logs bucket exists); regional staging bucket; build contract merged; smoke build identified by the id its own submit returned, succeeded as `platform-build@`, source bucket `<CICD_PROJECT>_europe-west1_cloudbuild`, no `<CICD_PROJECT>_cloudbuild` US bucket, image deleted (CP-3.1 to CP-3.5).
+- [ ] `WIF_POOL` `wif-factory` and one `WIF_PROVIDER` with the issuer of 03 and the numeric-id and `main` condition; `WIF_REPO_ID` and `WIF_OWNER_ID` written to the variables file so a cut sitting can resume (CP-4.1 to CP-4.3).
 - [ ] `SA_FACTORY_APPLY` with `workloadIdentityUser` for the repository and `objectAdmin` on the state bucket only; federation succeeded from `main` and was refused from another branch (CP-5.1 to CP-5.3).
 - [ ] `SA_FACTORY_GROUPS` and `SA_WALLE_DEPLOYER` exist with no bindings and no keys (CP-5.4, CP-5.5).
 - [ ] `factory-apply@` holds Billing Account User and Costs Manager on `BILLING_ACCOUNT_ID`; 07 BA-3.1 closed (CP-5.6).
@@ -1065,9 +1136,9 @@ These are parts of the design's `platform-core` and `CICD_PROJECT` rows that thi
 | File | Needs | Step |
 |---|---|---|
 | 07 | BA-3.1 closed by CP-5.6; the linking-test outcome; the BA-2.3 repeat with `x-goog-user-project` if it was needed | CP-1.4, CP-5.6 |
-| 11 | `KMS_PROJECT` (with `cloudkms`), `VALIDATOR_PROJECT` (with `bigquery`), `CICD_PROJECT` (with `binaryauthorization`, `containeranalysis`); the creator's Owner kept on all three | CP-1, CP-8.2 |
+| 11 | `KMS_PROJECT` (with `cloudresourcemanager`, `cloudkms`), `VALIDATOR_PROJECT` (with `bigquery` and `cloudkms`, for KV-8.6's Autokey key handle), `CICD_PROJECT` (with `binaryauthorization`, `containeranalysis` and `cloudkms`, for KV-5.1's `supply-chain` key ring and KV-5.2's keys); the creator's Owner kept on all three. KV-1.1 reads these as a precondition and stops if any is off; it never enables `cloudkms` itself, because an enable there would be a second bootstrap deviation outside CP-1.6's recorded set and would slip past CP-1.6's "any extra name is disabled" verify | CP-1.6, CP-8.2 |
 | 12 | All five project ids for `ENT_PROJECT_REPAIR_CORE`; `SA_FACTORY_APPLY` (requester of `ent-factory-singleton`); `SA_K7_EXECUTOR` (requester of `ent-k7-executor`); `BD-10-6` to close; the liens | CP-1.2, CP-1.3, CP-5.1, CP-6.1, CP-8.2 |
-| 13 | `GIT_OIDC_ISSUER` exactly as used in the provider (B19); the service dependency list and `observability` for the core allow-list; the Cloud Build default-account proposal; `SA_FACTORY_APPLY` and `SA_PLATFORM_DRIFT` for `pab-core-ci`; the CI principals for the deny policies' exceptions | CP-1.6, CP-3.3, CP-4.3, CP-5.1, CP-6.1 |
+| 13 | `GIT_OIDC_ISSUER` exactly as used in the provider (B19); the service dependency list, `observability`, `cloudkms` on `CICD_PROJECT` and `VALIDATOR_PROJECT`, and `cloudresourcemanager` on `KMS_PROJECT` (the P118 amendment) for the core allow-list; the Cloud Build default-account proposal; `SA_FACTORY_APPLY` and `SA_PLATFORM_DRIFT` for `pab-core-ci`; the CI principals for the deny policies' exceptions | CP-1.6, CP-3.3, CP-4.3, CP-5.1, CP-6.1 |
 | 14 | `LOGGING_PROJECT` with `logging`, `bigquery`, `pubsub`, `storage`; its `_Default` already regional | CP-1 |
 | 15 | `CORE_PROJECT` and `LOGGING_PROJECT` with `monitoring` and `pubsub`; the budgets to attach `platform-budgets` to | CP-1.9 |
 | 16 | `CORE_PROJECT` with `agentregistry`, `apphub`, `run`, `cloudscheduler`, `cloudasset`, `policyanalyzer`; `SA_FACTORY_APPLY` (registry writer); `SA_PLATFORM_DRIFT` (row 36); `ci/BUILD-CONTRACT.md`; `AR_PLATFORM` | CP-1, CP-3.4, CP-5.1, CP-6.1 |
@@ -1092,7 +1163,7 @@ These are parts of the design's `platform-core` and `CICD_PROJECT` rows that thi
 | S049 | major | Closed for this file's scope | `factory-groups@` is created (CP-5.4) and given Groups Admin by a super admin with the second human witnessing and verifying (CP-7.2, CP-7.3), and the roster records it (CP-7.4). `ge-admins@` is created by hand in 06; the GE-5 split is 19. |
 | S051 | major | Closed for this file's scope | The provider is created only after the signed P22/SD-14 record, with the issuer from 03 and the repository's numeric ids read from the host (CP-4.1, CP-4.3). Moving P22's gate is 03's; B19's value is 13's. |
 | S130 | major | Closed | `walle-deployer@` exists in `CICD_PROJECT` and `SA_WALLE_DEPLOYER` is set non-empty before 23 (CP-5.5). 23 guards its grant with `need` and grants before the lock. |
-| X-RQB-03 | major | Closed for this file's scope | Each core project gets a user-defined `europe-west1` bucket receiving `_Default`, `_Required` left global, and an explicit `_Trace` in `europe-west1` (CP-1.7, CP-1.8), with the one recorded exception of `KMS_PROJECT`'s `_Trace`. The folder observability default is 09; agent projects are 17. |
+| X-RQB-03 | major | Closed for this file's scope | Each core project gets a user-defined `europe-west1` bucket receiving `_Default`, `_Required` left global, and an explicit `_Trace` in `europe-west1` created through the Observability REST API — there is no gcloud create command for observability buckets — and read back with `gcloud beta observability buckets list` (CP-1.7, CP-1.8), with the one recorded exception of `KMS_PROJECT`'s `_Trace`. The folder observability default is 09; agent projects are 17. |
 
 No finding assigned to this file is deferred.
 
@@ -1101,9 +1172,11 @@ No finding assigned to this file is deferred.
 - Whether Project label keys may contain underscores (the gcloud reference says yes, the Resource Manager v3 reference regex says no). CP-1.1 settles it with a create that fails safely.
 - Whether `gcloud logging read` accepts `--bucket`, `--location` and `--view` to read a specific bucket (CP-1.7 has a console fallback).
 - Whether the Essential Contacts API needs enabling on the target project as well as on the quota project (CP-1.10).
-- The exact read-back form of `budgetFilter.projects` (number or id) (CP-1.9).
+- The exact read-back form of `budgetFilter.projects` (number or id). The documented create form is `projects/{project_id}`; CP-1.9 accepts either read-back and tests only that the filter names this project and is not empty.
+- The exact `Bucket` body the Observability `projects.locations.buckets.create` method requires; CP-1.8 sends `{}` with `?bucketId=_Trace` and the reference is re-read on the day.
+- Whether the synchronous `gcloud builds submit` honours `--format='value(id)'`; CP-3.5 falls back to `--async` and a poll.
+- Whether a versioned bucket's retention policy lets Terraform's state rewrite through; CP-2.2 tests it and clears the policy either way, so the answer changes only the record, not the end state.
 - Whether a deleted workload identity pool's id is reserved for 30 days (CP-4.2 ROLLBACK).
-- Whether versioning lets Terraform overwrite state and delete its lock file under an unlocked retention policy (CP-2.2 tests it).
 - Whether GitHub's issuer must be written with or without the trailing slash Google's page shows (CP-4.3; CP-5.3's run proves the chosen form).
 - The GitLab job form for WIF (CP-5.3), assembled from the GitLab ID-token and `create-cred-config` pages rather than one Google example.
 - Whether STS token exchanges are visible before 14 turns on Data Access logs (CP-5.3).
@@ -1112,7 +1185,7 @@ No finding assigned to this file is deferred.
 
 ## Sources
 
-Read on 2026-09-15: [gcloud projects create](https://docs.cloud.google.com/sdk/gcloud/reference/projects/create); [Resource Manager v3 Project resource](https://docs.cloud.google.com/resource-manager/reference/rest/v3/projects); [Create and manage projects](https://docs.cloud.google.com/resource-manager/docs/creating-managing-projects); [Project liens](https://docs.cloud.google.com/resource-manager/docs/project-liens); [gcloud billing projects link](https://docs.cloud.google.com/sdk/gcloud/reference/billing/projects/link); [gcloud resource-manager tags bindings list](https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/tags/bindings/list); [Regionalize your project's logs](https://docs.cloud.google.com/logging/docs/regionalized-logs); [gcloud logging buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/buckets/create); [Default resource settings for Logging](https://docs.cloud.google.com/logging/docs/default-settings); [Create observability buckets](https://docs.cloud.google.com/trace/docs/create-observability-buckets); [Observability API](https://docs.cloud.google.com/stackdriver/docs/reference/observability/api/rest); [gcloud essential-contacts create](https://docs.cloud.google.com/sdk/gcloud/reference/essential-contacts/create); [gcloud storage buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/create); [gcloud storage buckets update](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/update); [Object versioning](https://docs.cloud.google.com/storage/docs/using-object-versioning); [Public access prevention](https://docs.cloud.google.com/storage/docs/using-public-access-prevention); [Uniform bucket-level access](https://docs.cloud.google.com/storage/docs/using-uniform-bucket-level-access); [Soft delete](https://docs.cloud.google.com/storage/docs/use-soft-delete); [Bucket Lock](https://docs.cloud.google.com/storage/docs/bucket-lock); [Use retention policies](https://docs.cloud.google.com/storage/docs/using-bucket-lock); [gcloud artifacts repositories create](https://docs.cloud.google.com/sdk/gcloud/reference/artifacts/repositories/create); [Cloud Build default service account change](https://docs.cloud.google.com/build/docs/cloud-build-service-account-updates); [gcloud builds get-default-service-account](https://docs.cloud.google.com/sdk/gcloud/reference/builds/get-default-service-account); [gcloud builds submit](https://docs.cloud.google.com/sdk/gcloud/reference/builds/submit); [Configure user-specified service accounts](https://docs.cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts); [Workload Identity Federation with deployment pipelines](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines); [gcloud iam workload-identity-pools providers create-oidc](https://docs.cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/providers/create-oidc); [gcloud iam workload-identity-pools create-cred-config](https://docs.cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/create-cred-config); [GitHub Actions OIDC reference](https://docs.github.com/en/actions/reference/security/oidc); [GitLab ID token authentication](https://docs.gitlab.com/ci/secrets/id_token_authentication/); [google-github-actions/auth](https://github.com/google-github-actions/auth); [Assign specific admin roles (Workspace Admin Help)](https://knowledge.workspace.google.com/admin/users/assign-specific-admin-roles). Cited through the design pages and review verdicts, not re-read here: the Resource Manager access-control page (creator receives Owner, S018), the storage-overview page (Cloud Run spans and `_Trace`, X-RQB-03), 07's billing sources.
+Read on 2026-09-15: [gcloud projects create](https://docs.cloud.google.com/sdk/gcloud/reference/projects/create); [Resource Manager v3 Project resource](https://docs.cloud.google.com/resource-manager/reference/rest/v3/projects); [Create and manage projects](https://docs.cloud.google.com/resource-manager/docs/creating-managing-projects); [Project liens](https://docs.cloud.google.com/resource-manager/docs/project-liens); [gcloud billing projects link](https://docs.cloud.google.com/sdk/gcloud/reference/billing/projects/link); [gcloud resource-manager tags bindings list](https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/tags/bindings/list); [Regionalize your project's logs](https://docs.cloud.google.com/logging/docs/regionalized-logs); [gcloud logging buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/buckets/create); [Default resource settings for Logging](https://docs.cloud.google.com/logging/docs/default-settings); [Create observability buckets](https://docs.cloud.google.com/trace/docs/create-observability-buckets); [Observability API](https://docs.cloud.google.com/stackdriver/docs/reference/observability/api/rest); [Method: projects.locations.buckets.create](https://docs.cloud.google.com/stackdriver/docs/reference/observability/api/rest/v1/projects.locations.buckets/create); [gcloud beta observability buckets](https://docs.cloud.google.com/sdk/gcloud/reference/beta/observability/buckets/); [gcloud services disable](https://docs.cloud.google.com/sdk/gcloud/reference/services/disable); [Enabled services (default-enabled list)](https://docs.cloud.google.com/service-usage/docs/enabled-service); [Create a key ring](https://docs.cloud.google.com/kms/docs/create-key-ring); [Enable Autokey](https://docs.cloud.google.com/kms/docs/enable-autokey); [gcloud billing budgets create](https://docs.cloud.google.com/sdk/gcloud/reference/billing/budgets/create); [gcloud topic filters](https://docs.cloud.google.com/sdk/gcloud/reference/topic/filters); [gcloud essential-contacts create](https://docs.cloud.google.com/sdk/gcloud/reference/essential-contacts/create); [gcloud storage buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/create); [gcloud storage buckets update](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/update); [Object versioning](https://docs.cloud.google.com/storage/docs/using-object-versioning); [Public access prevention](https://docs.cloud.google.com/storage/docs/using-public-access-prevention); [Uniform bucket-level access](https://docs.cloud.google.com/storage/docs/using-uniform-bucket-level-access); [Soft delete](https://docs.cloud.google.com/storage/docs/use-soft-delete); [Bucket Lock](https://docs.cloud.google.com/storage/docs/bucket-lock); [Use retention policies](https://docs.cloud.google.com/storage/docs/using-bucket-lock); [gcloud artifacts repositories create](https://docs.cloud.google.com/sdk/gcloud/reference/artifacts/repositories/create); [Cloud Build default service account change](https://docs.cloud.google.com/build/docs/cloud-build-service-account-updates); [gcloud builds get-default-service-account](https://docs.cloud.google.com/sdk/gcloud/reference/builds/get-default-service-account); [gcloud builds submit](https://docs.cloud.google.com/sdk/gcloud/reference/builds/submit); [Configure user-specified service accounts](https://docs.cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts); [Workload Identity Federation with deployment pipelines](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines); [gcloud iam workload-identity-pools providers create-oidc](https://docs.cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/providers/create-oidc); [gcloud iam workload-identity-pools create-cred-config](https://docs.cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/create-cred-config); [GitHub Actions OIDC reference](https://docs.github.com/en/actions/reference/security/oidc); [GitLab ID token authentication](https://docs.gitlab.com/ci/secrets/id_token_authentication/); [google-github-actions/auth](https://github.com/google-github-actions/auth); [Assign specific admin roles (Workspace Admin Help)](https://knowledge.workspace.google.com/admin/users/assign-specific-admin-roles). Cited through the design pages and review verdicts, not re-read here: the Resource Manager access-control page (creator receives Owner, S018), the storage-overview page (Cloud Run spans and `_Trace`, X-RQB-03), 07's billing sources.
 
 ## Related
 

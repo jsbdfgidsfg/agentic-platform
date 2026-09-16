@@ -5,7 +5,8 @@
 - Last reviewed: 2026-09-15
 - Last executed: never
 - Stage: review §2 stage 28 pulled forward for part A (Eve's route 1 needs the paging service in file 26), the tail of stage 9 (the SCC notification config and its route), and gate line G2 for part B. Part A runs after file 14 and before file 17; part B waits for P10's contract and only G2 and Tier P wait on it.
-- Step prefix: PS. Steps: 53 (part A 37, part B 16). BLOCKED steps: PS-2.6 (paging audit forwarder code), PS-6.10 (H-3 code), PS-6.11 (SCC notifier code), and every part B step PS-7.1 to PS-8.10 (P10 contract; SIEM rule code for PS-8.2 to PS-8.4; H-2 code for PS-8.6; file 18's K7 job for PS-8.9). PS-5.4 waits on a value (`BUSINESS_HOURS`) if 03 has not set it.
+- Step prefix: PS. Steps: 54 (part A 38, part B 16). BLOCKED steps: PS-2.6 (paging audit forwarder code), PS-6.10 (H-3 code), PS-6.11 (SCC notifier code), and every part B step PS-7.1 to PS-8.10 (P10 contract; SIEM rule code for PS-8.2 to PS-8.4; H-2 code for PS-8.6; file 18's K7 job for PS-8.9). PS-5.4 waits on a value (`BUSINESS_HOURS`) if 03 has not set it.
+- Shell portability: every command in this file runs on either a BSD/macOS or a GNU/Linux workstation. Date arithmetic uses the [13](13-organisation-policies-deny-and-pab.md) OP-3.4 form (`date -u -v+Nd … 2>/dev/null || date -u -d '+N days' …`); `pbpaste` and `pbcopy` are named only as a macOS variant and are never the only path.
 - Replaces: nothing executable existed. It answers review item M3 ([../13-setup-procedure-review.md](../13-setup-procedure-review.md) §3), the "paste yours" channel lines of [../../wall-e/SETUP.md](../../wall-e/SETUP.md) Phase 16, the "witness channels" route of [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md) Phase 10b step 3, and SETUP's G2 line, which only read a SIEM that nothing built.
 - Closes: S003 (the activation-to-page half of SCC and every SIEM, MDR and paging step; the purchase half is [04](04-purchases-and-lead-times.md), the activation [09](09-folders-and-security-command-center.md)), S050 (the Tier C detection route re-scoped to SCC findings routed with a test finding, SIEM rules moved to Tier P; the GE-13 and GE-14 wording and README l.127 are [20](20-gemini-enterprise-gateway-and-tier-c-gate.md)'s half), X-ORG-07 (route 1: the organisation-owned paging service with the second human as parallel recipient, plus email; route 2 is [26](26-eve-reporting-and-witness-export.md) and [27](27-witness-grants-and-alarms.md)), X-ORG-15 (synthetic fixtures with production values, the sandbox export only for live fixtures, the super-administrator correction to 07 F1). §"Findings" at the end says how.
 - Decisions applied (pending signature in [03](03-decisions-and-people.md)): SD-06, SD-08, SD-10, SD-12, SD-13, SD-15; design decisions P92 to P99 of [../07-monitoring-detection-incident-response.md](../07-monitoring-detection-incident-response.md).
@@ -58,14 +59,16 @@ flowchart TD
 
 Part A:
 
-- [ ] File 01 complete: `~/.platform-env` with `need`, `penv_set`, `checkpoint`, `evidence_add`, `exists_or_pending`, `sitting_end`; `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, `DRILL_CALENDAR`, `DEVIATION_REGISTER`, `REGION`, `ORG_ID`, `DOMAIN`.
-- [ ] File 03: `SECOND_HUMAN_EMAIL` set; `INCIDENT_COMMANDER_EMAIL` set (PS-2.7 and PS-2.4's subject escalation wait for a person otherwise); `SECURITY_REVIEWER_EMAIL` set or `*tbd*`; `BUSINESS_TZ` and `BUSINESS_HOURS` set or `*tbd*` (PS-5.4 waits); `PLATFORM_REPO_REMOTE` with CODEOWNERS putting the second human on `/oncall/` (DC-9.4); `SIEM_KIND` recorded. Decision files for SD-08, SD-10, SD-12 and SD-13 exist (signed or recorded pending with the owner's note that part A may proceed).
+- [ ] File 01 complete: `~/.platform-env` with `need`, `penv_set`, `checkpoint`, `evidence_add`, `exists_or_pending`, `sitting_end`; `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, `DRILL_CALENDAR`, `DEVIATION_REGISTER`, `REGION`, `ORG_ID`, `DOMAIN`, **`OWNER_DAILY_ACCOUNT`** (01 PR-3.3 sets it; PS-3.1 writes it into `oncall.yaml` level 2 and PS-1.1 refuses without it).
+- [ ] File 03: `SECOND_HUMAN_EMAIL` set (DC-2.1); `INCIDENT_COMMANDER_EMAIL` set (DC-2.2; PS-2.7 and PS-2.4's subject escalation wait for a person otherwise); `SECURITY_REVIEWER_EMAIL` set or `*tbd*` (DC-2.3); **`BUSINESS_TZ` and `BUSINESS_HOURS` set or `*tbd*` (DC-7.1, decision WDEC-15)** — `*tbd*` is allowed and PS-2.1 then uses the paging tool's default time zone with a note, while PS-5.4 waits; `PLATFORM_REPO_REMOTE` with CODEOWNERS putting the second human on `/oncall/` (DC-9.4); `SIEM_KIND` recorded. Decision files for SD-08, SD-10, SD-12 and SD-13 exist (signed or recorded pending with the owner's note that part A may proceed).
+- [ ] **The three IT security roles this file books have a named person and an address.** 03 §5 (DC-2.1 to DC-2.7) carries no appointment row for them on 2026-09-15; until 03's owner adds `PPL-PA` (paging administrator, `PAGER_ADMIN_EMAIL`), `PPL-SCA` (SCC administrator, `SCC_ADMIN_EMAIL`) and — part B only — `PPL-SIA` (SIEM administrator, `SIEM_ADMIN_EMAIL`), PS-1.1 takes the three names from the incident commander in writing and opens a dated row in `DEVIATION_REGISTER` naming 03's owner. Their incompatibility line is the same one PU-2.7, PS-1.3 and PS-5.3 prove: none of the three may be the platform owner, and the paging administrator may not be a responder on either subject service. The MDR desk lead and the retainer owner (part B) are named in PU-2.1's retainer, not in 03.
+  - Gap recorded for 03 and 01: `PPL-PA`, `PPL-SCA`, `PPL-SIA` rows in 03 §5 with their variables, the matching rows in 01 §2.1 with their incompatible pairs and in README §6, and lead-time rows P-15, P-16, P-18 and P-19 in 01 §3.1. Owner: the platform owner, with ISMS naming the people under P137. This file does not create them.
 - [ ] File 04: `PAGER_SERVICE_NAME` and `PAGER_SUBJECT_SERVICE_NAME` set; PU-2.6 and PU-2.7 have `DONE` lines (tool with role separation and an audit trail; the platform owner proven absent from the subject service).
 - [ ] File 06: `SA_1_ADMIN`, `SA_2_ADMIN`, `GRP_PLATFORM_SECURITY`, `ROSTER_FILE`.
 - [ ] File 09: SCC Premium active at the organisation with data residency `eu` (`SCC_TIER` reads `PREMIUM/eu`), and the IT security person who administers SCC is named in the 09 record.
 - [ ] File 10: `CORE_PROJECT`, `CORE_PROJECT_NUMBER`, `LOGGING_PROJECT`, `LOGGING_PROJECT_NUMBER`; `logging`, `monitoring` and `pubsub` enabled in both (CP-1.6). `secretmanager.googleapis.com` is not enabled by 10: 02 §4.2 denies it on `fld-platform-core` by absence, with `CORE_PROJECT`'s `platform-pager-key` ([../09-supply-chain-secrets-recovery.md](../09-supply-chain-secrets-recovery.md) §2.4 row E) as the one dated exception, which PS-4.2 enables.
 - [ ] File 12: `ENT_PROJECT_REPAIR_CORE` and `ENT_SECRET_READ` exist and their one-grant tests passed. `Assumption:` the core repair bundle includes Monitoring notification-channel and alert-policy editing, Pub/Sub topic and subscription administration, Secret Manager administration and Logging configuration writes on the core projects; PS-1.1 checks it, and a missing role is a re-run of 12, never a direct grant.
-- [ ] File 13: the member constraint on `fld-platform-core` is known (PS-6.2 grants to a tenant user; PS-6.3 relies on the SCC notification service agent being admitted).
+- [ ] File 13: the member constraint on `fld-platform-core` is known (PS-6.2 grants to a tenant user; PS-6.3 relies on the SCC notification service agent being admitted). **13 OP-5.3's record must state, in writing, whether B5 (`constraints/iam.allowedPolicyMemberDomains`, value `DIRECTORY_CUSTOMER_ID`) admits a Google-managed service agent.** OP-5.3 as written on 2026-09-15 tests only `domain:example.com`, which proves nothing about `service-org-<ORG_ID>@gcp-sa-scc-notification.iam.gserviceaccount.com` (PS-6.3), the `gcp-sa-logging` sink writers of 14 CL-6.2 to CL-6.4, or `billing-export-bigquery@system.gserviceaccount.com` (14 CL-9.3). PS-1.1 checks for that record and, if it is absent, opens a dated `DEVIATION_REGISTER` row addressed to 13's owner asking for a positive test (bind a Google-managed service agent — for example the probe project's own `service-<num>@gcp-sa-pubsub.iam.gserviceaccount.com` — on the probe and record the result, with any allow-list addition the result requires committed into the B5 file in the same pull request). PS-6.3 cites that record; it neither assumes the exemption (as 14's precondition does) nor defers it to a step 13 does not have.
 - [ ] File 14: `SINK_S_ORG`, `SINK_S_FOLDER` exist; `LOG_BUCKET_EVIDENCE` and `LOG_BUCKET_IDENTITY` exist. PS-5.5 reads `LOGGING_PROJECT`'s own Admin Activity log, which S-folder's intercept does not remove from `_Required`.
 
 Part B, in addition:
@@ -82,13 +85,14 @@ Every step writes `checkpoint <id> START` before its ACTION and `checkpoint <id>
 
 | Person | Does | Present when |
 |---|---|---|
-| IT security paging administrator (IT security; never the platform owner) | Builds every escalation, schedule and integration in the paging tool; adds the service-key version to Secret Manager; creates the manual subject test incident | PS-1.3, PS-2.1 to PS-2.6, PS-4.2, PS-5.3 |
-| IT security SCC administrator (named in the 09 record) | Creates the notification config and the route-test source and findings | PS-1.2, PS-6.3, PS-6.7, PS-6.8, PS-6.9 interim |
-| Platform owner (`sa-1-admin@` for the Cloud steps) | Creates topics, subscriptions, secrets, channels and alert policies under PAM; runs the tests; acknowledges L1 and L2 test pages at Tier C-W | PS-1.1, PS-3, PS-4, PS-5, PS-6 |
-| Second human (IT security, `SECOND_HUMAN_EMAIL`) | Parallel L1 recipient; confirms receipt of every test page; required reviewer of `oncall.yaml`; receives the configuration-change log; approves PAM grants where 12 names them; reads the SMS verification codes | PS-2.5, PS-3.2, PS-4.6, PS-5.2 to PS-5.5, PS-6.8; part B PS-7.5, PS-8.7 |
-| Incident commander (IT security, not a tenant super admin) | Signs the escalation record; L3 and interim sole recipient for reports about the second human; confirms the L3 test page | PS-2.4, PS-2.7, PS-5.2 |
+| IT security paging administrator, `PAGER_ADMIN_EMAIL` (IT security; never the platform owner) — no appointment row in 03 §5 yet; see the Preconditions gap | Builds every escalation, schedule and integration in the paging tool; adds the service-key version to Secret Manager; creates the manual subject test incident | PS-1.3, PS-2.1 to PS-2.6, PS-4.2, PS-5.3 |
+| IT security SCC administrator, `SCC_ADMIN_EMAIL` (named in the 09 record) — no appointment row in 03 §5 yet; see the Preconditions gap | Creates the notification config and the route-test source and findings | PS-1.2, PS-6.3, PS-6.7, PS-6.8, PS-6.9 interim |
+| Platform owner (`sa-1-admin@` for the Cloud steps) | Creates topics, subscriptions, secrets, channels and alert policies under PAM; runs the tests; is paged at L1 (as the schedule member) and L2 but acknowledges neither during the tests of PS-5 | PS-1.1, PS-2.4b, PS-3, PS-4, PS-5, PS-6 |
+| Second human (IT security, `SECOND_HUMAN_EMAIL`) | Parallel L1 recipient; confirms receipt of every test page without acknowledging; required reviewer of `oncall.yaml`; receives the configuration-change log; approves PAM grants where 12 names them; reads the SMS verification codes; reports the second subject service's name for PS-2.4b | PS-2.4b, PS-2.5, PS-3.2, PS-4.2 preflight, PS-4.6, PS-5.2 to PS-5.5, PS-6.8; part B PS-7.5, PS-8.7 |
+| Incident commander (IT security, not a tenant super admin) | Signs the escalation record; L3 and interim sole recipient for reports about the second human; **acknowledges the L3 test page** (nobody acknowledges at L1 or L2); names the IT security people in writing where 03 has no appointment row yet | PS-1.1, PS-2.4, PS-2.7, PS-5.2, PS-5.4 |
 | Security reviewer (when appointed) | Sole recipient on `PAGER_SUBJECT_SH_SERVICE_NAME`; reviews the rule code (part B) | PS-2.4 (re-run at appointment), PS-8.2 |
-| MDR desk lead (part B) | Joins L1 on the platform escalation; acknowledges the 24x7 test | PS-8.7 |
+| IT security SIEM administrator, `SIEM_ADMIN_EMAIL` (part B) — no appointment row in 03 §5 yet; see the Preconditions gap | Holds the SecOps instance's administration, the feeds and the rule deployment path | PS-7.1 to PS-7.6, PS-8.5 |
+| MDR desk lead and retainer owner (part B; named in PU-2.1's retainer, not in 03) | Joins L1 on the platform escalation; acknowledges the 24x7 test | PS-8.7 |
 | Sandbox super admin (part B, optional) | Connects the sandbox tenant's own SecOps export if live fixtures are wanted | PS-8.8 |
 
 ## Decisions applied
@@ -116,11 +120,20 @@ Every step writes `checkpoint <id> START` before its ACTION and `checkpoint <id>
 
 ```bash
 source ~/.platform-env
-need ORG_ID DOMAIN REGION CORE_PROJECT CORE_PROJECT_NUMBER LOGGING_PROJECT LOGGING_PROJECT_NUMBER SINK_S_ORG SINK_S_FOLDER PAGER_SERVICE_NAME PAGER_SUBJECT_SERVICE_NAME SIEM_KIND SECOND_HUMAN_EMAIL INCIDENT_COMMANDER_EMAIL PLATFORM_REPO_DIR PLATFORM_REPO_REMOTE SA_1_ADMIN ENT_PROJECT_REPAIR_CORE ENT_SECRET_READ BUILD_LOG_DIR EVIDENCE_REGISTER DRILL_CALENDAR SCC_TIER
+need ORG_ID DOMAIN REGION CORE_PROJECT CORE_PROJECT_NUMBER LOGGING_PROJECT LOGGING_PROJECT_NUMBER SINK_S_ORG SINK_S_FOLDER PAGER_SERVICE_NAME PAGER_SUBJECT_SERVICE_NAME SIEM_KIND SECOND_HUMAN_EMAIL INCIDENT_COMMANDER_EMAIL OWNER_DAILY_ACCOUNT PLATFORM_REPO_DIR PLATFORM_REPO_REMOTE SA_1_ADMIN ENT_PROJECT_REPAIR_CORE ENT_SECRET_READ BUILD_LOG_DIR EVIDENCE_REGISTER DRILL_CALENDAR DEVIATION_REGISTER SCC_TIER
 penv_guard && echo "GUARD OK"
 mkdir -p "$BUILD_LOG_DIR/evidence/15"
 ls "$PLATFORM_REPO_DIR"/decisions/ | grep -Ei 'sd-08|sd-10|sd-12|sd-13|eve-h-scope|billing-scc-and-siem'
 grep -E '^/oncall/' "$PLATFORM_REPO_DIR/.github/CODEOWNERS"
+# BUSINESS_TZ and BUSINESS_HOURS may be *tbd* (03 DC-7.1, WDEC-15); they are read, never required here
+printf 'BUSINESS_TZ=%s BUSINESS_HOURS=%s\n' "${BUSINESS_TZ:-*tbd*}" "${BUSINESS_HOURS:-*tbd*}"
+# The three IT security people this file books: from 03 §5 when its rows exist, otherwise from the incident commander in writing
+for V in PAGER_ADMIN_EMAIL SCC_ADMIN_EMAIL; do
+  eval "printf '%s=%s\n' \"\$V\" \"\${$V:-UNSET}\""
+done
+# 13's B5 record: does iam.allowedPolicyMemberDomains admit a Google-managed service agent? (PS-6.3, and 14 CL-6, depend on it)
+grep -l -i 'gcp-sa-\|service agent' "$BUILD_LOG_DIR"/evidence/13/*OP-5.3* 2>/dev/null || echo "NO B5 SERVICE-AGENT RECORD (13 OP-5.3)"
+jq -r '.policies[]?.spec.rules[]?.values.allowedValues[]?' "$PLATFORM_REPO_DIR/policies/org/FLD_AGENTIC_PLATFORM/iam.allowedPolicyMemberDomains.json" 2>/dev/null
 for P in "$CORE_PROJECT" "$LOGGING_PROJECT"; do
   gcloud services list --enabled --project="$P" --format='value(config.name)' | grep -E '^(monitoring|pubsub|logging|secretmanager)\.googleapis\.com$' | sort | tr '\n' ' '; echo " <- $P"
 done
@@ -128,7 +141,7 @@ gcloud pam entitlements describe "$ENT_PROJECT_REPAIR_CORE" --format='yaml(privi
 test "$SCC_TIER" = "PREMIUM/eu" && echo "SCC OK" || echo "STOP: SCC is not Premium with eu residency (09)"
 ```
 
-- **VERIFY:** `GUARD OK`; the decision files are listed; the CODEOWNERS line names `SECOND_HUMAN_EMAIL`; each project line lists `logging`, `monitoring` and `pubsub` (10 CP-1.6 rows 2 and 3), and `secretmanager` is absent from both until PS-4.2; the entitlement's role bindings include roles that grant `monitoring.notificationChannels.create`, `monitoring.alertPolicies.create`, `pubsub.topics.create`, `pubsub.topics.setIamPolicy`, `secretmanager.secrets.create` and `logging.views.create` on the core projects (read each role's permissions with `gcloud iam roles describe <role>` if unsure); `SCC OK`. Any other miss: stop, and re-run the owning file (10 for APIs, 12 for the bundle, 09 for SCC); granting a role by hand here is refused. Also open 09's FS-7.7 detector diff: a detector the catalogue relies on that residency disables is carried into part B as a SIEM rule over Cloud Audit Logs (07 §3).
+- **VERIFY:** `GUARD OK`; the decision files are listed; the CODEOWNERS line names `SECOND_HUMAN_EMAIL`; each project line lists `logging`, `monitoring` and `pubsub` (10 CP-1.6 rows 2 and 3), and `secretmanager` is absent from both until PS-4.2; the entitlement's role bindings include roles that grant `monitoring.notificationChannels.create`, `monitoring.alertPolicies.create`, `pubsub.topics.create`, `pubsub.topics.setIamPolicy`, `secretmanager.secrets.create` and `logging.views.create` on the core projects (read each role's permissions with `gcloud iam roles describe <role>` if unsure); `SCC OK`. `OWNER_DAILY_ACCOUNT` passes `need` (01 PR-3.3 set it; PS-3.1 writes it into `oncall.yaml` and fails five steps in without it). `BUSINESS_TZ` and `BUSINESS_HOURS` print a value or `*tbd*`; `*tbd*` is not a stop, it is the note PS-2.1 carries and the wait PS-5.4 records. `PAGER_ADMIN_EMAIL` and `SCC_ADMIN_EMAIL` print `UNSET` on a first run — that is expected, PS-1.2 and PS-1.3 record them from the people who actually turn up. What PS-1.1 must establish is that there *are* two named people to book: a 03 appointment row (`PPL-PA`, `PPL-SCA`) if 03's owner has added them, otherwise the incident commander's written naming of both, and in that case the dated `DEVIATION_REGISTER` row for 03's missing rows named in the Preconditions. Neither may be the platform owner. No name, no booking: PS-1.3 and PS-1.2 do not start. Last, the B5 lines: an `OP-5.3` evidence file naming a `gcp-sa-*` principal is the record PS-6.3 cites. `NO B5 SERVICE-AGENT RECORD (13 OP-5.3)` is not a stop for part A up to PS-6.2, but it **is** a stop for PS-6.3: open the dated `DEVIATION_REGISTER` row addressed to 13's owner now, so the positive test is run before the SCC administrator is booked. Any other miss: stop, and re-run the owning file (10 for APIs, 12 for the bundle, 09 for SCC, 13 for B5, 03 for a person); granting a role by hand here is refused. Also open 09's FS-7.7 detector diff: a detector the catalogue relies on that residency disables is carried into part B as a SIEM rule over Cloud Audit Logs (07 §3).
 - **ROLLBACK:** None needed; the step only reads.
 - **EVIDENCE:** Build-log line under PS-1.1 with the output saved as `evidence/15/<date>-PS-1.1-preflight-v1.txt`. E-05. TISAX 1.1-1.2.
 
@@ -140,12 +153,20 @@ test "$SCC_TIER" = "PREMIUM/eu" && echo "SCC OK" || echo "STOP: SCC is not Premi
 
 ```bash
 ORG_ID=<ORG_ID from the platform owner>
-gcloud organizations get-iam-policy "$ORG_ID" --flatten='bindings[].members' --filter='bindings.members:"user:<IT security SCC administrator email>"' --format='value(bindings.role)'
+SCC_ADMIN=<this administrator's own address>
+gcloud organizations get-iam-policy "$ORG_ID" --flatten='bindings[].members' --filter="bindings.members:\"user:${SCC_ADMIN}\"" --format='value(bindings.role)'
 CLOUDSDK_API_ENDPOINT_OVERRIDES_SECURITYCENTER="https://securitycenter.eu.rep.googleapis.com/" gcloud scc notifications list "organizations/$ORG_ID" --location=eu --format='table(name,pubsubTopic,streamingConfig.filter)'
 ```
 
-  In the console, read the tier and the data residency location, and take a screenshot.
-- **VERIFY:** The administrator holds `roles/securitycenter.admin` at the organisation, or at least `roles/securitycenter.notificationConfigEditor`, `roles/securitycenter.sourcesAdmin` and `roles/securitycenter.findingsEditor`. The list shows no existing notification config (or each existing one is recorded with its owner and topic; none may point at a platform project). The console shows Premium and location `eu`. Google requires regional endpoints for SCC resources subject to data residency; the environment variable sets the gcloud property `api_endpoint_overrides/securitycenter` for that one command, so the persistent configuration is not changed.
+  In the console, read the tier and the data residency location, and take a screenshot. The platform owner then records the address this administrator used, so that PS-6.2 and PS-6.4 grant and remove against a stored value and not a placeholder:
+
+```bash
+# platform owner, tenant shell
+penv_set SCC_ADMIN_EMAIL "<the address the administrator signed in with>"
+need SCC_ADMIN_EMAIL && echo "SCC ADMIN RECORDED"
+```
+
+- **VERIFY:** `SCC ADMIN RECORDED`, and the stored address is the one in the policy output above, character for character. The administrator holds `roles/securitycenter.admin` at the organisation, or at least `roles/securitycenter.notificationConfigEditor`, `roles/securitycenter.sourcesAdmin` and `roles/securitycenter.findingsEditor`. The list shows no existing notification config (or each existing one is recorded with its owner and topic; none may point at a platform project). The console shows Premium and location `eu`. Google requires regional endpoints for SCC resources subject to data residency; the environment variable sets the gcloud property `api_endpoint_overrides/securitycenter` for that one command, so the persistent configuration is not changed.
 - **ROLLBACK:** None needed; the step only reads.
 - **EVIDENCE:** Screenshot and output as `<date>-PS-1.2-scc-state-v1`. E-05. TISAX 5.2.4.
 
@@ -157,7 +178,15 @@ CLOUDSDK_API_ENDPOINT_OVERRIDES_SECURITYCENTER="https://securitycenter.eu.rep.go
   1. Export the user list with base roles and team memberships, and hand it to the second human (not to the platform owner).
   2. Confirm the plan still includes role separation per team and an audit trail (04 PU-2.6: on PagerDuty, Advanced Permissions and Audit Trail Reporting, Business plan or higher).
   3. Confirm the teams: `agp-platform` (owns `PAGER_SERVICE_NAME`), `itsec-subject-reports` (owns both subject services, members: IT security only).
-- **VERIFY:** In the export, the platform owner's base role is neither Account Owner nor Global Admin (or the tool's equivalent), he is on `agp-platform` and not on `itsec-subject-reports`, and no account-wide role reaches the subject services. The second human signs the export.
+  4. The second human reports the paging administrator's address to the platform owner, who records it (PS-4.2's time-bound grant is made against this value, never a placeholder):
+
+```bash
+# platform owner, tenant shell
+penv_set PAGER_ADMIN_EMAIL "<the paging administrator's address, from the second human's report>"
+need PAGER_ADMIN_EMAIL && echo "PAGER ADMIN RECORDED"
+```
+
+- **VERIFY:** `PAGER ADMIN RECORDED`. In the export, the platform owner's base role is neither Account Owner nor Global Admin (or the tool's equivalent), he is on `agp-platform` and not on `itsec-subject-reports`, and no account-wide role reaches the subject services. The second human signs the export and confirms that the recorded address is the one on it.
 - **ROLLBACK:** None needed; the step only reads. A deviation is fixed by IT security before PS-2 starts.
 - **EVIDENCE:** `<date>-PS-1.3-paging-roles-v1`, signed by the second human. E-08. TISAX 4.1-4.2.
 
@@ -206,22 +235,33 @@ CLOUDSDK_API_ENDPOINT_OVERRIDES_SECURITYCENTER="https://securitycenter.eu.rep.go
 
 ### PS-2.4 The subject-report escalations
 
-- **WHO:** IT security paging administrator builds; the incident commander reviews; the second human verifies alone afterwards. The platform owner is not present.
-- **WHERE:** The paging tool, team `itsec-subject-reports`; tenant shell for the variable.
+- **WHO:** IT security paging administrator builds; the incident commander reviews; the second human verifies alone afterwards. The platform owner is not present and never opens either subject service. The variable he needs is recorded separately, in PS-2.4b.
+- **WHERE:** The paging tool, team `itsec-subject-reports`.
 - **ACTION:**
   1. On `PAGER_SUBJECT_SERVICE_NAME` (reports whose subject is the platform owner or any roster human other than the second human), create and attach `agp-subject-po-escalation`: level 1 the second human only, escalates after 15 minutes; level 2 the incident commander only. Never the platform owner.
   2. Create a second service, `agentic-platform-roster-subject-sh`, owned by `itsec-subject-reports`, for reports whose subject is the second human (`sa-2-admin@`, or a break-glass account in the second human's custody). One service cannot serve both, because its escalation would reach the subject. Attach `agp-subject-sh-escalation`: level 1 the security reviewer if `SECURITY_REVIEWER_EMAIL` is set, otherwise the incident commander (SD-10, SD-12); level 2 the incident commander if level 1 is the security reviewer, otherwise `*tbd*` (the ISMS contact 03 names; until then one level, repeated 2 times). Never the second human, never the platform owner.
   3. Urgency High on both; no integration yet: Eve's integrations and their keys are created in 26 straight into `EVE_PROJECT`'s Secret Manager, so no subject-service key passes through a platform project.
-  4. Record the second service name:
+  4. The second human writes the second service's exact name to the platform owner in one message, copied to the incident commander. That message, and nothing else, is what PS-2.4b records.
+- **VERIFY:** The second human, signed in alone, opens both services: `PAGER_SUBJECT_SERVICE_NAME` shows `agp-subject-po-escalation` whose targets are the second human and the incident commander only; `agentic-platform-roster-subject-sh` shows `agp-subject-sh-escalation` whose targets exclude the second human and the platform owner. Negative proof is PS-5.3.
+- **ROLLBACK:** IT security deletes the second service and the policies. Until they exist, 26 does not start for reports about roster humans.
+- **EVIDENCE:** Screenshots as `<date>-PS-2.4-subject-escalations-v1`, initialled by the incident commander and the second human. E-08. TISAX 4.1-4.2, 1.6. Re-run point: at the security reviewer's appointment, level 1 of `agp-subject-sh-escalation` switches to the security reviewer (README §9).
+
+### PS-2.4b Record the second subject service's name in the variables file
+
+- **WHO:** Platform owner, from the second human's message of PS-2.4 step 4. Witness: the second human (the name she reported must be the name that is stored).
+- **WHERE:** Shell, `~/.platform-env` sourced. The variables file and `penv_set` are the platform owner's (01 §4); he holds no role in the paging tool's `itsec-subject-reports` team and does not open either subject service to read the name.
+- **ACTION:**
 
 ```bash
-need INCIDENT_COMMANDER_EMAIL
+need INCIDENT_COMMANDER_EMAIL SECOND_HUMAN_EMAIL
 penv_set PAGER_SUBJECT_SH_SERVICE_NAME "agentic-platform-roster-subject-sh"
+need PAGER_SUBJECT_SH_SERVICE_NAME && echo "SUBJECT-SH NAME RECORDED"
 ```
 
-- **VERIFY:** The second human, signed in alone, opens both services: `PAGER_SUBJECT_SERVICE_NAME` shows `agp-subject-po-escalation` whose targets are the second human and the incident commander only; `agentic-platform-roster-subject-sh` shows `agp-subject-sh-escalation` whose targets exclude the second human and the platform owner. Negative proof is PS-5.3.
-- **ROLLBACK:** IT security deletes the second service and the policies; `penv_set --force` with a build-log line. Until they exist, 26 does not start for reports about roster humans.
-- **EVIDENCE:** Screenshots as `<date>-PS-2.4-subject-escalations-v1`, initialled by the incident commander and the second human. E-08. TISAX 4.1-4.2, 1.6. Re-run point: at the security reviewer's appointment, level 1 of `agp-subject-sh-escalation` switches to the security reviewer (README §9).
+  If the name in the message differs from the literal above (IT security's tool may enforce its own naming), use the name from the message, character for character.
+- **VERIFY:** `SUBJECT-SH NAME RECORDED`; the second human reads the stored value back from the platform owner's screen and confirms it equals the name in her message. The build log names the message (date, sender, recipients) as the source.
+- **ROLLBACK:** `penv_set --force PAGER_SUBJECT_SH_SERVICE_NAME <corrected name>` with a build-log line saying which message it came from.
+- **EVIDENCE:** The stored value and the source message reference as `<date>-PS-2.4b-subject-sh-name-v1`. E-08. TISAX 1.6.
 
 ### PS-2.5 The configuration-change log to the second human (interim)
 
@@ -328,12 +368,22 @@ timeouts_min:
 never_recipient_of_reports_about_self: true
 k5_k6_rota: []   # filled in 38; records held in the witness (08 records step)
 EOF
-python3 -c "import yaml,sys; d=yaml.safe_load(open(sys.argv[1])); assert d['services']['subject_platform_owner']['sole_recipient'].endswith(sys.argv[2]); assert sys.argv[3] not in str(d['services']['subject_platform_owner']); print('ONCALL OK')" "$PLATFORM_REPO_DIR/oncall/oncall.yaml" "$SECOND_HUMAN_EMAIL" "$OWNER_DAILY_ACCOUNT"
+python3 -c "import yaml,sys
+d=yaml.safe_load(open(sys.argv[1]))
+sh, po = sys.argv[2], sys.argv[3]
+assert d['services']['subject_platform_owner']['sole_recipient'].endswith(sh)
+assert po not in str(d['services']['subject_platform_owner'])
+assert po not in str(d['services']['subject_second_human'])
+lv = d['services']['platform']['levels']
+assert str(lv[1]).count(po) == 1, 'the platform owner must be level 2'
+assert po not in str(lv[0]), 'the platform owner must not be a named target on level 1'
+assert po not in str(lv[2]), 'the platform owner must not be on level 3'
+print('ONCALL OK')" "$PLATFORM_REPO_DIR/oncall/oncall.yaml" "$SECOND_HUMAN_EMAIL" "$OWNER_DAILY_ACCOUNT"
 git -C "$PLATFORM_REPO_DIR" add oncall/oncall.yaml
 git -C "$PLATFORM_REPO_DIR" commit -m "PS-3.1 oncall.yaml"
 ```
 
-- **VERIFY:** `ONCALL OK` (PyYAML from 01's workstation tools; if absent, read the file by eye against PS-2.2 and PS-2.4 and record that). The platform owner's address appears in `platform` level 2 only.
+- **VERIFY:** `ONCALL OK` (PyYAML from 01's workstation tools; if absent, read the file by eye against PS-2.2, PS-2.4 and the five assertions above, and record that). The assertions are what proves it: the platform owner's address appears exactly once in `services.platform.levels[1]` and nowhere in levels 0 and 2, in `subject_platform_owner` or in `subject_second_human`. `business_tz` and `business_hours` may read `*tbd*` (03 DC-7.1 has not signed WDEC-15); record it, and PS-5.4 waits.
 - **ROLLBACK:** `git -C "$PLATFORM_REPO_DIR" reset --hard HEAD~1` before the push.
 - **EVIDENCE:** Commit id in the build log. E-08. TISAX 1.6, 5.2.1.
 
@@ -380,8 +430,9 @@ gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-du
 
 ### PS-4.2 The `platform-pager-key` secret, filled by IT security
 
-- **WHO:** Platform owner enables the API, creates the secret and a time-bound adder grant; IT security paging administrator adds the version from the tool's copy button on their own workstation.
-- **WHERE:** Shell (platform owner); IT security's workstation with gcloud (administrator); the paging tool's integration page. The secret is 09-supply-chain §2.4 row E: `platform-pager-key`, regional, in `CORE_PROJECT`, the one exception to "no secret in the core" of 02 §4.2.
+- **WHO:** Platform owner enables the API, creates the secret and a time-bound adder grant, and removes that grant in the same sitting; IT security paging administrator adds the version on their own workstation, with the second human watching the screen for the preflight below.
+- **WHERE:** Shell (platform owner); IT security's workstation with gcloud (administrator), on macOS or Linux — every command below runs on both; the paging tool's integration page. The secret is 09-supply-chain §2.4 row E: `platform-pager-key`, regional, in `CORE_PROJECT`, the one exception to "no secret in the core" of 02 §4.2.
+- **Preflight on the administrator's workstation, before the key is ever visible (the second human watches and initials):** Handoff and Universal Clipboard off (macOS: System Settings → General → AirDrop & Handoff → "Allow Handoff between this Mac and your iCloud devices" off — a copied key otherwise reaches that person's other Apple devices the moment it is copied); every clipboard-history manager quit, not merely paused; screen sharing and any recording off; shell history off for the sitting (`set +o history` in bash, `unsetopt INC_APPEND_HISTORY; unset HISTFILE` in zsh). Record the four confirmations. The `read -s` path of the ACTION does not put the key on the clipboard at all and is the default; the macOS `pbpaste` variant is a fallback, allowed only with this preflight done.
 - **ACTION (platform owner):**
 
 ```bash
@@ -391,21 +442,37 @@ ROW="| BD-15-1 | $(date -u +%Y-%m-%d) | 15 PS-4.2 | DEV | secretmanager.googleap
 awk -v row="$ROW" '/^\| Id \| Opened/ {t=1} t && !d && $0 !~ /^\|/ {print row; d=1} {print} END {if (!d) print row}' "$DEVIATION_REGISTER" > "$DEVIATION_REGISTER.tmp" && mv "$DEVIATION_REGISTER.tmp" "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "PS-4.2 deviation: secretmanager on CORE_PROJECT"
 gcloud secrets create platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --labels=owner=platform,purpose=pager-key
-EXP="$(date -u -v+1d +%Y-%m-%dT%H:%M:%SZ)"
-gcloud secrets add-iam-policy-binding platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --member="user:<IT security paging administrator email>" --role=roles/secretmanager.secretVersionAdder --condition="expression=request.time < timestamp(\"${EXP}\"),title=ps-4-2-until-${EXP%%T*}"
+need PAGER_ADMIN_EMAIL
+EXP="$(date -u -v+1d +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '+1 day' +%Y-%m-%dT%H:%M:%SZ)"
+test -n "$EXP" || { echo "STOP: no expiry computed; do not create an unconditioned adder binding"; }
+gcloud secrets add-iam-policy-binding platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --member="user:${PAGER_ADMIN_EMAIL}" --role=roles/secretmanager.secretVersionAdder --condition="expression=request.time < timestamp(\"${EXP}\"),title=ps-4-2-until-${EXP%%T*}"
 ```
+
+  The `date` line is the portable form of [13](13-organisation-policies-deny-and-pab.md) OP-3.4: BSD/macOS `-v`, GNU `-d`. The `test -n "$EXP"` line is not decoration — an empty `EXP` would create the binding with `request.time < timestamp("")`, which is a malformed or never-expiring condition on a secret that holds a paging key.
 
   If the enable is refused by 13's `gcp.restrictServiceUsage` on `fld-platform-core`, stop: the project-level exception for `CORE_PROJECT` is a re-run of 13 under `ENT_PLATFORM_POLICY`, never a change made here.
-- **ACTION (IT security, own workstation):** open the integration `cloud-monitoring` of PS-2.3, press the tool's copy button for the integration key, then in the terminal, without displaying it:
+- **ACTION (IT security, own workstation), default path — the key never touches the clipboard:** open the integration `cloud-monitoring` of PS-2.3, reveal the integration key on screen, and type or copy-by-hand into a terminal that is not echoing:
 
 ```bash
-pbpaste | gcloud secrets versions add platform-pager-key --project=<CORE_PROJECT> --location=europe-west1 --data-file=- --format='value(name)'
-pbcopy < /dev/null
+CORE_PROJECT=<CORE_PROJECT>; REGION=<REGION>
+stty -echo; printf 'Integration key (input is hidden), then Return: '; IFS= read -r K; stty echo; echo
+printf '%s' "$K" | gcloud secrets versions add platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --data-file=- --format='value(name)'
+unset K
 ```
 
-- **VERIFY:** `gcloud secrets versions list platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --format='value(name,state)'` shows version 1 `ENABLED`; the printed version name is recorded. `gcloud secrets get-iam-policy platform-pager-key --project="$CORE_PROJECT" --location="$REGION"` shows the conditioned binding only. Nothing was echoed; IT security confirms the clipboard was cleared.
-- **ROLLBACK:** `gcloud secrets delete platform-pager-key --project="$CORE_PROJECT" --location="$REGION"`, IT security regenerates the integration key in the tool, and the deviation row is closed.
-- **EVIDENCE:** Secret name and version number (never the value), the deviation row, as `<date>-PS-4.2-pager-key-secret-v1`. E-05. TISAX 5.1.1, 4.1-4.2.
+  The key is read with echo off, is never an argument to any command, and so reaches neither the screen, the shell history nor the process list. `--data-file=-` reads standard input ([`gcloud secrets versions add`](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/versions/add), read 2026-09-15). **macOS fallback, only with the preflight above done and initialled:** `pbpaste | gcloud secrets versions add platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --data-file=-` then `pbcopy < /dev/null` — which clears the local pasteboard only, not a synchronised or history-keeping one, which is why the preflight exists. On Linux the equivalents are `xclip -o` / `wl-paste`, with the same preflight against clipboard managers.
+- **ACTION (platform owner, same sitting, after the version exists):** remove the adder grant rather than leaving it to expire:
+
+```bash
+need CORE_PROJECT REGION PAGER_ADMIN_EMAIL
+gcloud secrets remove-iam-policy-binding platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --member="user:${PAGER_ADMIN_EMAIL}" --role=roles/secretmanager.secretVersionAdder --condition="expression=request.time < timestamp(\"${EXP}\"),title=ps-4-2-until-${EXP%%T*}"
+gcloud secrets get-iam-policy platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --format='table(bindings.role,bindings.members)'
+```
+
+  The removal must name the same condition as the binding it removes, so keep `EXP` in the shell until this runs (it is a date, not a secret). If the shell was closed, read the condition back from `get-iam-policy` and pass it verbatim.
+- **VERIFY:** `gcloud secrets versions list platform-pager-key --project="$CORE_PROJECT" --location="$REGION" --format='value(name,state)'` shows version 1 `ENABLED`; the printed version name is recorded (never the value). The closing `get-iam-policy` shows **no** `secretVersionAdder` binding left and no user principal at all: reading this secret is `ENT_SECRET_READ`'s just-in-time grant (12), so a standing accessor is as much a finding as a leftover adder, and either is removed before the sitting ends. Nothing was echoed at any point; IT security confirms the four preflight items and, on the fallback path only, that the pasteboard was cleared.
+- **ROLLBACK:** Remove the adder binding first if it is still there, then `gcloud secrets delete platform-pager-key --project="$CORE_PROJECT" --location="$REGION"`; IT security regenerates the integration key in the tool (the old one must be treated as burnt), and the deviation row is closed. If the key is believed to have reached a clipboard sync or a history manager at any point, regeneration is not optional.
+- **EVIDENCE:** Secret name and version number (never the value), the four preflight confirmations initialled by the second human, the closing IAM policy table showing no adder, and the deviation row, as `<date>-PS-4.2-pager-key-secret-v1`. E-05. TISAX 5.1.1, 4.1-4.2.
 
 ### PS-4.3 The paging channel in `CORE_PROJECT`
 
@@ -418,13 +485,16 @@ need CORE_PROJECT REGION PAGER_SERVICE_NAME ENT_SECRET_READ
 gcloud pam grants create --entitlement="$ENT_SECRET_READ" --requested-duration=1800s --justification="setup 15 PS-4.3 and PS-4.4: pager service key into two Monitoring channels"
 # wait until the approver has approved: the next line must print ACTIVE before anything else runs
 gcloud pam grants list --entitlement="$ENT_SECRET_READ" --filter='state=ACTIVE' --format='value(state)'
-CH="$(gcloud secrets versions access 1 --secret=platform-pager-key --project="$CORE_PROJECT" --location="$REGION" \
+RESP="$(gcloud secrets versions access 1 --secret=platform-pager-key --project="$CORE_PROJECT" --location="$REGION" \
   | jq -Rn --arg dn "${PAGER_SERVICE_NAME} (core)" '{type:"pagerduty", displayName:$dn, description:"setup 15 PS-4.3", labels:{service_key: input}}' \
-  | curl -sS --fail-with-body -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" --data-binary @- "https://monitoring.googleapis.com/v3/projects/${CORE_PROJECT}/notificationChannels" \
-  | jq -r '.name // empty')"
-case "$CH" in projects/*/notificationChannels/*) penv_set NOTIF_CH_PAGER_CORE "$CH";; *) echo "STOP: channel not created; read the API error (it does not contain the key)";; esac
+  | curl -sS --fail-with-body -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" --data-binary @- "https://monitoring.googleapis.com/v3/projects/${CORE_PROJECT}/notificationChannels")" \
+  || { printf '%s\n' "$RESP" | jq -r '.error | "\(.code) \(.status): \(.message)"' 2>/dev/null || printf '%s\n' "$RESP"; echo "STOP: channel not created; the error above is the API's, and a Monitoring error never echoes a label value"; }
+CH="$(printf '%s' "$RESP" | jq -r '.name // empty')"
+case "$CH" in projects/*/notificationChannels/*) penv_set NOTIF_CH_PAGER_CORE "$CH";; *) echo "STOP: no channel name in the response";; esac
+unset RESP
 ```
 
+  The response is captured before anything reads it, because `--fail-with-body` writes the error body to standard output and a `jq -r '.name // empty'` in the same pipeline would throw it away — leaving nothing to read at the moment the operator most needs it. The two rejections to tell apart here are 13's `iam.allowedPolicyMemberDomains` (a member the constraint refuses) and a malformed `service_key` (a mis-copied integration key, which means PS-4.2 is re-run, not this step). Google's Monitoring API returns the field name and reason, not the value: `labels.service_key` is sensitive and is only partially populated even on retrieval, so printing the error does not print the key. `unset RESP` keeps the request body, which did contain the key, out of the rest of the sitting.
 - **VERIFY:** `gcloud beta monitoring channels describe "$NOTIF_CH_PAGER_CORE" --project="$CORE_PROJECT" --format='value(type,displayName,enabled)'` prints `pagerduty`, the display name and `True`. Do not print the full resource: the key is partially shown.
 - **ROLLBACK:** `gcloud beta monitoring channels delete "$NOTIF_CH_PAGER_CORE" --project="$CORE_PROJECT"`.
 - **EVIDENCE:** Channel name as `<date>-PS-4.3-channel-pager-core-v1`. E-08. TISAX 1.6.
@@ -436,12 +506,14 @@ case "$CH" in projects/*/notificationChannels/*) penv_set NOTIF_CH_PAGER_CORE "$
 - **ACTION:**
 
 ```bash
-need CORE_PROJECT LOGGING_PROJECT REGION PAGER_SERVICE_NAME
-CH="$(gcloud secrets versions access 1 --secret=platform-pager-key --project="$CORE_PROJECT" --location="$REGION" \
+need CORE_PROJECT LOGGING_PROJECT REGION PAGER_SERVICE_NAME ENT_SECRET_READ
+RESP="$(gcloud secrets versions access 1 --secret=platform-pager-key --project="$CORE_PROJECT" --location="$REGION" \
   | jq -Rn --arg dn "${PAGER_SERVICE_NAME} (logging)" '{type:"pagerduty", displayName:$dn, description:"setup 15 PS-4.4", labels:{service_key: input}}' \
-  | curl -sS --fail-with-body -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" --data-binary @- "https://monitoring.googleapis.com/v3/projects/${LOGGING_PROJECT}/notificationChannels" \
-  | jq -r '.name // empty')"
-case "$CH" in projects/*/notificationChannels/*) penv_set NOTIF_CH_PAGER_LOGGING "$CH";; *) echo "STOP: channel not created";; esac
+  | curl -sS --fail-with-body -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" --data-binary @- "https://monitoring.googleapis.com/v3/projects/${LOGGING_PROJECT}/notificationChannels")" \
+  || { printf '%s\n' "$RESP" | jq -r '.error | "\(.code) \(.status): \(.message)"' 2>/dev/null || printf '%s\n' "$RESP"; echo "STOP: channel not created in LOGGING_PROJECT; read the error above (it carries no label value)"; }
+CH="$(printf '%s' "$RESP" | jq -r '.name // empty')"
+case "$CH" in projects/*/notificationChannels/*) penv_set NOTIF_CH_PAGER_LOGGING "$CH";; *) echo "STOP: no channel name in the response";; esac
+unset RESP
 gcloud pam grants list --entitlement="$ENT_SECRET_READ" --filter='state=ACTIVE' --format='value(name)' | while read -r G; do gcloud pam grants revoke "$G" --reason="PS-4.4 done"; done
 ```
 
@@ -545,10 +617,10 @@ cp "$W/ack-test.yaml" "$BUILD_LOG_DIR/evidence/15/" && rm -rf "$W"
 
 ### PS-5.2 Business-hours acknowledgement test on the platform escalation
 
-- **WHO:** Platform owner fires and acknowledges only at L2; the second human confirms receipt at L1 and does **not** acknowledge; the incident commander acknowledges at L3. Witness: the second human records times.
+- **WHO:** Platform owner fires. **Nobody acknowledges at L1 or L2** — not the L1 schedule member (the platform owner himself at Tier C-W), not the second human, not the platform owner when L2 pages him; the incident commander alone acknowledges, at L3. The second human confirms receipt at L1 from her own phone and mailbox and records T0 to T5. Witness: the second human. An acknowledgement at L1 or L2 ends the escalation and this step must then be run again: the whole point is to measure the full L1 → L2 → L3 chain.
 - **WHERE:** Shell; the paging tool on each person's phone.
 - **ACTION:**
-  1. Announce the test to the three people and agree that the L1 schedule member (the platform owner at Tier C-W) and the second human let L1 time out, the platform owner acknowledges nothing until L3 has been paged, and the incident commander acknowledges.
+  1. Announce the test to the three people and agree the rule in the WHO: L1 and L2 are both left to time out, and only the incident commander acknowledges, at L3.
   2. Fire:
 
 ```bash
@@ -576,7 +648,7 @@ date -u +%Y-%m-%dT%H:%M:%SZ
 
 ### PS-5.4 Out-of-hours acknowledgement test
 
-- **WHO:** As PS-5.2; the time is chosen by the second human outside `BUSINESS_HOURS` and not announced to the platform owner in advance beyond the week.
+- **WHO:** As PS-5.2, including its acknowledgement rule in full: the platform owner fires, nobody acknowledges at L1 or L2, the incident commander acknowledges at L3, the second human confirms receipt at L1 and records T0 to T5. The time is chosen by the second human outside `BUSINESS_HOURS` and not announced to the platform owner in advance beyond the week.
 - **WHERE:** As PS-5.2. BLOCKED on a person if `BUSINESS_HOURS` is `*tbd*`: record `WAITING business hours (03)`.
 - **ACTION:** The second human asks the platform owner, by message at the chosen time, to run the PS-5.2 fire command (or runs it from a platform-owner-free path: the second human holds no role in `CORE_PROJECT`, so the platform owner runs it on request). Nobody acknowledges at L1 or L2; the incident commander acknowledges at L3.
 - **VERIFY:** As PS-5.2, with T5 - T1 against the 60-minute out-of-hours target (`Assumption:`); the result is recorded whatever it is. A miss is not a failure of this step: it is the honest number for Tier C-W (07 §9.2 "next business morning") and an input to the MDR contract (PS-8.7).
@@ -637,14 +709,16 @@ gcloud logging views delete agp-alert-test --bucket=_Default --location=global -
 - **ACTION:**
 
 ```bash
-need CORE_PROJECT
+need CORE_PROJECT DRILL_CALENDAR BUILD_LOG_DIR
 POL="$(gcloud monitoring policies list --project="$CORE_PROJECT" --filter='displayName="agp-ack-test (setup 15 PS-5)"' --format='value(name)')"
 gcloud monitoring policies update "$POL" --project="$CORE_PROJECT" --no-enabled
-printf '| DR-15-2 | Acknowledgement drill: enable agp-ack-test, fire, record T0-T5, disable | quarterly and after any change to the escalations | platform owner fires | second human confirms receipt | 15 | %s | | | P99; G2 |\n' "$(date -u -v+3m +%Y-%m-%d)" >> "$DRILL_CALENDAR"
+DUE="$(date -u -v+3m +%Y-%m-%d 2>/dev/null || date -u -d '+3 months' +%Y-%m-%d)"
+test -n "$DUE" || { echo "STOP: no due date computed; the calendar row would carry an empty date"; }
+printf '| DR-15-2 | Acknowledgement drill: enable agp-ack-test, fire, record T0-T5, disable | quarterly and after any change to the escalations | platform owner fires | second human confirms receipt | 15 | %s | | | P99; G2 |\n' "$DUE" >> "$DRILL_CALENDAR"
 git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit -m "PS-5.6 acknowledgement drill row"
 ```
 
-- **VERIFY:** `gcloud monitoring policies describe "$POL" --project="$CORE_PROJECT" --format='value(enabled)'` prints `False`; the calendar row is committed.
+- **VERIFY:** `gcloud monitoring policies describe "$POL" --project="$CORE_PROJECT" --format='value(enabled)'` prints `False`; the calendar row is committed **and its due-date column holds a date**, not an empty field (`tail -1 "$DRILL_CALENDAR"`). The `date` line is 13 OP-3.4's portable form: BSD/macOS `-v+3m`, GNU `-d '+3 months'`.
 - **ROLLBACK:** `--enabled`.
 - **EVIDENCE:** Build-log line. E-08. TISAX 1.5.
 
@@ -663,7 +737,7 @@ gcloud pubsub subscriptions create scc-findings-desk --project="$CORE_PROJECT" -
 penv_set SCC_TOPIC "projects/${CORE_PROJECT}/topics/scc-findings"
 ```
 
-  `Assumption:` 13's B21 KMS constraints do not require CMEK for Pub/Sub topics in `CORE_PROJECT`; if the create is refused by a CMEK constraint, stop, record the refusal, and re-run with `--topic-encryption-key` naming a key 11 creates for it (a re-run of 11, not a key made here).
+  No organisation policy in force today can refuse this topic for want of CMEK. The constraint that could is 13's **B20** (`constraints/gcp.restrictNonCmekServices` with `constraints/gcp.restrictCmekCryptoKeyProjects`), and 13 holds B20 until P12 — it has no file, only 13's `policies/HELD.md`. B21 (`cloudkms.allowedProtectionLevels`, `cloudkms.disableBeforeDestroy`, `cloudkms.minimumDestroyScheduledDuration`) governs how a key may be made, never whether a service must use one, so it cannot bear on this step. Re-run note for P12: when B20 is applied, this topic is re-read, and if `pubsub.googleapis.com` is inside its scope the topic is re-created with `--topic-encryption-key` naming a key 11 creates for it (a re-run of 11, not a key made here). If the create is refused by a CMEK constraint before then, stop and record it: a constraint 13 believes it is holding is in force, which is a 13 finding.
 - **VERIFY:** `gcloud pubsub topics describe scc-findings --project="$CORE_PROJECT" --format='yaml(messageStoragePolicy,messageRetentionDuration)'` shows `allowedPersistenceRegions: [europe-west1]` and `enforceInTransit: true`; `gcloud pubsub subscriptions describe scc-findings-desk --project="$CORE_PROJECT" --format='value(topic,expirationPolicy)'` shows the topic and no expiry.
 - **ROLLBACK:** Delete the subscription, then the topic (before PS-6.3).
 - **EVIDENCE:** `<date>-PS-6.1-scc-topic-v1`. E-05. TISAX 5.2.4.
@@ -671,17 +745,18 @@ penv_set SCC_TOPIC "projects/${CORE_PROJECT}/topics/scc-findings"
 ### PS-6.2 A temporary topic grant for the SCC administrator
 
 - **WHO:** Platform owner under `ENT_PROJECT_REPAIR_CORE`.
-- **WHERE:** Shell. Google's notification-config pages say the creator needs `pubsub.topics.setIamPolicy` on the topic, so that the SCC notification service agent is granted its role automatically when the config is created. `gcloud pubsub topics add-iam-policy-binding` has no condition flag, so the grant is unconditioned and PS-6.4 removes it in the same sitting.
+- **WHERE:** Shell. Google's notification-config pages say the creator needs `pubsub.topics.setIamPolicy` on the topic, so that the SCC notification service agent is granted its role automatically when the config is created. [`gcloud pubsub topics add-iam-policy-binding`](https://docs.cloud.google.com/sdk/gcloud/reference/pubsub/topics/add-iam-policy-binding) (read 2026-09-15) takes `--member` and `--role` and the gcloud-wide flags only — there is no `--condition` — so the grant cannot be time-bound and PS-6.4 removes it in the same sitting instead.
 - **ACTION:**
 
 ```bash
-need CORE_PROJECT
-gcloud pubsub topics add-iam-policy-binding scc-findings --project="$CORE_PROJECT" --member="user:<IT security SCC administrator email>" --role=roles/pubsub.admin
+need CORE_PROJECT SCC_ADMIN_EMAIL
+gcloud pubsub topics add-iam-policy-binding scc-findings --project="$CORE_PROJECT" --member="user:${SCC_ADMIN_EMAIL}" --role=roles/pubsub.admin
 checkpoint PS-6.2 PENDING - - "temporary pubsub.admin on scc-findings; PS-6.4 removes it today"
 ```
 
-- **VERIFY:** `gcloud pubsub topics get-iam-policy scc-findings --project="$CORE_PROJECT" --format=json` shows the one binding for the administrator.
-- **ROLLBACK:** `gcloud pubsub topics remove-iam-policy-binding scc-findings --project="$CORE_PROJECT" --member="user:<IT security SCC administrator email>" --role=roles/pubsub.admin`.
+  `SCC_ADMIN_EMAIL` is the address PS-1.1 checked (03 `PPL-SCA` when 03 has the row, otherwise the incident commander's written name with the deviation row open). The grant is to a named person, never to a group or a domain.
+- **VERIFY:** `gcloud pubsub topics get-iam-policy scc-findings --project="$CORE_PROJECT" --format=json` shows the one binding for the administrator. If the binding is refused naming `constraints/iam.allowedPolicyMemberDomains`, the member is outside 13's B5 value and this is a 13 re-run, not a change here.
+- **ROLLBACK:** `gcloud pubsub topics remove-iam-policy-binding scc-findings --project="$CORE_PROJECT" --member="user:${SCC_ADMIN_EMAIL}" --role=roles/pubsub.admin`.
 - **EVIDENCE:** Policy JSON before and after in the build log. E-05. TISAX 4.1-4.2.
 
 ### PS-6.3 The organisation notification config
@@ -699,7 +774,7 @@ unset CLOUDSDK_API_ENDPOINT_OVERRIDES_SECURITYCENTER
 ```
 
   Muted findings are not excluded: muting is itself a silencing lever, and a muted CRITICAL finding still pages (`Assumption:` accepted noise; the security reviewer may add an exclusion as a dated change).
-- **VERIFY:** The describe output shows the topic, the filter exactly as written and a `serviceAccount` of the form `service-org-<ORG_ID>@gcp-sa-scc-notification.iam.gserviceaccount.com`. `gcloud pubsub topics get-iam-policy scc-findings --project=<CORE_PROJECT>` (platform owner) shows that service agent with the role Google grants automatically (`roles/securitycenter.notificationServiceAgent`). If the create is refused because the service agent is outside 13's member constraint, stop and record: the fix is 13's constraint admitting Google service agents, never a broader exception here.
+- **VERIFY:** The describe output shows the topic, the filter exactly as written and a `serviceAccount` of the form `service-org-<ORG_ID>@gcp-sa-scc-notification.iam.gserviceaccount.com`. `gcloud pubsub topics get-iam-policy scc-findings --project=<CORE_PROJECT>` (platform owner) shows that service agent with the role Google grants automatically (`roles/securitycenter.notificationServiceAgent`). **Gate, checked at PS-1.1:** 13 OP-5.3's record states whether B5 (`constraints/iam.allowedPolicyMemberDomains`) admits a Google-managed service agent. This step does not run on an assumption either way — not on 14's precondition, which asserts the exemption as settled on the strength of a `domain:example.com` test that says nothing about it, and not on a deferral to a 13 step that does not exist. If the record says B5 admits Google-managed service agents, proceed and cite it in the evidence. If it says B5 does not, the automatic grant to `service-org-<ORG_ID>@gcp-sa-scc-notification.iam.gserviceaccount.com` will fail: stop, and the fix is 13's committed B5 file gaining the allow-list entry (or the `is:`-form exemption the constraint supports) under `ENT_PLATFORM_POLICY`, in a reviewed pull request, never a broader exception made here. If there is no record at all, PS-1.1's deviation row is already open against 13's owner; this step waits for it. The same answer decides 14 CL-6.2 to CL-6.4 and CL-9.3, so it is recorded once, in 13, and read here.
 
 ```bash
 penv_set SCC_NOTIFICATION_CONFIG "organizations/${ORG_ID}/locations/eu/notificationConfigs/agp-scc-to-pager"
@@ -715,8 +790,8 @@ penv_set SCC_NOTIFICATION_CONFIG "organizations/${ORG_ID}/locations/eu/notificat
 - **ACTION:**
 
 ```bash
-need CORE_PROJECT
-gcloud pubsub topics remove-iam-policy-binding scc-findings --project="$CORE_PROJECT" --member="user:<IT security SCC administrator email>" --role=roles/pubsub.admin
+need CORE_PROJECT SCC_ADMIN_EMAIL
+gcloud pubsub topics remove-iam-policy-binding scc-findings --project="$CORE_PROJECT" --member="user:${SCC_ADMIN_EMAIL}" --role=roles/pubsub.admin
 gcloud pubsub topics get-iam-policy scc-findings --project="$CORE_PROJECT" --format='table(bindings.role,bindings.members)'
 ```
 
@@ -775,19 +850,32 @@ cp "$W/scc-waiting.yaml" "$BUILD_LOG_DIR/evidence/15/" && rm -rf "$W"
 
 - **ACTION:**
 
+  Fill `ORG_ID` and `SCC_API` by hand on the first two lines; everything after them runs unedited, and the source id is captured from the API's answer rather than typed.
+
 ```bash
 ORG_ID=<ORG_ID>
-curl -sS -H "Authorization: Bearer $(gcloud auth print-access-token)" "https://securitycenter.googleapis.com/v2/organizations/${ORG_ID}/sources" | jq -r '.sources[]? | [.name,.displayName] | @tsv'
-printf '%s' '{"displayName":"agp-route-test","description":"Setup 15 PS-6.6: synthetic findings that prove the SCC to pager route (Tier C) and the weekly H-3 check. Category AGP_ROUTE_TEST only."}' \
-  | curl -sS --fail-with-body -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" --data-binary @- "https://securitycenter.googleapis.com/v2/organizations/${ORG_ID}/sources" | jq -r '.name'
+SCC_API=https://securitycenter.googleapis.com          # retry with https://securitycenter.eu.rep.googleapis.com if refused
+curl -sS -H "Authorization: Bearer $(gcloud auth print-access-token)" "${SCC_API}/v2/organizations/${ORG_ID}/sources" | jq -r '.sources[]? | [.name,.displayName] | @tsv'
+SRC="$(printf '%s' '{"displayName":"agp-route-test","description":"Setup 15 PS-6.6: synthetic findings that prove the SCC to pager route (Tier C) and the weekly H-3 check. Category AGP_ROUTE_TEST only."}' \
+  | curl -sS --fail-with-body -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" --data-binary @- "${SCC_API}/v2/organizations/${ORG_ID}/sources" | jq -r '.name // empty')"
+printf 'created source: %s\n' "${SRC:-NONE}"
 ```
 
-  `Assumption:` sources are created on the global endpoint as Google's page shows; if the call is refused under data residency, retry on `https://securitycenter.eu.rep.googleapis.com/v2/...` and record which worked.
-- **VERIFY:** The POST prints `organizations/<ORG_ID>/sources/<SOURCE_ID>`; the list, run again, shows it once.
+  `Assumption:` sources are created on the global endpoint as Google's page shows; if the call is refused under data residency, set `SCC_API` to the regional endpoint, run the POST again, and record which worked — but only after checking with the list command that the refused call created nothing, since the source cannot be deleted.
+- **VERIFY:** `printf` shows `organizations/<the organisation's numeric id>/sources/<a numeric source id>`, not `NONE`; the list, run again, shows `agp-route-test` exactly once. IT security reads that line out to the platform owner, who stores it — the value is the API's, never a hand-typed placeholder:
 
 ```bash
-penv_set SCC_ROUTE_TEST_SOURCE "organizations/<ORG_ID>/sources/<SOURCE_ID>"
+# platform owner, tenant shell
+need ORG_ID
+SRC="<the name IT security read out, pasted whole>"
+case "$SRC" in
+  organizations/"$ORG_ID"/sources/[0-9]*) penv_set SCC_ROUTE_TEST_SOURCE "$SRC";;
+  *) echo "STOP: not a source name for this organisation; do not store it";;
+esac
+need SCC_ROUTE_TEST_SOURCE && printf '%s\n' "$SCC_ROUTE_TEST_SOURCE" | grep -qE "^organizations/${ORG_ID}/sources/[0-9]+$" && echo "SOURCE STORED OK"
 ```
+
+  `SOURCE STORED OK` is the proof: PS-6.8 passes the stored id to `gcloud scc findings create` and PS-6.12's `need SCC_ROUTE_TEST_SOURCE` would otherwise pass on an angle-bracket string that no API will accept.
 
 - **ROLLBACK:** **IRREVERSIBLE**. The display name and description can be updated; the source stays.
 - **EVIDENCE:** Source name as `<date>-PS-6.6-route-test-source-v1`. E-05. TISAX 5.2.4.
@@ -808,7 +896,7 @@ penv_set SCC_ROUTE_TEST_SOURCE "organizations/<ORG_ID>/sources/<SOURCE_ID>"
 - **ACTION (IT security):**
 
 ```bash
-ORG_ID=<ORG_ID>; SOURCE_ID=<SOURCE_ID>; CORE_PROJECT_NUMBER=<CORE_PROJECT_NUMBER>
+ORG_ID=<ORG_ID>; SOURCE_ID=<the numeric id at the end of PS-6.6's stored SCC_ROUTE_TEST_SOURCE>; CORE_PROJECT_NUMBER=<CORE_PROJECT_NUMBER>
 export CLOUDSDK_API_ENDPOINT_OVERRIDES_SECURITYCENTER="https://securitycenter.eu.rep.googleapis.com/"
 F="agproute$(date -u +%Y%m%d%H%M)"
 gcloud scc findings create "$F" --organization="$ORG_ID" --location=eu --source="$SOURCE_ID" --state=ACTIVE --category=AGP_ROUTE_TEST --event-time="$(date -u +%Y-%m-%dT%H:%M:%SZ)" --resource-name="//cloudresourcemanager.googleapis.com/projects/${CORE_PROJECT_NUMBER}"
@@ -842,13 +930,15 @@ unset CLOUDSDK_API_ENDPOINT_OVERRIDES_SECURITYCENTER
 - **ACTION:** Add the weekly row, then repeat PS-6.8 each week until PS-6.10 is live. A weekly writer cannot be watched by a Cloud Monitoring absence condition (at most 23.5 hours, and never met before a first data point, S123), so H-3 is a positive check: a week without a record is itself the alarm, read by the second human.
 
 ```bash
-need DRILL_CALENDAR
-printf '| DR-15-3 | H-3 interim: IT security raises an AGP_ROUTE_TEST finding; platform owner pulls and acks; a missed week is a severity 2 finding raised by the second human | weekly, Wednesdays, until PS-6.10 is live | IT security SCC administrator | second human confirms the page | 15 | %s | | | H-3; G2 evidence |\n' "$(date -u -v+7d +%Y-%m-%d)" >> "$DRILL_CALENDAR"
+need DRILL_CALENDAR BUILD_LOG_DIR
+DUE="$(date -u -v+7d +%Y-%m-%d 2>/dev/null || date -u -d '+7 days' +%Y-%m-%d)"
+test -n "$DUE" || { echo "STOP: no due date computed; the calendar row would carry an empty date"; }
+printf '| DR-15-3 | H-3 interim: IT security raises an AGP_ROUTE_TEST finding; platform owner pulls and acks; a missed week is a severity 2 finding raised by the second human | weekly, Wednesdays, until PS-6.10 is live | IT security SCC administrator | second human confirms the page | 15 | %s | | | H-3; G2 evidence |\n' "$DUE" >> "$DRILL_CALENDAR"
 git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit -m "PS-6.9 H-3 interim weekly row"
 ```
 
   After the first week, read the desk subscription's `num_undelivered_messages` series over 7 days in Metrics Explorer; if it is continuous, add to PS-6.5's policy a `conditionAbsent` of `84600s` (23.5 hours) on the same filter with `gcloud monitoring policies update <policy> --project="$CORE_PROJECT" --policy-from-file=<edited file>`, and record the change. If it is not continuous, add nothing and record that.
-- **VERIFY:** The calendar row is committed; the first weekly record exists 7 days later.
+- **VERIFY:** The calendar row is committed and its due-date column holds a date, not an empty field (`tail -1 "$DRILL_CALENDAR"`; the `date` line is 13 OP-3.4's portable form, BSD/macOS `-v+7d`, GNU `-d '+7 days'`); the first weekly record exists 7 days later.
 - **ROLLBACK:** The row is removed only when PS-6.10 is live and its first automatic record exists.
 - **EVIDENCE:** One record per week, `<date>-PS-6.9-h3-weekly-v<n>`. E-08. TISAX 1.5, 5.2.4.
 
@@ -882,13 +972,14 @@ git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit 
 
 ```bash
 need ENT_PROJECT_REPAIR_CORE ONCALL_FILE NOTIF_CH_PAGER_CORE NOTIF_CH_EMAIL_CORE NOTIF_CH_SMS_SECOND_HUMAN NOTIF_CH_PAGER_LOGGING NOTIF_CH_EMAIL_LOGGING NOTIF_CH_SMS_SECOND_HUMAN_LOGGING SCC_TOPIC SCC_NOTIFICATION_CONFIG SCC_ROUTE_TEST_SOURCE PAGER_SUBJECT_SH_SERVICE_NAME
-grep -E 'PS-(1\.[1-3]|2\.[1-5]|2\.7|3\.[12]|4\.[1-7]|5\.[1-6]|6\.[1-9])\s+DONE' "$BUILD_LOG_DIR/checkpoints.tsv" | awk -F'\t' '{print $2}' | sort -u | wc -l
-grep -E 'PS-(2\.6|6\.10|6\.11)\s+BLOCKED' "$BUILD_LOG_DIR/checkpoints.tsv" | awk -F'\t' '{print $2}' | sort -u
+printf '%s\n' "$SCC_ROUTE_TEST_SOURCE" | grep -qE '^organizations/[0-9]+/sources/[0-9]+$' && echo "SOURCE VALUE OK" || echo "STOP: SCC_ROUTE_TEST_SOURCE is not a source name (PS-6.6)"
+awk -F'\t' '$3=="DONE" && $2 ~ /^PS-(1\.[1-3]|2\.[1-5]|2\.4b|2\.7|3\.[12]|4\.[1-7]|5\.[1-6]|6\.[1-9])$/ {print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u | wc -l
+awk -F'\t' '$3=="BLOCKED" && $2 ~ /^PS-(2\.6|6\.10|6\.11)$/ {print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u
 gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_CORE" --filter='state=ACTIVE' --format='value(name)' | while read -r G; do gcloud pam grants revoke "$G" --reason="setup 15 part A closed"; done
 sitting_end
 ```
 
-- **VERIFY:** The count prints `33` (every part A step before this one except the three BLOCKED ones; `32` when PS-5.4 still waits on `BUSINESS_HOURS`, which is then recorded as `BLOCKED` with that reason and does not hold the hand-over, and PS-6.9 counts from its first weekly record); the three BLOCKED steps PS-2.6, PS-6.10 and PS-6.11 are listed; `SITTING-END OK`.
+- **VERIFY:** `SOURCE VALUE OK`. The count prints `34` (every part A step before this one except the three BLOCKED ones: PS-1.1 to PS-1.3, PS-2.1 to PS-2.5, PS-2.4b, PS-2.7, PS-3.1 to PS-3.2, PS-4.1 to PS-4.7, PS-5.1 to PS-5.6, PS-6.1 to PS-6.9; `33` when PS-5.4 still waits on `BUSINESS_HOURS`, which is then recorded as `BLOCKED` with that reason and does not hold the hand-over, and PS-6.9 counts from its first weekly record); the three BLOCKED steps PS-2.6, PS-6.10 and PS-6.11 are listed; `SITTING-END OK`. The two `awk` selectors read the tab-separated checkpoints file by field — step id in column 2, status in column 3 — and anchor the id, so `PS-6.1` no longer matches inside `PS-6.10` and no count depends on `\s`, which BSD/macOS `grep -E` does not read as whitespace.
 - **ROLLBACK:** None.
 - **EVIDENCE:** `<date>-PS-6.12-part-a-record-v1`, signed by the second human. E-05, E-08. TISAX 1.6, 5.2.4.
 
@@ -1098,7 +1189,9 @@ exists_or_pending "serviceAccount:<SIEM outbound principal>" PS-8.9 "15 PS-8.9 r
 Part A:
 
 - [ ] `PAGER_SERVICE_NAME` uses `agp-platform-escalation` with the second human on level 1 beside the desk, L2 platform owner, L3 incident commander, signed (PS-2.2, PS-2.7).
-- [ ] `PAGER_SUBJECT_SERVICE_NAME` and `PAGER_SUBJECT_SH_SERVICE_NAME` exist under `itsec-subject-reports`; neither reaches its subject; the platform owner holds no role on either (PS-2.4, PS-5.3).
+- [ ] `PAGER_SUBJECT_SERVICE_NAME` and `PAGER_SUBJECT_SH_SERVICE_NAME` exist under `itsec-subject-reports`; neither reaches its subject; the platform owner holds no role on either and read the second service's name from the second human's message, not from the tool (PS-2.4, PS-2.4b, PS-5.3).
+- [ ] Nothing in PS-4.2 left a standing binding: `gcloud secrets get-iam-policy platform-pager-key` shows no `secretVersionAdder` and no user principal (PS-4.2).
+- [ ] Each acknowledgement test measured the full L1 → L2 → L3 chain, with the acknowledgement at L3 only (PS-5.2, PS-5.4).
 - [ ] The configuration-change log reaches the second human weekly (PS-2.5); the forwarder is in README's BLOCKED index (PS-2.6).
 - [ ] `ONCALL_FILE` merged on `main` with the second human's and the incident commander's approvals (PS-3.2).
 - [ ] Six channels, three per core project, SMS verified, no other channel (PS-4.7).
@@ -1128,9 +1221,11 @@ Part B (when unblocked):
 | [28](28-eve-independent-proof-and-sandbox-drills.md) | The subject-escalation proof (PS-5.3) as the model for the second human's confirmation | PS-5.3 |
 | [38](38-super-admin-gate-and-grant.md) | G2 | PS-8.10 |
 | [42](42-gates-drills-and-evidence.md) | Drill rows PS-2.5, PS-5.6, PS-6.9 in `DRILL_CALENDAR` | PS-2.5, PS-5.6, PS-6.9 |
-| [README](README.md) | BLOCKED rows: PS-2.6 (paging audit forwarder, IT security), PS-6.10 and PS-8.6 (B-05), PS-6.11 (SCC notifier, platform owner), PS-7.1 to PS-8.10 (B-06); re-run rows: security reviewer appointed → PS-2.4 level 1 of the second-human subject escalation; `K7_JOB` → PS-8.9 | this file |
+| [README](README.md) | BLOCKED rows: PS-2.6 (paging audit forwarder, IT security), PS-6.10 and PS-8.6 (B-05), PS-6.11 (SCC notifier, platform owner), PS-7.1 to PS-8.10 (B-06); re-run rows: security reviewer appointed → PS-2.4 level 1 of the second-human subject escalation; `K7_JOB` → PS-8.9; B20 applied at P12 → PS-6.1's topic re-read for CMEK. Role rows §6 needs and does not have: paging administrator, SCC administrator, SIEM administrator (03 §5 `PPL-PA`, `PPL-SCA`, `PPL-SIA`, with their incompatible pairs in 01 §2.1 and lead times in 01 §3.1 P-15, P-16, P-18, P-19) | this file |
 
-Variables produced: `ONCALL_FILE`, `NOTIF_CH_PAGER_CORE`, `NOTIF_CH_EMAIL_CORE`, `NOTIF_CH_SMS_SECOND_HUMAN`, `SCC_TOPIC`, `SCC_NOTIFICATION_CONFIG`, `SIEM_INGEST_PRINCIPAL` (part B). Added by this file beyond the plan's table, for the plan's next revision: `NOTIF_CH_PAGER_LOGGING`, `NOTIF_CH_EMAIL_LOGGING`, `NOTIF_CH_SMS_SECOND_HUMAN_LOGGING` (the scope puts channels in `LOGGING_PROJECT` too), `PAGER_SUBJECT_SH_SERVICE_NAME` (one subject service cannot serve both sole recipients), `SCC_ROUTE_TEST_SOURCE` (the permanent test source).
+Variables produced: `ONCALL_FILE`, `NOTIF_CH_PAGER_CORE`, `NOTIF_CH_EMAIL_CORE`, `NOTIF_CH_SMS_SECOND_HUMAN`, `SCC_TOPIC`, `SCC_NOTIFICATION_CONFIG`, `SIEM_INGEST_PRINCIPAL` (part B). Added by this file beyond the plan's table, for the plan's next revision: `NOTIF_CH_PAGER_LOGGING`, `NOTIF_CH_EMAIL_LOGGING`, `NOTIF_CH_SMS_SECOND_HUMAN_LOGGING` (the scope puts channels in `LOGGING_PROJECT` too), `PAGER_SUBJECT_SH_SERVICE_NAME` (one subject service cannot serve both sole recipients), `SCC_ROUTE_TEST_SOURCE` (the permanent test source), `PAGER_ADMIN_EMAIL` and `SCC_ADMIN_EMAIL` (PS-1.3 and PS-1.2 record them so that the grants of PS-4.2, PS-6.2 and PS-6.4 name a stored address; they belong in 03 §5 as `PPL-PA` and `PPL-SCA`, and `SIEM_ADMIN_EMAIL` as `PPL-SIA` for part B).
+
+Consumed from other files and **not** created here, each with the file and step that owes it: `OWNER_DAILY_ACCOUNT` (01 PR-3.3), `BUSINESS_TZ` and `BUSINESS_HOURS` (03 DC-7.1, decision WDEC-15, may be `*tbd*`), the B5 service-agent record (13 OP-5.3), the three IT security appointments (03 §5, rows not written on 2026-09-15).
 
 ## Findings
 
@@ -1148,10 +1243,9 @@ Deferred: none of the four. S123 is not assigned here; its lesson is applied (PS
 - Whether an SCC source can be created on the global v2 endpoint when data residency is on, or needs the `eu` regional endpoint (PS-6.6 tries global first and records the result).
 - The latency from an SCC finding to a Pub/Sub message, and from a log entry to a log-based alert notification; Google publishes neither figure (PS-5.2, PS-6.8 record them).
 - Whether `pubsub.googleapis.com/subscription/num_undelivered_messages` reports continuously at 0 for an idle subscription (PS-6.9 checks before adding an absence condition).
-- Whether IAM conditions are accepted on a Pub/Sub topic binding (PS-6.2 falls back to a same-day removal).
 - Whether the S-folder intercept leaves `LOGGING_PROJECT`'s own Admin Activity entries scannable by a log-based alert in that project (PS-5.5 tests it, with a stated fallback).
 - The exact Cloud Logging method names for view creation and deletion (PS-5.5 reads them back before relying on the filter).
-- Whether 13's member constraint admits the SCC notification service agent (PS-6.3 stops and records if not).
+- Whether 13's member constraint (B5) admits the SCC notification service agent. This is **not** left to this file to discover: 13 OP-5.3 must record a positive test against a Google-managed service agent, PS-1.1 checks for that record, and PS-6.3 cites it. Until the record exists, the open item belongs to 13's owner, with a dated `DEVIATION_REGISTER` row; the same answer governs 14 CL-6.2 to CL-6.4 and CL-9.3.
 - The Chronicle location id for the Europe multi-region (`eu` assumed from the `eu-chronicle.googleapis.com` endpoint) and the SecOps outbound principal for K7 (07 §2.2 *tbd*).
 - Paging-tool facts are the vendor's documentation (escalation policies, audit trail reporting, manual incidents), not Google's; if IT security's own tool is used, the equivalents are recorded at PS-1.3.
 - The Events API v1 integration type is taken from Google's Cloud Monitoring page; the vendor's own support status for v1 on the day was not checked.
@@ -1171,7 +1265,8 @@ Google, read 2026-09-15:
 - Channels via API and gcloud: https://docs.cloud.google.com/monitoring/alerts/using-channels-api ; https://docs.cloud.google.com/sdk/gcloud/reference/beta/monitoring/channels/create ; https://docs.cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.notificationChannels
 - Alert policies: https://docs.cloud.google.com/sdk/gcloud/reference/monitoring/policies/create ; https://docs.cloud.google.com/monitoring/api/ref_v3/rest/v3/projects.alertPolicies ; https://docs.cloud.google.com/monitoring/alerts/metric-absence
 - Log-based alerts: https://docs.cloud.google.com/logging/docs/alerting/log-based-alerts ; query language: https://docs.cloud.google.com/logging/docs/view/logging-query-language
-- Pub/Sub metrics: https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z ; topics and subscriptions: https://docs.cloud.google.com/sdk/gcloud/reference/pubsub/topics/create ; https://docs.cloud.google.com/sdk/gcloud/reference/pubsub/subscriptions/create
+- Pub/Sub metrics: https://docs.cloud.google.com/monitoring/api/metrics_gcp_p_z ; topics and subscriptions: https://docs.cloud.google.com/sdk/gcloud/reference/pubsub/topics/create ; https://docs.cloud.google.com/sdk/gcloud/reference/pubsub/subscriptions/create ; topic IAM (flags `--member` and `--role` only, no `--condition`, which settles PS-6.2's same-day removal): https://docs.cloud.google.com/sdk/gcloud/reference/pubsub/topics/add-iam-policy-binding
+- Secret Manager versions (`--data-file=-` reads standard input, PS-4.2): https://docs.cloud.google.com/sdk/gcloud/reference/secrets/versions/add ; secret IAM: https://docs.cloud.google.com/sdk/gcloud/reference/secrets/add-iam-policy-binding
 - PAM grants: https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/create
 - SecOps Google Cloud ingestion: https://docs.cloud.google.com/chronicle/docs/ingestion/default-parsers/ingest-gcp-logs ; feeds: https://docs.cloud.google.com/chronicle/docs/administration/feed-management ; Chronicle API: https://docs.cloud.google.com/chronicle/docs/reference/rest (rules.create, rules.updateDeployment, rules.retrohunts.create, events.import, referenceLists, verifyRuleText)
 - Workspace export to SecOps: https://knowledge.workspace.google.com/admin/reports/export-log-events-to-google-security-operations-to-monitor-insider-risk

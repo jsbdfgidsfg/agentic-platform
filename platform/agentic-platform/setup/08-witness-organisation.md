@@ -5,7 +5,7 @@
 - Last reviewed: 2026-09-15
 - Last executed: never
 - Stage: review §2 stage 7 (W-1, W-2 and the records step). W-3 (the member constraint and the two grants to `eve-export@`) and W-4 (the absence alarms) are [27-witness-grants-and-alarms.md](27-witness-grants-and-alarms.md). This file can start as soon as P14 is signed (03) and the witness domain is registered (04); it runs in parallel with 06 to 18 and waits on no platform file.
-- Step prefix: WO. Steps: 38 (W-1: 15, W-2: 18, records: 5). BLOCKED steps: WO-2.10 (the mirror tables, until Eve's schema files are committed at `EVE_SCHEMAS_COMMIT` by file 23). Gated but not BLOCKED: WO-2.16 and WO-2.17 (the two retention locks, until P13 is signed), WO-2.15 (Access Approval, until the Customer Care subscription of WO-1.13 is active or recorded as unavailable).
+- Step prefix: WO. Steps: 38 (W-1: 15, W-2: 18, records: 5). **Run order exception:** WO-2.13 (Cloud Storage `DATA_WRITE` audit logs) is printed and performed **before** WO-2.12 (the records convention, the bucket's first object), so that no write to the witness bucket is ever outside the audit log; its id is kept because file 27 cites `08 WO-2.13`. BLOCKED steps: WO-2.10 (the mirror tables, until Eve's schema files are committed at `EVE_SCHEMAS_COMMIT` by file 23). Gated but not BLOCKED: WO-2.16 and WO-2.17 (the two retention locks, until P13 is signed), WO-2.15 (Access Approval, until the Customer Care subscription of WO-1.13 is active or recorded as unavailable).
 - Replaces: `project-topology.md` §7.5 rows W-1 and W-2, the "IT security created the tenant…" precondition of `eve/07-build-runbook.md` Phase 10b and its "Witness tenant (IT security)" row, and the witness half of `wall-e/PREREQUISITES.md` §9. Decisions applied: SD-04 (witness administrators are not tenant super admins), SD-27 (paper records until W-2, then the records step), SD-28 (billing, support, domain), SD-07 (the heartbeat contract the table carries), SD-43 (row tampering detected, not prevented).
 - Closes: S005 (the W-1 and W-2 half; W-3, W-4 and the export are 26 and 27), X-ORG-05 (the witness half: who administers, owner of record, recovery design), X-ORG-08 (billing), X-ORG-09 (domain custody and edition grounds), X-ORG-11 (the upload of earlier records and the standing records rule), X-RQB-06 (billing account, Customer Care, Access Transparency; the `billingEnabled` alarm is 27 and the tenant-side push-failure alert is 26). Detail in "Findings this file closes".
 - Elapsed time: 2 to 3 days hands-on across two or three sittings; 2 to 6 weeks elapsed, driven by the billing route and the support subscription (04 PU-2.4, PU-3.1, PU-3.2) and by the up-to-7-day wait before a new security key is usable at sign-in (the figure file 06 records).
@@ -47,7 +47,7 @@ flowchart TD
   W1A --> W1B["WO-1.4 to WO-1.9: sign-up, 2SV keys, second admin, owner of record, recovery Off, share logs"]
   W1B --> W1C["WO-1.10 to WO-1.14: organisation, defaults replaced, billing account, Customer Care, Access Transparency"]
   W1C --> W2A["WO-2.1 to WO-2.7: project, APIs, IAM, channels, budget, Admin Activity alert"]
-  W2A --> W2B["WO-2.8 to WO-2.14: eve_mirror, heartbeat table, bucket, DATA_WRITE logs, upload alert"]
+  W2A --> W2B["WO-2.8, WO-2.9, WO-2.11, then WO-2.13 (DATA_WRITE logs), then WO-2.12 (records convention), WO-2.14 (upload alert)"]
   W2B --> W2C["WO-2.15: Access Approval"]
   W2B --> R["WO-3.1 to WO-3.5: records backlog uploaded, standing rule"]
   W2C --> H["WO-2.18: identifiers handed to the tenant"]
@@ -86,7 +86,7 @@ Separation checked in WO-1.1 and re-checked in 42 quarterly: neither witness adm
 | 1 | WO-1.1 to WO-1.5 | both witness administrators, second human | half a day | up to 7 days before a new key is usable at sign-in |
 | 2 | WO-1.6 to WO-1.11 | both witness administrators, second human | half a day | the second administrator's and owner of record's key wait |
 | 3 | WO-1.12 to WO-1.15 | both witness administrators, second human; finance's named payer for payment details only | half a day | the billing route and the Customer Care activation (days to weeks) |
-| 4 | WO-2.1 to WO-2.9, WO-2.11 to WO-2.14, WO-2.18 | both witness administrators; second human for WO-2.7, WO-2.14, WO-2.18 | one day | none |
+| 4 | WO-2.1 to WO-2.9, WO-2.11, WO-2.13, WO-2.12, WO-2.14, WO-2.18 (WO-2.13 before WO-2.12: see the run-order note at WO-2.13) | both witness administrators; second human for WO-2.7, WO-2.14, WO-2.18 | one day | none |
 | 5 | WO-3.1 to WO-3.5 | a witness administrator, custodians and other-line witnesses at the safe, second human | half a day | none |
 | Later | WO-2.10 (on `EVE_SCHEMAS_COMMIT`), WO-2.15 (on Customer Care), WO-2.16 and WO-2.17 (on P13), WO-3.3 (on every new record) | as each step | one hour each | none |
 
@@ -113,6 +113,7 @@ The witness exists because a tenant super admin can reach everything inside the 
 | A witness administrator loses a key after WO-1.6 | The other witness administrator resets 2SV for the account in front of the second human (Menu > Directory > Users > user > Security), the key is re-enrolled from a spare, and a custody record goes through WO-3.3 the same day. |
 | The billing route is not ready at WO-1.12 | W-1 pauses after WO-1.11. Never link the witness project to any tenant billing account, even for a day. |
 | WO-2.7's test does not fire within an hour | Check the sink's writer binding (WO-2.6), the metric's bucket name and the policy's filter; do not continue to WO-2.8 until the alert fires, because every later change relies on it. |
+| The witness project has to be discarded (wrong id, wrong organisation, a superseding P14) | Before WO-2.11: `gcloud projects delete "$EVE_WITNESS_PROJECT"`, name recorded as burnt. From WO-2.11 on the Cloud Storage lien blocks `projects.delete`; the bucket can still be deleted only before WO-2.12, and the lien has to be listed and deleted by hand (`gcloud alpha resource-manager liens list --project=…`, then `liens delete`) under a superseding P14 record with both witness administrators and the second human present. From WO-2.16 or WO-2.17 the locked periods have to elapse first: plan to keep the project instead. |
 | An IRREVERSIBLE step (WO-2.1, WO-2.8, WO-2.11, WO-2.16, WO-2.17) has START and no DONE after an interruption | Never re-run it. Read the resource's state (`gcloud projects describe`, `bq show`, `gcloud storage buckets describe`), record it, and ask both witness administrators and the second human before going on (README resume rule 3). |
 | A safe inspection finds a mismatch or a broken seal | Do not upload that record. Report to the incident commander the same day; the key is re-enrolled (04 §7.1); the new custody record and the inspection report go to the witness through WO-3.3. |
 | A tenant principal appears in any witness IAM policy | Remove it, report a severity 1 to the incident commander with the WO-2.7 incident, and re-run WO-1.11, WO-1.12 and WO-2.3's checks. |
@@ -302,17 +303,26 @@ penv_set SECOND_HUMAN_WITNESS_ACCOUNT "owner-of-record@${WITNESS_DOMAIN}"
 - **WHERE:** `https://console.cloud.google.com` signed in as `WITNESS_SA_1` (accept the Google Cloud terms of service on first visit only after both administrators have read them), then the witness workstation shell signed in as `WITNESS_SA_1` under file 01's credential rules.
 - **ACTION:**
 
+  The customer id lives at a different path in the two Resource Manager versions the SDK may print: the v1 Organization nests it under `owner.directoryCustomerId` (with `lifecycleState`), the v3 Organization carries `directoryCustomerId` at the top level (with `state`). `gcloud organizations describe` does not publish which shape it returns, and an unmatched `--format='value(...)'` path yields an **empty string** that `penv_set` would store without complaint — the failure would then surface only in file 27, which consumes `WITNESS_CUSTOMER_ID` for the W-3 member constraint. So the raw resource is read once, the path that appeared is recorded, and the value is asserted before it is stored:
+
 ```bash
 need WITNESS_SA_1 WITNESS_SA_2 WITNESS_DOMAIN
 gcloud auth login "$WITNESS_SA_1"
-gcloud organizations list --format="table(displayName,name,owner.directoryCustomerId)"
+gcloud organizations list --format=yaml
 penv_set WITNESS_ORG_ID "<digits of organizations/N whose displayName is WITNESS_DOMAIN>"
-penv_set WITNESS_CUSTOMER_ID "$(gcloud organizations describe "$WITNESS_ORG_ID" --format='value(owner.directoryCustomerId)')"
+test -n "$WITNESS_ORG_ID" && printf '%s' "$WITNESS_ORG_ID" | grep -Eq '^[0-9]+$' || { echo "WITNESS_ORG_ID empty or not digits: stop"; false; }
+gcloud organizations describe "$WITNESS_ORG_ID" --format=yaml | tee "$(mktemp -d)/witness-org-describe.yaml"
+CID="$(gcloud organizations describe "$WITNESS_ORG_ID" --format='value(directoryCustomerId)')"
+if [ -z "$CID" ]; then CID="$(gcloud organizations describe "$WITNESS_ORG_ID" --format='value(owner.directoryCustomerId)')"; SHAPE="v1 owner.directoryCustomerId"; else SHAPE="v3 directoryCustomerId"; fi
+printf 'customer id read from: %s\n' "$SHAPE"
+printf '%s' "$CID" | grep -Eq '^C[0-9a-z]{8}$' || { echo "customer id empty or not a C0-form id: stop, read the describe output by hand"; false; }
+penv_set WITNESS_CUSTOMER_ID "$CID"
 gcloud organizations add-iam-policy-binding "$WITNESS_ORG_ID" --member="user:${WITNESS_SA_2}" --role=roles/resourcemanager.organizationAdmin --condition=None
 gcloud org-policies describe iam.allowedPolicyMemberDomains --organization="$WITNESS_ORG_ID" --effective --format=json
 ```
 
-- **VERIFY:** `gcloud organizations list` shows exactly one organisation, display name `WITNESS_DOMAIN`, lifecycle `ACTIVE`. `WITNESS_CUSTOMER_ID` is not `DIRECTORY_CUSTOMER_ID` of the tenant (the second human compares it with his own copy). `gcloud organizations get-iam-policy "$WITNESS_ORG_ID" --format=json | jq -r '.bindings[] | select(.role=="roles/resourcemanager.organizationAdmin") | .members[]'` prints exactly `user:WITNESS_SA_1` and `user:WITNESS_SA_2`. The effective `iam.allowedPolicyMemberDomains` output is saved: for an organisation created after 2024-05-03 it is enforced by the security baseline with the witness's own customer id, which 27 depends on (W-3).
+  (*Assumption:* the customer id is the `C` + eight characters form Google shows in the Admin console, as the plan's variable table records; if a tenant's id is longer, widen the pattern and record it, never drop the check.)
+- **VERIFY:** `gcloud organizations list --format=yaml` shows exactly one organisation, display name `WITNESS_DOMAIN`, and its lifecycle field — `state: ACTIVE` in the v3 shape, `lifecycleState: ACTIVE` in the v1 shape — is `ACTIVE`; which field appeared is written in the build log beside `SHAPE`. `WITNESS_ORG_ID` and `WITNESS_CUSTOMER_ID` are both non-empty and well formed (the two pattern tests above ran without stopping the block). `WITNESS_CUSTOMER_ID` is not `DIRECTORY_CUSTOMER_ID` of the tenant (the second human compares it with his own copy, and confirms it is a real id, not a blank). `gcloud organizations get-iam-policy "$WITNESS_ORG_ID" --format=json | jq -r '.bindings[] | select(.role=="roles/resourcemanager.organizationAdmin") | .members[]'` prints exactly `user:WITNESS_SA_1` and `user:WITNESS_SA_2`. The effective `iam.allowedPolicyMemberDomains` output is saved: for an organisation created after 2024-05-03 it is enforced by the security baseline with the witness's own customer id, which 27 depends on (W-3).
 - **ROLLBACK:** `gcloud organizations remove-iam-policy-binding "$WITNESS_ORG_ID" --member="user:${WITNESS_SA_2}" --role=roles/resourcemanager.organizationAdmin`.
 - **EVIDENCE:** The command output as `<date>-WO-1.10-organisation-v1` (uploaded in WO-3.3; the org id and customer id are identifiers, not secrets). EU AI Act E-06. TISAX 4.1-4.2.
 
@@ -435,7 +445,7 @@ gcloud billing projects describe "$EVE_WITNESS_PROJECT" --format="value(billingE
 ```
 
   prints `organization`, `WITNESS_ORG_ID`, `ACTIVE` and the three labels; then `True` and `billingAccounts/<WITNESS_BILLING_ACCOUNT_ID>`. If the id is taken, apply the names register's signed fallback suffix, record it, and repeat.
-- **ROLLBACK:** **IRREVERSIBLE as a name**: a project id can never be reused, even after deletion. Confirm before running: the id equals the NAMES record value, both witness administrators have read it aloud, and P14 is signed. A project created wrongly is shut down with `gcloud projects delete "$EVE_WITNESS_PROJECT"` only before WO-2.16 (a locked bucket places a lien) and the name is recorded as burnt.
+- **ROLLBACK:** **IRREVERSIBLE as a name**: a project id can never be reused, even after deletion. Confirm before running: the id equals the NAMES record value, both witness administrators have read it aloud, and P14 is signed. A project created wrongly is shut down with `gcloud projects delete "$EVE_WITNESS_PROJECT"` only **before WO-2.11**, and the name is recorded as burnt. From WO-2.11 on the delete fails: enabling per-object retention puts a Cloud Storage lien on the project's `projects.delete` permission ("After you enable the feature on a bucket, Cloud Storage applies a lien to the `projects.delete` permission for the project that contains the bucket, at best effort" — Object Retention Lock, read 2026-09-15), and WO-2.16's bucket lock adds the same barrier. Removing the lien is a deliberate act of its own (`gcloud alpha resource-manager liens delete <lien>`), taken only under a superseding P14 record with both witness administrators and the second human present.
 - **EVIDENCE:** Output as `<date>-WO-2.1-project-v1` (uploaded in WO-3.3). EU AI Act E-06. TISAX 1.3 (asset register), 4.1.
 
 ### WO-2.2 Enable the APIs
@@ -487,6 +497,8 @@ gcloud projects get-iam-policy "$EVE_WITNESS_PROJECT" --format=json | jq -r '.bi
 ```
 
   prints exactly seven user bindings: `roles/owner` and `roles/storage.admin` for each of the two administrators, and `roles/monitoring.viewer`, `roles/logging.viewer` and `roles/bigquery.jobUser` for the owner of record. No `domain:` or `group:` member, and no tenant address.
+
+  **Expected count when this check is re-run later** (WO-3.5's quarterly re-run, 42): seven at this step; **nine** after WO-2.15 adds `roles/accessapproval.configEditor` to each administrator; 27's grant to `eve-export@` is a `serviceAccount:` member and is excluded by the `select` above, so it never changes the user count. Any other line is investigated as a tenant principal in the witness (see "If something goes wrong in the middle").
 - **ROLLBACK:** `gcloud projects remove-iam-policy-binding "$EVE_WITNESS_PROJECT" --member=<member> --role=<role>` for each added binding.
 - **EVIDENCE:** The sorted list as `<date>-WO-2.3-project-iam-v1` (uploaded in WO-3.3). EU AI Act E-08. TISAX 4.1-4.2.
 
@@ -514,13 +526,15 @@ penv_set WITNESS_EMAIL_CHANNEL "$(gcloud beta monitoring channels list --project
 - **WHERE:** Witness workstation shell.
 - **ACTION:** Budget alerts accept email channels only, up to five. The amount is the P14 record's figure (*tbd* until finance states it; eve/01 prices the witness at hours of work, not a second platform). Default recipients (the two Billing Account Administrators) stay on.
 
+  `--filter-projects` is passed even though the account pays for one project today: file 07 §8 imposes the same contract on every budget in the set (`projects/<project-id>`, never the number, because a malformed or absent filter scopes the budget to the whole billing account), and without it this budget's meaning would change silently the day a second project is ever linked to `org-witness`. `--budget-amount` may carry the currency or not — "If excluded, the currency used will be the currency associated with the billing account" (`gcloud billing budgets create` reference, read 2026-09-15) — so the `${CUR}` suffix below is correct but redundant; it is kept only so the amount and its currency are read aloud together at the sitting.
+
 ```bash
 need WITNESS_BILLING_ACCOUNT_ID EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL
 CUR="$(gcloud billing accounts describe "$WITNESS_BILLING_ACCOUNT_ID" --format='value(currencyCode)')"
-gcloud billing budgets create --billing-project="$EVE_WITNESS_PROJECT" --billing-account="$WITNESS_BILLING_ACCOUNT_ID" --display-name="witness-budget" --budget-amount="<amount from the P14 record>${CUR}" --calendar-period=month --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0 --notifications-rule-monitoring-notification-channels="$WITNESS_EMAIL_CHANNEL"
+gcloud billing budgets create --billing-project="$EVE_WITNESS_PROJECT" --billing-account="$WITNESS_BILLING_ACCOUNT_ID" --display-name="witness-budget" --budget-amount="<amount from the P14 record>${CUR}" --calendar-period=month --filter-projects="projects/${EVE_WITNESS_PROJECT}" --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0 --notifications-rule-monitoring-notification-channels="$WITNESS_EMAIL_CHANNEL"
 ```
 
-- **VERIFY:** `gcloud billing budgets list --billing-project="$EVE_WITNESS_PROJECT" --billing-account="$WITNESS_BILLING_ACCOUNT_ID" --format=json | jq '.[] | {displayName, amount, thresholdRules, notificationsRule}'` shows `witness-budget`, the amount in `CUR`, three thresholds and the three channels. Billing > Budgets & alerts in the console shows the same.
+- **VERIFY:** `gcloud billing budgets list --billing-project="$EVE_WITNESS_PROJECT" --billing-account="$WITNESS_BILLING_ACCOUNT_ID" --format=json | jq '.[] | {displayName, amount, budgetFilter, thresholdRules, notificationsRule}'` shows `witness-budget`, the amount in `CUR`, `budgetFilter.projects` holding exactly one entry for the witness project — `projects/<EVE_WITNESS_PROJECT>` or the same project echoed as `projects/<EVE_WITNESS_PROJECT_NUMBER>`; record which form is returned — while an **empty or absent** `projects` list means the budget is scoped to the whole billing account and the budget is deleted and recreated, three thresholds and the three channels. Billing > Budgets & alerts in the console shows the same.
 - **ROLLBACK:** `gcloud billing budgets delete <budget id> --billing-project="$EVE_WITNESS_PROJECT" --billing-account="$WITNESS_BILLING_ACCOUNT_ID"`.
 - **EVIDENCE:** The JSON (billing account id masked) as `<date>-WO-2.5-budget-v1` (uploaded in WO-3.3). TISAX 6.1.
 
@@ -530,10 +544,12 @@ gcloud billing budgets create --billing-project="$EVE_WITNESS_PROJECT" --billing
 - **WHERE:** Witness workstation shell.
 - **ACTION:** An aggregated organisation sink with `--include-children` carries Admin Activity entries of the organisation and its project, including the witness tenant's own Admin log events shared by WO-1.9. A bucket-scoped metric on its destination feeds WO-2.7, because a log-based alerting policy is documented only for entries routed by a project-level sink.
 
+  The filter uses `LOG_ID("cloudaudit.googleapis.com/activity")`, the form Google's aggregated-sinks page gives for exactly this case, and **not** the substring form `logName:"…%2Factivity"`: the query-language page warns that "Using `:` might result in slower searches" and that "Substring matches on indexed fields don't take advantage of log indexes" (both read 2026-09-15). The URL-encoded equality form (`logName="projects/…/logs/cloudaudit.googleapis.com%2Factivity"`) is kept only where one fully qualified log name in one project is meant, as file 07 BA-4.2 does for the billing account and as WO-2.14 does for the project's Data Access log.
+
 ```bash
 need WITNESS_ORG_ID EVE_WITNESS_PROJECT
 gcloud logging buckets create witness-admin-activity --project="$EVE_WITNESS_PROJECT" --location=europe-west1 --retention-days=400 --description="Admin Activity of org-witness, for the witness change alert"
-gcloud logging sinks create witness-admin-activity "logging.googleapis.com/projects/${EVE_WITNESS_PROJECT}/locations/europe-west1/buckets/witness-admin-activity" --organization="$WITNESS_ORG_ID" --include-children --log-filter='logName:"cloudaudit.googleapis.com%2Factivity"'
+gcloud logging sinks create witness-admin-activity "logging.googleapis.com/projects/${EVE_WITNESS_PROJECT}/locations/europe-west1/buckets/witness-admin-activity" --organization="$WITNESS_ORG_ID" --include-children --log-filter='LOG_ID("cloudaudit.googleapis.com/activity")'
 SINK_WRITER="$(gcloud logging sinks describe witness-admin-activity --organization="$WITNESS_ORG_ID" --format='value(writerIdentity)')"
 gcloud projects add-iam-policy-binding "$EVE_WITNESS_PROJECT" --member="$SINK_WRITER" --role=roles/logging.bucketWriter --condition=None
 ```
@@ -548,9 +564,11 @@ gcloud projects add-iam-policy-binding "$EVE_WITNESS_PROJECT" --member="$SINK_WR
 - **WHERE:** Witness workstation shell.
 - **ACTION:** Every Admin Activity entry in `org-witness` notifies three people, so neither witness administrator can change an alert, a grant, the bucket, the sink or a Cloud Identity role alone and unnoticed. The deletion of this policy or of the sink is itself an Admin Activity entry, delivered only if the policy still exists at evaluation; that residual is covered by the second human's monthly check in 42.
 
+  Two forms below are the documented ones, not guesses. `--bucket-name` takes the **full** bucket path: Google's counter-metrics page gives `--bucket-name projects/my-project/locations/global/buckets/my-test-bucket` (read 2026-09-15), which is the shape used here with `europe-west1` in place of `global`. The `--log-filter` uses `LOG_ID("cloudaudit.googleapis.com/activity")` for the reason given in WO-2.6 — and it matters more here than in the sink, because this metric has to fire an alarm inside the 30 minutes the VERIFY assumes, and a substring match on `logName` does not use the log index.
+
 ```bash
 need EVE_WITNESS_PROJECT WITNESS_EMAIL_CHANNEL
-gcloud logging metrics create witness-admin-activity --project="$EVE_WITNESS_PROJECT" --bucket-name="projects/${EVE_WITNESS_PROJECT}/locations/europe-west1/buckets/witness-admin-activity" --description="Count of Admin Activity entries in org-witness" --log-filter='logName:"cloudaudit.googleapis.com%2Factivity"'
+gcloud logging metrics create witness-admin-activity --project="$EVE_WITNESS_PROJECT" --bucket-name="projects/${EVE_WITNESS_PROJECT}/locations/europe-west1/buckets/witness-admin-activity" --description="Count of Admin Activity entries in org-witness" --log-filter='LOG_ID("cloudaudit.googleapis.com/activity")'
 POL="$(mktemp -d)/witness-admin-activity-policy.json"
 jq -n --arg ch "$WITNESS_EMAIL_CHANNEL" '{displayName:"witness-admin-activity", combiner:"OR", conditions:[{displayName:"Any Admin Activity entry in org-witness", conditionThreshold:{filter:"metric.type=\"logging.googleapis.com/user/witness-admin-activity\" AND resource.type=\"logging_bucket\"", comparison:"COMPARISON_GT", thresholdValue:0, duration:"0s", aggregations:[{alignmentPeriod:"300s", perSeriesAligner:"ALIGN_SUM"}]}}], notificationChannels:($ch|split(",")), documentation:{content:"An administrative change was made in org-witness. Each recipient checks the Admin Activity entry against the witness build log. An unexplained change is a severity 1 report to the incident commander.", mimeType:"text/markdown"}}' > "$POL"
 gcloud monitoring policies create --project="$EVE_WITNESS_PROJECT" --policy-from-file="$POL"
@@ -588,8 +606,11 @@ bq --project_id="$EVE_WITNESS_PROJECT" show --format=prettyjson "${EVE_WITNESS_P
 jq --arg u "$SECOND_HUMAN_WITNESS_ACCOUNT" '.access += [{"role":"READER","userByEmail":$u}] | {access}' "$D/before.json" > "$D/update.json"
 bq --project_id="$EVE_WITNESS_PROJECT" update --source="$D/update.json" "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}"
 bq --project_id="$EVE_WITNESS_PROJECT" show --format=prettyjson "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}" > "$D/after.json"
+diff <(jq -S '.access | map(select(.userByEmail != $u))' --arg u "$SECOND_HUMAN_WITNESS_ACCOUNT" "$D/before.json") <(jq -S '.access | map(select(.userByEmail != $u))' --arg u "$SECOND_HUMAN_WITNESS_ACCOUNT" "$D/after.json") || { echo "dataset access changed beyond the added READER: investigate before continuing"; false; }
 diff <(jq -S .access "$D/before.json") <(jq -S .access "$D/after.json")
 ```
+
+  The first `diff` fails closed: with the new READER entry filtered out, the access array before and after must be identical, or the block stops. `bq update --source` sends only the fields in `update.json`, so it is already safer than a whole-policy write, but the same check is kept here as in WO-2.13. `before.json` and `after.json` are the step's evidence.
 
 - **VERIFY:** `bq --project_id="$EVE_WITNESS_PROJECT" show --format=prettyjson "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}" | jq '{location, defaultTableExpirationMs, defaultPartitionExpirationMs, defaultEncryptionConfiguration}'` prints `"EU"` and three nulls. The diff shows only the added READER entry.
 - **ROLLBACK:** **IRREVERSIBLE as a name and location**: a dataset's name and location cannot change. Confirm before running: the NAMES record says `eve_mirror`, and the P14 record does not name another location. An empty wrongly created dataset is removed with `bq --project_id="$EVE_WITNESS_PROJECT" rm -d "${EVE_WITNESS_PROJECT}:${WITNESS_MIRROR_DS}"` and recreated; a dataset holding pushed rows is never removed.
@@ -654,8 +675,10 @@ bq --project_id="$EVE_WITNESS_PROJECT" mk --table --description="Mirror of eve.<
 - **WHERE:** Witness workstation shell.
 - **ACTION:** Location `EU` and Google-managed encryption (08 S6, P112). Retention is set now and **not** locked (WO-2.16 locks). The value is `EVIDENCE_RETENTION_DAYS` if P13 is signed, otherwise the R2 proposal of 400 days, recorded as interim. Per-object retention is enabled so that custody, rota and drill records can carry their own 10-year retention (08 R11 and R12; 10-eu-ai-act E-08), which the bucket-level 400 days does not give; **once enabled it cannot be disabled**. The organisation already enforces uniform bucket-level access; the flag is explicit anyway.
 
+  `--retention-period` takes an ISO 8601 duration; Google's own example on the `gcloud storage buckets create` reference is `--retention-period=P1Y1M1DT5S`, so the `P<days>D` form below is valid (read 2026-09-15).
+
 ```bash
-need EVE_WITNESS_PROJECT
+need EVE_WITNESS_PROJECT SECOND_HUMAN_WITNESS_ACCOUNT
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES
 penv_set WITNESS_BUCKET "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES WITNESS_BUCKET)"
 RDAYS="$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 EVIDENCE_RETENTION_DAYS 2>/dev/null || true)"
@@ -672,13 +695,44 @@ gcloud storage buckets get-iam-policy "$WITNESS_BUCKET" --format=json | jq -r '.
 ```
 
   Location `EU`; uniform access true; public access prevention `enforced`; `retention_policy.retentionPeriod` equals `RDAYS × 86400` seconds and `isLocked` is absent or false; object retention enabled; no default KMS key. The IAM list holds the project convenience bindings (`projectOwner`, `projectEditor`, `projectViewer`) and the owner-of-record's objectViewer only. If the name is taken, apply the signed fallback suffix and record it.
-- **ROLLBACK:** **IRREVERSIBLE as a name, location and per-object-retention switch.** Confirm before running: the NAMES record value, location `EU` per 08 S6, and the decision to enable per-object retention written in the P14 or SD-27 record. An empty bucket without a locked policy can be deleted with `gcloud storage buckets delete "$WITNESS_BUCKET"`; its name may not be available again.
+- **ROLLBACK:** **IRREVERSIBLE as a name, location and per-object-retention switch, and it makes the project undeletable.** Confirm before running, each line written on the sitting form:
+  1. The bucket name equals the NAMES record value, read aloud by witness administrator 2.
+  2. Location `EU` per 08 S6; `EVE_WITNESS_PROJECT` is the project of WO-2.1 and no other.
+  3. The decision to enable per-object retention is written in the P14 or SD-27 record.
+  4. **From this command on, `gcloud projects delete "$EVE_WITNESS_PROJECT"` fails**: "After you enable the feature on a bucket, Cloud Storage applies a lien to the `projects.delete` permission for the project that contains the bucket, at best effort" (Object Retention Lock, read 2026-09-15). The lien must be removed by hand (`gcloud alpha resource-manager liens list --project="$EVE_WITNESS_PROJECT"`, then `gcloud alpha resource-manager liens delete <lien>`) before the project could ever be discarded, and that removal is itself an Admin Activity entry alerted by WO-2.7.
+  5. Per-object retention "cannot be disabled" once enabled (same page).
+
+  What can still be undone, and for how long: an **empty** bucket with no locked retention policy can be deleted with `gcloud storage buckets delete "$WITNESS_BUCKET"` — that is, **only before WO-2.12**, which uploads the records convention with a 10-year retain-until. After WO-2.12 "a bucket containing retained objects cannot be deleted until the retain-until time on all objects in the bucket has passed and all objects inside the bucket have been deleted" (same page). Deleting the bucket does **not** lift the project lien; the lien survives it and is removed only as in line 4. A deleted bucket name may not be available again.
 - **EVIDENCE:** The describe and IAM output as `<date>-WO-2.11-witness-bucket-v1` (the first object uploaded in WO-3.3). EU AI Act E-06. TISAX 5.2 (bucket lock states), 1.3.
+
+### WO-2.13 Turn on Cloud Storage `DATA_WRITE` audit logs
+
+> **Run order:** this step is printed here, out of id order, because it must run **immediately after WO-2.11 and before WO-2.12**. Its id stays `WO-2.13` because [27-witness-grants-and-alarms.md](27-witness-grants-and-alarms.md) cites `08 WO-2.13` for this switch in its BigQuery and Cloud Storage metrics step. Object creation is a `DATA_WRITE` Data Access event and Data Access logs are off by default, so a bucket written before this step has no audit record of its first write — and the first write is the records convention that defines custody for everything after it ("One witness administrator deletes an alarm, a sink or a record", in the threat table above, relies on that record existing). This step needs the project only, not the bucket.
+
+- **WHO:** Witness administrator 1; witness administrator 2 reviews the diff.
+- **WHERE:** Witness workstation shell (console equivalent: IAM & Admin > Audit Logs > Google Cloud Storage > Data Write).
+- **Precondition:** WO-2.1 has created the project (the bucket need not exist). Nothing has been uploaded to `WITNESS_BUCKET` yet.
+- **ACTION:** Data Access logs are off by default; object creation, change and deletion are `DATA_WRITE`, not Admin Activity. `set-iam-policy` replaces the **whole** policy, and the `etag` is the only concurrency guard, so the write is gated on a diff that proves nothing outside `auditConfigs` changed: if the diff prints anything, the `||` branch stops the block before `set-iam-policy` runs. `before.json` is kept as evidence so the etag-conflict path can be reconstructed.
+
+```bash
+need EVE_WITNESS_PROJECT
+D="$(mktemp -d)"; echo "policy working directory: $D"
+gcloud projects get-iam-policy "$EVE_WITNESS_PROJECT" --format=json > "$D/before.json"
+jq '.auditConfigs = ((.auditConfigs // []) | map(select(.service != "storage.googleapis.com")) + [{"service":"storage.googleapis.com","auditLogConfigs":[{"logType":"DATA_WRITE"}]}])' "$D/before.json" > "$D/after.json"
+diff <(jq -S 'del(.auditConfigs)' "$D/before.json") <(jq -S 'del(.auditConfigs)' "$D/after.json") || { echo "policy changed outside auditConfigs: stop, do not set-iam-policy"; false; }
+gcloud projects set-iam-policy "$EVE_WITNESS_PROJECT" "$D/after.json"
+```
+
+  (Run the block as a block, not line by line: the `||` clause only protects the `set-iam-policy` that follows it in the same run. If the shell is interactive and the operator pastes line by line, witness administrator 2 reads the diff output aloud and confirms it is empty before the last line is typed.)
+- **VERIFY:** The `diff` printed nothing, so `set-iam-policy` ran (had it printed, the block would have stopped with `policy changed outside auditConfigs`). `gcloud projects get-iam-policy "$EVE_WITNESS_PROJECT" --format=json | jq '.auditConfigs'` shows `storage.googleapis.com` with `DATA_WRITE`. The `set-iam-policy` did not fail on an etag conflict (if it did, start again from `get-iam-policy`; `before.json` shows which etag was read). `jq -S 'del(.auditConfigs)' "$D/before.json"` and the same over a fresh `get-iam-policy` still match: no binding was lost.
+- **ROLLBACK:** Repeat the same gated block with the storage entry removed from `auditConfigs`. Doing so blinds WO-2.14 and is itself notified by WO-2.7.
+- **EVIDENCE:** `auditConfigs` output and `before.json` (bindings are identifiers, not secrets) as `<date>-WO-2.13-storage-data-write-v1`. EU AI Act E-06. TISAX 5.2.
 
 ### WO-2.12 Write the records convention into the bucket
 
 - **WHO:** Witness administrator 1 writes; witness administrator 2 and the second human sign.
 - **WHERE:** Witness workstation shell.
+- **Precondition:** **WO-2.13 has been run** (printed above this step for that reason), so this first object's write is in `cloudaudit.googleapis.com%2Fdata_access` from the moment it lands. Check it before uploading: `gcloud projects get-iam-policy "$EVE_WITNESS_PROJECT" --format=json | jq -e '.auditConfigs[] | select(.service=="storage.googleapis.com") | .auditLogConfigs[] | select(.logType=="DATA_WRITE")'` prints the entry and exits 0.
 - **ACTION:** Write `custody/<date>-records-convention-v1.md` with this content, sign it (initials and date in the file's signature table after both have read it), and upload it with the convention it defines:
   1. Prefixes: `custody/` (key and envelope custody, safe inspections, the witness organisation's own setup records, contracts such as the heartbeat), `rota/` (the K5 and K6 rota and every change of it, the `oncall.yaml` rota section as merged), `drills/` (drill records: break-glass drills, the witness part of G-2, Eve's proofs of 28, K6 and K7 drills, alert tests).
   2. Name: `<prefix><date>-<record>-v<n>.<ext>`, where `<date>` is the date the record was made (not the upload date), `<record>` is lowercase letters, digits and hyphens, `v<n>` starts at 1. A correction is a new object `v<n+1>` whose first line names what it supersedes. Nothing is ever overwritten; the retention policy refuses it anyway.
@@ -686,42 +740,29 @@ gcloud storage buckets get-iam-policy "$WITNESS_BUCKET" --format=json | jq -r '.
   4. Each upload batch adds `custody/<upload date>-upload-manifest-v<n>.txt` listing object name, SHA-256 and MD5.
   5. Uploaders: the two witness administrators only. No tenant identity ever writes here except `eve-export@` under 27's grant, and only under the export prefix 27 defines.
 
-  Upload it (the first object of the bucket; the upload alert does not exist yet, so the second human watches the upload on screen):
+  Upload it (the first object of the bucket; the upload **alert** does not exist yet — WO-2.14 creates it — so the second human watches the upload on screen, and the write is nevertheless in the Data Access **log** because WO-2.13 ran first; WO-2.14 reads that entry back):
 
 ```bash
-need WITNESS_BUCKET
+need WITNESS_BUCKET EVE_WITNESS_PROJECT
 C="<local path>/$(date -u +%F)-records-convention-v1.md"
 gcloud storage cp --no-clobber --retain-until="$(date -u -v+10y +%FT%TZ)" --retention-mode=Unlocked --custom-metadata=sha256="$(shasum -a 256 "$C" | cut -d' ' -f1)",source=export,signed-by=wa1-wa2-sh "$C" "${WITNESS_BUCKET}/custody/"
 ```
 
-- **VERIFY:** `gcloud storage ls -l "${WITNESS_BUCKET}/custody/"` lists `<date>-records-convention-v1.md`, and `gcloud storage objects describe "${WITNESS_BUCKET}/custody/<date>-records-convention-v1.md" --format="value(md5_hash)"` equals `openssl dgst -md5 -binary "$C" | openssl base64`.
+- **VERIFY:** `gcloud storage ls -l "${WITNESS_BUCKET}/custody/"` lists `<date>-records-convention-v1.md`, and `gcloud storage objects describe "${WITNESS_BUCKET}/custody/<date>-records-convention-v1.md" --format="value(md5_hash)"` equals `openssl dgst -md5 -binary "$C" | openssl base64`. Within a few minutes the write is in the Data Access log: `gcloud logging read 'logName="projects/'"${EVE_WITNESS_PROJECT}"'/logs/cloudaudit.googleapis.com%2Fdata_access" AND protoPayload.methodName="storage.objects.create"' --project="$EVE_WITNESS_PROJECT" --limit=5 --format="value(timestamp,protoPayload.resourceName)"` shows this object. If it does not, WO-2.13 did not take effect: stop, fix it, and record that the bucket's first object is unlogged.
 - **ROLLBACK:** Supersede with `v2`; never delete.
 - **EVIDENCE:** The object itself. EU AI Act E-08. TISAX 1.1-1.2, 3.1.
-
-### WO-2.13 Turn on Cloud Storage `DATA_WRITE` audit logs
-
-- **WHO:** Witness administrator 1; witness administrator 2 reviews the diff.
-- **WHERE:** Witness workstation shell (console equivalent: IAM & Admin > Audit Logs > Google Cloud Storage > Data Write).
-- **ACTION:** Data Access logs are off by default; object creation, change and deletion are `DATA_WRITE`, not Admin Activity. The policy's `bindings` and `etag` are kept unchanged.
-
-```bash
-need EVE_WITNESS_PROJECT
-D="$(mktemp -d)"
-gcloud projects get-iam-policy "$EVE_WITNESS_PROJECT" --format=json > "$D/before.json"
-jq '.auditConfigs = ((.auditConfigs // []) | map(select(.service != "storage.googleapis.com")) + [{"service":"storage.googleapis.com","auditLogConfigs":[{"logType":"DATA_WRITE"}]}])' "$D/before.json" > "$D/after.json"
-diff <(jq -S 'del(.auditConfigs)' "$D/before.json") <(jq -S 'del(.auditConfigs)' "$D/after.json")
-gcloud projects set-iam-policy "$EVE_WITNESS_PROJECT" "$D/after.json"
-```
-
-- **VERIFY:** The `diff` printed nothing (bindings and etag unchanged) before `set-iam-policy` ran. `gcloud projects get-iam-policy "$EVE_WITNESS_PROJECT" --format=json | jq '.auditConfigs'` shows `storage.googleapis.com` with `DATA_WRITE`. The `set-iam-policy` did not fail on an etag conflict (if it did, start again from `get-iam-policy`).
-- **ROLLBACK:** Repeat with the storage entry removed from `auditConfigs`. Doing so blinds WO-2.14 and is itself notified by WO-2.7.
-- **EVIDENCE:** `auditConfigs` output as `<date>-WO-2.13-storage-data-write-v1`. EU AI Act E-06. TISAX 5.2.
 
 ### WO-2.14 Alert on every upload, change or delete in the witness bucket
 
 - **WHO:** Witness administrator 1 creates; witness administrator 2 uploads the test object; the second human confirms receipt without help.
 - **WHERE:** Witness workstation shell.
 - **ACTION:** A log-based alerting policy scans entries that originate in the project, so it sees the bucket's `DATA_WRITE` entries. Notifications are rate-limited to one per 5 minutes per policy; a batch of uploads is one notification, and each recipient reads the full list in Logs Explorer.
+
+  The records convention uploaded in WO-2.12 predates **this alert**, but not the **log**: WO-2.13 ran before it, so that first write has a `storage.objects.create` entry in `cloudaudit.googleapis.com%2Fdata_access`. Read it once here and record it with the policy, so the bucket's history is complete from object one:
+
+```bash
+gcloud logging read 'logName="projects/'"${EVE_WITNESS_PROJECT}"'/logs/cloudaudit.googleapis.com%2Fdata_access" AND protoPayload.methodName="storage.objects.create"' --project="$EVE_WITNESS_PROJECT" --limit=10 --format="table(timestamp,protoPayload.resourceName,protoPayload.authenticationInfo.principalEmail)"
+```
 
 ```bash
 need EVE_WITNESS_PROJECT WITNESS_BUCKET WITNESS_EMAIL_CHANNEL
@@ -749,16 +790,18 @@ gcloud storage cp --no-clobber --retain-until="$(date -u -v+10y +%FT%TZ)" --rete
 - **WHERE:** Witness workstation shell (console equivalent: Security > Access Approval > Enroll, project selected).
 - **ACTION:** Only if WO-1.13 bought Customer Care. Access Transparency is confirmed (WO-1.14). Approval requests notify both witness administrators' tenant mailboxes (the witness accounts have none); approvals are made in the witness console by a witness administrator.
 
+  `roles/accessapproval.approver` carries `accessapproval.requests.approve` and `accessapproval.requests.dismiss` only: it does **not** carry `accessapproval.settings.update`, so an approver alone cannot run the `settings update` below. `roles/accessapproval.configEditor` carries `accessapproval.settings.get`, `.update` and `.delete` **and** the approve permissions, so it is granted to both administrators and no separate approver binding is needed (Access Approval access-control page, read 2026-09-15). Both hold it, so either can approve and either can run the rollback; neither can act unnoticed, because every binding change is an Admin Activity entry alerted by WO-2.7.
+
 ```bash
 need EVE_WITNESS_PROJECT WITNESS_SA_1 WITNESS_SA_2 WITNESS_ADMIN_1_EMAIL WITNESS_ADMIN_2_EMAIL
-gcloud projects add-iam-policy-binding "$EVE_WITNESS_PROJECT" --member="user:${WITNESS_SA_1}" --role=roles/accessapproval.approver --condition=None
-gcloud projects add-iam-policy-binding "$EVE_WITNESS_PROJECT" --member="user:${WITNESS_SA_2}" --role=roles/accessapproval.approver --condition=None
+gcloud projects add-iam-policy-binding "$EVE_WITNESS_PROJECT" --member="user:${WITNESS_SA_1}" --role=roles/accessapproval.configEditor --condition=None
+gcloud projects add-iam-policy-binding "$EVE_WITNESS_PROJECT" --member="user:${WITNESS_SA_2}" --role=roles/accessapproval.configEditor --condition=None
 gcloud access-approval settings update --project="$EVE_WITNESS_PROJECT" --enrolled_services=all --notification_emails="${WITNESS_ADMIN_1_EMAIL},${WITNESS_ADMIN_2_EMAIL}"
 ```
 
   If WO-1.13 recorded Access Approval as unavailable: write `N/A` with a pointer to that record in the build log and skip.
-- **VERIFY:** `gcloud access-approval settings get --project="$EVE_WITNESS_PROJECT" --format=json | jq '{enrolledServices, notificationEmails, enrolledAncestor}'` shows `all` enrolled and the two addresses. Security > Access Approval in the console shows the project enrolled.
-- **ROLLBACK:** `gcloud access-approval settings delete --project="$EVE_WITNESS_PROJECT"` (*Assumption:* the delete subcommand; confirm with `gcloud access-approval settings --help` on the day) and remove the two approver bindings.
+- **VERIFY:** `gcloud access-approval settings get --project="$EVE_WITNESS_PROJECT" --format=json | jq '{enrolledServices, notificationEmails, enrolledAncestor}'` shows `all` enrolled and the two addresses. Security > Access Approval in the console shows the project enrolled. `gcloud projects get-iam-policy "$EVE_WITNESS_PROJECT" --format=json | jq -r '.bindings[] | select(.role=="roles/accessapproval.configEditor") | .members[]'` prints exactly the two witness administrators; the project's user-binding count is now **nine**, not the seven of WO-2.3 (see the note there).
+- **ROLLBACK:** `gcloud access-approval settings delete --project="$EVE_WITNESS_PROJECT"` (a documented subcommand, `gcloud access-approval settings delete`, read 2026-09-15; the `--project` flag takes a project number or id) and then `gcloud projects remove-iam-policy-binding "$EVE_WITNESS_PROJECT" --member="user:${WITNESS_SA_1}" --role=roles/accessapproval.configEditor` and the same line for `WITNESS_SA_2`. Both deletions are Admin Activity entries alerted by WO-2.7.
 - **EVIDENCE:** The settings JSON or the N/A pointer as `<date>-WO-2.15-access-approval-v1`. EU AI Act E-06. TISAX 6.1.
 
 ### WO-2.16 Lock the witness bucket's retention policy
@@ -777,8 +820,8 @@ need WITNESS_BUCKET EVE_WITNESS_PROJECT
 gcloud storage buckets update "$WITNESS_BUCKET" --lock-retention-period
 ```
 
-- **VERIFY:** `gcloud storage buckets describe "$WITNESS_BUCKET" --format="json(retention_policy)"` shows `isLocked: true` and the P13 period. `gcloud alpha resource-manager liens list --project="$EVE_WITNESS_PROJECT"` shows a lien with origin Cloud Storage (*Assumption:* the lien is listed under this command; Google documents the lien, and if the command is unavailable on the day, record the describe output only). The WO-2.7 alert fires for the bucket update.
-- **ROLLBACK:** **IRREVERSIBLE.** A locked policy cannot be removed or shortened, the bucket cannot be deleted until every object has met the period, and the project cannot be deleted (lien). Gated on the signed P13 record (DPO) and the four checks above. If P13 is not signed when W-2 ends, this step is `PENDING` in the README re-run index, and 27 and 42 read `isLocked` until it is done.
+- **VERIFY:** `gcloud storage buckets describe "$WITNESS_BUCKET" --format="json(retention_policy)"` shows `isLocked: true` and the P13 period. `gcloud alpha resource-manager liens list --project="$EVE_WITNESS_PROJECT"` shows a lien with origin Cloud Storage (*Assumption:* the lien is listed under this command; Google documents the lien itself, and if the command does not show it on the day, record the describe output only). The lien is expected to be there already from WO-2.11's per-object retention; a lien that appears only now is recorded as such. The WO-2.7 alert fires for the bucket update.
+- **ROLLBACK:** **IRREVERSIBLE.** A locked policy cannot be removed or shortened, and the bucket cannot be deleted until every object has met the period. The project has been undeletable since WO-2.11's lien; this step adds a second barrier of the same kind. Gated on the signed P13 record (DPO) and the four checks above. If P13 is not signed when W-2 ends, this step is `PENDING` in the README re-run index, and 27 and 42 read `isLocked` until it is done.
 - **EVIDENCE:** The sitting form with three signatures and the describe output as `<date>-WO-2.16-bucket-lock-v1` under `custody/`. EU AI Act E-06. TISAX 5.2 (bucket lock states).
 
 ### WO-2.17 Lock the per-object retention of the records uploaded so far
@@ -880,7 +923,7 @@ gcloud storage cat "${WITNESS_BUCKET}/custody/<upload date>-upload-manifest-v<n>
 - **WHO:** A witness administrator writes; the second human reviews the pull request.
 - **WHERE:** The pull request to `BUILD_LOG_DIR` (witness lines), and file 01's `DRILL_CALENDAR` and README re-run index through the same pull request.
 - **ACTION:** Add:
-  1. `DRILL_CALENDAR`: monthly, a witness administrator lists objects uploaded in the month and the second human checks them against the month's custody, rota and drill events in the build log; quarterly, WO-1.2's domain custody checks, WO-1.11's organisation IAM check, WO-1.12's billing IAM check and WO-2.3's project IAM check are re-run and recorded under `drills/`.
+  1. `DRILL_CALENDAR`: monthly, a witness administrator lists objects uploaded in the month and the second human checks them against the month's custody, rota and drill events in the build log; quarterly, WO-1.2's domain custody checks, WO-1.11's organisation IAM check, WO-1.12's billing IAM check, WO-2.3's project IAM check (expected user-binding count: seven, or nine once WO-2.15 is done) and WO-2.5's budget-scope check (`budgetFilter.projects` still names the witness project alone; if a second project has been created in `org-witness`, the budget is revisited before anything else) are re-run and recorded under `drills/`.
   2. README re-run index: "any custody, rota or drill record made in files 06, 10, 24, 27, 28, 30, 37, 38, 39, 42 → WO-3.3 the same day by a witness administrator"; "`EVE_SCHEMAS_COMMIT` set (23) → WO-2.10"; "P13 signed (03) → WO-2.16, then WO-2.17"; "Eve's export code shape differs from heartbeat contract v1 (26) → WO-2.9 `heartbeat_v2`".
   3. A note in the pull request to 27's writer: `WITNESS_EMAIL_CHANNEL` is a comma-separated list of three channels; `roles/bigquery.dataEditor` includes `bigquery.tables.delete` and `bigquery.tables.update`, so row 32's grant should be a custom role holding `bigquery.tables.updateData`, `bigquery.tables.get` and `bigquery.datasets.get` (*Assumption:* the minimum for streaming or Storage Write API inserts; 27 verifies) without table delete or update, with detection of DML as SD-43 does for Eve's tables.
 - **VERIFY:** The merged pull request shows the calendar entries and the four re-run lines; the second human is the approver.
@@ -912,7 +955,7 @@ Deferred: none of the six. The parts named in the last column belong to those fi
 - [ ] WO-2.4 to WO-2.7: three email channels received tests; budget with three thresholds; Admin Activity alert fired on a test change and the second human confirmed receipt first.
 - [ ] WO-2.8 and WO-2.9: `eve_mirror` in `EU` with no expirations; `heartbeat` contract v1 with its hash handed to 26.
 - [ ] WO-2.10: mirror tables created at `EVE_SCHEMAS_COMMIT`, or BLOCKED with a re-run index line.
-- [ ] WO-2.11 to WO-2.14: bucket in `EU`, uniform access, public access prevention enforced, per-object retention enabled, retention set; convention written; `DATA_WRITE` on for storage; upload alert fired on the test drill record.
+- [ ] WO-2.11, WO-2.13, WO-2.12, WO-2.14, **in that run order**: bucket in `EU`, uniform access, public access prevention enforced, per-object retention enabled (project lien from here), retention set; `DATA_WRITE` on for storage **before** the first object; convention written and its `storage.objects.create` entry present in the Data Access log; upload alert fired on the test drill record.
 - [ ] WO-2.15: Access Approval enrolled for all services, or N/A with its record.
 - [ ] WO-2.16 and WO-2.17: `isLocked: true` and record retentions `Locked` with three signatures each, or PENDING on P13 with a re-run index line.
 - [ ] WO-2.18: the tenant copy holds only the four identifiers.
@@ -946,13 +989,13 @@ Consumes: `WITNESS_DOMAIN` (04); `WITNESS_ADMIN_1_EMAIL`, `WITNESS_ADMIN_2_EMAIL
 
 - Cloud Identity, "Set up Cloud Identity as a Google Cloud administrator": sign-up URLs for Free (`sku=identitybasic`) and Premium (`sku=identitypremium`); the recovery address must differ from the admin address; domain already in use and the 24-hour or 7-day wait.
 - Cloud Identity, "Compare Cloud Identity features and editions": security keys and Admin log events in both editions; Premium support and SLA.
-- Resource Manager, "Creating and managing organization resources": the organisation is created for the Cloud Identity account; Project Creator and Billing Account Creator granted to all domain users; the creating super admin gets Organization Administrator. Resource Manager REST reference: `owner.directoryCustomerId`, `lifecycleState`.
+- Resource Manager, "Creating and managing organization resources": the organisation is created for the Cloud Identity account; Project Creator and Billing Account Creator granted to all domain users; the creating super admin gets Organization Administrator. Resource Manager REST reference **v1**: `owner.directoryCustomerId`, `lifecycleState`; **v3** `organizations`: top-level `directoryCustomerId` (a union "owner" field) and `state`. `gcloud organizations describe` does not publish which shape it returns, so WO-1.10 reads the resource with `--format=yaml`, records the path that appeared and asserts the value.
 - Resource Manager, "Organization policy security baseline": constraints enforced for organisations created on or after 2024-05-03, including `iam.allowedPolicyMemberDomains` and `storage.uniformBucketLevelAccess`.
 - Workspace Admin Help: "Deploy 2-Step Verification" (Menu > Security > Authentication > 2-step verification; Only security key; New user enrollment period 1 day to 6 months); "Allow super administrators to recover their password" (Security > Authentication > Account recovery > Super admin account recovery); "Recovering administrator access to your account" (another super admin; support-assisted recovery with proof of domain ownership); "Add recovery information for admins and users" (Directory > Users > user > Security > Recovery information); "Assign specific admin roles" (Account > Admin roles; Super Admin cannot go to a group); "Share data with Google Cloud services" (Account > Account settings > Legal and compliance > Sharing options; super admin; Cloud Identity included); Workspace Updates 2025-09 "Reporting rules are now activity rules" (Security > Investigation tool; Cloud Identity Premium listed, Free not).
-- Cloud Billing: "Create a self-serve Cloud Billing account" (organisation drop-down, Billing Account Creator, currency cannot be changed); "Overview of Cloud Billing access control" (creator is Billing Account Administrator; the account inherits IAM from its parent organisation and can pay for projects in other organisations); REST `billingAccounts` (`parent`, `currencyCode`, `masterBillingAccount`); gcloud `billing accounts describe`, `get-iam-policy`, `add-iam-policy-binding` (GA); `gcloud billing budgets create` and `update` (up to five channels, `--disable-default-iam-recipients`, `--calendar-period`); "Customize budget notification recipients" (email channels only).
-- Customer Care, "Purchasing and setting up Standard Support" (Support > Overview > View Customer Care services; per organisation resource; Organization Administrator and Support Account Administrator). Access Approval pricing (included with Standard, Enhanced and Premium Support). Access Approval overview (Access Transparency first). Access Transparency, "Enable Access Transparency" (a default control for every organisation; viewer roles). `gcloud access-approval settings update` and `get` (`--enrolled_services`, `--notification_emails`). "Enable Access Approval" (roles `accessapproval.configEditor`, `approver`, `viewer`).
-- Cloud Storage: "Use and lock retention policies" and "Bucket Lock" (update `--retention-period`, `--lock-retention-period`; irreversible; lien on the project; objects not replaced before the period; per-object retention coexists); "Use object retention lock" and "Object Retention Lock" (`--enable-per-object-retention` cannot be disabled; `objects update --retain-until --retention-mode`; Locked is irreversible; `storage.objects.overrideUnlockedRetention`); gcloud `storage buckets create`, `buckets update`, `cp` (`--no-clobber`, `--retain-until`, `--retention-mode`, `--custom-metadata`), `hash`; "Cloud Audit Logs with Cloud Storage" (DATA_WRITE for object creation, deletion and modification; Data Access off by default).
-- Cloud Logging: "Configure Data Access audit logs" (IAM & Admin > Audit Logs; `auditConfigs`; keep `bindings` and `etag`); "Aggregated sinks" (`--organization --include-children`; `roles/logging.bucketWriter` for the writer identity); `gcloud logging buckets create` (location immutable, `--retention-days`); "Bucket-scoped log-based metrics" (entries routed to a bucket regardless of origin; resource type `logging_bucket`); `gcloud logging metrics create --bucket-name`; "Configure log-based alerting policies" (`conditionMatchedLog`, `notificationRateLimit`, scans entries originating in the project; `gcloud monitoring policies create --policy-from-file`, GA); "Google Workspace audit logs" (organisation-level `cloudaudit.googleapis.com%2Factivity`; available for Cloud Identity).
+- Cloud Billing: "Create a self-serve Cloud Billing account" (organisation drop-down, Billing Account Creator, currency cannot be changed); "Overview of Cloud Billing access control" (creator is Billing Account Administrator; the account inherits IAM from its parent organisation and can pay for projects in other organisations); REST `billingAccounts` (`parent`, `currencyCode`, `masterBillingAccount`); gcloud `billing accounts describe`, `get-iam-policy`, `add-iam-policy-binding` (GA); `gcloud billing budgets create` and `update` (up to five channels, `--disable-default-iam-recipients`, `--calendar-period`; `--filter-projects` is a "Set of projects in the form projects/{project_id}", and with the flag absent the budget covers all spend on the account; `--budget-amount` "If excluded, the currency used will be the currency associated with the billing account"); "Customize budget notification recipients" (email channels only).
+- Customer Care, "Purchasing and setting up Standard Support" (Support > Overview > View Customer Care services; per organisation resource; Organization Administrator and Support Account Administrator). Access Approval pricing (included with Standard, Enhanced and Premium Support). Access Approval overview (Access Transparency first). Access Transparency, "Enable Access Transparency" (a default control for every organisation; viewer roles). `gcloud access-approval settings update`, `get` and `delete` (`--enrolled_services`, `--notification_emails`; `settings delete` is a published subcommand taking `--project`, `--folder` or `--organization`). "Enable Access Approval" and Access Approval access control (roles `accessapproval.configEditor`, `approver`, `viewer`): **configEditor** carries `accessapproval.settings.get`, `.update` and `.delete` as well as the approve permissions, and is the role required to modify Access Approval settings; **approver** carries `accessapproval.requests.approve` and `.dismiss` only and cannot write settings.
+- Cloud Storage: "Use and lock retention policies" and "Bucket Lock" (update `--retention-period`, `--lock-retention-period`; irreversible; lien on the project; objects not replaced before the period; per-object retention coexists); "Use object retention lock" and "Object Retention Lock" (`--enable-per-object-retention` cannot be disabled; `objects update --retain-until --retention-mode`; Locked is irreversible; `storage.objects.overrideUnlockedRetention`); gcloud `storage buckets create`, `buckets update`, `cp` (`--no-clobber`, `--retain-until`, `--retention-mode`, `--custom-metadata`), `hash`; `--retention-period` takes an ISO 8601 duration, Google's example being `--retention-period=P1Y1M1DT5S`, so `P<days>D` is a valid form; "Object Retention Lock": enabling per-object retention "applies a lien to the `projects.delete` permission for the project that contains the bucket, at best effort", "the feature cannot be disabled on a bucket" once enabled, and "a bucket containing retained objects cannot be deleted until the retain-until time on all objects in the bucket has passed and all objects inside the bucket have been deleted"; "Cloud Audit Logs with Cloud Storage" (DATA_WRITE for object creation, deletion and modification; Data Access off by default).
+- Cloud Logging: "Configure Data Access audit logs" (IAM & Admin > Audit Logs; `auditConfigs`; keep `bindings` and `etag`); "Aggregated sinks" (`--organization --include-children`; `roles/logging.bucketWriter` for the writer identity; `LOG_ID("cloudaudit.googleapis.com/…")` as the filter form for audit logs); "Logging query language" ("Using `:` might result in slower searches"; "Substring matches on indexed fields don't take advantage of log indexes"); `gcloud logging buckets create` (location immutable, `--retention-days`); "Bucket-scoped log-based metrics" and "Counter metrics" (entries routed to a bucket regardless of origin; resource type `logging_bucket`; `--bucket-name projects/my-project/locations/global/buckets/my-test-bucket`, the full path form); `gcloud logging metrics create --bucket-name`; "Configure log-based alerting policies" (`conditionMatchedLog`, `notificationRateLimit`, scans entries originating in the project; `gcloud monitoring policies create --policy-from-file`, GA); "Google Workspace audit logs" (organisation-level `cloudaudit.googleapis.com%2Factivity`; available for Cloud Identity).
 - Cloud Monitoring: `gcloud beta monitoring channels create` (email example); "Notification options" (SMS needs verification; email is not stated to).
 - gcloud `projects create` (6 to 30 characters, `--organization`, `--labels`). BigQuery "Access control" (`roles/bigquery.dataEditor` includes `bigquery.tables.create`, `delete`, `updateData`).
 
@@ -960,12 +1003,10 @@ Consumes: `WITNESS_DOMAIN` (04); `WITNESS_ADMIN_1_EMAIL`, `WITNESS_ADMIN_2_EMAIL
 
 | Item | Where | Closes it |
 |---|---|---|
-| `gcloud access-approval settings delete` as the rollback subcommand | WO-2.15 | `gcloud access-approval settings --help` on the day; recorded in the build log |
-| `gcloud alpha resource-manager liens list` shows the Cloud Storage lien | WO-2.16 | run on the day; if absent, the describe output alone is the evidence |
+| `gcloud alpha resource-manager liens list` shows the Cloud Storage lien | WO-2.11, WO-2.16 | run on the day; if absent, the describe output alone is the evidence (the lien itself is documented on the Object Retention Lock page; only the gcloud listing is unconfirmed, and it is an alpha surface) |
 | Whether Cloud Identity Admin log events reach the bucket-scoped metric of WO-2.7 through the organisation sink | WO-2.7 | WO-2.7's second test; fallback: WO-1.15's review as a monthly standing check |
 | Whether the Premium activity-rule builder accepts an external recipient address | WO-1.15 | read the builder on the day, if the edition is Premium |
 | Metric and log-based alert latency (30 and 15 minutes assumed) | WO-2.7, WO-2.14 | the measured times in each VERIFY record |
-| `--retention-period="P<days>D"` accepted as ISO 8601 days by `gcloud storage buckets create` (Google's example is `P1Y1M1DT5S`) | WO-2.11, WO-2.16 | the describe output in seconds; if refused, use the seconds form Google's bucket-lock page gives |
 | The field name of object retention in `gcloud storage objects describe` JSON (`retention_settings` or `retention`) | WO-2.17, WO-3.4 | the jq expression reads both; record which appears |
 | The minimum custom-role permissions for `eve-export@`'s inserts without table delete | WO-3.5 note to 27 | 27's negative test |
 | Access Approval availability for the witness without Customer Care | WO-1.13 | Google's PU-3.1 answer (04) |

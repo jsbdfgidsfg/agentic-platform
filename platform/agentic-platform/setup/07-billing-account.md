@@ -5,7 +5,7 @@
 - Last reviewed: 2026-09-15
 - Last executed: never
 - Stage: review §2 stage 5, moved after file 06 (decision SD-45) so that the billing roles go to `sa-1-admin@`, never to a daily account.
-- Step prefix: BA. Steps: 16. BLOCKED steps: none, because no code is needed. One step is PENDING by design: BA-3.1 waits for `factory-apply@` (file 10) and is a re-run point.
+- Step prefix: BA. Steps: 18 (BA-6.2 is three: 6.2a grant, 6.2b submit, 6.2c remove). BLOCKED steps: none, because no code is needed. One step is PENDING by design: BA-3.1 waits for `factory-apply@` (file 10) and is a re-run point.
 - Replaces: the billing rows of `wall-e/PREREQUISITES.md` §4.1 and the currency half of `wall-e/SETUP.md` Phase 6's budget command. This file applies decision SD-16 (P31's billing line).
 - Closes: X-RQB-05 for its account, roles, currency, self-grant detection, closure record and quota halves; S023. The export half of X-RQB-05 is file 14's; the Terraform `billing_project` half is file 17's (see "Findings" at the end).
 
@@ -28,7 +28,7 @@ flowchart LR
   A["BA-1 Account: standard, dedicated, currency"] --> B["BA-2 Roles to sa-1-admin@ with expiry"]
   B --> C["BA-4 Self-grant and admin-change detection"]
   A --> D["BA-5 Who may close the account"]
-  A --> E["BA-6 Project quota request"]
+  A --> E["BA-6 Quota: 6.2a grant, 6.2b submit, 6.2c remove"]
   B --> F["File 10: link test, factory-apply@ created"]
   F --> G["BA-3 Roles to factory-apply@ (re-run)"]
   C --> H["Files 14 and 15: sink and alert (re-run)"]
@@ -49,7 +49,7 @@ flowchart LR
 
 | Role | Does | Present at |
 |---|---|---|
-| Billing administrator (finance, `BILLING_ADMIN_EMAIL`) | Confirms the account, grants and removes the roles, runs the weekly interim check, signs the closers record | BA-1, BA-2.2, BA-3.1, BA-4.2, BA-4.3, BA-5.2, BA-7.1 |
+| Billing administrator (finance, `BILLING_ADMIN_EMAIL`) | Confirms the account, reads the currency, grants and removes the roles, reads the billing-account audit log (the only person here who can: `roles/billing.admin` carries `logging.logEntries.list`), runs the weekly interim check, signs the closers record | BA-1.1, BA-1.2, BA-1.3, BA-2.2, BA-3.1, BA-4.2, BA-4.3, BA-5.1, BA-5.2, BA-7.1 |
 | Platform owner (as `sa-1-admin@`) | Records the values, verifies each grant, reads the organisation side, files the quota request | every step |
 | Second human | Receives the detection's output; reviews the detection pull request (CODEOWNERS of 03). Not a witness | BA-4.1, BA-4.3 |
 
@@ -103,17 +103,28 @@ gcloud billing projects list --billing-account="$BILLING_ACCOUNT_ID" --format="t
 
 ### BA-1.3 Read the currency and stop unless EUR
 
-- **WHO:** Platform owner; the billing administrator confirms.
-- **WHERE:** Shell with `~/.platform-env` sourced (or the billing administrator's session, as in BA-1.1).
-- **ACTION:**
+- **WHO:** Billing administrator reads and reports the value; the platform owner records it. The split is the same as BA-1.1's and for the same reason: `billing.accounts.get` is held by Billing Account Viewer, User, Costs Manager and Administrator (billing-access page, read 2026-09-16), and `sa-1-admin@` holds none of them until BA-2.2, so both the `describe` and its API equivalent return permission denied in the platform owner's shell.
+- **WHERE:** The billing administrator's shell for the read; the platform owner's shell with `~/.platform-env` sourced for the record.
+- **ACTION:** The billing administrator runs the read and reads the three-letter code to the platform owner (a currency code is not a secret):
+
+```bash
+gcloud billing accounts describe "<BILLING_ACCOUNT_ID>" --format='value(currencyCode)'
+```
+
+  If that prints nothing, the field did not come back through gcloud; the billing administrator repeats it against the API from the same session, which needs the same `billing.accounts.get` permission, and takes `currencyCode`:
+
+```bash
+curl -sS -H "Authorization: Bearer $(gcloud auth print-access-token)" "https://cloudbilling.googleapis.com/v1/billingAccounts/<BILLING_ACCOUNT_ID>"
+```
+
+  The platform owner then records the reported value:
 
 ```bash
 need BILLING_ACCOUNT_ID
-BA_CUR="$(gcloud billing accounts describe "$BILLING_ACCOUNT_ID" --format='value(currencyCode)')"
-printf '%s\n' "$BA_CUR"
+BA_CUR="<the three-letter code reported by the billing administrator>"
 ```
 
-- **VERIFY:** The printed value is a three-letter ISO 4217 code. If it is `EUR`, record it with `penv_set BILLING_CURRENCY EUR`. If it is empty, the field did not come back through gcloud: read it from the API with `curl -sS -H "Authorization: Bearer $(gcloud auth print-access-token)" "https://cloudbilling.googleapis.com/v1/billingAccounts/${BILLING_ACCOUNT_ID}"` and take `currencyCode`. If it is not `EUR`, **stop**: an account operates in one currency, and no self-serve option changes it after creation (Cloud Billing concepts and create-billing-account pages, read 2026-09-15). Then either finance provides an EUR account (BA-1.1 restarts), or SD-16 is amended and signed to accept the currency, and then:
+- **VERIFY:** The reported value is a three-letter ISO 4217 code. If it is `EUR`, the platform owner records it with `penv_set BILLING_CURRENCY EUR`. If it is not `EUR`, **stop**: an account operates in one currency, and no self-serve option changes it after creation (Cloud Billing concepts and create-billing-account pages, read 2026-09-15). Then either finance provides an EUR account (BA-1.1 restarts), or SD-16 is amended and signed to accept the currency, and then:
 
 ```bash
 penv_set BILLING_CURRENCY "$BA_CUR"
@@ -158,7 +169,7 @@ gcloud billing accounts add-iam-policy-binding "$BILLING_ACCOUNT_ID" --member="u
 gcloud billing accounts get-iam-policy "$BILLING_ACCOUNT_ID" --flatten="bindings[].members" --format="table(bindings.role,bindings.members)"
 ```
 
-  `user:sa-1-admin@...` appears exactly twice, under `roles/billing.user` and `roles/billing.costsManager`, and under no other role. The roles give `billing.resourceAssociations.create` (User) and `billing.budgets.create` plus `billing.accounts.get` (Costs Manager), per the IAM billing roles reference (read 2026-09-15). Google's linking page lists "Billing Account User + Billing Account Viewer". *Assumption:* Costs Manager's `billing.accounts.get` covers the Viewer half. File 10's link test settles it: if the link is refused on the billing side, the billing administrator adds `roles/billing.viewer` with a build-log line and an SD-16 note.
+  `user:sa-1-admin@...` appears exactly twice, under `roles/billing.user` and `roles/billing.costsManager`, and under no other role. `roles/billing.user` carries both `billing.accounts.get` and `billing.resourceAssociations.create`; `roles/billing.costsManager` carries `billing.budgets.create` (billing-access page and IAM billing roles reference, read 2026-09-16). Linking a project needs a documented pair, one permission on each side: `billing.resourceAssociations.create` on the account, which these two roles give, and `resourcemanager.projects.createBillingAssignment` on the project, which they do not and cannot (secure-project-billing-account-link page, read 2026-09-16: "On the project: Project Billing Manager and Project Browser or Project Owner; on the Cloud Billing account: Billing Account User and Billing Account Viewer or Billing Account Administrator"). The account half is finished here; the project half is file 10's, where `sa-1-admin@` creates each core project and so holds the creator's Owner on it, which contains `resourcemanager.projects.createBillingAssignment`. If file 10's link test is refused, read the error before adding a role: a refusal naming the billing account is answered by `roles/billing.viewer` on the account, with a build-log line and an SD-16 note; a refusal naming the project is answered by `roles/billing.projectManager` on that project, never on the account, and never at organisation level.
 - **ROLLBACK:** `gcloud billing accounts remove-iam-policy-binding "$BILLING_ACCOUNT_ID" --member="user:${SA_1_ADMIN}" --role=<role>` for each role, or **Delete** on the principal in the Permissions panel.
 - **EVIDENCE:** The policy table as `<date>-BA-2.2-billing-iam-after-grant-v1`. The grant itself is an Admin Activity entry in the account's audit log, which BA-4.2 uses as its seeded event. TISAX 4.1.3, 4.2.1.
 
@@ -208,7 +219,7 @@ The platform owner holds Organization Administrator under file 06's dated except
 | Source | What it records | Who can read it on the day | Where the alert is built |
 |---|---|---|---|
 | A. The organisation's Admin Activity log | `SetIamPolicy` on the organisation adding `roles/billing.*`, `roles/iam.securityAdmin`, or a custom role holding a billing permission (from BA-5.1) | Holders of Logs Viewer at organisation level, none in the platform yet | File 14's `S-org` carries it to `LOGGING_PROJECT`; file 15 part A builds the alert |
-| B. The billing account's Admin Activity log `billingAccounts/<id>/logs/cloudaudit.googleapis.com%2Factivity` | Every `ADMIN_WRITE` method, including `SetIamPolicy`, `CloseBillingAccount` and the account updates (Cloud Billing audit-logging page, read 2026-09-15) | The billing administrator (Billing Account Administrator includes `logging.logEntries.list`) | An organisation sink does not include it, because `--include-children` covers only child projects and folders (gcloud `logging sinks create` reference). File 14 creates a billing-account sink; file 15 builds the alert |
+| B. The billing account's Admin Activity log `billingAccounts/<id>/logs/cloudaudit.googleapis.com%2Factivity` | Every `ADMIN_WRITE` method, including `SetIamPolicy`, `CloseBillingAccount` and the account updates (Cloud Billing audit-logging page, read 2026-09-15) | The billing administrator only. Reading Admin Activity entries needs `logging.logEntries.list` on the resource, which `roles/billing.admin` carries (Cloud Billing access-control page, read 2026-09-16); `roles/billing.user`, `costsManager` and `viewer` do not, so `sa-1-admin@` cannot read this log and must not be given a way to. **Not readable in the console:** "for audit logs related to billing, you can only use the Google Cloud CLI or the Logging API" (Cloud Audit Logs overview, read 2026-09-16) | An organisation sink does not include it, because `--include-children` covers only child projects and folders (gcloud `logging sinks create` reference). File 14 creates a billing-account sink; file 15 builds the alert |
 
 No project exists before file 10, so no Cloud Monitoring alert can be created in this file. The detection is written and proven here. The weekly interim check covers the gap. Files 14 and 15 deploy it, with a back-dated search that starts at BA-2.2's date.
 
@@ -244,22 +255,34 @@ git -C "$PLATFORM_REPO_DIR" push -u origin ba-billing-detection
 
 ### BA-4.2 Prove filter B on the grants just made
 
-- **WHO:** Billing administrator; the platform owner verifies the output.
-- **WHERE:** The billing administrator's shell, or console **Logging > Logs Explorer** with the billing account selected as scope.
-- **ACTION:**
+- **WHO:** Billing administrator runs both reads; the platform owner verifies the output he is sent. The platform owner cannot run them himself and is not to be granted a way to (§4 row B).
+- **WHERE:** The billing administrator's shell only. There is no console route: audit logs related to billing are readable only through the gcloud CLI or the Logging API (Cloud Audit Logs overview, read 2026-09-16), so **Logging > Logs Explorer** never shows this log whatever scope is selected.
+- **PRECONDITION:** BA-2.2 is done (it is the seeded event this step proves), and the billing administrator still holds `roles/billing.admin` on the account, which is what carries `logging.logEntries.list` there. Confirm it in one call before reading, so that a permission error later cannot be mistaken for an empty log:
+
+```bash
+gcloud billing accounts get-iam-policy "<BILLING_ACCOUNT_ID>" --flatten="bindings[].members" --filter="bindings.role=roles/billing.admin" --format="value(bindings.members)"
+```
+
+- **ACTION:** The positive read, then the negative read:
 
 ```bash
 gcloud logging read "logName=\"billingAccounts/${BILLING_ACCOUNT_ID}/logs/cloudaudit.googleapis.com%2Factivity\" AND protoPayload.methodName=\"SetIamPolicy\"" --billing-account="$BILLING_ACCOUNT_ID" --freshness=7d --format="table(timestamp,protoPayload.authenticationInfo.principalEmail,protoPayload.methodName)"
 ```
 
-- **VERIFY:** At least one `SetIamPolicy` row dated with BA-2.2, whose principal is `BILLING_ADMIN_EMAIL`. This proves the log exists and is readable. The same query with `-protoPayload.authenticationInfo.principalEmail="<BILLING_ADMIN_EMAIL>"` added returns no row. If the first query returns nothing, stop: without source B, BA-4.3 is blind.
+```bash
+gcloud logging read "logName=\"billingAccounts/${BILLING_ACCOUNT_ID}/logs/cloudaudit.googleapis.com%2Factivity\" AND protoPayload.methodName=\"SetIamPolicy\" AND -protoPayload.authenticationInfo.principalEmail=\"${BILLING_ADMIN_EMAIL}\"" --billing-account="$BILLING_ACCOUNT_ID" --freshness=7d --format="table(timestamp,protoPayload.authenticationInfo.principalEmail,protoPayload.methodName)"
+```
+
+- **VERIFY:** The first read returns at least one `SetIamPolicy` row dated with BA-2.2 whose principal is `BILLING_ADMIN_EMAIL`; the second returns nothing. Separate the two failures, because they are different faults and only one of them is a stop:
+  - **Empty result, exit status 0, no error text.** The log does not hold what it must. **Stop:** without source B, BA-4.3 and file 15's alert are blind. Re-check the account id, widen `--freshness`, and if it is still empty, re-run BA-2.2's grant read-back to confirm the grant happened on this account.
+  - **`PERMISSION_DENIED` / HTTP 403, or a message naming `logging.logEntries.list`.** The log was not read at all, and nothing about its contents is proven. Do **not** record this as "the log does not exist". The billing administrator's `roles/billing.admin` is missing or was granted somewhere other than this account: fix the grant under the precondition read above and repeat the step. If `roles/billing.admin` is confirmed present and the 403 persists, raise it with Google support under file 04's row and record the step as unproven; do not answer it by granting a logging role to `sa-1-admin@` or by moving the read to any other principal, and do not attempt to grant `roles/logging.viewer` on the billing account — Google documents no logging role as grantable on a billing-account resource.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** Both outputs as `<date>-BA-4.2-filter-b-proof-v1`. TISAX 5.2.4 (event logging), 4.2.1.
+- **EVIDENCE:** The precondition output and both read outputs as `<date>-BA-4.2-filter-b-proof-v1`, with the exit status of each read recorded beside it so that empty and 403 stay distinguishable in the record. TISAX 5.2.4 (event logging), 4.2.1.
 
 ### BA-4.3 Run the interim check weekly until file 15's alert is live
 
 - **WHO:** Billing administrator (source B); platform owner (source A, recorded as weak because he is its subject). The output goes to the second human.
-- **WHERE:** As BA-4.2 for source B; the platform owner's shell for source A.
+- **WHERE:** As BA-4.2 for source B (the billing administrator's shell, never the console); the platform owner's shell for source A.
 - **ACTION:** Each week from BA-2.2 until file 15 records the alert live:
 
 ```bash
@@ -270,7 +293,7 @@ gcloud logging read "logName=\"billingAccounts/${BILLING_ACCOUNT_ID}/logs/clouda
 gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.role:roles/billing. OR bindings.role=roles/iam.securityAdmin" --format="table(bindings.role,bindings.members)"
 ```
 
-- **VERIFY:** Source B returns no row. Source A lists only the principals recorded in BA-5.1. Any difference is sent the same day to the billing administrator and the second human, who treat it as a report under SG-BILL-01. Accepted gap: a self-grant that is never used on the account shows only in source A, which the monitored person reads. It closes when file 15 runs filter A over the organisation log from BA-2.2's date. Owner of the gap: the second human. Due date: file 15 part A.
+- **VERIFY:** Source B returns no row **and exits 0**. A 403 is not a clean week: it means the week was not checked, and it is reported the same day as a missed check, under BA-4.2's 403 branch. Source A lists only the principals recorded in BA-5.1. Any difference is sent the same day to the billing administrator and the second human, who treat it as a report under SG-BILL-01. Accepted gap: a self-grant that is never used on the account shows only in source A, which the monitored person reads. It closes when file 15 runs filter A over the organisation log from BA-2.2's date. Owner of the gap: the second human. Due date: file 15 part A.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** One build-log line per week, `BA-4.3-<YYYY-Www>`, with both outputs attached, as `<date>-BA-4.3-weekly-v<n>`. Re-run index rows: "14: billing-account sink for source B" and "15 part A: SG-BILL-01 alert on A and B, back-dated from BA-2.2, recipients billing administrator and second human; then stop BA-4.3". TISAX 4.2.1 (review), 5.2.4.
 
@@ -284,17 +307,21 @@ Only Billing Account Administrator holds `billing.accounts.close` among predefin
 - **WHERE:** Both shells.
 - **ACTION:**
 
+  Account side, with no role named in the filter, so that a role this file did not anticipate cannot be missed. There is no `roles/billing.linkAdmin`: the predefined Cloud Billing roles are Billing Account Creator, Administrator, User, Viewer, Costs Manager and Project Billing Manager (billing-access page, read 2026-09-16), and a gcloud filter on a role string that does not exist matches nothing without erroring, which would have produced a clean-looking inventory.
+
 ```bash
-gcloud billing accounts get-iam-policy "$BILLING_ACCOUNT_ID" --flatten="bindings[].members" --filter="bindings.role=roles/billing.admin OR bindings.role:roles/billing.linkAdmin" --format="table(bindings.role,bindings.members)"
+gcloud billing accounts get-iam-policy "$BILLING_ACCOUNT_ID" --flatten="bindings[].members" --filter="bindings.role:roles/billing." --format="table(bindings.role,bindings.members)"
 ```
+
+  Organisation side, which adds `roles/billing.projectManager` — the role that can unlink the platform's projects from the account (`resourcemanager.projects.deleteBillingAssignment`; secure-project-billing-account-link page, read 2026-09-16) — to the roles that can close it or grant a closer:
 
 ```bash
 gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.role:roles/billing. OR bindings.role=roles/iam.securityAdmin OR bindings.role=roles/resourcemanager.organizationAdmin" --format="table(bindings.role,bindings.members)"
 gcloud iam roles list --organization="$ORG_ID" --format="value(name)"
 ```
 
-  For each custom role listed: `gcloud iam roles describe <ROLE_ID> --organization="$ORG_ID" --format="value(includedPermissions)"`. Note any role holding `billing.accounts.close`, `billing.accounts.setIamPolicy` or `billing.accounts.move`.
-- **VERIFY:** A table with three columns: direct closers (Billing Account Administrator on the account, expected: finance only), inherited closers (`roles/billing.admin` at organisation level), and indirect paths (Organization Administrator, Security Admin, custom roles able to grant a closer role). No `domain:` or `allUsers` member holds any billing role, and `roles/billing.creator` has no `domain:` member (removed in 06). Neither `SA_1_ADMIN` nor `factory-apply@` is a direct or inherited closer.
+  For each custom role listed: `gcloud iam roles describe <ROLE_ID> --organization="$ORG_ID" --format="value(includedPermissions)"`. Note any role holding `billing.accounts.close`, `billing.accounts.setIamPolicy`, `billing.accounts.move`, `billing.resourceAssociations.delete` or `resourcemanager.projects.deleteBillingAssignment`. The last two do not close the account but detach the platform's projects from it, which stops the same services just as fast.
+- **VERIFY:** A table with four columns: direct closers (Billing Account Administrator on the account, expected: finance only), inherited closers (`roles/billing.admin` at organisation level), unlinkers (`roles/billing.projectManager`, project Owner, and custom roles holding `billing.resourceAssociations.delete` or `resourcemanager.projects.deleteBillingAssignment`), and indirect paths (Organization Administrator, Security Admin, custom roles able to grant a closer role). No `domain:` or `allUsers` member holds any billing role, and `roles/billing.creator` has no `domain:` member (removed in 06). Neither `SA_1_ADMIN` nor `factory-apply@` is a direct or inherited closer.
 - **ROLLBACK:** Read only. A finding (for example a daily account holding `roles/billing.admin`) is removed by its grantor under a dated change, not in this step.
 - **EVIDENCE:** The table as `<date>-BA-5.1-closers-inventory-v1`. It is the baseline for BA-4.3's source A. TISAX 4.2.1, 5.3.3 (return and removal from external IT services).
 
@@ -332,27 +359,66 @@ Project quota is checked for the creating account and for the organisation. Soft
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** The table in the build log under BA-6.1.
 
-### BA-6.2 File the increase
+Filing the increase needs Quota Administrator (`roles/servicemanagement.quotaAdmin`, which carries `serviceusage.quotas.update` and `cloudquotas.quotas.update`; Cloud Quotas "View and manage quotas" page, read 2026-09-16). Organization Administrator does not include it. The role must be held **while the request is submitted**, not merely before or after, which is why the grant, the submission and the removal are three steps and not one paste.
 
-- **WHO:** Platform owner. The request needs Quota Administrator (`roles/servicemanagement.quotaAdmin`, which carries `serviceusage.quotas.update` and `cloudquotas.quotas.update`; Cloud Quotas "View and manage quotas" page, read 2026-09-15). Organization Administrator does not include it. Preferred: the organisation's existing holder of that role files the request, named in the build log. Otherwise `SA_1_ADMIN` is granted it for this sitting only, as a dated addition to 06's exception in `DEVIATION_REGISTER`, and removed at the end of the step.
-- **WHERE:** Console **IAM & Admin > Quotas & System Limits**, resource selector set to the organisation.
-- **ACTION:** Filter **Metric** `cloudresourcemanager.googleapis.com/projects_count`; select **Cloud Resource Manager API**; **More actions > Edit quota**; in **Quota changes** enter the target from BA-6.1 above the current value and the description "Agentic platform: about 20 projects under fld-agentic-platform, paid by billing account BILLING_ACCOUNT_ID, 2026-09 to Tier W"; **Next**; contact details of the platform owner; **Submit request**. If the self-grant path was used:
+Preferred path: the organisation's existing holder of `roles/servicemanagement.quotaAdmin` submits BA-6.2b, is named in the build log, and BA-6.2a and BA-6.2c are then skipped with a build-log line saying so. Only if there is no such holder does the platform owner take the self-grant path below.
+
+### BA-6.2a Grant Quota Administrator to `SA_1_ADMIN` for this sitting (self-grant path only)
+
+- **WHO:** Platform owner as `sa-1-admin@`, under file 06's Organization Administrator exception. The second human is told the same day that the role was taken, and is told again when BA-6.2c removes it; he is not an approver here.
+- **WHERE:** Shell with `~/.platform-env` sourced.
+- **PRECONDITION:** BA-6.1's total is written in the build log, and file 04's purchase row for the billing account is settled (a quota request can attract a payment, and BA-6.2b must not be submitted before finance can answer one).
+- **ACTION:**
 
 ```bash
+need ORG_ID SA_1_ADMIN
 gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:${SA_1_ADMIN}" --role="roles/servicemanagement.quotaAdmin" --condition=None
+```
+
+- **VERIFY:** Both permissions echo back, which is what proves the role is live before anything is submitted. `gcloud organizations` has no `test-iam-permissions` subcommand, so this goes through the Resource Manager v3 API, as BA-2.3 does for the billing account:
+
+```bash
+curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -d '{"permissions":["serviceusage.quotas.update","cloudquotas.quotas.update"]}' "https://cloudresourcemanager.googleapis.com/v3/organizations/${ORG_ID}:testIamPermissions"
+```
+
+  Both `serviceusage.quotas.update` and `cloudquotas.quotas.update` are listed in the response. If either is missing, **stop** and do not go on to BA-6.2b: the console request would fail with a permission error after the form has been filled.
+- **ROLLBACK:** BA-6.2c, which is not optional. Until it runs, the platform owner holds an organisation-level role that BA-4.3's source A read will show.
+- **EVIDENCE:** One line in `DEVIATION_REGISTER`, id `DEV-BA-06`: "roles/servicemanagement.quotaAdmin to SA_1_ADMIN at organisation level for the BA-6.2b quota request, taken <date>, to be removed same sitting by BA-6.2c, removal date recorded on that line." The `testIamPermissions` response as `<date>-BA-6.2a-quota-admin-granted-v1`. TISAX 4.1.3, 4.2.1.
+
+### BA-6.2b File the increase
+
+- **WHO:** The named existing holder of `roles/servicemanagement.quotaAdmin`, or the platform owner once BA-6.2a's VERIFY has passed.
+- **WHERE:** Console **IAM & Admin > Quotas & System Limits**, resource selector set to the organisation.
+- **ACTION:** Filter **Metric** `cloudresourcemanager.googleapis.com/projects_count`; select **Cloud Resource Manager API**; **More actions > Edit quota**; in **Quota changes** enter the target from BA-6.1 above the current value and the description "Agentic platform: about 20 projects under fld-agentic-platform, paid by billing account BILLING_ACCOUNT_ID, 2026-09 to Tier W"; **Next**; contact details of the submitter; **Submit request**.
+- **VERIFY:** Google's acknowledgement email arrives. The **Increase Requests** tab shows the request as pending, with the target from BA-6.1.
+- **ROLLBACK:** **IRREVERSIBLE** as a submission. *Assumption:* the console offers no withdrawal. An unused increase costs nothing. Gated on: BA-6.1's recorded count, BA-6.2a's passed VERIFY (or the named existing holder), and file 04's settled purchase row. If Google asks for a payment, nothing is paid until finance approves it under that row.
+- **EVIDENCE:** The acknowledgement email saved as `<date>-BA-6.2b-quota-request-v1`, with the submitter's name. TISAX 1.3.3.
+
+### BA-6.2c Remove Quota Administrator (self-grant path only)
+
+- **WHO:** Platform owner, in the same sitting as BA-6.2a. Never left to the next sitting.
+- **WHERE:** Shell with `~/.platform-env` sourced.
+- **ACTION:** Run as soon as BA-6.2b's acknowledgement is in hand. The answer of BA-6.3 arrives by email and needs no role.
+
+```bash
 gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:${SA_1_ADMIN}" --role="roles/servicemanagement.quotaAdmin" --condition=None
 ```
 
-  (the first before the request, the second straight after it).
-- **VERIFY:** Google's acknowledgement email arrives. The **Increase Requests** tab shows the request as pending. If the self-grant path was used, the organisation policy read of BA-4.3 no longer shows `roles/servicemanagement.quotaAdmin` for `SA_1_ADMIN`.
-- **ROLLBACK:** **IRREVERSIBLE** as a submission. *Assumption:* the console offers no withdrawal. An unused increase costs nothing. Before submitting, confirm that the count in BA-6.1 is recorded. If Google asks for a payment, nothing is paid until finance approves it under file 04's purchase row, which gates this step.
-- **EVIDENCE:** The acknowledgement email saved as `<date>-BA-6.2-quota-request-v1`; the deviation line if the self-grant path was used. TISAX 1.3.3.
+- **VERIFY:** The read below returns nothing at all:
+
+```bash
+gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.role=roles/servicemanagement.quotaAdmin" --format="value(bindings.members)"
+```
+
+  From the next week on, BA-4.3's source A read no longer shows `roles/servicemanagement.quotaAdmin` for `SA_1_ADMIN` either.
+- **ROLLBACK:** Re-grant through BA-6.2a, only for a new quota request with its own deviation line.
+- **EVIDENCE:** The empty read as `<date>-BA-6.2c-quota-admin-removed-v1`; `DEV-BA-06` closed with the removal date. TISAX 4.1.3 (revocation).
 
 ### BA-6.3 Record the answer
 
 - **WHO:** Platform owner.
-- **WHERE:** Console **IAM & Admin > Quotas & System Limits > Increase Requests**; the approval email.
-- **ACTION:** Wait for the decision (elapsed time, about two business days); record the approved value.
+- **WHERE:** The decision email, which is the primary record and needs no role. The console **IAM & Admin > Quotas & System Limits > Increase Requests** tab is a confirmation only: reading quotas needs Quota Viewer (`roles/servicemanagement.quotaViewer`; View and manage quotas page, read 2026-09-16), which the platform owner does not hold once BA-6.2c has run. If the tab is needed, the named existing Quota Administrator or holder of Quota Viewer reads it and reports; the role is not re-taken for a read.
+- **ACTION:** Wait for the decision (elapsed time, about two business days); record the approved value from the email.
 - **VERIFY:** The approved value is at least BA-6.1's total. File 10 does not wait for the answer: *Assumption:* its five core projects fit within the organisation's current quota, which the platform owner confirms on the **Quotas & System Limits** row before file 10 starts. If the answer is lower or a refusal, file 18 (the sixth project) waits for a new request with the refusal's reasons answered. Every file that creates a project records the remaining headroom in its build log, and a new request is filed before the headroom falls below 3.
 - **ROLLBACK:** None.
 - **EVIDENCE:** The decision email as `<date>-BA-6.3-quota-decision-v1`.
@@ -388,6 +454,7 @@ Rules:
 - The amount carries no currency. Without one, the budget uses the account's currency (gcloud reference, read 2026-09-15). The number is 02 §2.2's tier default, converted if BA-1.3 recorded a non-EUR currency.
 - `--filter-projects` takes `projects/<project-id>`, never the number. A malformed filter scopes the budget to the whole account (salvaged from SETUP l.692).
 - `--billing-project` is always passed. The S023 403 was refuted for a shell with a current project, because `billing/quota_project` "When unset, the default is [CURRENT_PROJECT]" (gcloud configurations topic, read 2026-09-15). File 01 forbids a current project, so the default is empty here.
+- The caller needs `serviceusage.services.use` on the project named in `--billing-project`, as well as its billing-account roles: that permission "is required to set a project as the quota project, or use that quota project in a request" (set-quota-project page, read 2026-09-16), and it is contained in Service Usage Consumer (`roles/serviceusage.serviceUsageConsumer`) or any role containing it. `sa-1-admin@` holds it through the creator's Owner on `CICD_PROJECT` (file 10). `factory-apply@`, which this file gives only the two billing-account roles (BA-3.1), does **not**: file 10 grants it `roles/serviceusage.serviceUsageConsumer` on `CICD_PROJECT`, and file 16's drift job carries that binding in its expected set. A budget call missing it fails on the project, not on the billing account, so read which resource the 403 names before adding a billing role.
 - Terraform run with user credentials before WIF exists sets `billing_project` and `user_project_override` on the provider. That is file 17's step, for the same reason.
 
 ## Verification checklist for this part
@@ -398,9 +465,9 @@ Rules:
 - [ ] `BOOTSTRAP_BILLING_EXPIRY` set from the signed record; deviation-register line written (BA-2.1).
 - [ ] `sa-1-admin@` holds exactly Billing Account User and Billing Account Costs Manager on the account, nothing at organisation level, and `testIamPermissions` proves two present and two absent (BA-2.2, BA-2.3).
 - [ ] BA-3.1 listed as PENDING in the README re-run index, or done after file 10.
-- [ ] `detections/billing-account-admin.yaml` merged with the second human's review; filter B proven on BA-2.2's grant; weekly check scheduled; re-run rows for files 14 and 15 written (BA-4).
+- [ ] `detections/billing-account-admin.yaml` merged with the second human's review; filter B proven on BA-2.2's grant by the billing administrator through gcloud (never the console), with the exit status recorded so that an empty result and a 403 are told apart; weekly check scheduled; re-run rows for files 14 and 15 written (BA-4).
 - [ ] Closers inventory and signed closers record merged (BA-5).
-- [ ] Quota request filed with the count recorded; decision recorded, or pending with the expected date (BA-6).
+- [ ] Quota request filed with the count recorded, by the named existing Quota Administrator or after BA-6.2a's `testIamPermissions` passed; if the self-grant path was used, `DEV-BA-06` is open at BA-6.2a and closed with a removal date at BA-6.2c, and the organisation policy read returns nothing for `roles/servicemanagement.quotaAdmin`; decision recorded, or pending with the expected date (BA-6).
 - [ ] Removal date on the re-run index (BA-7.1).
 - [ ] Every EVIDENCE record listed in `EVIDENCE_REGISTER`.
 
@@ -409,10 +476,10 @@ Rules:
 | File | Needs | Step |
 |---|---|---|
 | 09 | Nothing from here directly. SCC's organisation pay-as-you-go, if chosen under P11, bills the accounts of every project in the organisation, including this one | — |
-| 10 | `BILLING_ACCOUNT_ID` for the linking test and every core-project link; `BILLING_CURRENCY` and §8 for budgets; BA-3.1 re-run once `SA_FACTORY_APPLY` exists; the BA-2.3 repeat with `x-goog-user-project` if needed; the quota headroom | BA-1.1, BA-1.3, BA-3.1, BA-6.3 |
+| 10 | `BILLING_ACCOUNT_ID` for the linking test and every core-project link; `BILLING_CURRENCY` and §8 for budgets; BA-3.1 re-run once `SA_FACTORY_APPLY` exists; the BA-2.3 repeat with `x-goog-user-project` if needed; the quota headroom. **Also:** this file settles only the account side of the link (`billing.resourceAssociations.create`, from `roles/billing.user`, BA-2.2). File 10 must hold the project side itself — `resourcemanager.projects.createBillingAssignment`, from the creator's Owner on each core project, or `roles/billing.projectManager` plus Project Browser — and grant `roles/serviceusage.serviceUsageConsumer` on `CICD_PROJECT` to `factory-apply@` for §8's `--billing-project` | BA-1.1, BA-1.3, BA-2.2, BA-3.1, BA-6.3, §8 |
 | 14 | `BILLING_ACCOUNT_ID` and `BILLING_ADMIN_EMAIL` for the standard and detailed export to an EU dataset in `LOGGING_PROJECT` (made by the billing administrator); the billing-account sink for BA-4's source B; the label-filtered view if BA-1.2 took branch (b) | BA-1.2, BA-4.3 |
 | 15 part A | `detections/billing-account-admin.yaml`; the back-dated search from BA-2.2's date; recipients billing administrator and second human; then stop BA-4.3 | BA-4.1, BA-4.3 |
-| 16 | The billing bindings of `sa-1-admin@` (until expiry) and `factory-apply@`, for the drift job's expected set | BA-2.2, BA-3.1 |
+| 16 | The billing bindings of `sa-1-admin@` (until expiry) and `factory-apply@`, for the drift job's expected set; and, in the same expected set, `roles/serviceusage.serviceUsageConsumer` for `factory-apply@` on `CICD_PROJECT`, without which §8's `--billing-project` fails (granted in file 10) | BA-2.2, BA-3.1, §8 |
 | 17 | §8's budget contract; Terraform `billing_project` and `user_project_override`; the supersession date that triggers BA-7.1 | §8, BA-7.1 |
 | 42 | The closers record, the weekly checks and the removal record, for the quarterly access review | BA-4.3, BA-5.2, BA-7.1 |
 
@@ -426,6 +493,8 @@ Rules:
 ## Sources
 
 Read on 2026-09-15: [gcloud billing accounts describe](https://docs.cloud.google.com/sdk/gcloud/reference/billing/accounts/describe); [BillingAccount resource](https://docs.cloud.google.com/billing/docs/reference/rest/v1/billingAccounts); [gcloud billing accounts add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/billing/accounts/add-iam-policy-binding); [get-iam-policy](https://docs.cloud.google.com/sdk/gcloud/reference/billing/accounts/get-iam-policy); [gcloud billing accounts list](https://docs.cloud.google.com/sdk/gcloud/reference/billing/accounts/list); [Cloud Billing access control](https://docs.cloud.google.com/billing/docs/how-to/billing-access); [IAM billing roles](https://docs.cloud.google.com/iam/docs/roles-permissions/billing); [IAM Resource Manager roles](https://docs.cloud.google.com/iam/docs/roles-permissions/resourcemanager); [Manage access to billing accounts](https://docs.cloud.google.com/billing/docs/how-to/grant-access-to-billing); [Close or reopen a billing account](https://docs.cloud.google.com/billing/docs/how-to/close-or-reopen-billing-account); [Cloud Billing concepts](https://docs.cloud.google.com/billing/docs/concepts); [Create a self-serve billing account](https://docs.cloud.google.com/billing/docs/how-to/create-billing-account); [Enable, disable or change billing for a project](https://docs.cloud.google.com/billing/docs/how-to/modify-project); [Cloud Billing audit logging](https://docs.cloud.google.com/billing/docs/audit-logging); [Cloud Billing quotas](https://docs.cloud.google.com/billing/quotas); [gcloud logging read](https://docs.cloud.google.com/sdk/gcloud/reference/logging/read); [gcloud logging sinks create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/sinks/create); [Understanding audit logs](https://docs.cloud.google.com/logging/docs/audit/understanding-audit-logs); [Sensitive Actions overview](https://docs.cloud.google.com/security-command-center/docs/concepts-sensitive-actions-overview); [Create projects](https://docs.cloud.google.com/resource-manager/docs/creating-managing-projects); [Project quota requests](https://support.google.com/cloud/answer/6330231); [View and manage quotas](https://docs.cloud.google.com/docs/quotas/view-manage); [gcloud billing budgets create](https://docs.cloud.google.com/sdk/gcloud/reference/billing/budgets/create); [gcloud configurations](https://docs.cloud.google.com/sdk/gcloud/reference/topic/configurations).
+
+Re-read or newly read on 2026-09-16, for the corrections of BA-1.3, BA-2.2, BA-4.2, BA-5.1, BA-6.2 and §8: [Cloud Audit Logs overview](https://docs.cloud.google.com/logging/docs/audit) ("for audit logs related to billing, you can only use the Google Cloud CLI or the Logging API"; Logs Viewer `roles/logging.viewer` for Admin Activity on a project); [Access control for Cloud Billing APIs](https://docs.cloud.google.com/billing/docs/access-control) (`roles/billing.admin` carries `logging.logEntries.list`); [Cloud Billing access control and permissions](https://docs.cloud.google.com/billing/docs/how-to/billing-access) (the six predefined roles; `roles/billing.user` carries `billing.accounts.get` and `billing.resourceAssociations.create`); [Secure the link between a project and its billing account](https://docs.cloud.google.com/billing/docs/how-to/secure-project-billing-account-link) (the project-side and account-side permission pair); [View and manage quotas](https://docs.cloud.google.com/docs/quotas/view-manage) (`roles/servicemanagement.quotaAdmin`, `serviceusage.quotas.update`, `cloudquotas.quotas.update`); [Set the quota project](https://docs.cloud.google.com/docs/quotas/set-quota-project) (`serviceusage.services.use`, `roles/serviceusage.serviceUsageConsumer`); [organizations.testIamPermissions](https://docs.cloud.google.com/resource-manager/reference/rest/v3/organizations/testIamPermissions).
 
 ## Related
 

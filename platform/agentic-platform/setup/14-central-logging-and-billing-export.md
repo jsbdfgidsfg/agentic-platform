@@ -4,8 +4,10 @@
 - Owner: the platform owner
 - Last reviewed: 2026-09-15
 - Last executed: never
-- Stage: review §2 stage 13, central logging, one of the four Tier R items (HLD §0.4). Runs after file 13 and before files 15 to 17, which read `SINK_S_ORG`, `SINK_S_FOLDER` and the Tier R evidence this file records.
-- Step prefix: CL. Steps: 47. BLOCKED steps: CL-8.5 (the Data Access canary job, README B-02). Steps that wait on a decision or a later identity, not on code, and are recorded PENDING: CL-10.1 to CL-10.3 (retention values and the two locks, on P13), CL-3.3 (`eve-verifier@`, the SIEM ingestion principal), CL-3.4 (the security reviewer) and CL-7.3 (`mo-metrics@`, `eve-verifier@`).
+- Stage: review §2 stage 13, central logging, one of the four Tier R items (HLD §0.4). Runs after [13](13-organisation-policies-deny-and-pab.md) §6 (OP-6.5 `DONE`) and before files 15 to 17, which read `SINK_S_ORG`, `SINK_S_FOLDER` and the Tier R evidence this file records.
+- Consumes: `ORG_ID`, `DOMAIN`, `DIRECTORY_CUSTOMER_ID`, `REGION`, `BQ_LOCATION`, `WORKSPACE_EDITION`, `PLATFORM_REPO_DIR`, `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER`, `EVIDENCE_INTERIM_LOCATION` (01); NAMES (log bucket, dataset and `BILLING_EXPORT_DS` names), KEYS, P13 (`EVIDENCE_RETENTION_DAYS`, `IDENTITY_RETENTION_DAYS`, may be unsigned at the first run), SD-11, SD-12, SD-16, SD-18, SD-38, SD-40, `SECOND_HUMAN_EMAIL`, `SECURITY_REVIEWER_EMAIL` (`*tbd*` allowed) (03); `PU-5.2` volume method (04); `GEMINI_PROJECT` (05); `GRP_PLATFORM_SECURITY`, `GRP_GE_ADMINS`, `SA_2_ADMIN` (06); `BILLING_ACCOUNT_ID`, `BILLING_ADMIN_EMAIL`, BA-1.2 branch, BA-4 source B (07); `FLD_AGENTIC_PLATFORM`, `FLD_PLATFORM_CORE`, observability default storage location (09); `LOGGING_PROJECT`, `LOGGING_PROJECT_NUMBER`, `CORE_PROJECT`, `KMS_PROJECT`, the `_Default` redirect (10); `KEY_PLATFORM_LOGS` (11); `ENT_ORG_SINK`, `ENT_FOLDER_ADMIN`, `ENT_PROJECT_REPAIR_CORE` (12); B1, B8, B9, B10 in force at `fld-agentic-platform` and the committed `fld-platform-core` allow-list, at OP-6.3 and OP-6.5 (13).
+- Produces: `LOG_BUCKET_EVIDENCE`, `LOG_BUCKET_IDENTITY`, `SINK_S_ORG`, `SINK_S_FOLDER`, `PLATFORM_LOGS_DS`, `PLATFORM_LOGS_VIEWS_DS`, `BILLING_EXPORT_DS`, `KMS_KEY_BQ_LOGS` (branch (a) of CL-4.1 only, otherwise `*tbd*`); the committed `logging/filters/*.txt`, `logging/sinks-expected.yaml`, `logging/audit-config-fld-agentic-platform.json` and `logging/audit-config-projects.json`; the log views `security`, `siem`, `ge-requests`, `identity`; the Tier R "central logging" record of CL-11.2 with its watch list; the PENDING re-run rows CL-3.3, CL-3.4, CL-7.3, CL-10.1 to CL-10.3 and the BLOCKED row CL-8.5.
+- Step prefix: CL. Steps: 47. Run order note: **CL-2.5 runs before CL-2.3 and CL-2.4** (the throwaway probe of CMEK with Log Analytics, and of locking); every other step runs in numeric order. **IRREVERSIBLE** steps, each with its own confirmation list and gate: CL-2.5 (the `--locked` line on the throwaway), CL-2.3 and CL-2.4 (location, CMEK, and for the evidence bucket the Log Analytics opt-in), CL-4.2, CL-4.3 and CL-9.1 (dataset names and location), CL-10.2 and CL-10.3 (the two locks, second human present). CL-6.3's enabling of interception is not irreversible but is not replayable either, so it carries a confirm-before-running table and the second human as approver. BLOCKED steps: CL-8.5 (the Data Access canary job, README B-02). Steps that wait on a decision or a later identity, not on code, and are recorded PENDING: CL-10.1 to CL-10.3 (retention values and the two locks, on P13), CL-3.3 (`eve-verifier@`, the SIEM ingestion principal), CL-3.4 (the security reviewer) and CL-7.3 (`mo-metrics@`, `eve-verifier@`).
 - Replaces: `wall-e/SETUP.md` Phase 5 (Workspace audit-log sharing), whose steps and verify are salvaged into CL-1 with the Data Access reading rule of S181; the interim organisation sinks of SETUP 11.3, which are **not** carried over (S094, S157); the dataset-before-sink order and partitioned tables of `eve/07-build-runbook.md` Phase 7, applied here to `platform_logs`. Eve's own sink `eve-workspace-audit` stays Eve's (file 24).
 - Decisions applied: SD-40 (no interim or agent organisation sinks; the platform sinks come first), SD-18 (rows 40 and 41 have a maker here; `ent-org-sink` is approved by the second human), SD-16 (the export by the billing administrator; the shared-account view), SD-38 (evidence copies after this file), SD-11 (the identity bucket's readers), SD-12 (the monitored administrator cannot silence the logging path unnoticed).
 - Closes: S159, S094 and S157 (for the platform sinks), S048 (rows 40 and 41), the central-logging part of S001, the export and billing-account-sink parts of X-RQB-05. See "Findings" at the end.
@@ -16,7 +18,7 @@
 The platform's evidence path for everything that happens in the Workspace tenant, in the organisation's Cloud IAM and inside `fld-agentic-platform`, stored once, in the EU, on a platform key, readable only through named views:
 
 1. **The Workspace feed.** "Share data with Google Cloud services" turned on by a super admin after the organisation's Cloud Logging owner is consulted, and proven at organisation scope for the Admin, Groups, Login, OAuth token and SAML streams (Data Access streams read with `roles/logging.privateLogViewer`, S181).
-2. **Two locked log buckets in `LOGGING_PROJECT`.** `platform-evidence-logs` (audit families of the folder, organisation-level entries, the billing account's audit log) and `platform-identity-logs` (Login, SAML and OAuth-token Data Access entries of every tenant account), both in `europe-west1` on `KEY_PLATFORM_LOGS`, created unlocked at the floor, locked in two separate **IRREVERSIBLE** steps on P13's signed values with the second human present.
+2. **Two locked log buckets in `LOGGING_PROJECT`.** `platform-evidence-logs` (audit families of the folder, organisation-level entries, the billing account's audit log) and `platform-identity-logs` (Login, SAML and OAuth-token Data Access entries of every tenant account), both in `europe-west1` on `KEY_PLATFORM_LOGS`, created unlocked at the floor only after a throwaway bucket has proved that this tenant accepts CMEK together with Log Analytics and has recorded what a lock still allows (CL-2.5, run first), and locked in two separate **IRREVERSIBLE** steps on P13's signed values with the second human present.
 3. **Two aggregated sinks and one billing-account sink.** `S-org` (organisation, no include-children) and `S-folder` (`fld-agentic-platform`, include-children, intercepting), both into the project destination `LOGGING_PROJECT`; `billing-account-audit` for 07's source B.
 4. **Three fan-out sinks.** `to-evidence-bucket`, `to-identity-bucket`, `to-bigquery` (partitioned tables, into `platform_logs`, created with its 400-day partition expiry first), and an exclusion on `LOGGING_PROJECT`'s own `_Default` sink so rerouted entries are not stored twice.
 5. **Views and readers.** Log views `security`, `siem`, `ge-requests` and `identity` with conditional `roles/logging.viewAccessor` bindings; the authorised view `platform_logs_views.walle_workspace_logs` and the dataset `READER` grants of topology row 40, PENDING until `mo-metrics@` and `eve-verifier@` exist.
@@ -57,7 +59,7 @@ flowchart LR
 
 ## Preconditions
 
-- [ ] File 13 is complete: the folder baseline is applied (the member constraint admits Google's service agents, proven by 13's first grant) and SCC tier and residency were read after the first location policy.
+- [ ] File 13 **§6 is complete** (OP-6.5 `DONE`): B1, B8, B9 and B10 are in force at `fld-agentic-platform` (the member constraint admits Google's service agents, proven by 13's first grant) and SCC tier and residency were read after the first location policy (OP-6.2). 13 §8 **may still be open**; record the date of this run against 13's checkpoint list, because `gcp.restrictServiceUsage` on `fld-platform-core` is only enforced at OP-8.4 — until then CL-2.1's `gcloud services list` is a dry-run-era reading and proves the APIs are enabled, not that the allow-list admits them. If this file runs after OP-8.4, CL-2.1's reading is the enforced one and any missing API is a 13 re-run under `ENT_PLATFORM_POLICY`, never an enable made here. 13's hand-over row for this file cites OP-8.4 for "`LOGGING_PROJECT` inside the core allow-list"; that part is the later re-run, not a gate on starting (13's owner corrects the row).
 - [ ] File 12 is complete: `ENT_ORG_SINK` (organisation `roles/logging.configWriter`, approver the second human), `ENT_FOLDER_ADMIN` (on `fld-agentic-platform`) and `ENT_PROJECT_REPAIR_CORE` exist and each had its one-grant test; the organisation exception and the creator's Owner on the five core projects are withdrawn.
 - [ ] File 11 has created `KEY_PLATFORM_LOGS` (`platform-logs-europe-west1`, ring `logging`, `europe-west1`, HSM) in `KMS_PROJECT`.
 - [ ] File 10 has created `LOGGING_PROJECT` and `CORE_PROJECT`, linked to `BILLING_ACCOUNT_ID`, with `logging.googleapis.com`, `bigquery.googleapis.com` and `cloudkms.googleapis.com` on the allow-list, and `_Default` redirected to a regional bucket.
@@ -78,13 +80,13 @@ need ORG_ID DOMAIN DIRECTORY_CUSTOMER_ID REGION BQ_LOCATION GEMINI_PROJECT LOGGI
 | Role | Does | Present at |
 |---|---|---|
 | Platform owner (`sa-1-admin@`) | Requests the PAM grants and performs every GCP step; commits the expected-sink inventory and the audit configuration | every section |
-| Second human (`sa-2-admin@`, IT security) | Approves `ENT_ORG_SINK` grants; reviews the expected-sink inventory and the audit configuration; reads the seeded proofs through the views (the platform owner, a monitored subject, does not prove his own evidence path); **present for each lock** | CL-1.3 (performs or witnesses the toggle), CL-5.1, CL-6.2, CL-6.3, CL-6.5, CL-6.6, CL-8.1, CL-10.2, CL-10.3 |
+| Second human (`sa-2-admin@`, IT security) | Approves `ENT_ORG_SINK` grants; **approves the enabling of the intercepting folder sink** (CL-6.3); reviews the expected-sink inventory and the audit configuration; reads the folder and organisation IAM outputs of CL-3.5; reads the seeded proofs through the views (the platform owner, a monitored subject, does not prove his own evidence path); **present for each lock** | CL-1.3 (performs or witnesses the toggle), CL-2.5 (told the result), CL-3.5, CL-5.1, CL-6.2, CL-6.3, CL-6.5, CL-6.6, CL-8.1, CL-10.2, CL-10.3 |
 | A super admin | Turns sharing on. `Assumption:` the second human as `sa-2-admin@`, so that the change's actor is not the monitored platform owner; otherwise `sa-1-admin@` with the second human watching | CL-1.3 |
 | The organisation's Cloud Logging owner | Consulted before the toggle; holds `roles/logging.viewer` and `roles/logging.privateLogViewer` at the organisation and reads the streams, unless `ENT_ORG_SINK`'s committed bundle already carries both | CL-1.1, CL-1.4, CL-1.5, CL-1.6 |
 | Billing administrator (finance) | Creates nothing in GCP but the export: enables standard and detailed usage cost export; creates the billing-account sink | CL-6.4, CL-9.2, CL-9.3 |
 | Approver of `ENT_FOLDER_ADMIN` and `ENT_PROJECT_REPAIR_CORE` | As file 12 recorded (the second human until the security reviewer is appointed, `Assumption:`) | CL-2.1 |
 
-Sittings that cannot start without two people: CL-6 (the second human approves and reads the proofs) and CL-10 (the locks). Every step writes `checkpoint <id> START` before its ACTION and `checkpoint <id> DONE` when its VERIFY passes (01 §1). Temporary files hold IAM policies and filters, never a secret, and are removed at the end of each step.
+Sittings that cannot start without two people: CL-6 (the second human approves `S-org` and the enabling of the intercepting `S-folder`, and reads the proofs) and CL-10 (the locks). Steps whose run order is not their numeric order: **CL-2.5 runs before CL-2.3 and CL-2.4** (it probes CMEK with Log Analytics, and locking, on a throwaway bucket). Every step writes `checkpoint <id> START` before its ACTION and `checkpoint <id> DONE` when its VERIFY passes (01 §1). Temporary files hold IAM policies and filters, never a secret, and are removed at the end of each step.
 
 ## 1. Workspace audit-log sharing
 
@@ -194,7 +196,7 @@ gcloud services list --enabled --project="$LOGGING_PROJECT" --format="value(conf
 gcloud billing projects describe "$LOGGING_PROJECT" --format="value(billingAccountName,billingEnabled)"
 ```
 
-- **VERIFY:** `gcloud pam grants describe <grant name> --format="value(state)"` prints `ACTIVE` for both after approval. The services list prints the three APIs. The billing line prints `billingAccounts/<BILLING_ACCOUNT_ID>` and `True`. A grant in `APPROVAL_AWAITED` for more than the sitting is withdrawn and the sitting rescheduled; no step below runs on a standing role.
+- **VERIFY:** `gcloud pam grants describe <grant name> --format="value(state)"` prints `ACTIVE` for both after approval. The services list prints the three APIs; record beside it whether 13 OP-8.4 has run (if not, this is a dry-run-era reading: the APIs are enabled, but the `fld-platform-core` allow-list is not yet enforced, so a later enforcement can still surface a missing service — that is 13's re-run, not a change made here). The billing line prints `billingAccounts/<BILLING_ACCOUNT_ID>` and `True`. A grant in `APPROVAL_AWAITED` for more than the sitting is withdrawn and the sitting rescheduled; no step below runs on a standing role.
 - **ROLLBACK:** `gcloud pam grants revoke <grant name> --location=global <scope flag>` by an approver, or let the grant expire.
 - **EVIDENCE:** Grant names and states in the build log; PAM's own audit entries are the record. TISAX 4.1.3, 4.2.1. EU AI Act E-08.
 
@@ -222,6 +224,35 @@ gcloud kms keys add-iam-policy-binding "$KEY_PLATFORM_LOGS" --member="serviceAcc
 - **ROLLBACK:** Read only, or remove the binding before any bucket uses the key.
 - **EVIDENCE:** The key description and policy table as `<date>-CL-2.2-logging-key-v1`. TISAX 5.1 (cryptography table). EU AI Act E-05.
 
+### CL-2.5 Prove what a locked bucket still allows, and that CMEK with Log Analytics is accepted, on a throwaway bucket
+
+> **Run this step before CL-2.3 and CL-2.4**, out of numeric order. The id stays `CL-2.5` because CL-3.1, CL-10.1, the checklist and files 17 and 24 cite it; the run order is what matters, and the checkpoint line records it. CL-2.3 does not start until this step's record exists.
+
+- **WHO:** Platform owner under the `ENT_FOLDER_ADMIN` grant; the second human is told the result before CL-2.3 and again before CL-10.
+- **WHERE:** Shell.
+- **ACTION:** Two questions are answered at once on one empty one-day bucket, because both answers are otherwise learned on a production bucket that cannot be undone.
+  1. **Locking.** Google says locking "is irreversible", that the retention "can't be changed", and that a locked bucket cannot be deleted "unless empty" (buckets page and `buckets update --locked` reference, read 2026-09-15). It does not say whether a log view can be created on a locked bucket, which files 17 and 24 need for per-agent views after CL-10.
+  2. **CMEK together with Log Analytics.** CL-2.3 sets `--cmek-kms-key-name` and `--enable-analytics` on the same bucket and neither can be changed afterwards ("After a log bucket is created, you can't reconfigure the log bucket to change or remove CMEK", CMEK page; "Once opted in, the bucket cannot be opted out of Log Analytics", gcloud reference). The Log Analytics page carries CMEK caveats — a join reads across storage resources only when they use the same key or share an ancestor default key, and temporary join data is encrypted with that key (Log Analytics page, read 2026-09-15). If the combination is refused or degrades, it must fail here and not on the evidence bucket.
+
+  The throwaway therefore carries the same key and the same analytics opt-in as CL-2.3 will:
+
+```bash
+need LOGGING_PROJECT REGION KEY_PLATFORM_LOGS
+T="cl-lock-test-$(date -u +%Y%m%d)"
+gcloud logging buckets create "$T" --location="$REGION" --retention-days=1 --cmek-kms-key-name="$KEY_PLATFORM_LOGS" --enable-analytics --description="Throwaway probe of CMEK + Log Analytics + locking (14 CL-2.5); delete same day" --project="$LOGGING_PROJECT"; echo "create exit $?"
+gcloud logging buckets describe "$T" --location="$REGION" --project="$LOGGING_PROJECT" --format="yaml(name,retentionDays,analyticsEnabled,cmekSettings.kmsKeyName,lifecycleState)" || { echo "STOP: no throwaway bucket; record the create error and raise it with the second human before CL-2.3"; false; }
+gcloud logging buckets update "$T" --location="$REGION" --locked --project="$LOGGING_PROJECT"; echo "lock exit $?"
+gcloud logging views create probe --bucket="$T" --location="$REGION" --log-filter='LOG_ID("cloudaudit.googleapis.com/activity")' --project="$LOGGING_PROJECT"; echo "view create exit $?"
+gcloud logging buckets update "$T" --location="$REGION" --retention-days=2 --project="$LOGGING_PROJECT"; echo "retention increase exit $?"
+gcloud logging buckets delete "$T" --location="$REGION" --project="$LOGGING_PROJECT" --quiet; echo "delete exit $?"
+```
+
+- **VERIFY:** Record the five exit codes and the describe output.
+  - **Before CL-2.3 may run:** `create exit 0`, and the describe shows `analyticsEnabled: true` **and** `cmekSettings.kmsKeyName` equal to `KEY_PLATFORM_LOGS`. If the create is refused, or either field is missing, CL-2.3 does not run as written: record which of the two the tenant refuses, raise it with the second human, and take the CMEK-only bucket (drop `--enable-analytics`, with a `DEVIATION_REGISTER` line against 08 S12) or the analytics-only bucket (never: SK-7 and 08 §5 require the key) as the signed choice.
+  - **For CL-10:** the delete of the empty bucket succeeds. If the view create fails, CL-3.1 must create every view the platform will ever need on these buckets before CL-10, and file 17's per-agent views move to per-tier buckets created unlocked (08 §3.3's cap rule) — write that into the re-run index before going on. The retention result tells CL-10 whether a later P13 increase is possible after the lock.
+- **ROLLBACK:** **IRREVERSIBLE** from the `--locked` line onwards: the lock cannot be removed and the bucket's retention cannot be changed downwards. Confirm before running that line: the bucket name starts `cl-lock-test-`, its retention is 1 day, it is in `LOGGING_PROJECT`, and no sink writes to it (nothing in CL-5 or CL-6 exists yet, or names it). The bucket is deletable only once empty; if the delete is refused it persists for its 1-day retention and is deleted the next day — recorded in the build log, not a finding. Nothing before the lock line needs a rollback beyond that delete.
+- **EVIDENCE:** The five results and the describe output as `<date>-CL-2.5-lock-and-cmek-behaviour-v1`; the line "CMEK+analytics accepted" (or the refusal and the signed choice) is quoted in CL-2.3's confirmation. TISAX 5.2.4, 5.1. EU AI Act E-05.
+
 ### CL-2.3 Create `platform-evidence-logs`
 
 - **WHO:** Platform owner under the `ENT_FOLDER_ADMIN` grant (its `roles/logging.configWriter` reaches `LOGGING_PROJECT` by inheritance).
@@ -242,7 +273,7 @@ gcloud logging buckets describe platform-evidence-logs --location="$REGION" --pr
 ```
 
   `retentionDays: 400`, `locked` absent or false, `analyticsEnabled: true`, `cmekSettings.kmsKeyName` equal to `KEY_PLATFORM_LOGS`, `lifecycleState: ACTIVE`, and the name in `europe-west1`.
-- **ROLLBACK:** **IRREVERSIBLE** as to location, CMEK and the Log Analytics opt-in. Confirm before running: CL-2.2's policy table, `REGION` is `europe-west1`, and the name matches the signed NAMES record. Gate: `tools/decision-need.sh NAMES KEYS` prints `SIGNED` twice. A bucket made wrong before any sink writes to it is deleted with `gcloud logging buckets delete platform-evidence-logs --location="$REGION" --project="$LOGGING_PROJECT"`; the name then stays reserved while the bucket is pending deletion, so the fix waits.
+- **ROLLBACK:** **IRREVERSIBLE** as to location, CMEK and the Log Analytics opt-in. Confirm before running, each read aloud from its record: CL-2.2's policy table; **CL-2.5 recorded "CMEK+analytics accepted"** (`create exit 0`, `analyticsEnabled: true`, `cmekSettings.kmsKeyName` equal to the key) on the throwaway, so the combination is not being tried for the first time here; `REGION` is `europe-west1`; and the name matches the signed NAMES record. Gate: `tools/decision-need.sh NAMES KEYS` prints `SIGNED` twice. A bucket made wrong before any sink writes to it is deleted with `gcloud logging buckets delete platform-evidence-logs --location="$REGION" --project="$LOGGING_PROJECT"`; the name then stays reserved while the bucket is pending deletion, so the fix waits.
 - **EVIDENCE:** The describe output as `<date>-CL-2.3-evidence-bucket-v1`. TISAX 5.2.4, 5.1. EU AI Act E-06.
 
 ### CL-2.4 Create `platform-identity-logs`
@@ -263,26 +294,6 @@ penv_set LOG_BUCKET_IDENTITY "projects/${LOGGING_PROJECT}/locations/${REGION}/bu
 - **VERIFY:** The describe command of CL-2.3 for `platform-identity-logs` shows `retentionDays` equal to `ID_DAYS`, not locked, `analyticsEnabled` absent or false, the key, `ACTIVE`.
 - **ROLLBACK:** **IRREVERSIBLE** as to location and CMEK. Same confirmation and gate as CL-2.3. Delete before any sink writes, as CL-2.3.
 - **EVIDENCE:** `<date>-CL-2.4-identity-bucket-v1`. TISAX 5.2.4, 7.1. EU AI Act E-06.
-
-### CL-2.5 Prove what a locked bucket still allows, on a throwaway bucket
-
-- **WHO:** Platform owner; the second human is told the result before CL-10.
-- **WHERE:** Shell.
-- **ACTION:** Google says locking "is irreversible", that the retention "can't be changed", and that a locked bucket cannot be deleted "unless empty" (buckets page and `buckets update --locked` reference, read 2026-09-15). It does not say whether a log view can be created on a locked bucket, which files 17 and 24 need for per-agent views after CL-10. An empty one-day bucket answers it at no risk.
-
-```bash
-need LOGGING_PROJECT REGION
-T="cl-lock-test-$(date -u +%Y%m%d)"
-gcloud logging buckets create "$T" --location="$REGION" --retention-days=1 --project="$LOGGING_PROJECT"
-gcloud logging buckets update "$T" --location="$REGION" --locked --project="$LOGGING_PROJECT"
-gcloud logging views create probe --bucket="$T" --location="$REGION" --log-filter='LOG_ID("cloudaudit.googleapis.com/activity")' --project="$LOGGING_PROJECT"; echo "view create exit $?"
-gcloud logging buckets update "$T" --location="$REGION" --retention-days=2 --project="$LOGGING_PROJECT"; echo "retention increase exit $?"
-gcloud logging buckets delete "$T" --location="$REGION" --project="$LOGGING_PROJECT" --quiet; echo "delete exit $?"
-```
-
-- **VERIFY:** Record the three exit codes. Expected and required: the delete of the empty bucket succeeds (else the throwaway stays until its one-day retention passes, recorded). If the view create fails, CL-3.1 must create every view the platform will ever need on these buckets before CL-10, and file 17's per-agent views move to per-tier buckets created unlocked (08 §3.3's cap rule) — write that into the re-run index before going on. The retention result tells CL-10 whether a later P13 increase is possible after the lock.
-- **ROLLBACK:** None needed; the bucket is empty and deleted.
-- **EVIDENCE:** The three results as `<date>-CL-2.5-lock-behaviour-v1`. TISAX 5.2.4. EU AI Act E-05.
 
 ## 3. Log views and their readers
 
@@ -366,17 +377,25 @@ if [ -n "${SIEM_INGEST_PRINCIPAL-}" ] && [ "$SIEM_INGEST_PRINCIPAL" != '*tbd*' ]
 
 ### CL-3.5 Prove that nobody reads every view
 
-- **WHO:** Platform owner; the second human reads the output.
-- **WHERE:** Shell.
-- **ACTION:**
+- **WHO:** Platform owner runs the three reads; the second human reads the three files and signs the folder and organisation ones (they are above the platform owner's own scope).
+- **WHERE:** Shell. The folder read needs the `ENT_FOLDER_ADMIN` grant of CL-2.1 (still active) or the second human's own reader; the organisation read is the second human's, or the platform owner's under `ENT_ORG_SINK` if its committed bundle carries `resourcemanager.organizations.getIamPolicy` — read file 12's entitlement file first and record which.
+- **ACTION:** All three reads use the same `--flatten`, `--filter` and `--format`, so the outputs are comparable line by line and are the drift job's first expected set. `grep` exits 1 when it matches nothing, which here is the wanted result, so each pipeline ends with `|| true` and the match count is printed separately.
 
 ```bash
-gcloud projects get-iam-policy "$LOGGING_PROJECT" --flatten="bindings[].members" --format="table(bindings.role,bindings.members,bindings.condition.title)" | grep -E 'roles/(owner|editor|viewer|logging\.(viewer|privateLogViewer|admin|viewAccessor))|roles/(admin|writer|reader)' 
+need LOGGING_PROJECT FLD_AGENTIC_PLATFORM ORG_ID BUILD_LOG_DIR
+D="$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-CL-3.5"
+R='roles/(owner|editor|viewer|logging\.(viewer|privateLogViewer|admin|viewAccessor))'
+gcloud projects get-iam-policy "$LOGGING_PROJECT" --flatten="bindings[].members" --format="table(bindings.role,bindings.members,bindings.condition.title)" > "${D}-project.txt"
+gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten="bindings[].members" --format="table(bindings.role,bindings.members,bindings.condition.title)" > "${D}-folder.txt"
+gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --format="table(bindings.role,bindings.members,bindings.condition.title)" > "${D}-org.txt"
+for f in "${D}-project.txt" "${D}-folder.txt" "${D}-org.txt"; do
+  echo "== $f"; grep -E "$R" "$f" || true; echo "matching rows: $(grep -cE "$R" "$f" || true)"
+done
 ```
 
-- **VERIFY:** Every row is one of CL-3.2's conditioned `viewAccessor` rows. No human or group holds `roles/owner`, `roles/editor`, `roles/viewer`, `roles/logging.viewer`, `roles/logging.privateLogViewer` or `roles/logging.admin` on `LOGGING_PROJECT` outside an active PAM grant (the platform owner's `ENT_FOLDER_ADMIN` and `ENT_PROJECT_REPAIR_CORE` grants appear only while active, and carry no logging reader role). The folder and organisation above are read the same way by the second human with `gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM"` and `gcloud organizations get-iam-policy "$ORG_ID"`, filtered on the same roles; any standing holder other than `gcp-organization-admins@` (break-glass, 06) is a finding to the second human.
+- **VERIFY:** In `${D}-project.txt`, every matching row is one of CL-3.2's conditioned `viewAccessor` rows: no human or group holds `roles/owner`, `roles/editor`, `roles/viewer`, `roles/logging.viewer`, `roles/logging.privateLogViewer` or `roles/logging.admin` on `LOGGING_PROJECT` outside an active PAM grant (the platform owner's `ENT_FOLDER_ADMIN` and `ENT_PROJECT_REPAIR_CORE` grants appear only while active, and carry no logging reader role), and no unconditioned `roles/logging.viewAccessor`. In `${D}-folder.txt` and `${D}-org.txt`, read by the second human, any standing holder of the same roles other than `gcp-organization-admins@` (break-glass, 06) is a finding to the second human the same day, recorded with the holder's name and the granting date. A non-zero `grep` status is not a failure: `matching rows: 0` on the folder and organisation files is the wanted result.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** The three filtered outputs as `<date>-CL-3.5-no-standing-log-readers-v1`; the drift job's expected set (16) starts from this record. TISAX 4.2.1. EU AI Act E-06.
+- **EVIDENCE:** The three files `<date>-CL-3.5-project.txt`, `-folder.txt`, `-org.txt`, committed together as `<date>-CL-3.5-no-standing-log-readers-v1` with the second human's signature on the folder and organisation ones; the drift job's expected set (16) starts from this record. TISAX 4.2.1. EU AI Act E-06.
 
 ## 4. The BigQuery datasets
 
@@ -393,17 +412,39 @@ gcloud kms autokey-config describe --folder="$FLD_AGENTIC_PLATFORM" --format=jso
 ```
 
 - **VERIFY:** Record one branch:
-  - **(a) An Autokey configuration naming `KMS_PROJECT` applies** to `LOGGING_PROJECT`'s folder or its parent. Then each dataset of CL-4.2, CL-4.3 and CL-9.1 first gets a key handle, and its `kmsKey` is the `--default_kms_key`:
+  - **(a) An Autokey configuration naming `KMS_PROJECT` applies** to `LOGGING_PROJECT`'s folder or its parent. Then each dataset of CL-4.2, CL-4.3 and CL-9.1 first gets its own key handle, and that handle's `kmsKey` is the `--default_kms_key`. A key handle is created per dataset, one at a time, with an explicit id (never `--generate-key-handle-id`, so a re-run is idempotent and the id names the dataset); `gcloud kms key-handles create` triggers provisioning and does not necessarily return the key, so the handle is polled until `kmsKey` is set (Autokey page: the operation "response includes ... `done`: true", and a KeyHandle carries "`kmsKey`: the full resource ID of the key created by Autokey for this resource"; `gcloud kms key-handles create --location --resource-type --key-handle-id` and `key-handles describe`, both read 2026-09-15):
 
 ```bash
-KH="$(curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -d '{"resourceTypeSelector":"bigquery.googleapis.com/Dataset"}' "https://cloudkms.googleapis.com/v1/projects/${LOGGING_PROJECT}/locations/europe/keyHandles")"
-printf '%s\n' "$KH"
+need LOGGING_PROJECT
+kms_key_for_dataset() {                       # $1 = dataset name, used as the key-handle id
+  _kh="kh-$1"
+  gcloud kms key-handles create --key-handle-id="$_kh" --location=europe --resource-type=bigquery.googleapis.com/Dataset --project="$LOGGING_PROJECT" >/dev/null 2>&1 || echo "key-handle create returned non-zero (already exists, or still provisioning); polling"
+  _n=0
+  while [ "$_n" -lt 30 ]; do
+    _k="$(gcloud kms key-handles describe "$_kh" --location=europe --project="$LOGGING_PROJECT" --format='value(kmsKey)' 2>/dev/null)"
+    case "$_k" in *locations/europe/*) printf '%s\n' "$_k"; return 0;; esac
+    _n=$((_n+1)); sleep 10
+  done
+  echo "STOP: key handle $_kh has no kmsKey in locations/europe after 5 minutes" >&2; return 1
+}
+KMS_KEY_BQ_LOGS="$(kms_key_for_dataset platform_logs)" || false
+printf '%s\n' "$KMS_KEY_BQ_LOGS"
+penv_set KMS_KEY_BQ_LOGS "$KMS_KEY_BQ_LOGS"
 ```
 
-    The call returns an operation; `gcloud kms` shows the key once done. `Assumption:` the key-handle location for an `EU` dataset is `europe` (BigQuery requires a `europe` key for an `EU` dataset, BigQuery CMEK page, read 2026-09-15); the returned key name must contain `locations/europe/`, else stop.
+    CL-4.2 then uses `KMS_FLAG="--default_kms_key=${KMS_KEY_BQ_LOGS}"`, and CL-4.3 and CL-9.1 call `kms_key_for_dataset platform_logs_views` and `kms_key_for_dataset "$BDS"` for their own handles (`penv_set KMS_KEY_BQ_VIEWS` and `KMS_KEY_BQ_BILLING`). Nothing is pasted by hand. If `gcloud kms key-handles` is unavailable in the installed SDK, the same handle is created with the documented REST call and the operation polled:
+
+```bash
+OP="$(curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: ${LOGGING_PROJECT}" -H "Content-Type: application/json" -d '{"resource_type_selector":"bigquery.googleapis.com/Dataset"}' "https://cloudkms.googleapis.com/v1/projects/${LOGGING_PROJECT}/locations/europe/keyHandles?key_handle_id=kh-platform_logs" | jq -r .name)"
+until curl -sS -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: ${LOGGING_PROJECT}" "https://cloudkms.googleapis.com/v1/${OP}" | jq -e '.done == true' >/dev/null; do sleep 10; done
+curl -sS -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: ${LOGGING_PROJECT}" "https://cloudkms.googleapis.com/v1/${OP}" | jq -r '.response.kmsKey'
+```
+
+    `Assumption:` the key-handle location for an `EU` dataset is `europe` ("a dataset in region `EU` should be protected with a key ring from region `europe`", BigQuery CMEK page, read 2026-09-15); the key name must contain `locations/europe/`, which the loop asserts, else the step stops and no dataset is created.
   - **(b) No Autokey configuration applies.** The datasets use Google-managed encryption. `DEVIATION_REGISTER` gets: "platform_logs, platform_logs_views and BILLING_EXPORT_DS Google-managed, against 09 §2.2; reason: no Autokey on fld-platform-core and the default key must exist before the sink's tables; owner platform owner; closed by recreating under a signed change only if the key table is amended". This does not breach SK-7, which requires CMEK in W+ folders only. `Assumption:` branch (b) is what 11 as planned produces.
-- **ROLLBACK:** Read only (a key handle made in branch (a) and unused is harmless; it is recorded).
-- **EVIDENCE:** Both outputs and the branch as `<date>-CL-4.1-dataset-encryption-v1`; the deviation row in branch (b). TISAX 5.1. EU AI Act E-05.
+- **VERIFY (branch (a) only):** `printenv KMS_KEY_BQ_LOGS` is non-empty and contains `locations/europe/`; `gcloud kms keys describe "$KMS_KEY_BQ_LOGS" --format="yaml(name,primary.state)"` shows `ENABLED`. CL-4.2 does not run until this holds, and the same is repeated per dataset for CL-4.3 and CL-9.1.
+- **ROLLBACK:** Read only in branch (b). In branch (a) a key handle is not deletable and an unused Autokey key is recorded, not removed; it is harmless (no dataset points at it) and its name is written in the build log so 11's key table stays complete.
+- **EVIDENCE:** Both `autokey-config describe` outputs, the branch, and in branch (a) the key names of every handle made, as `<date>-CL-4.1-dataset-encryption-v1`; the deviation row in branch (b). TISAX 5.1. EU AI Act E-05.
 
 ### CL-4.2 Create `platform_logs` with its 400-day partition expiry, before any sink
 
@@ -414,7 +455,7 @@ printf '%s\n' "$KH"
 ```bash
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES
 need LOGGING_PROJECT BQ_LOCATION
-KMS_FLAG=""   # branch (a) of CL-4.1: KMS_FLAG="--default_kms_key=<the key name from the key handle>"
+KMS_FLAG=""; [ -n "${KMS_KEY_BQ_LOGS-}" ] && KMS_FLAG="--default_kms_key=${KMS_KEY_BQ_LOGS}"   # set in branch (a) of CL-4.1, empty in branch (b); never typed by hand
 bq --location="$BQ_LOCATION" mk --dataset --default_partition_expiration=34560000 --description="Central audit copy for SQL: folder audit families and organisation-level entries, identity services excluded (08 S14)" --label=agp-store:s14 $KMS_FLAG "${LOGGING_PROJECT}:platform_logs"
 penv_set PLATFORM_LOGS_DS platform_logs
 ```
@@ -438,7 +479,7 @@ bq show --format=prettyjson "${LOGGING_PROJECT}:platform_logs" | jq '{location, 
 ```bash
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES
 need LOGGING_PROJECT BQ_LOCATION
-KMS_FLAG=""   # as CL-4.2: set from CL-4.1 branch (a), empty in branch (b)
+KMS_FLAG=""   # branch (a): KMS_KEY_BQ_VIEWS="$(kms_key_for_dataset platform_logs_views)"; penv_set KMS_KEY_BQ_VIEWS "$KMS_KEY_BQ_VIEWS"; KMS_FLAG="--default_kms_key=${KMS_KEY_BQ_VIEWS}"
 bq --location="$BQ_LOCATION" mk --dataset --description="Authorised views over platform_logs, one per agent; readers dataset-level (topology row 40)" --label=agp-store:s14-views $KMS_FLAG "${LOGGING_PROJECT}:platform_logs_views"
 penv_set PLATFORM_LOGS_VIEWS_DS platform_logs_views
 ```
@@ -455,27 +496,43 @@ Entries that an aggregated sink sends to a project destination are rerouted by t
 
 - **WHO:** Platform owner writes; the second human is a required reviewer.
 - **WHERE:** `PLATFORM_REPO_DIR`, branch `cl-logging-sinks`, files `logging/filters/*.txt` and `logging/sinks-expected.yaml`.
-- **ACTION:** Write one filter file per sink with the exact text below (placeholders `ORG_ID`, `BILLING_ACCOUNT_ID`, `LOGGING_PROJECT` substituted by `sed` at use, never edited by hand), and the inventory.
+- **ACTION:** Write one filter file per sink with the commands below, never by hand: each file holds exactly one filter on one line, with the placeholders `ORG_ID`, `BILLING_ACCOUNT_ID` and `LOGGING_PROJECT` left in place and substituted by `sed` at use. The here-documents are quoted (`<<'EOF'`), so nothing in them is expanded at write time.
 
-```text
-# logging/filters/audit-families.txt  (S-folder)
+```bash
+need PLATFORM_REPO_DIR
+mkdir -p "$PLATFORM_REPO_DIR/logging/filters"
+cat > "$PLATFORM_REPO_DIR/logging/filters/audit-families.txt" <<'EOF'
 LOG_ID("cloudaudit.googleapis.com/activity") OR LOG_ID("cloudaudit.googleapis.com/data_access") OR LOG_ID("cloudaudit.googleapis.com/system_event") OR LOG_ID("cloudaudit.googleapis.com/policy") OR LOG_ID("cloudaudit.googleapis.com/access_transparency")
-
-# logging/filters/s-org.txt
+EOF
+cat > "$PLATFORM_REPO_DIR/logging/filters/s-org.txt" <<'EOF'
 logName:"organizations/ORG_ID/logs/"
-
-# logging/filters/identity.txt  (to-identity-bucket)
+EOF
+cat > "$PLATFORM_REPO_DIR/logging/filters/identity.txt" <<'EOF'
 logName:"organizations/ORG_ID/logs/" AND (protoPayload.serviceName="login.googleapis.com" OR (protoPayload.serviceName="oauth2.googleapis.com" AND LOG_ID("cloudaudit.googleapis.com/data_access")))
-
-# logging/filters/evidence.txt  (to-evidence-bucket and to-bigquery)
+EOF
+cat > "$PLATFORM_REPO_DIR/logging/filters/evidence.txt" <<'EOF'
 (LOG_ID("cloudaudit.googleapis.com/activity") OR LOG_ID("cloudaudit.googleapis.com/data_access") OR LOG_ID("cloudaudit.googleapis.com/system_event") OR LOG_ID("cloudaudit.googleapis.com/policy") OR LOG_ID("cloudaudit.googleapis.com/access_transparency") OR logName:"organizations/ORG_ID/logs/" OR logName:"billingAccounts/BILLING_ACCOUNT_ID/logs/") AND NOT (logName:"organizations/ORG_ID/logs/" AND (protoPayload.serviceName="login.googleapis.com" OR (protoPayload.serviceName="oauth2.googleapis.com" AND LOG_ID("cloudaudit.googleapis.com/data_access"))))
-
-# logging/filters/default-exclusion.txt  (exclusion on LOGGING_PROJECT's _Default)
+EOF
+cat > "$PLATFORM_REPO_DIR/logging/filters/default-exclusion.txt" <<'EOF'
 NOT logName:"projects/LOGGING_PROJECT/logs/"
-
-# logging/filters/billing-account.txt
+EOF
+cat > "$PLATFORM_REPO_DIR/logging/filters/billing-account.txt" <<'EOF'
 logName:"billingAccounts/BILLING_ACCOUNT_ID/logs/"
+EOF
 ```
+
+  Which sink each file serves: `audit-families.txt` → `S-folder` (CL-6.3); `s-org.txt` → `S-org` (CL-6.2); `identity.txt` → `to-identity-bucket` (CL-5.3); `evidence.txt` → `to-evidence-bucket` (CL-5.2) and `to-bigquery` (CL-5.4); `default-exclusion.txt` → the `_Default` exclusion of CL-5.5; `billing-account.txt` → `billing-account-audit` (CL-6.4).
+
+  Every consumer reads its file the same way, and a filter is never retyped into a command:
+
+```bash
+F="$(mktemp)"
+sed -e "s/ORG_ID/${ORG_ID}/g" -e "s/BILLING_ACCOUNT_ID/${BILLING_ACCOUNT_ID}/g" -e "s/LOGGING_PROJECT/${LOGGING_PROJECT}/g" "$PLATFORM_REPO_DIR/logging/filters/<name>.txt" | grep -v '^#' | tr '\n' ' ' > "$F"
+```
+
+  `tr '\n' ' '` (not `tr -d '\n'`), so a filter later split over several lines still substitutes into one valid filter instead of running its words together; the trailing space is harmless.
+
+  Then write the inventory, `logging/sinks-expected.yaml`, whose `filter:` and `exclusion:` values name the files just written — it is the authoritative expected state that CL-6.6's census, 16's drift job and Eve (25) compare against:
 
 ```yaml
 # logging/sinks-expected.yaml: any sink not listed is a finding (CL-6.6, drift job 16, Eve 25)
@@ -507,7 +564,17 @@ git -C "$PLATFORM_REPO_DIR" push -u origin cl-logging-sinks
 ```
 
   Open the pull request; add `logging/` to CODEOWNERS with the second human as required reviewer in the same pull request, so a later filter change needs him.
-- **VERIFY:** `git -C "$PLATFORM_REPO_DIR" log --oneline origin/main -- logging/sinks-expected.yaml` shows the merge; the pull request shows the second human's approval; `grep -n 'logging/' "$PLATFORM_REPO_DIR/CODEOWNERS"` names him.
+- **VERIFY:** Each filter file exists and holds exactly one filter, so no consumer can concatenate two:
+
+```bash
+for f in audit-families s-org identity evidence default-exclusion billing-account; do
+  n="$(grep -vc '^#' "$PLATFORM_REPO_DIR/logging/filters/$f.txt")"
+  printf '%s lines:%s\n' "$f" "$n"; [ "$n" = "1" ] || { echo "STOP: $f.txt does not hold exactly one filter"; false; }
+done
+grep -rn 'tr -d' "$PLATFORM_REPO_DIR/logging" || echo "no tr -d in committed helpers"
+```
+
+  Then `git -C "$PLATFORM_REPO_DIR" log --oneline origin/main -- logging/sinks-expected.yaml` shows the merge; the pull request shows the second human's approval; `grep -n 'logging/' "$PLATFORM_REPO_DIR/CODEOWNERS"` names him.
 - **ROLLBACK:** A revert pull request under the same review.
 - **EVIDENCE:** Merge commit and pull request URL in `EVIDENCE_REGISTER` as `<date>-CL-5.1-sink-inventory-v1`. TISAX 5.2.1 (change management), 5.2.4. EU AI Act E-05.
 
@@ -520,7 +587,7 @@ git -C "$PLATFORM_REPO_DIR" push -u origin cl-logging-sinks
 ```bash
 need LOGGING_PROJECT REGION ORG_ID BILLING_ACCOUNT_ID
 F="$(mktemp)"
-sed -e "s/ORG_ID/${ORG_ID}/g" -e "s/BILLING_ACCOUNT_ID/${BILLING_ACCOUNT_ID}/g" "$PLATFORM_REPO_DIR/logging/filters/evidence.txt" | grep -v '^#' | tr -d '\n' > "$F"
+sed -e "s/ORG_ID/${ORG_ID}/g" -e "s/BILLING_ACCOUNT_ID/${BILLING_ACCOUNT_ID}/g" "$PLATFORM_REPO_DIR/logging/filters/evidence.txt" | grep -v '^#' | tr '\n' ' ' > "$F"
 gcloud logging sinks create to-evidence-bucket "logging.googleapis.com/projects/${LOGGING_PROJECT}/locations/${REGION}/buckets/platform-evidence-logs" --log-filter="$(cat "$F")" --description="Fan-out: evidence copy (08 §3.2)" --project="$LOGGING_PROJECT"
 rm -f "$F"
 ```
@@ -538,7 +605,7 @@ rm -f "$F"
 ```bash
 need LOGGING_PROJECT REGION ORG_ID
 F="$(mktemp)"
-sed -e "s/ORG_ID/${ORG_ID}/g" "$PLATFORM_REPO_DIR/logging/filters/identity.txt" | grep -v '^#' | tr -d '\n' > "$F"
+sed -e "s/ORG_ID/${ORG_ID}/g" "$PLATFORM_REPO_DIR/logging/filters/identity.txt" | grep -v '^#' | tr '\n' ' ' > "$F"
 gcloud logging sinks create to-identity-bucket "logging.googleapis.com/projects/${LOGGING_PROJECT}/locations/${REGION}/buckets/platform-identity-logs" --log-filter="$(cat "$F")" --description="Fan-out: Login, SAML, OAuth-token Data Access (08 §5.3)" --project="$LOGGING_PROJECT"
 rm -f "$F"
 ```
@@ -556,7 +623,7 @@ rm -f "$F"
 ```bash
 need LOGGING_PROJECT ORG_ID BILLING_ACCOUNT_ID PLATFORM_LOGS_DS
 F="$(mktemp)"
-sed -e "s/ORG_ID/${ORG_ID}/g" -e "s/BILLING_ACCOUNT_ID/${BILLING_ACCOUNT_ID}/g" "$PLATFORM_REPO_DIR/logging/filters/evidence.txt" | grep -v '^#' | tr -d '\n' > "$F"
+sed -e "s/ORG_ID/${ORG_ID}/g" -e "s/BILLING_ACCOUNT_ID/${BILLING_ACCOUNT_ID}/g" "$PLATFORM_REPO_DIR/logging/filters/evidence.txt" | grep -v '^#' | tr '\n' ' ' > "$F"
 gcloud logging sinks create to-bigquery "bigquery.googleapis.com/projects/${LOGGING_PROJECT}/datasets/${PLATFORM_LOGS_DS}" --use-partitioned-tables --disabled --log-filter="$(cat "$F")" --description="Fan-out: SQL copy, identity services excluded (08 §3.2)" --project="$LOGGING_PROJECT"
 rm -f "$F"
 W="$(gcloud logging sinks describe to-bigquery --project="$LOGGING_PROJECT" --format='value(writerIdentity)')"; W="${W#serviceAccount:}"; printf '%s\n' "$W"
@@ -580,13 +647,18 @@ rm -f "$A" "$B"
 - **WHERE:** Shell.
 - **ACTION:** `_Default` keeps `LOGGING_PROJECT`'s own operational logs (sink errors, bucket notices), redirected by file 10 to its regional bucket.
 
+  The exclusion filter is the committed `default-exclusion.txt`, substituted the same way as every other filter, so `sinks-expected.yaml` names the file that was actually applied and 16's drift job compares like with like:
+
 ```bash
 need LOGGING_PROJECT
 gcloud logging sinks describe _Default --project="$LOGGING_PROJECT" --format="yaml(destination,filter,exclusions)"
-gcloud logging sinks update _Default --add-exclusion=name=rerouted-entries,filter='NOT logName:"projects/'"$LOGGING_PROJECT"'/logs/"' --project="$LOGGING_PROJECT"
+F="$(mktemp)"
+sed -e "s/LOGGING_PROJECT/${LOGGING_PROJECT}/g" "$PLATFORM_REPO_DIR/logging/filters/default-exclusion.txt" | grep -v '^#' | tr '\n' ' ' > "$F"
+gcloud logging sinks update _Default --add-exclusion=name=rerouted-entries,filter="$(cat "$F")" --project="$LOGGING_PROJECT"
+rm -f "$F"
 ```
 
-- **VERIFY:** The describe run again lists the exclusion `rerouted-entries` with that filter, the destination unchanged from file 10 (a regional bucket, not `global`). After CL-6.5, a query on `_Default`'s bucket for `logName:"organizations/"` returns nothing newer than the exclusion (run by the second human through a PAM-granted reader if one is needed, or recorded as "checked by storage metrics": Cloud console → Logging → Logs Storage shows the `_Default` bucket's volume flat while `platform-evidence-logs` grows).
+- **VERIFY:** The describe run again lists the exclusion `rerouted-entries` with a filter equal to the substituted file (compare with `diff`, as CL-5.2), the destination unchanged from file 10 (a regional bucket, not `global`). After CL-6.5, a query on `_Default`'s bucket for `logName:"organizations/"` returns nothing newer than the exclusion (run by the second human through a PAM-granted reader if one is needed, or recorded as "checked by storage metrics": Cloud console → Logging → Logs Storage shows the `_Default` bucket's volume flat while `platform-evidence-logs` grows).
 - **ROLLBACK:** `gcloud logging sinks update _Default --remove-exclusions=rerouted-entries --project="$LOGGING_PROJECT"`.
 - **EVIDENCE:** Before and after describe outputs as `<date>-CL-5.5-default-exclusion-v1`. TISAX 5.2.4. EU AI Act E-05.
 
@@ -650,24 +722,44 @@ gcloud projects get-iam-policy "$LOGGING_PROJECT" --flatten="bindings[].members"
 
 ### CL-6.3 Create `S-folder`, intercepting
 
-- **WHO:** Platform owner under the `ENT_FOLDER_ADMIN` grant (configWriter on the folder); the second human is told before enabling, because from that moment child projects keep only `_Required` copies of the audit families.
-- **WHERE:** Shell.
-- **ACTION:**
+- **WHO:** Platform owner under the `ENT_FOLDER_ADMIN` grant (configWriter on the folder); **approver: the second human**, as for `S-org` in CL-6.2. He approves the `--no-disabled` line specifically, after reading the confirmation list below and the filter file at the merged commit; the platform owner does not enable interception alone, because it is the step that takes every child project's own copy of the audit families away.
+- **WHERE:** Shell; the second human beside the operator (or on a call with the terminal shared) for the enabling line.
+- **ACTION:** Interception is authorised by SD-40 (the platform sinks come first, no agent or interim organisation sink) together with the folder-sink design of 08 §3.2; the gate below refuses to run if either record is unsigned.
+
+  **Confirm before running the `--no-disabled` line**, each item read aloud from its record and ticked in the build log:
+
+  | Confirm | Where it was proven |
+  |---|---|
+  | The destination project is `LOGGING_PROJECT`, and it is the project named in `logging/sinks-expected.yaml` | CL-5.1 merged commit |
+  | `platform_logs` exists with its 400-day partition expiry, and `to-evidence-bucket`, `to-identity-bucket` and `to-bigquery` are enabled in `LOGGING_PROJECT`, so an intercepted entry has somewhere to land | CL-4.2, CL-5.2 to CL-5.4 |
+  | The writer identity of `S-folder` holds `roles/logging.logWriter` on `LOGGING_PROJECT` (the line above this one, read back) | this step |
+  | Every child project's own sinks were listed and every owner who loses a copy agreed | CL-6.1 |
+  | The filter is the committed `audit-families.txt` at the merged commit, not typed here | CL-5.1 |
+
+  **Consequence, not undone by the rollback:** from the moment the sink is enabled, every current and future project under `fld-agentic-platform` keeps only `_Required` copies of the five audit families in its own `_Default` bucket. If the destination, the filter or the writer is wrong, the entries of that window are routed nowhere and **cannot be replayed**: they are lost, not delayed. That is why the enable is a two-person line and why CL-6.5 proves the path within the same sitting.
 
 ```bash
-need FLD_AGENTIC_PLATFORM LOGGING_PROJECT
-F="$(mktemp)"; grep -v '^#' "$PLATFORM_REPO_DIR/logging/filters/audit-families.txt" | tr -d '\n' > "$F"
+"$PLATFORM_REPO_DIR/tools/decision-need.sh" SD-40
+need FLD_AGENTIC_PLATFORM LOGGING_PROJECT SECOND_HUMAN_EMAIL
+F="$(mktemp)"; grep -v '^#' "$PLATFORM_REPO_DIR/logging/filters/audit-families.txt" | tr '\n' ' ' > "$F"
 gcloud logging sinks create S-folder "logging.googleapis.com/projects/${LOGGING_PROJECT}" --folder="$FLD_AGENTIC_PLATFORM" --include-children --intercept-children --disabled --log-filter="$(cat "$F")" --description="Audit families of every project under fld-agentic-platform, intercepting (08 §3.2); maker setup 14 CL-6.3"
 rm -f "$F"
 W="$(gcloud logging sinks describe S-folder --folder="$FLD_AGENTIC_PLATFORM" --format='value(writerIdentity)')"; printf '%s\n' "$W"
 gcloud projects add-iam-policy-binding "$LOGGING_PROJECT" --member="$W" --role="roles/logging.logWriter" --condition=None
+gcloud logging sinks describe S-folder --folder="$FLD_AGENTIC_PLATFORM" --format="yaml(destination,filter,includeChildren,interceptChildren,disabled,writerIdentity)"
+```
+
+  The sink now exists, disabled and harmless. **Stop here**, walk the confirmation table with the second human against that describe output, write his name in the checkpoint's approver field, and only then run the enabling line with him present:
+
+```bash
+checkpoint CL-6.3 START "$SECOND_HUMAN_EMAIL" - "enable interception on fld-agentic-platform"
 gcloud logging sinks update S-folder --folder="$FLD_AGENTIC_PLATFORM" --no-disabled
 penv_set SINK_S_FOLDER "folders/${FLD_AGENTIC_PLATFORM}/sinks/S-folder"
 ```
 
-- **VERIFY:** `gcloud logging sinks describe S-folder --folder="$FLD_AGENTIC_PLATFORM" --format="yaml(destination,filter,includeChildren,interceptChildren,disabled,writerIdentity)"` shows `includeChildren: true`, `interceptChildren: true`, not disabled, the five-log-id filter; the writer under `roles/logging.logWriter` on `LOGGING_PROJECT`.
-- **ROLLBACK:** `gcloud logging sinks update S-folder --folder="$FLD_AGENTIC_PLATFORM" --disabled` restores normal routing to child `_Default` buckets from that moment; nothing intercepted meanwhile is replayed.
-- **EVIDENCE:** `<date>-CL-6.3-s-folder-v1`. Topology row 41 (folder half). TISAX 5.2.4. EU AI Act E-06.
+- **VERIFY:** `gcloud logging sinks describe S-folder --folder="$FLD_AGENTIC_PLATFORM" --format="yaml(destination,filter,includeChildren,interceptChildren,disabled,writerIdentity)"` shows `includeChildren: true`, `interceptChildren: true`, not disabled, the five-log-id filter; the writer under `roles/logging.logWriter` on `LOGGING_PROJECT`. The checkpoint line carries the second human's address as approver, and the UTC minute of the enable is written down: it is the start of the interception window that CL-6.5 must prove within the same sitting.
+- **ROLLBACK:** `gcloud logging sinks update S-folder --folder="$FLD_AGENTIC_PLATFORM" --disabled` restores normal routing to child `_Default` buckets from that moment. **Nothing intercepted meanwhile is replayed**: the entries routed while the sink was enabled and misconfigured are lost, which is why the confirmation table is walked before the enable and not after. Deleting the sink is the same, plus the loss of the writer identity; it needs the second human's written agreement, as CL-5.2's.
+- **EVIDENCE:** Both describe outputs (disabled, then enabled), the confirmation table ticked, the checkpoint line with the approver and the enabling minute, as `<date>-CL-6.3-s-folder-v1`. Topology row 41 (folder half). TISAX 5.2.4, 5.2.1. EU AI Act E-06.
 
 ### CL-6.4 Create `billing-account-audit` (07's source B)
 
@@ -706,20 +798,21 @@ gcloud billing accounts remove-iam-policy-binding "$BILLING_ACCOUNT_ID" --member
   After 15 minutes the second human runs:
 
 ```bash
-V="--bucket=platform-evidence-logs --location=europe-west1 --view=security --project=${LOGGING_PROJECT}"
+need LOGGING_PROJECT REGION BQ_LOCATION ORG_ID
+V="--bucket=platform-evidence-logs --location=${REGION} --view=security --project=${LOGGING_PROJECT}"
 gcloud logging read 'logName:"organizations/'"$ORG_ID"'/logs/" AND protoPayload.serviceName="admin.googleapis.com"' $V --freshness=2h --limit=5 --format="table(timestamp,protoPayload.methodName)"
 gcloud logging read 'logName:"organizations/'"$ORG_ID"'/logs/" AND protoPayload.methodName="SetIamPolicy"' $V --freshness=3h --limit=3 --format="table(timestamp,protoPayload.serviceName)"
 gcloud logging read 'logName:"projects/'"$LOGGING_PROJECT"'/logs/cloudaudit.googleapis.com%2Factivity" AND protoPayload.methodName:"UpdateBucket"' $V --freshness=2h --limit=3 --format="table(timestamp,protoPayload.methodName)"
 gcloud logging read 'logName:"billingAccounts/"' $V --freshness=2h --limit=3 --format="table(timestamp,protoPayload.methodName)"
 gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' $V --freshness=2h --limit=3 --format="table(timestamp)"
-gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --bucket=platform-identity-logs --location=europe-west1 --view=identity --project="$LOGGING_PROJECT" --freshness=2h --limit=3 --format="table(timestamp,protoPayload.methodName)"
+gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --bucket=platform-identity-logs --location="$REGION" --view=identity --project="$LOGGING_PROJECT" --freshness=2h --limit=3 --format="table(timestamp,protoPayload.methodName)"
 ```
 
   The platform owner, under `ENT_PROJECT_REPAIR_CORE`, reads BigQuery (the second human reads the output):
 
 ```bash
-bq --location=EU query --use_legacy_sql=false --format=pretty 'SELECT protopayload_auditlog.serviceName AS svc, COUNT(*) AS n FROM `'"$LOGGING_PROJECT"'.platform_logs.cloudaudit_googleapis_com_activity` WHERE timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR) GROUP BY svc ORDER BY n DESC'
-bq --location=EU query --use_legacy_sql=false --format=pretty 'SELECT COUNT(*) AS identity_rows FROM `'"$LOGGING_PROJECT"'.platform_logs.cloudaudit_googleapis_com_data_access` WHERE protopayload_auditlog.serviceName IN ("login.googleapis.com") AND timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR)'
+bq --location="$BQ_LOCATION" query --use_legacy_sql=false --format=pretty 'SELECT protopayload_auditlog.serviceName AS svc, COUNT(*) AS n FROM `'"$LOGGING_PROJECT"'.platform_logs.cloudaudit_googleapis_com_activity` WHERE timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR) GROUP BY svc ORDER BY n DESC'
+bq --location="$BQ_LOCATION" query --use_legacy_sql=false --format=pretty 'SELECT COUNT(*) AS identity_rows FROM `'"$LOGGING_PROJECT"'.platform_logs.cloudaudit_googleapis_com_data_access` WHERE protopayload_auditlog.serviceName IN ("login.googleapis.com") AND timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 HOUR)'
 ```
 
 - **VERIFY:** In the `security` view: the seeded OU create and delete (1), an organisation `SetIamPolicy` (2), the `UpdateBucket` (3) and the billing-account `SetIamPolicy` (5) each appear at their seeded times. The fifth read in the `security` view returns **no** Login row (identity services are excluded from the evidence bucket), and the `identity` view returns the second human's sign-in (4). In BigQuery, `admin.googleapis.com` and `logging.googleapis.com` rows are present and `identity_rows` is `0` (the second query fails with "not found" if no Data Access table exists yet, which also proves no identity row reached BigQuery). The actor exclusion is absent everywhere: every seeded actor appears. The second human signs the proof record. Any miss: stop, CL-6.2 to CL-6.4's sinks stay enabled, and the cause is found before CL-7.
@@ -752,8 +845,8 @@ gcloud logging sinks list --organization="$ORG_ID" --format="value(name)" | grep
 - **ACTION:** The view replaces Wall-E's retired `walle_workspace_logs` dataset (08 §3.2, P104, P107). It carries no actor filter: reconciliation needs the robot's own writes.
 
 ```bash
-need LOGGING_PROJECT PLATFORM_LOGS_DS PLATFORM_LOGS_VIEWS_DS
-bq --location=EU mk --use_legacy_sql=false --description="Workspace Admin events over platform_logs; no actor exclusion (topology row 40)" --view='SELECT * FROM `'"$LOGGING_PROJECT"'.'"$PLATFORM_LOGS_DS"'.cloudaudit_googleapis_com_activity` WHERE protopayload_auditlog.serviceName = "admin.googleapis.com"' "${LOGGING_PROJECT}:${PLATFORM_LOGS_VIEWS_DS}.walle_workspace_logs"
+need LOGGING_PROJECT BQ_LOCATION PLATFORM_LOGS_DS PLATFORM_LOGS_VIEWS_DS
+bq --location="$BQ_LOCATION" mk --use_legacy_sql=false --description="Workspace Admin events over platform_logs; no actor exclusion (topology row 40)" --view='SELECT * FROM `'"$LOGGING_PROJECT"'.'"$PLATFORM_LOGS_DS"'.cloudaudit_googleapis_com_activity` WHERE protopayload_auditlog.serviceName = "admin.googleapis.com"' "${LOGGING_PROJECT}:${PLATFORM_LOGS_VIEWS_DS}.walle_workspace_logs"
 ```
 
 - **VERIFY:** `bq show --format=prettyjson "${LOGGING_PROJECT}:${PLATFORM_LOGS_VIEWS_DS}.walle_workspace_logs" | jq '{type, view: .view.query}'` shows `VIEW` and the query with no `principalEmail`.
@@ -904,7 +997,7 @@ gcloud iam service-accounts get-iam-policy "k7-executor@${CORE_PROJECT}.iam.gser
   After 15 minutes, the second human:
 
 ```bash
-gcloud logging read 'logName:"projects/'"$CORE_PROJECT"'/logs/cloudaudit.googleapis.com%2Fdata_access" AND protoPayload.serviceName=("logging.googleapis.com" OR "iam.googleapis.com")' --bucket=platform-evidence-logs --location=europe-west1 --view=security --project="$LOGGING_PROJECT" --freshness=1h --limit=5 --format="table(timestamp,protoPayload.serviceName,protoPayload.methodName)"
+gcloud logging read 'logName:"projects/'"$CORE_PROJECT"'/logs/cloudaudit.googleapis.com%2Fdata_access" AND protoPayload.serviceName=("logging.googleapis.com" OR "iam.googleapis.com")' --bucket=platform-evidence-logs --location="$REGION" --view=security --project="$LOGGING_PROJECT" --freshness=1h --limit=5 --format="table(timestamp,protoPayload.serviceName,protoPayload.methodName)"
 ```
 
 - **VERIFY:** At least one `logging.googleapis.com` and one `iam.googleapis.com` Data Access row from `CORE_PROJECT` in the central bucket. `Assumption:` `ListBuckets` is typed Data Access for `logging.googleapis.com`; if it does not appear, the second human records which of the two did and the step is re-run with `gcloud logging read` in `CORE_PROJECT` as the call. `CORE_PROJECT`'s own `_Default` bucket holds no copy (interception).
@@ -936,7 +1029,7 @@ Google (export setup page, read 2026-09-15): usage cost export needs "Billing Ac
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES SD-16
 need LOGGING_PROJECT BQ_LOCATION BILLING_ACCOUNT_ID
 BDS="$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES BILLING_EXPORT_DS)"
-KMS_FLAG=""   # as CL-4.2: a separate key handle in branch (a), empty in branch (b)
+KMS_FLAG=""   # branch (a): KMS_KEY_BQ_BILLING="$(kms_key_for_dataset "$BDS")"; penv_set KMS_KEY_BQ_BILLING "$KMS_KEY_BQ_BILLING"; KMS_FLAG="--default_kms_key=${KMS_KEY_BQ_BILLING}"
 test "$(gcloud billing projects describe "$LOGGING_PROJECT" --format='value(billingAccountName)')" = "billingAccounts/${BILLING_ACCOUNT_ID}" || { echo "STOP: LOGGING_PROJECT not on BILLING_ACCOUNT_ID"; false; }
 bq --location="$BQ_LOCATION" mk --dataset --description="Cloud Billing standard and detailed usage cost export for BILLING_ACCOUNT_ID (08 S26); no table or partition expiry" --label=agp-store:s26 $KMS_FLAG "${LOGGING_PROJECT}:${BDS}"
 penv_set BILLING_EXPORT_DS "$BDS"
@@ -977,9 +1070,10 @@ gcloud projects add-iam-policy-binding "$LOGGING_PROJECT" --member="user:${BILLI
 - **ACTION:**
 
 ```bash
+need LOGGING_PROJECT BQ_LOCATION BILLING_ADMIN_EMAIL BILLING_EXPORT_DS
 gcloud projects remove-iam-policy-binding "$LOGGING_PROJECT" --member="user:${BILLING_ADMIN_EMAIL}" --role="roles/bigquery.user" --condition=None
-bq --location=EU query --use_legacy_sql=false --format=pretty 'SELECT DATE(usage_start_time) AS d, COUNT(*) AS n FROM `'"$LOGGING_PROJECT"'.'"$BILLING_EXPORT_DS"'.gcp_billing_export_v1_*` WHERE usage_start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 DAY) GROUP BY d ORDER BY d'
-bq --location=EU query --use_legacy_sql=false --format=pretty 'SELECT service.description AS service, sku.description AS sku, ROUND(SUM(cost),2) AS cost FROM `'"$LOGGING_PROJECT"'.'"$BILLING_EXPORT_DS"'.gcp_billing_export_v1_*` WHERE service.description LIKE "%Security Command Center%" AND usage_start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 35 DAY) GROUP BY 1,2 ORDER BY cost DESC'
+bq --location="$BQ_LOCATION" query --use_legacy_sql=false --format=pretty 'SELECT DATE(usage_start_time) AS d, COUNT(*) AS n FROM `'"$LOGGING_PROJECT"'.'"$BILLING_EXPORT_DS"'.gcp_billing_export_v1_*` WHERE usage_start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 DAY) GROUP BY d ORDER BY d'
+bq --location="$BQ_LOCATION" query --use_legacy_sql=false --format=pretty 'SELECT service.description AS service, sku.description AS sku, ROUND(SUM(cost),2) AS cost FROM `'"$LOGGING_PROJECT"'.'"$BILLING_EXPORT_DS"'.gcp_billing_export_v1_*` WHERE service.description LIKE "%Security Command Center%" AND usage_start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 35 DAY) GROUP BY 1,2 ORDER BY cost DESC'
 ```
 
 - **VERIFY:** The role is gone (CL-9.2's policy read is empty). Rows for the last two days keep arriving after the removal (`Assumption:` the export does not need the enabling user's BigQuery role to continue; if rows stop, the role is restored under a signed SD-16 note and the finding recorded). The SCC query result (possibly empty if SCC is billed to another account under P11's subscription branch) is recorded for SD-15. **Shared account (07 BA-1.2 branch b):** create an authorised view `platform_logs_views.billing_platform` selecting only rows whose `project.id` is one of the platform's projects from the register, authorise it on `BILLING_EXPORT_DS` with the CL-7.2 pattern, and grant readers only on the view; nobody but the export service account and PAM-granted repair holds anything on the raw dataset.
@@ -1091,12 +1185,13 @@ sitting_end
 - [ ] Sharing enabled, consented by the Cloud Logging owner; Admin and Groups streams proven; Login and OAuth-token Data Access streams proven by a reader holding `roles/logging.privateLogViewer` (CL-1.1 to CL-1.5).
 - [ ] Workspace log volume measured and sent to finance and the DPO (CL-1.6).
 - [ ] `KEY_PLATFORM_LOGS` usable by Logging's key service account only (CL-2.2).
-- [ ] `platform-evidence-logs` and `platform-identity-logs` in `europe-west1`, CMEK, unlocked at the floor or the signed value; lock behaviour recorded (CL-2.3 to CL-2.5).
-- [ ] Views `security`, `siem`, `ge-requests`, `identity`; conditioned readers bound; PENDING readers indexed; no standing project-level log reader (CL-3).
+- [ ] The throwaway probe run **before** the production buckets: CMEK with Log Analytics accepted (exit code and read-back), lock behaviour and view-after-lock recorded, throwaway deleted or its 1-day persistence noted (CL-2.5).
+- [ ] `platform-evidence-logs` and `platform-identity-logs` in `europe-west1`, CMEK, unlocked at the floor or the signed value, each created only after its confirmation list was ticked (CL-2.3, CL-2.4).
+- [ ] Views `security`, `siem`, `ge-requests`, `identity`; conditioned readers bound; PENDING readers indexed; no standing project-level log reader, and the folder and organisation policies read the same way and signed by the second human (CL-3, three files from CL-3.5).
 - [ ] Encryption branch recorded; `platform_logs` in `EU` with a 400-day default partition expiry set before any sink; `platform_logs_views` created (CL-4).
-- [ ] Filters and `logging/sinks-expected.yaml` merged with the second human's review and CODEOWNERS on `logging/` (CL-5.1).
+- [ ] Filters written by the committed `cat > ... <<'EOF'` commands, each file holding exactly one filter, and `logging/sinks-expected.yaml` merged with the second human's review and CODEOWNERS on `logging/`; every sink and exclusion below built by substituting a file, never by retyping a filter (CL-5.1).
 - [ ] `to-evidence-bucket`, `to-identity-bucket` (documented service names), `to-bigquery` (partitioned, writer `WRITER` on the dataset only), and the `_Default` exclusion (CL-5.2 to CL-5.5).
-- [ ] Child-project sinks checked; `S-org` (no children) and `S-folder` (children, intercepting) enabled with writers on `LOGGING_PROJECT`; `billing-account-audit` enabled, temporary role removed (CL-6.1 to CL-6.4).
+- [ ] Child-project sinks checked; `S-org` (no children) approved by the second human under `ENT_ORG_SINK`, and `S-folder` (children, intercepting) created disabled, its confirmation table ticked and its enabling approved by the second human with the UTC minute recorded; both writers on `LOGGING_PROJECT`; `billing-account-audit` enabled, temporary role removed (CL-6.1 to CL-6.4).
 - [ ] End-to-end proof read and signed by the second human, including "no identity row in the evidence bucket or BigQuery" (CL-6.5).
 - [ ] Sink census clean, no retired sink, weekly run scheduled (CL-6.6).
 - [ ] `walle_workspace_logs` authorised view created and authorised; row 40 readers granted or PENDING (CL-7).
@@ -1122,6 +1217,8 @@ sitting_end
 | 31, 33, 39 | No Wall-E organisation sink and no `walle_workspace_logs` dataset; `platform_logs_views.walle_workspace_logs` exists; 39 repeats the census | CL-6.6, CL-7.1 |
 | 42 | Lock records, census history, hand-canary history, billing-export records | CL-6.6, CL-8.4, CL-9, CL-10 |
 | All | Evidence copies from `EVIDENCE_INTERIM_LOCATION` into the platform evidence bucket once it exists (SD-38) | README §4 |
+
+Not produced here, and unowned at 2026-09-15: `CORE_PROJECT`'s project-level `gcp.restrictServiceUsage` exception for `secretmanager`, which [15](15-pager-siem-and-detections.md) PS-4.2 needs for `platform-pager-key`. File [13](13-organisation-policies-deny-and-pab.md) defers it to 15 and 15 PS-4.2 defers it back to 13, so once 13 §8 has enforced the `fld-platform-core` allow-list (where `secretmanager` is deliberately absent) PS-4.2's `services enable` is refused and part A stops — and with it the paging channels that 17, 18, 20 and 26 depend on. Nothing in this file creates, consumes or can repair that exception; it is recorded here only so the gap is not lost between the two files that defer it. Owner: the platform owner, either in **13** as `policies/org/CORE_PROJECT/gcp.restrictServiceUsage.json` (the core list plus `secretmanager`, at project level, in the OP-2.6 pull request, with its own check that the folder list still excludes `secretmanager`), or in **15** as an explicit step under `ENT_PLATFORM_POLICY` with the pull request and approver named. Whichever is chosen, the deferral in the other file is deleted.
 
 ## Findings
 

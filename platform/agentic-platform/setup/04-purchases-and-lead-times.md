@@ -5,7 +5,7 @@
 - Last reviewed: 2026-09-15
 - What this is: the one purchase list for the agentic platform, Mo, Eve and Wall-E, sorted by lead time, longest first. Each row names who raises it, who buys and approves it, the file and gate it blocks, and the check that proves the item is in hand. It is stage 3 of the set ([README](README.md)) and runs from day one, in parallel with [03](03-decisions-and-people.md) and [05](05-gemini-enterprise-inventory.md).
 - It replaces: the unsorted lists in [../../wall-e/PREREQUISITES.md](../../wall-e/PREREQUISITES.md) §3.1 and §9, the day-one items of [../brief/29-roadmap-and-cost.md](../brief/29-roadmap-and-cost.md) and the cost lines of [../01-hld.md](../01-hld.md) §0.5, which now point here. The key count of PREREQUISITES §3.1 and 04 §8.3 is superseded by §4 below.
-- Step prefix: `PU`. Steps: 20. Steps marked BLOCKED: none (no step here needs code that does not exist).
+- Step prefix: `PU`. Steps: 22. Steps marked BLOCKED: none (no step here needs code that does not exist).
 - Review findings closed here (from [../13-setup-procedure-review.md](../13-setup-procedure-review.md)): S003 (the purchase half; activation is [09](09-folders-and-security-command-center.md), the SIEM feed is [15](15-pager-siem-and-detections.md)), S083 (the purchase and key-count half; the prerequisites table is [01](01-prerequisites-and-conventions.md)), X-ORG-04, X-ORG-08, X-RQB-06, X-RQB-07, X-RQB-09. §8 says how each is closed.
 - Google facts on this page were read on 2026-09-15; the sources are listed at the end. Vendor lead times (MDR, penetration test, paging tool, keys) are `Assumption:` values, never Google facts.
 
@@ -19,7 +19,8 @@ Nothing in Google Cloud or Workspace. It gets into hand everything that is bough
 - the paging service `PAGER_SERVICE_NAME` and the separate escalation for reports whose subject is a roster human, `PAGER_SUBJECT_SERVICE_NAME`, administered by IT security with the platform owner holding no administrator or responder role on it (SD-12);
 - Chrome Enterprise Premium, Gemini Enterprise licences, Gmail-bearing seats, and model throughput if decision 6 needs it;
 - the dedicated platform billing account in hand and the project-quota request filed;
-- the hardware keys, counted once and correctly, with an inventory whose serials live only in custody records;
+- the git-host plan that [03](03-decisions-and-people.md) DC-9 needs, because protected branches and code owners on a private repository are a paid feature on both candidate hosts;
+- the hardware keys, counted once and correctly, with an inventory whose serials live only in custody records, and the envelopes, spare envelopes, safe and custody forms that [06](06-organisation-bootstrap-and-roster.md) requires at its first sitting;
 - three written answers from the Google account team;
 - the costs that sit on no Google Cloud budget, each with an owner and a purchase record.
 
@@ -29,7 +30,7 @@ What it does not do: activate SCC (09), open the witness organisation or its bil
 
 A quote, a question or a domain-availability search may start before any signature. An order, a contract or a registration waits on the decision named in its step.
 
-- [ ] [01](01-prerequisites-and-conventions.md) done: `~/.platform-env` exists with `penv_set` and `need`; `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER` set.
+- [ ] [01](01-prerequisites-and-conventions.md) done: `~/.platform-env` exists with `penv_set` and `need`; `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER`, `PLATFORM_REPO_DIR` set. `PLATFORM_REPO_DIR` is needed because PU-0.1 calls `tools/decision-need.sh`, written by [03](03-decisions-and-people.md) DC-1.2.
 - [ ] From [03](03-decisions-and-people.md), signed or dated as pending in its tracker:
   - [ ] P10 (SIEM: `SIEM_KIND`) and the MDR partner, signed by IT security.
   - [ ] P11 / SD-15 (SCC Premium: `SCC_BILLING_MODEL` and the payer), signed by IT security and finance.
@@ -38,8 +39,13 @@ A quote, a question or a domain-availability search may start before any signatu
   - [ ] Decision 29 / SD-29 (sandbox before the grant, edition, whether the twin robots use hardware-key 2SV); `SANDBOX_SA_1_EMAIL`, `SANDBOX_SA_2_EMAIL` set.
   - [ ] Decision 6 / SD-09 (model pin), only for PU-2.8.
   - [ ] SD-12 (the subject-report escalation), co-signed by the second human; `SECOND_HUMAN_EMAIL`, `INCIDENT_COMMANDER_EMAIL` set.
+  - [ ] P63 (the Chrome Enterprise Premium licence count: one per operator and approver on the Tier W+ control surfaces), signed by the platform owner and IT security. Gates PU-2.9 only.
+  - [ ] P99 (the paging tool), signed by IT security. Gates PU-2.6 only.
+  - [ ] P22 / SD-14 (the git host), signed by the platform owner and IT security, so PU-2.13 can buy the plan [03](03-decisions-and-people.md) DC-9 needs.
   - [ ] The penetration-test window (G8) recorded.
 - [ ] The workstation shell rules of 01 hold: no default gcloud project.
+
+**Precondition gap to close in 03, not here.** `decisions/TRACKER.md`, written by [03](03-decisions-and-people.md) DC-1.3 from §5 and §11 of that file, has rows for P10, P11, P22 and P31 but **no row for P63 and none for P99**: 03 §11.5 does not list them, so `tools/decision-need.sh P63 P99` fails on a missing tracker row rather than on an unsigned decision. Before PU-2.6 or PU-2.9 commits, the platform owner adds the two rows to the tracker under DC-1.3's rule and signs the records under DC-1.4. Until the rows exist, PU-0.1 records the gap and neither purchase is committed. Owner: platform owner with IT security.
 
 ## People
 
@@ -52,6 +58,9 @@ A quote, a question or a domain-availability search may start before any signatu
 | The two witness administrators (IT security) | Register the witness domain in a registrar account they alone administer | — |
 | The second human | Confirms, without the platform owner's help, that he holds no role on the subject-report escalation (PU-2.7) | witnesses PU-2.7 |
 | Key custodians | Receive keys and sign the inventory (PU-4.2) | a witness from the other administration line |
+| The existing organisation-level administrator holding `roles/beyondcorp.admin` (IT security) | Performs the Chrome Enterprise Premium trial and purchase (PU-2.9); the platform owner does not | — |
+| The owner of organisation-level Cloud Logging | Runs the volume measurement in their own shell from a handed-over organisation id (PU-5.2) | — |
+| Facilities | Delivers and installs the safe with its sign-out log (PU-4.0) | — |
 
 No other second person is needed in this part.
 
@@ -67,17 +76,25 @@ Start every row on day one. "Start" is what may happen before the decision; "Com
 | 4 | Witness: a separately registered domain outside the tenant's reach; approval of a billing account parented by the witness organisation; a Customer Care subscription for the witness organisation | weeks (billing path answer; domain registration days) | search now; commit on P14 / SD-28 | IT security (witness administrators); procurement; finance approver | [08](08-witness-organisation.md) W-1, W-2; custody records home (SD-27); G-2; the grant | domain registered and locked; billing path and support approved in writing | PU-2.4, PU-3.1, PU-3.2 |
 | 5 | Sandbox Workspace tenant: edition equal to production and at least Enterprise Standard, its own domain (TXT and MX added in 21), seats, two sandbox super admins | weeks (`Assumption:` second customer contract through the reseller or account team; a domain removed from another account waits 24 hours, or 7 days through a reseller) | search now; commit on decision 29 / SD-29 | platform owner; procurement; finance approver | [21](21-sandbox-tenant-and-nonprod-foundation.md); Eve drills in [28](28-eve-independent-proof-and-sandbox-drills.md); G10, G11, G14, G-7 | domain registered with DNS access for 21; order with edition and seat count | PU-2.5 |
 | 6 | The organisation paging service and the subject-report escalation (SD-12) | weeks if a tool must be bought (`Assumption:`); days if IT security operates one | now; commit on P99 and SD-12 | platform owner; IT security; finance approver | [15](15-pager-siem-and-detections.md) part A; [26](26-eve-reporting-and-witness-export.md) route 1 (SD-08 fallback until then) | tool contracted with role separation and an audit trail; both service names reserved; the platform owner proven absent from the subject escalation | PU-2.6, PU-2.7 |
-| 7 | Chrome Enterprise Premium licences, one per operator and approver (P63) | weeks (`Assumption:` procurement); a 60-day trial is available at once | quote now; commit on P63 | platform owner; procurement; finance approver | [33](33-wall-e-action-services-and-approval-surfaces.md) (`al-platform-operator`, `-lite` until then); Tier W | subscription active for the licensed count | PU-2.9 |
+| 7 | Chrome Enterprise Premium licences, one per operator and approver (P63) | weeks (`Assumption:` procurement); a 60-day trial for up to 5,000 users is available at once, but Google requires valid payment details even for the trial | quote now; commit on P63 **and after row 10**, because both the trial and the purchase need a billing account | platform owner; procurement; finance approver | [33](33-wall-e-action-services-and-approval-surfaces.md) (`al-platform-operator`, `-lite` until then); Tier W | subscription active for the licensed count | PU-2.9, run after PU-2.10 |
 | 8 | Model throughput (Provisioned Throughput on `eu`), only if decision 6 needs it | minutes to weeks (Google: depends on the order size and capacity) | only after decision 6 | platform owner; finance approver | [35](35-wall-e-engine-registration-and-gateways.md); [40](40-mo-after-stage-0.md); Stage 0 | order active, or a signed "Standard PayGo is enough" record | PU-2.8 |
 | 9 | Hardware security keys, 22 or 26 with spares (§4) | days to weeks (`Assumption:` procurement and delivery) | order now | platform owner; procurement | [06](06-organisation-bootstrap-and-roster.md) first (6 keys), then 08, 21, 24, 30, 37 | keys received, inventory signed, serials in custody records only | PU-4.1, PU-4.2 |
 | 10 | The dedicated platform billing account (standard, not a reseller sub-account; EUR) and a project-quota request for about 20 projects | days; quota requests typically within 2 business days, possibly with a payment | now; commit on P31 / SD-16 | platform owner; finance (billing administrator) | [07](07-billing-account.md), [10](10-core-projects-and-ci-identities.md); stage 5 | account open and designated; quota request reference recorded | PU-2.10, PU-2.11 |
 | 11 | Gemini Enterprise licences for operators and administrators; Gmail-bearing seats for `walle@`, `eve@` (the twin robots' seats are row 5) | days if seats must be bought; none if free seats exist | now | platform owner; procurement | [24](24-eve-workspace-identity-and-audit-feeds.md) (`eve@`), [30](30-wall-e-workspace-side.md) (`walle@`), [35](35-wall-e-engine-registration-and-gateways.md) (share verify) | free seats and licences shown in the consoles | PU-2.12 |
+| 12 | Git-host plan for **private** repositories with protected branches, required reviewers and code owners on the control files (P22 / SD-14) | weeks (`Assumption:` procurement and the host's own provisioning); days if the organisation already holds an eligible plan | quote now; commit on P22 / SD-14 | platform owner; procurement; finance approver | [03](03-decisions-and-people.md) DC-9.2 to DC-9.7 (the repository and its rules); [06](06-organisation-bootstrap-and-roster.md) (the roster merge needs the second human as required reviewer); [16](16-register-and-shared-registry.md) | a private repository exists on the bought plan in which a ruleset or approval rule enforces two human approvals with code owners, and an approval given by a bot or service account does not satisfy it | PU-2.13 |
+| 13 | Physical custody materials: tamper-evident envelopes, spare envelopes for re-sealing, a corporate safe with a sign-out log, printed custody forms | days to weeks (`Assumption:` facilities and stationery supply; a safe that must be installed is the long pole) | order now | platform owner with IT security; facilities and procurement | [06](06-organisation-bootstrap-and-roster.md) preconditions (four sealed envelopes plus at least four spares, the safe, the forms), then 08, 21, 24, 30 | materials received and counted against the 06 precondition list; the safe installed with its sign-out log opened | PU-4.0 |
+
+Rows 12 and 13 were added after the first sort and keep the numbering of rows 1-11, which later files, §5 and §8 cite. Their lead times place row 12 between rows 5 and 9, and row 13 between rows 9 and 10.
+
+**The table's order is not the execution order of §2.** §1 sorts by lead time so that nothing waits on a purchase order; §2 runs in a dependency order. The one place they differ: **PU-2.9 (row 7) runs after PU-2.10 (row 10)**, because Chrome Enterprise Premium is purchased in the Cloud console against a billing account and Google requires valid payment details even to start the 60-day trial. Quoting row 7 still starts on day one.
 
 The account-team questions (§3) and the cost records (§5) run alongside rows 1-4.
 
 ## 2. Purchase steps
 
-Every shell step runs in the shell with `~/.platform-env` sourced, per 01. Contracts, quotes and prices are commercial records: they go to `EVIDENCE_INTERIM_LOCATION` (restricted), and the build log holds only their reference.
+Every shell step runs in the shell with `~/.platform-env` sourced, per 01 — **except PU-5.2**, which is performed by someone outside the platform line who has no variables file; that step says how its one value is handed over. Contracts, quotes and prices are commercial records: they go to `EVIDENCE_INTERIM_LOCATION` (restricted), and the build log holds only their reference.
+
+The steps are numbered from §1's lead-time order, so they are not in execution order. Read this before working top to bottom: **PU-2.9 is performed after PU-2.10**, and its own preconditions repeat that. Every other step may be raised on day one in the order printed.
 
 ### PU-0.1 Confirm the inputs from 03
 
@@ -88,11 +105,15 @@ Every shell step runs in the shell with `~/.platform-env` sourced, per 01. Contr
 ```bash
 need SIEM_KIND SCC_BILLING_MODEL BILLING_ADMIN_EMAIL SECOND_HUMAN_EMAIL INCIDENT_COMMANDER_EMAIL
 need WITNESS_ADMIN_1_EMAIL WITNESS_ADMIN_2_EMAIL SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL
+"$PLATFORM_REPO_DIR/tools/decision-need.sh" P10 P11 SD-15 P14 SD-28 P31 SD-16 WDEC-29 SD-29 SD-12 P22 SD-14
+"$PLATFORM_REPO_DIR/tools/decision-need.sh" P63 P99 || echo "GAP: P63 and/or P99 have no signed record; PU-2.9 and PU-2.6 may quote but not commit"
 ```
 
-- **VERIFY:** both lines return without error. A failure names the empty or `*tbd*` variable: start the quotes and questions for that row, and do not commit it.
+  The second `decision-need.sh` line is written with `|| echo` on purpose: on 2026-09-15 neither P63 nor P99 has a row in 03's tracker (see the precondition gap above), so a hard failure here would stop every other row for two purchases that are only quoted on day one.
+
+- **VERIFY:** the two `need` lines and the first `decision-need.sh` line return without error. A failure names the empty or `*tbd*` variable, or the unsigned decision: start the quotes and questions for that row, and do not commit it. If the second line prints `GAP`, record which of P63 and P99 is missing and carry it into PU-2.6 and PU-2.9 as an uncommitted row.
 - **ROLLBACK:** none needed (read-only).
-- **EVIDENCE:** a build-log checkpoint for PU-0.1 listing which decisions were signed on the day (`EVIDENCE_REGISTER`; E-05; TISAX 1.1-1.2).
+- **EVIDENCE:** a build-log checkpoint for PU-0.1 listing which decisions were signed on the day, and the `GAP` line verbatim if it printed (`EVIDENCE_REGISTER`; E-05; TISAX 1.1-1.2).
 
 ### PU-2.1 SIEM and MDR retainer (row 1, P10)
 
@@ -125,11 +146,15 @@ need WITNESS_ADMIN_1_EMAIL WITNESS_ADMIN_2_EMAIL SANDBOX_SA_1_EMAIL SANDBOX_SA_2
 - **WHERE:** finance approval record; the Google account team for the subscription.
 - **ACTION:**
   1. Put both options to IT security and finance in writing, with Google's terms of 2026-09-15:
-     - pay-as-you-go at organisation level: usage is charged to the billing accounts associated with the projects in the organisation, so every existing cost centre sees a surcharge. It needs finance's signature and a notice to each cost-centre owner. The platform budget line cannot carry it.
+     - pay-as-you-go at organisation level: Google's wording is that Premium tier pay-as-you-go pricing for an organisation bases charges on usage of Google Cloud services, "with your usage charged to the billing accounts associated with the projects in your organization". So every existing cost centre sees a surcharge. It needs finance's signature and a notice to each cost-centre owner. The platform budget line cannot carry it.
      - subscription: a sales contract, minimum annual cost 15,000 USD, minimum term 12 months.
   2. Record the choice in `SCC_BILLING_MODEL` (set in 03) and the payer's name.
   3. If pay-as-you-go: finance sends the cost-centre notice. If subscription: IT security signs the order.
-  4. Record that organisation-level Premium includes 2 million Model Armor tokens a month (the subscription includes 3 billion), which changes the Model Armor bill of `GEMINI_PROJECT` (SD-15).
+  4. Record the Model Armor allowance the chosen model carries, because it changes the Model Armor bill of `GEMINI_PROJECT` (SD-15). What Google's pricing pages state, read on 2026-09-15:
+     - a **Premium subscription** includes 3 billion Model Armor tokens a month, then 0.10 USD per million tokens;
+     - **standalone Model Armor**, bought outside Security Command Center, is free up to 2 million tokens a month, then 0.10 USD per million tokens.
+
+     The allowance carried by **organisation-level Premium on pay-as-you-go** is *tbd*: it is not stated as retrievable text on either page. Do not assume it is the 2 million figure, which is the standalone allowance. PU-3.3 asks the account team for it, and the answer is written back into this step and into §5 before P11 is signed. If P11 must be signed before the answer arrives, the pay-as-you-go option is costed with a **zero** included allowance, which is the conservative reading.
   5. If P11 chooses the Enterprise tier instead (P94 does not), see PU-3.3 before anything else.
 - **VERIFY:** a signed payer record naming the model and the payer; for pay-as-you-go, the dated notice to cost-centre owners; for the subscription, a countersigned order. Activation with `eu` residency is file 09's step, not this one.
 - **ROLLBACK:** pay-as-you-go: none until 09 activates. Subscription: **IRREVERSIBLE** for 12 months. Confirm before signing: P11 signed by IT security and finance, and P94's tier (Premium) and residency (`eu`) are what the order names. Gate: P11 / SD-15.
@@ -207,7 +232,7 @@ penv_set PAGER_SERVICE_NAME "agentic-platform"
 ```
 
 - **VERIFY:** IT security shows the service in the tool (PagerDuty: Services, Service Directory, the service is listed) and the contract or plan page shows a plan with both capabilities of step 2.
-- **ROLLBACK:** the service can be deleted by IT security before file 15 wires it; the contract follows the vendor's terms. If no tool is contracted when Eve goes live, file 26 uses SD-08's temporary route 1 (Cloud Monitoring email and SMS channels in `EVE_PROJECT` to the second human) as a dated deviation.
+- **ROLLBACK:** the service can be deleted by IT security before file 15 wires it; the contract follows the vendor's terms. If no tool is contracted when Eve goes live, file 26 uses SD-08's temporary route 1 (Cloud Monitoring email and SMS channels in `EVE_PROJECT` to the second human) as a dated deviation. Gate: P99 (signed by IT security) and SD-12. If PU-0.1 printed `GAP` for P99, the tool is quoted but not bought until the record is signed and its tracker row exists.
 - **EVIDENCE:** `<date>-PU-2.6-paging-contract-v1` (TISAX 1.6; E-10).
 
 ### PU-2.7 The subject-report escalation (SD-12)
@@ -243,17 +268,32 @@ penv_set PAGER_SUBJECT_SERVICE_NAME "<service name created by IT security>"
 - **ROLLBACK:** before the order is active, cancel it in the same flow. An active order: **IRREVERSIBLE** for its term. Confirm before ordering: decision 6 signed, the model's retirement date at least 6 months after Stage 1, the location `eu`. Gate: decision 6 / SD-09.
 - **EVIDENCE:** `<date>-PU-2.8-throughput-decision-v1` (E-11; TISAX 6.1).
 
-### PU-2.9 Chrome Enterprise Premium (row 7, P63)
+### PU-2.9 Chrome Enterprise Premium (row 7, P63) — runs after PU-2.10
 
-- **WHO:** procurement quotes; the purchase itself is made by a holder of Cloud BeyondCorp Admin (`roles/beyondcorp.admin`) at organisation level, which is `sa-1-admin@` only after [06](06-organisation-bootstrap-and-roster.md), or IT security; the finance approver signs.
-- **WHERE:** Google Cloud console, Security, Chrome Enterprise Premium page, Subscribe or Purchase; then the Admin console.
+**Preconditions, both checked before the request is raised:**
+
+- [ ] **PU-2.10 is complete:** the dedicated platform billing account is open and designated, its check output reads `True`, `EUR`, empty, `organizations/<ORG_ID>`, and its id is on file with finance. Both the purchase and the 60-day trial are made in the Cloud console against a billing account, and Google requires valid payment details even for the trial. Without PU-2.10 this step cannot be performed at all.
+- [ ] **A named holder of Cloud BeyondCorp Admin exists today.** Google requires `roles/beyondcorp.admin` **at the organisation level** to buy Chrome Enterprise Premium. This file runs at stage 3, before [06](06-organisation-bootstrap-and-roster.md) exists, and `sa-1-admin@` is not created until then; [06](06-organisation-bootstrap-and-roster.md) OB-3.7 grants exactly four organisation roles to `sa-1-admin@` (`organizationAdmin`, `folderCreator`, `projectCreator`, `privilegedaccessmanager.admin`) and says "No other role is granted", and no file from 06 to 12 grants `roles/beyondcorp.admin` to anyone. So the purchaser here is **an existing organisation-level administrator of the tenant's Google Cloud organisation** — in practice the IT security administrator who already holds Organization Administrator, named in the build log before the request is raised. The platform owner does not grant himself the role to make this step work; if nobody holds it, IT security grants it to one of its own named administrators and records that grant, and file 12 is not affected because the grant is not on a platform principal.
+
+- **WHO:** procurement quotes; **the purchase itself is performed by the named existing organisation-level administrator identified by the check below** (IT security), not by the platform owner and not by `sa-1-admin@`; the finance approver signs. No witness.
+- **WHERE:** the platform owner's shell for the check; then Google Cloud console, `https://console.cloud.google.com/security/cep/`, Subscribe or Purchase, by the named administrator; then the Admin console for the status read.
 - **ACTION:**
-  1. Count one licence per operator and approver on the Tier W+ control surfaces (P63); record the count.
-  2. Optionally start the 60-day trial (up to 5,000 users) so file 33 can test `al-platform-operator` before the purchase completes.
-  3. Purchase the subscription for the counted licences on the platform billing account (HLD §0.5 payer: platform). Purchasing makes licences available but does not assign them; assignment is file 33.
-- **VERIFY:** Admin console, Menu, Chrome browser, Reports, Security insights: the status banner shows the subscription active. The Cloud console Chrome Enterprise Premium page shows the purchased count.
-- **ROLLBACK:** cancel under the subscription terms; file 33 keeps `al-platform-operator-lite` (IP and time) until licences exist.
-- **EVIDENCE:** `<date>-PU-2.9-cep-subscription-v1` (TISAX 4.1; E-11).
+  1. Establish who may buy. The platform owner runs the read below and records the named principal in the build log; if it prints nothing, the request stops here and IT security names a holder first.
+
+```bash
+need ORG_ID
+gcloud organizations get-iam-policy "$ORG_ID" --format='table(bindings.role,bindings.members)' --flatten='bindings[].members[]' --filter='bindings.role="roles/beyondcorp.admin"'
+```
+
+  2. Count one licence per operator and approver on the Tier W+ control surfaces (P63); record the count and the names it was counted from.
+  3. Optionally start the 60-day trial (Google: 60 days for up to 5,000 users at no cost, "you won't be charged, but our systems require valid payment details") so file 33 can test `al-platform-operator` before the purchase completes. The trial is started by the same named administrator, against the billing account of PU-2.10.
+  4. Purchase the subscription for the counted licences on the platform billing account (HLD §0.5 payer: platform). Purchasing makes licences available but does not assign them; assignment is file 33.
+- **VERIFY:**
+  1. The command of action 1 printed at least one principal, and that principal is the person who performed actions 3 and 4.
+  2. Admin console, Menu, Chrome browser, Reports, Security insights: the status banner shows the trial or subscription active (for a trial it reads "Your trial ends in X days").
+  3. The Cloud console Chrome Enterprise Premium page shows the purchased count, and it equals the count of action 2.
+- **ROLLBACK:** cancel under the subscription terms; file 33 keeps `al-platform-operator-lite` (IP and time) until licences exist. A started trial is left to expire; no rollback is needed and no charge arises. Gate: P63, signed, with a row in 03's tracker. If PU-0.1 printed `GAP` for P63, the licences are quoted and the trial may be started, but the subscription is not bought.
+- **EVIDENCE:** `<date>-PU-2.9-cep-purchaser-v1` (the output of action 1 and the named administrator), `<date>-PU-2.9-cep-subscription-v1` (the order and the count) (TISAX 4.1; E-11).
 
 ### PU-2.10 The dedicated platform billing account (row 10, P31, SD-16)
 
@@ -294,6 +334,29 @@ gcloud billing accounts describe "<account id>" --format='value(open,currencyCod
 - **ROLLBACK:** reduce seats under the plan's terms.
 - **EVIDENCE:** `<date>-PU-2.12-seats-and-licences-v1` with the counts (TISAX 1.3).
 
+### PU-2.13 The git-host plan (row 12, P22 / SD-14)
+
+This step exists because the git host is a hard prerequisite of Tier R ([01](01-prerequisites-and-conventions.md) P-13) and [03](03-decisions-and-people.md) DC-9 builds a repository whose required-reviewer, code-owner and audited-bypass settings are **paid features on a private repository**, yet nothing in the earlier draft of this file costed it, gave it a lead time or named a procurement owner. 03 runs in parallel with this file, so the plan is bought before DC-9.2 creates the repository, not after.
+
+- **WHO:** platform owner raises and specifies; procurement orders; the finance approver signs. IT security countersigns the rule set, because it is the control that makes every later two-human commit real. No witness.
+- **WHERE:** procurement system; then the git host's own billing page, performed by the person who will be organisation owner on the host in DC-9.2.
+- **ACTION:**
+  1. Read the signed P22 / SD-14 record for `GIT_HOST`. Do not guess: 03 DC-4.3 sets `GIT_HOST` and `GIT_OIDC_ISSUER` from the record, and a self-managed host is out of scope of Google's Workload Identity Federation page, so 10 stops on it.
+  2. Specify the plan against what DC-9 needs, and write the reasons into the order so nobody buys the free tier:
+     - **If `GIT_HOST` is `github.com`:** protected branches are available on private repositories with GitHub Pro, Team, Enterprise Cloud and Enterprise Server; code owners are available on private repositories with the same plans; and code review settings on organisation-owned private repositories need Team, Enterprise Cloud or Enterprise Server. The repository of DC-9 is organisation-owned and private, so the floor is **GitHub Team**, and Enterprise Cloud if the organisation wants SSO and the fuller audit log.
+     - **If `GIT_HOST` is `gitlab.com`:** Code Owners and merge-request approval rules (the number and type of required approvals) are **Premium and Ultimate** features; audit events record a bypassed policy. So the floor is **GitLab Premium**.
+     - Seats: one per human who commits or reviews — at least the platform owner, the second human, the second operator, the security reviewer or incident commander, and the blind grader. Bot and service accounts are not given seats that can approve.
+  3. Procurement orders the plan for the counted seats. The billing account of the git host is the organisation's usual one, not the Google Cloud platform billing account of PU-2.10.
+- **VERIFY:** before 03 DC-9.2 is run, the platform owner and IT security together confirm, on the host's own settings pages, all four:
+  1. the organisation's plan on the billing page is the one ordered (GitHub Team or higher; GitLab Premium or higher);
+  2. a **private** test repository can be created in that organisation;
+  3. in that test repository a ruleset or approval rule can be set that requires two approvals and review from code owners on a named path, and that rule can be saved;
+  4. an approval given by a bot or service account does not satisfy the rule — proved on the test repository by having a bot or service account approve and the merge still being refused, with the refusal screenshotted. Where the host cannot express this as a setting, the rule is enforced by DC-9.9's CI check instead, and that is written here as the reason, with DC-9.9 named as the compensating control.
+
+  The test repository is deleted once the four checks pass; the real repository is DC-9.2's.
+- **ROLLBACK:** downgrade or cancel under the host's terms before DC-9.2 creates the repository. After DC-9.5 has pushed history, a downgrade that removes protected branches or code owners is **a control failure, not a rollback**: it is treated as a change to a control file and needs the same two-human approval, and IT security is told the same day.
+- **EVIDENCE:** `<date>-PU-2.13-git-host-plan-v1` (the order and the plan name) and `<date>-PU-2.13-git-host-rules-proof-v1` (the four verify outputs, including the refused bot approval) in `EVIDENCE_INTERIM_LOCATION` (E-05, E-11; TISAX 5.2, 1.6). 03 DC-9.6 cites this evidence rather than re-proving it.
+
 ## 3. Questions to the account team
 
 Each question is sent in writing by the named person; the answer is filed the day it arrives. A step is done when the answer is in hand, whatever it says.
@@ -316,12 +379,14 @@ Each question is sent in writing by the named person; the answer is filed the da
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `<date>-PU-3.2-witness-invoicing-answer-v1` (TISAX 6.1).
 
-### PU-3.3 SCC Enterprise residency activation date
+### PU-3.3 SCC Enterprise residency activation date, and the Premium Model Armor allowance
 
-- **WHO:** IT security asks.
+- **WHO:** IT security asks; the platform owner writes the answer back into PU-2.3 step 4 and §5.
 - **WHERE:** the account team.
-- **ACTION:** ask: "For the Enterprise tier with data residency, Google says activation must be scheduled with the account representative. Confirm that the Premium tier with `eu` residency at organisation level needs no scheduled date, and give the lead time for a Premium subscription order." P94 does not choose Enterprise; the answer is recorded so P11 is closed on facts.
-- **VERIFY:** a dated written answer. If P11 selects Enterprise, the scheduled activation date is recorded and file 09 waits for it.
+- **ACTION:** ask, in one message:
+  1. "For the Enterprise tier with data residency, Google says activation must be scheduled with the account representative. Confirm that the Premium tier with `eu` residency at organisation level needs no scheduled date, and give the lead time for a Premium subscription order." P94 does not choose Enterprise; the answer is recorded so P11 is closed on facts.
+  2. "How many Model Armor tokens a month are included with Security Command Center Premium activated at organisation level on **pay-as-you-go**, as opposed to the 3 billion a month stated for a Premium **subscription** and the 2 million a month stated for standalone Model Armor? State the overage rate that applies in each case."
+- **VERIFY:** a dated written answer covering both questions. If P11 selects Enterprise, the scheduled activation date is recorded and file 09 waits for it. The token figure replaces the *tbd* in PU-2.3 step 4 and in §5's SCC row on the day it arrives; if the answer does not give one, PU-2.3's zero-allowance costing stands and that is written into §5.
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `<date>-PU-3.3-scc-residency-answer-v1` (E-11; TISAX 6.1).
 
@@ -344,6 +409,21 @@ The count below supersedes [../04-identity-and-privileged-access.md](../04-ident
 | **Order** | **22, or 26 with the twin robots** | | |
 
 The second human's non-administrator witness account (SD-04) is decided in 08; if it needs keys of its own, 08 draws them from the spares and PU-4.1 re-orders.
+
+### PU-4.0 Order the custody materials (row 13)
+
+Keys without envelopes, a safe and forms cannot be taken into custody, and [06](06-organisation-bootstrap-and-roster.md)'s preconditions require all three at its first sitting: "one [envelope] per human admin account (spare key and backup codes) and one per break-glass account, four in total, plus at least four spares for re-sealing (`v2` records). A corporate safe with a sign-out log. Paper custody forms (file 01 template)." The earlier draft of this file ordered only the keys. Raised on day one, alongside PU-4.1.
+
+- **WHO:** platform owner raises with IT security; facilities and procurement order. No approver beyond the usual purchase limit. No witness.
+- **WHERE:** procurement system; facilities for the safe.
+- **ACTION:**
+  1. Order **tamper-evident envelopes**: 4 for 06 (one per human admin account and one per break-glass account), plus 4 for 08's witness administrators, 4 for 21's sandbox super admins, 2 for `walle@` (30) and 2 for `eve@` (24) — 16 in use.
+  2. Order **spare envelopes** for re-sealing: at least one per envelope in use, so a `v2` record never waits on a new order. `Assumption:` 16 spares, 32 envelopes in total. Envelopes must be sequentially numbered by the supplier, because the custody record of PU-4.2 records an envelope number.
+  3. Confirm or order a **corporate safe with a sign-out log** that the platform owner and the second human can both reach and that IT security can audit, plus a second safe or compartment in IT security's own area for the witness administrators' spares (SD-04 keeps the lines apart). A safe that must be delivered and bolted down is the long pole of this row: raise it first.
+  4. Print the **paper custody forms**, enough for every line of §4's table plus spares. 06's preconditions call these "file 01 template"; on 2026-09-15 [01](01-prerequisites-and-conventions.md) names the keys, the safe and the envelopes (P-25, §3.2, and the envelope-witness role) but prints no form. Check first: if 01 carries a form on the day, use it unchanged; if it does not, the platform owner drafts one carrying exactly the fields PU-4.2 records, has IT security countersign it as the template, and tells 01's owner so the template lands in 01 rather than here.
+- **VERIFY:** count the delivered envelopes against steps 1 and 2 and record the number range; the safe is installed, its sign-out log is open with a first dated line, and both custodians have tested that they can open it; the printed forms carry the template's fields (label, serial, account, custodian, envelope number, date, two signature blocks). The platform owner ticks row 13 only against 06's precondition list, item by item.
+- **ROLLBACK:** amend or cancel the order before delivery. Nothing here is irreversible.
+- **EVIDENCE:** `<date>-PU-4.0-custody-materials-v1` with the envelope number range, the safe's location and the date its sign-out log was opened (TISAX 3.1; E-08). No envelope number is a secret; no key serial is written here, because no key is opened at this step.
 
 ### PU-4.1 Order the keys
 
@@ -374,7 +454,7 @@ The per-project budgets of P39 see only Google Cloud spend on the platform accou
 
 | Cost | Driver | Paid by | Purchase record | From tier |
 |---|---|---|---|---|
-| SCC Premium | pay-as-you-go on every project billing account of the organisation, or the subscription (min. 15,000 USD a year, 12 months) | per P11 (IT security and finance) | PU-2.3 | C |
+| SCC Premium | pay-as-you-go on every project billing account of the organisation, or the subscription (min. 15,000 USD a year, 12 months). Model Armor tokens included: 3 billion a month with the subscription; *tbd* with organisation-level pay-as-you-go, costed at zero until PU-3.3 answers | per P11 (IT security and finance) | PU-2.3, PU-3.3 | C |
 | Google SecOps or the organisation's SIEM, with the MDR retainer | events per day, retention term, retainer | IT security | PU-2.1 | P |
 | Penetration test | scoped, then full | IT security | PU-2.2 | W (scoped), P-SA (full) |
 | Paging tool (Business plan or higher if PagerDuty) | users | IT security | PU-2.6 | W (channel), P (24x7) |
@@ -383,7 +463,9 @@ The per-project budgets of P39 see only Google Cloud spend on the platform accou
 | Chrome Enterprise Premium | licences per operator and approver | platform | PU-2.9 | W |
 | Gemini Enterprise licences and Gmail-bearing seats | people and robots | tenant (seats), platform (robots) | PU-2.12 | C, P |
 | Model throughput, if ordered | GSUs and term | agent budgets | PU-2.8 | Stage 0 |
+| Git-host plan (GitHub Team or higher; GitLab Premium or higher) | seats for the humans who commit and review | platform, with the organisation's usual git-host payer | PU-2.13 | R (03 DC-9 gates 06) |
 | Hardware keys | 22 or 26 | platform | PU-4.1 | first file (06) |
+| Custody materials: envelopes, spare envelopes, safe, custody forms | 16 envelopes in use plus spares; one safe, plus a compartment in IT security's area | platform (envelopes, forms); facilities (safe) | PU-4.0 | first file (06) |
 | Human hours | roles of HLD §0.3 | — | — | every tier |
 
 ### PU-5.1 File the cost record
@@ -397,21 +479,32 @@ The per-project budgets of P39 see only Google Cloud spend on the platform accou
 
 ### PU-5.2 Measure Workspace audit-log volume before P31 sets LOGGING_PROJECT's budget
 
-- **WHO:** the owner of organisation-level Cloud Logging, holding `roles/logging.privateLogViewer` at the organisation (login, SAML and part of the OAuth token logs are Data Access logs). The platform owner records the numbers.
-- **WHERE:** that person's shell. Runs only if "Share data with Google Cloud services" is already on; otherwise the measurement is a re-run point of file [14](14-central-logging-and-billing-export.md) after it turns sharing on, and this step records "not measurable on `<date>`".
-- **ACTION:** count one day of entries per stream, and the byte size of a 1,000-entry sample. Output goes straight to `wc`; nothing is stored, because the entries hold employee login metadata.
+- **WHO:** the owner of organisation-level Cloud Logging, holding `roles/logging.privateLogViewer` at the organisation (login, SAML and part of the OAuth token logs are Data Access logs). The platform owner records the numbers and performs nothing here.
+- **WHERE:** **that person's own shell, which has no `~/.platform-env`, no `penv_set` and no `need`** — those exist only on the platform owner's workstation ([01](01-prerequisites-and-conventions.md) §4). So nothing below interpolates a platform variable. Runs only if "Share data with Google Cloud services" is already on; otherwise the measurement is a re-run point of file [14](14-central-logging-and-billing-export.md) after it turns sharing on, and this step records "not measurable on `<date>`".
+
+  **Handing over the one value.** The platform owner runs `echo "$ORG_ID"` in his own shell and gives the logging owner that number — the organisation id is not a secret — by the same route the two use for other work, recorded in the build log as "ORG_ID handed to `<name>` for PU-5.2 on `<date>`". The logging owner substitutes it for `<ORG_ID>` in the first line below and runs nothing until the guard prints `using organizations/<number>`.
+
+  *Alternative, if the two cannot meet:* the organisation's existing IAM owner grants the platform owner `roles/logging.privateLogViewer` at the organisation for the day and withdraws it the same day, recorded in `DEVIATION_REGISTER`. The platform owner then runs the block in his own shell with `--organization="$ORG_ID"`. This is a second person reading employee login metadata, so IT security approves it in writing first; the handover above is the default.
+
+- **ACTION:** count one day of entries per stream, then size one compact sample. Output goes straight to `wc`; nothing is stored, because the entries hold employee login metadata.
 
 ```bash
-gcloud logging read 'protoPayload.serviceName="admin.googleapis.com"' --organization="$ORG_ID" --freshness=1d --format='value(insertId)' | wc -l
-gcloud logging read 'protoPayload.serviceName="cloudidentity.googleapis.com"' --organization="$ORG_ID" --freshness=1d --format='value(insertId)' | wc -l
-gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --organization="$ORG_ID" --freshness=1d --format='value(insertId)' | wc -l
-gcloud logging read 'protoPayload.serviceName="oauth2.googleapis.com"' --organization="$ORG_ID" --freshness=1d --format='value(insertId)' | wc -l
-gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --organization="$ORG_ID" --freshness=1d --limit=1000 --format=json | wc -c
+ORG="<ORG_ID handed over by the platform owner, digits only>"
+case "$ORG" in ''|*[!0-9]*) echo "STOP: not an organisation id; ask the platform owner and run nothing below" >&2; unset ORG;; *) echo "using organizations/$ORG";; esac
+gcloud logging read 'protoPayload.serviceName="admin.googleapis.com"' --organization="${ORG:?stop: organisation id not set}" --freshness=1d --format='value(insertId)' | wc -l
+gcloud logging read 'protoPayload.serviceName="cloudidentity.googleapis.com"' --organization="${ORG:?stop: organisation id not set}" --freshness=1d --format='value(insertId)' | wc -l
+gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --organization="${ORG:?stop: organisation id not set}" --freshness=1d --format='value(insertId)' | wc -l
+gcloud logging read 'protoPayload.serviceName="oauth2.googleapis.com"' --organization="${ORG:?stop: organisation id not set}" --freshness=1d --format='value(insertId)' | wc -l
+gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --organization="${ORG:?stop: organisation id not set}" --freshness=1d --limit=1000 --format=json | jq -c '.[]' | wc -c
 ```
 
-- **VERIFY:** four counts and one byte figure recorded; the estimate (entries a day times bytes per entry times 30) is written with the date into P31's input record, so LOGGING_PROJECT's budget is set from a measurement plus 13 months of 400-day retention growth (Cloud Logging: 0.50 USD per GiB ingested above 50 GiB per project a month; 0.01 USD per GiB a month retained beyond 30 days).
-- **ROLLBACK:** none needed (read-only).
-- **EVIDENCE:** `<date>-PU-5.2-workspace-log-volume-v1` with numbers only (TISAX 1.3; E-09).
+  `--limit` defaults to unlimited, so the four counting lines are not capped at 1,000. `${ORG:?...}` stops each line with a message if the guard unset the variable, instead of sending `--organization=` and getting four silent failures. If `jq` is not installed on that workstation, replace `jq -c '.[]'` with `python3 -c 'import json,sys;[print(json.dumps(e,separators=(",",":"))) for e in json.load(sys.stdin)]'`.
+
+  **Which byte figure to record.** The last line measures what `gcloud` renders, not what Cloud Logging meters, so `jq -c` is used to strip the pretty-printer's indentation and the figure is recorded as an **upper bound** on ingested bytes. Where the logging owner can read Cloud Monitoring for the organisation's log bucket, prefer the metered figure instead: the metric type `logging.googleapis.com/billing/bytes_ingested` gives billable ingested bytes and can be filtered by `log_source` and `log_bucket_id` over the same day. **Record which of the two methods produced the number**, alongside the number; an estimate built on the upper bound is marked as such so P31's budget is not read as a measurement it is not.
+
+- **VERIFY:** four counts, one byte figure, and the method that produced it, all recorded. The estimate (entries a day times bytes per entry times 30) is written with the date and the method into P31's input record, so LOGGING_PROJECT's budget is set from a measurement plus 13 months of 400-day retention growth (Cloud Logging: 0.50 USD per GiB ingested above 50 GiB per project a month; 0.01 USD per GiB a month retained beyond 30 days). A budget set from the upper-bound method is revisited once 14 can read the metered figure.
+- **ROLLBACK:** none needed (read-only). If the alternative route was used, confirm the temporary `roles/logging.privateLogViewer` grant was withdrawn the same day and that the withdrawal is in `DEVIATION_REGISTER`.
+- **EVIDENCE:** `<date>-PU-5.2-workspace-log-volume-v1` with numbers and the method only — no log entry, no employee identifier (TISAX 1.3; E-09). The handover line and, if used, the temporary grant and its withdrawal, in the build log.
 
 ## 6. Verification checklist for the whole part
 
@@ -424,11 +517,14 @@ gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --organiza
 - [ ] `PAGER_SERVICE_NAME` set; the tool has role separation and an audit trail (PU-2.6).
 - [ ] `PAGER_SUBJECT_SERVICE_NAME` set; the second human has proven the platform owner holds no role on it (PU-2.7).
 - [ ] Model throughput decided after decision 6, or row 8 marked "waits on decision 6" (PU-2.8).
-- [ ] Chrome Enterprise Premium active or trial started (PU-2.9).
 - [ ] Billing account check output `True`, `EUR`, empty, `organizations/<ORG_ID>` on file; quota request reference recorded (PU-2.10, PU-2.11).
+- [ ] Chrome Enterprise Premium active or trial started, **after** PU-2.10, by a named holder of `roles/beyondcorp.admin` at the organisation whose binding was printed and recorded (PU-2.9).
 - [ ] Free Gmail-bearing seats and Gemini Enterprise licences counted (PU-2.12).
+- [ ] Git-host plan bought and its four rule checks passed before 03 DC-9.2 runs (PU-2.13).
+- [ ] Envelopes, spares, safe with an open sign-out log and custody forms counted against 06's precondition list (PU-4.0).
 - [ ] 22 or 26 keys received; custody record signed and scanned; no serial outside custody records (PU-4.1, PU-4.2).
-- [ ] Cost record committed; log volume measured or re-run point recorded (PU-5.1, PU-5.2).
+- [ ] Cost record committed; log volume measured with its method recorded, or the re-run point recorded (PU-5.1, PU-5.2).
+- [ ] P63 and P99 either signed with a tracker row, or the PU-0.1 `GAP` line is on file and neither purchase was committed.
 
 ```bash
 need SANDBOX_DOMAIN WITNESS_DOMAIN PAGER_SERVICE_NAME PAGER_SUBJECT_SERVICE_NAME
@@ -441,7 +537,9 @@ The first line passes; the second prints `0`.
 
 | File | Needs | From |
 |---|---|---|
+| [03](03-decisions-and-people.md) | the git-host plan in force before DC-9.2 creates the repository, with DC-9.6's settings evidence already produced here | PU-2.13 |
 | [06](06-organisation-bootstrap-and-roster.md) | six keys (sa-1, sa-2, brk-gcp) received with custody lines | PU-4.2 |
+| [06](06-organisation-bootstrap-and-roster.md) | four tamper-evident envelopes plus at least four spares, the safe with its sign-out log, the printed custody forms — its stated preconditions | PU-4.0 |
 | [07](07-billing-account.md) | the account designated and checked; the quota request reference (07 verifies the granted quota with its linking test and re-files only if refused) | PU-2.10, PU-2.11 |
 | [08](08-witness-organisation.md) | `WITNESS_DOMAIN`; the approved billing route; the approved Customer Care subscription; PU-3.1 and PU-3.2 answers; four witness-administrator keys | PU-2.4, PU-3.1, PU-3.2, PU-4.2 |
 | [09](09-folders-and-security-command-center.md) | the SCC payer record and, if chosen, the contract; PU-3.3 | PU-2.3, PU-3.3 |
@@ -465,11 +563,29 @@ The first line passes; the second prints `0`.
 | X-RQB-07 (minor) | Costs outside Google Cloud budgets had no owner or record; LOGGING_PROJECT's budget would be set without a volume measurement | §5 table with owners and purchase records; PU-5.2 measures volume before P31 sets the budget |
 | X-RQB-09 (minor) | No list sorted by lead time with owner and blocked gate; the witness billing account, the platform billing account and quota, and model throughput were in no list | §1, one table sorted by lead time with owner, blocked file and gate; rows 4, 8 and 10 |
 
-No finding in this page's scope is deferred.
+Findings raised by the 2026-09-16 review of this file:
 
-## Sources checked on 2026-09-15
+| Finding | What stood | How this page closes it |
+|---|---|---|
+| PU-2.9 named a principal that never exists (major) | `roles/beyondcorp.admin` is granted to nobody in files 06 to 12; 06 OB-3.7 grants four organisation roles to `sa-1-admin@` and says "No other role is granted", so row 7 could never be ticked | PU-2.9's second precondition names the existing organisation-level administrator as the purchaser and prints the binding with `gcloud organizations get-iam-policy` before the request is raised; the alternative fix (adding the role to OB-3.7's exception set with a DEV-06-01 line and a withdrawal in 12) is left to 06's and 12's owners and is **not** assumed here |
+| PU-2.9 ordered before PU-2.10 (major) | Both the purchase and the trial need a billing account that PU-2.10 opens; §1's lead-time sort put row 7 before row 10 | PU-2.9's first precondition, the heading "runs after PU-2.10", the note under §1's table and the note in §2's preamble; the §6 checklist puts PU-2.10 first |
+| PU-5.2 interpolated `$ORG_ID` in a shell that has no variables file (major) | Five commands would have run as `--organization=` and failed silently | PU-5.2 hands the organisation id over as a literal, guards it, and uses `${ORG:?}` on every line; a temporary-grant alternative is written with IT security approval and a `DEVIATION_REGISTER` entry |
+| No git-host row (major) | The git host is a Tier R prerequisite (01 P-13) and 03 DC-9 needs paid private-repository features, but nothing costed it or named a procurement owner | Row 12 and PU-2.13, with the plan floor for each candidate host and a four-part rule check run before DC-9.2 |
+| No custody-materials row (major) | 06's preconditions require envelopes, spares, a safe with a sign-out log and custody forms; 04 ordered only the keys | Row 13 and PU-4.0, counted against 06's own precondition list |
+| P63 and P99 missing from the Preconditions and PU-0.1 (minor) | §1 rows 6 and 7 named gates that no precondition or gate line carried | Two Precondition lines, the tracker-gap note, the `decision-need.sh` lines in PU-0.1, and `Gate:` lines in PU-2.6 and PU-2.9 |
+| PU-5.2's byte figure measured gcloud's pretty-printer (minor) | The estimate feeding P31's budget would be materially high | `jq -c` with the figure recorded as an upper bound, the metered `logging.googleapis.com/billing/bytes_ingested` route preferred where readable, and the method recorded with the number |
+| PU-2.3's Model Armor allowances unconfirmed (minor) | "Organisation-level Premium includes 2 million tokens" conflated the standalone allowance with the Premium one | PU-2.3 step 4 restates the two confirmed figures and marks the pay-as-you-go allowance *tbd* with a zero-allowance costing rule; PU-3.3 asks for it. The pay-as-you-go billing target **was** confirmed and is now quoted in Google's own words |
 
-- Security Command Center pricing (pay-as-you-go payer, subscription minimums, Model Armor allowances): https://cloud.google.com/security-command-center/pricing
+No finding in this page's scope is deferred. One fix is **declined as out of scope for this file**: adding `roles/beyondcorp.admin` to OB-3.7's exception set would be an edit to [06](06-organisation-bootstrap-and-roster.md) and a matching withdrawal in [12](12-privileged-access-catalogue.md); this file owns neither, so it takes the alternative the same finding offers and names the existing holder instead.
+
+## Sources checked on 2026-09-15, and on 2026-09-16 where marked
+
+- Security Command Center pricing (subscription minimums; Premium subscription includes 3 billion Model Armor tokens a month, then 0.10 USD per million; standalone Model Armor free to 2 million tokens a month): https://cloud.google.com/security-command-center/pricing and https://cloud.google.com/security/products/model-armor#pricing (re-read 2026-09-16; the organisation-level pay-as-you-go allowance is not stated on either page and is *tbd*, asked in PU-3.3)
+- Organisation-level pay-as-you-go charges "the billing accounts associated with the projects in your organization" (re-read 2026-09-16): https://cloud.google.com/security-command-center/pricing and https://docs.cloud.google.com/security-command-center/docs/service-tiers
+- `gcloud logging read` resource-scope flags, at most one of `--organization`, `--folder`, `--project`, `--billing-account`, and `--limit` defaulting to unlimited (re-read 2026-09-16): https://docs.cloud.google.com/sdk/gcloud/reference/logging/read
+- The metered ingestion metric `logging.googleapis.com/billing/bytes_ingested`, with `log_source` and `log_bucket_id` labels (read 2026-09-16): https://docs.cloud.google.com/logging/docs/logs-based-metrics and https://docs.cloud.google.com/stackdriver/estimating-bills
+- GitHub: protected branches and code owners on private repositories need GitHub Pro, Team, Enterprise Cloud or Enterprise Server; code review settings on organisation-owned private repositories need Team or Enterprise (read 2026-09-16): https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches and https://docs.github.com/articles/about-code-owners and https://docs.github.com/en/organizations/organizing-members-into-teams/managing-code-review-settings-for-your-team
+- GitLab: Code Owners and merge-request approval rules are Premium and Ultimate features; audit events record a bypass (read 2026-09-16): https://docs.gitlab.com/user/project/codeowners/ and https://docs.gitlab.com/user/project/merge_requests/approvals/rules/ and https://docs.gitlab.com/user/compliance/audit_events/
 - SCC and SecOps data residency, Enterprise activation scheduled with the account representative: https://docs.cloud.google.com/security-command-center/docs/data-residency-support and https://docs.cloud.google.com/security-command-center/docs/activate-enterprise-tier
 - Access Approval pricing (included with Standard, Enhanced and Premium Support): https://cloud.google.com/assured-workloads/access-approval/pricing
 - Billing access and inheritance from the parent organisation: https://docs.cloud.google.com/billing/docs/how-to/billing-access
@@ -484,7 +600,7 @@ No finding in this page's scope is deferred.
 - Workspace MX record `smtp.google.com`, priority 1: https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace
 - Workspace audit logs, types and buckets: https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging
 - Cloud Logging pricing: https://cloud.google.com/stackdriver/pricing
-- Chrome Enterprise Premium purchase, role and status check: https://support.google.com/chrome/a/answer/15832585
+- Chrome Enterprise Premium: `roles/beyondcorp.admin` "must be assigned at the Organization level"; purchase at `https://console.cloud.google.com/security/cep/`; trial 60 days for up to 5,000 users, "you won't be charged, but our systems require valid payment details"; status banner in Admin console, Chrome browser, Reports, Security insights (re-read 2026-09-16): https://support.google.com/chrome/a/answer/15832585
 - Gemini Enterprise subscriptions and licences: https://docs.cloud.google.com/gemini/enterprise/docs/licenses
 - Provisioned Throughput processing time: https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/provisioned-throughput/purchase-provisioned-throughput
 - Penetration testing of own projects needs no notice: https://support.google.com/cloud/answer/6262505

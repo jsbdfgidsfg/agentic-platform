@@ -56,8 +56,8 @@ flowchart TD
 - [ ] File 03: `PLATFORM_REPO_REMOTE` exists with DC-9.6's protection (two approvals, code owners, last-push approval, administrators included) and DC-9.4's CODEOWNERS; `GIT_HOST` is GitHub (if P22 chose GitLab, §12.1 of 03 applies and this file is re-issued as a dated revision before execution); SD-02, SD-09, SD-18, SD-34, SD-36 and NAMES are signed (`tools/decision-need.sh`); `SECOND_HUMAN_EMAIL` is set; `SECURITY_REVIEWER_EMAIL` is set or `*tbd*` (RG-1.2 and RG-3.6 say what changes).
 - [ ] File 06: `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `GRP_PLATFORM_READERS`, `GRP_EVE_OWNERS`, `GRP_PLATFORM_SECURITY` are set and merged.
 - [ ] File 09: every `FLD_*` is set and `register/folders.yaml` is merged (FS-4.2).
-- [ ] File 10: `CORE_PROJECT` with `agentregistry`, `apphub`, `bigquery`, `run`, `cloudscheduler`, `cloudasset` and `policyanalyzer` enabled; `SA_FACTORY_APPLY`, `SA_PLATFORM_DRIFT`, `SA_WALLE_DEPLOYER` exist with no bindings.
-- [ ] File 12 is complete: the creator's Owner is removed from the core projects; `ENT_PROJECT_REPAIR_CORE` and `ENT_FOLDER_ADMIN` exist and their one-grant tests passed. (Not in the plan's consume list for 16; needed because every IAM change here is a PAM act after 12.)
+- [ ] File 10 (CP-1.6, row 2): `CORE_PROJECT` with `agentregistry`, `apphub`, `bigquery`, `run`, `cloudscheduler`, `cloudasset`, `policyanalyzer` and `monitoring` enabled — RG-0.1 checks all eight and stops on any missing one. `securitycenter.googleapis.com` in `CORE_PROJECT` is needed only from RG-8.2 (the drift job's S4 source); RG-0.1 checks it and writes a re-run line on 10 CP-1.6 if absent, which must be closed before B-02 is unblocked. `SA_FACTORY_APPLY`, `SA_PLATFORM_DRIFT`, `SA_WALLE_DEPLOYER` exist with no bindings.
+- [ ] File 12 is complete: the creator's Owner is removed from the core projects; `ENT_PROJECT_REPAIR_CORE` (PA-4.2, folder-scoped at `fld-platform-core`, carrying `agentregistry.admin` and `monitoring.admin`), `ENT_FOLDER_ADMIN` (PA-4.1) and `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE` (PA-4.3, `run.developer` and `iam.serviceAccountUser` on `CORE_PROJECT`) exist and their one-grant tests passed; `FLD_PLATFORM_CORE` is set (09). (Not in the plan's consume list for 16; needed because every IAM change here is a PAM act after 12, and because RG-5.7, RG-8.2 and RG-8.3 name these three entitlements exactly.)
 - [ ] File 14 is complete: the Data Access configuration at `fld-agentic-platform` is merged; `SINK_S_ORG`, `SINK_S_FOLDER` exist.
 - [ ] File 15 part A: `NOTIF_CH_PAGER_CORE` and `NOTIF_CH_EMAIL_CORE` exist, or RG-5.6 records PENDING and 15 re-runs it.
 - [ ] Workstation: `gh` signed in as a repository administrator; `pipx` available (RG-2.1 installs the schema checker).
@@ -67,13 +67,13 @@ flowchart TD
 | Role | Does | Present at |
 |---|---|---|
 | Platform owner (`sa-1-admin@` for GCP, daily git-host account for commits) | Every step unless named otherwise; requests every PAM grant | all |
-| Second human (`SECOND_HUMAN_EMAIL`) | Approves `ENT_PROJECT_REPAIR_CORE` and `ENT_FOLDER_ADMIN` grants; required reviewer on `/identity/`, `/.github/` and, while the security reviewer is not appointed, `/ci/`, `/contract/` and `/register/schema/`; approves the control-group negative test; co-signs every manual parse; confirms the drill page | RG-1.2, RG-1.4, RG-2.6, RG-3.1, RG-4.3, RG-5.2, RG-5.7, RG-7.1, RG-7.2 |
+| Second human (`SECOND_HUMAN_EMAIL`) | Approves every PAM grant this file takes — `ENT_PROJECT_REPAIR_CORE` (RG-5.2, RG-5.7, RG-6.1, RG-7.3, RG-8.3), `ENT_FOLDER_ADMIN` (RG-7.2, RG-8.3's feed) and `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE` (RG-8.2, RG-8.3's `actAs`); required reviewer on `/identity/`, `/.github/` and, while the security reviewer is not appointed, `/ci/`, `/contract/` and `/register/schema/`; approves the control-group negative test; co-signs every manual parse; confirms the drill page | RG-1.2, RG-1.4, RG-2.6, RG-3.1, RG-4.3, RG-5.2, RG-5.7, RG-7.1, RG-7.2 |
 | Security reviewer (`SECURITY_REVIEWER_EMAIL`) | Reviews the CI rules and schemas; signs the row-36 exception (ratification if appointed later, RATIFY-SR); co-signs manual parses for P-SA rows, gate checklists, ladder raises and contract changes | RG-2.6, RG-3.1, RG-3.6, RG-7.1 |
 | Second operator (`SECOND_OPERATOR_EMAIL`) | Gives the single approval in the negative test of RG-4.3 | RG-4.3 |
 
 Separation rules: the platform owner never approves his own grant (PAM refuses it: "You can't approve your own request", PAM approve-grants page, read 2026-09-15) and never counts as a reviewer of his own pull request. Hands-on about 2 days; elapsed 3 to 5 days (reviews and the drill).
 
-Conventions of [01](01-prerequisites-and-conventions.md) apply to every step: `checkpoint <id> START` before the action, `checkpoint <id> DONE [witness] [evidence]` after the verify; `evidence_add` for every record; records named `<date>-<step>-<slug>-v<n>`; deviation rows `BD-16-<n>` in 01 PR-4.1's table. Every pull request below is opened with `gh pr create --repo "$repo"` from a branch named after the step; `repo` is derived as in 03 §12.
+Conventions of [01](01-prerequisites-and-conventions.md) apply to every step: `checkpoint <id> START` before the action, `checkpoint <id> DONE [witness] [evidence]` after the verify; `evidence_add` for every record; records named `<date>-<step>-<slug>-v<n>`; deviation rows `BD-16-<n>` in 01 PR-4.1's table. Every pull request below is opened with `gh pr create --repo "$PLATFORM_REPO_SLUG"` from a branch named after the step. `PLATFORM_REPO_SLUG` (the `owner/name` of 03 §12) is **persisted with `penv_set` in RG-0.1**, not held in the shell: this part runs over 3 to 5 days across pull-request reviews and a drill, and a step resumed in a fresh shell must not build `repos//…`. Every fence that uses it begins with `source ~/.platform-env` or follows one in the same shell, and `need PLATFORM_REPO_SLUG` fails loudly if it is unset.
 
 ## 0. The sitting
 
@@ -89,19 +89,22 @@ checkpoint RG-0.1 START
 penv_guard
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" SD-02 SD-09 SD-14 SD-18 SD-34 SD-36 NAMES
 need SA_1_ADMIN GIT_HOST PLATFORM_REPO_REMOTE PLATFORM_REPO_DIR BUILD_LOG_DIR EVIDENCE_REGISTER DEVIATION_REGISTER DRILL_CALENDAR SECOND_HUMAN_EMAIL ORG_ID REGION BQ_LOCATION DOMAIN
-need CORE_PROJECT CORE_PROJECT_NUMBER CICD_PROJECT SA_FACTORY_APPLY SA_PLATFORM_DRIFT SA_WALLE_DEPLOYER FLD_AGENTIC_PLATFORM ROSTER_FILE CONTROL_GROUPS_FILE GRP_PLATFORM_READERS GRP_EVE_OWNERS ENT_PROJECT_REPAIR_CORE ENT_FOLDER_ADMIN
-repo=$(printf '%s' "$PLATFORM_REPO_REMOTE" | sed -E 's#^https://github.com/##; s#\.git$##')
+need CORE_PROJECT CORE_PROJECT_NUMBER CICD_PROJECT SA_FACTORY_APPLY SA_PLATFORM_DRIFT SA_WALLE_DEPLOYER FLD_AGENTIC_PLATFORM FLD_PLATFORM_CORE ROSTER_FILE CONTROL_GROUPS_FILE GRP_PLATFORM_READERS GRP_EVE_OWNERS ENT_PROJECT_REPAIR_CORE ENT_FOLDER_ADMIN ENT_DEPLOY_CREDENTIAL_HOLDER_CORE
+penv_set PLATFORM_REPO_SLUG "$(printf '%s' "$PLATFORM_REPO_REMOTE" | sed -E 's#^https://github.com/##; s#\.git$##')"
+need PLATFORM_REPO_SLUG
+case "$PLATFORM_REPO_SLUG" in */*) : ;; *) echo "PLATFORM_REPO_SLUG is not owner/name: stop"; false;; esac
 test "$GIT_HOST" = "github.com" || { echo "git host is not GitHub: stop, 03 section 12.1 re-issue"; false; }
 test "$(gcloud config get account 2>/dev/null)" = "$SA_1_ADMIN" || { echo "not sa-1-admin@: stop"; false; }
 git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
 test -s "$PLATFORM_REPO_DIR/register/folders.yaml" || { echo "folders.yaml missing: 09 FS-4.2 first"; false; }
-gcloud services list --enabled --project="$CORE_PROJECT" --format="value(config.name)" | grep -E '^(agentregistry|apphub|bigquery|run|cloudscheduler|cloudasset|policyanalyzer)\.googleapis\.com$' | sort
+gcloud services list --enabled --project="$CORE_PROJECT" --format="value(config.name)" | grep -E '^(agentregistry|apphub|bigquery|run|cloudscheduler|cloudasset|policyanalyzer|monitoring)\.googleapis\.com$' | sort | tee "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-0.1-core-apis-v1.txt" | wc -l
+gcloud services list --enabled --project="$CORE_PROJECT" --format="value(config.name)" | grep -qx 'securitycenter.googleapis.com' || printf '%s\tRG-0.1\tsecuritycenter.googleapis.com on CORE_PROJECT\t10 CP-1.6 enables it (row 2): re-run before 16 RG-8.2\tPENDING\t-\n' "$(date -u +%F)" >> "$BUILD_LOG_DIR/rerun-index.tsv"
 gcloud projects get-iam-policy "$CORE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:user:" --format="table(bindings.role,bindings.members)"
 printf 'SECURITY_REVIEWER_EMAIL=%s\n' "${SECURITY_REVIEWER_EMAIL:-*tbd*}"
 ```
 
-  `GIT_HOST`'s value form is 03's; if 03 recorded it differently (for example `GitHub`), compare against that record, not this literal.
-- **VERIFY:** `penv_guard` prints nothing; `decision-need.sh` exits 0; every `need` passes; the services list prints the seven names; the user-member listing on `CORE_PROJECT` is empty (12 removed the creator's Owner). Whether the security reviewer is appointed is written in the checkpoint note; it decides the reviewer column of RG-1.2 and RG-3.6.
+  `GIT_HOST`'s value form is 03's; if 03 recorded it differently (for example `GitHub`), compare against that record, not this literal. Eight services are required in this sitting: the seven the register and registry work uses, and `monitoring.googleapis.com`, which RG-5.6's alert policy needs (10 CP-1.6 enables it on every core row). `securitycenter.googleapis.com` is needed only from RG-8.2, when the drift job reads findings through the SCC API as source S4 with `CORE_PROJECT` as its quota project (RG-7.3's `serviceusage.serviceUsageConsumer`); it is not enabled here — if the check above wrote the re-run line, 10 CP-1.6 must enable it in `CORE_PROJECT` before B-02 is unblocked.
+- **VERIFY:** `penv_guard` prints nothing; `decision-need.sh` exits 0; every `need` passes; `PLATFORM_REPO_SLUG` is persisted (`grep PLATFORM_REPO_SLUG ~/.platform-env`); the services count prints `8` and the recorded file holds the eight names; a missing name is a stop, not a workaround (re-run 10 CP-1.6 for that project); the user-member listing on `CORE_PROJECT` is empty (12 removed the creator's Owner). Whether the security reviewer is appointed is written in the checkpoint note; it decides the reviewer column of RG-1.2 and RG-3.6.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** Output as `<date>-RG-0.1-gates-v1` in `BUILD_LOG_DIR/records/`. E-xx: E-05. TISAX 5.2.1.
 
@@ -111,17 +114,20 @@ printf 'SECURITY_REVIEWER_EMAIL=%s\n' "${SECURITY_REVIEWER_EMAIL:-*tbd*}"
 
 - **WHO:** Platform owner.
 - **WHERE:** Shell, in `PLATFORM_REPO_DIR`.
-- **ACTION:** 03 DC-9.4 fixed `/roster/` and `/control-groups/` as the second human's paths and asked 06 and 16 to check that the control files sit under them; 06 OB-5.1 and OB-5.2 committed them under `identity/`.
+- **ACTION:** 03 DC-9.4 fixed `/roster/` and `/control-groups/` as the second human's paths and asked 06 and 16 to check that the control files sit under them; 06 OB-5.1 and OB-5.2 committed them under `identity/`. This step also reads the **git-host logins** RG-1.2 and RG-1.4 need: CODEOWNERS entries are written as logins, never as email addresses, because GitHub's About code owners page says "You cannot use an email address to refer to a managed user account" (read 2026-09-15), and an entry that owns nothing fails silently — the `/identity/` line would then not require the second human at all, and RG-4.3's proof would fail for the wrong reason.
 
 ```bash
-need ROSTER_FILE CONTROL_GROUPS_FILE
+need ROSTER_FILE CONTROL_GROUPS_FILE PLATFORM_REPO_SLUG
 cat "$PLATFORM_REPO_DIR/.github/CODEOWNERS"
 printf '%s\n%s\n' "$ROSTER_FILE" "$CONTROL_GROUPS_FILE"
-gh api "repos/$repo/codeowners/errors" --jq '.errors | length'
+gh api "repos/$PLATFORM_REPO_SLUG/codeowners/errors" --jq '.errors | length'
+gh api "repos/$PLATFORM_REPO_SLUG/collaborators?affiliation=all" --paginate --jq '.[] | [.login, .type, .role_name] | @tsv' | tee "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-1.1-collaborators-v1.tsv"
+gh api "orgs/${PLATFORM_REPO_SLUG%%/*}" --jq '[.login, .type, (.plan.name // "n/a")] | @tsv'
 ls "$PLATFORM_REPO_DIR" "$PLATFORM_REPO_DIR/register"
 ```
 
-- **VERIFY:** The output shows which paths lack the second human. Expected on 2026-09-15's plan: `identity/super-admin-roster.json` and `identity/control-groups.json` are covered only by the `*` line (the platform owner), so the second human is **not** a required reviewer on them; `codeowners/errors` prints `0`. Any other uncovered control file found is added to RG-1.2's list.
+  The collaborator listing is the only source of a login for RG-1.2 and RG-1.4 (never memory, never an email guessed from a name). The organisation read plus the git-host administrator's statement settle one question the operator writes into the record: whether the organisation uses Enterprise Managed Users. The procedure writes logins either way, so the answer changes nothing here; it is recorded because 03's own CODEOWNERS, written with whatever form it chose, must be re-read if the answer is yes.
+- **VERIFY:** The output shows which paths lack the second human. Expected on 2026-09-15's plan: `identity/super-admin-roster.json` and `identity/control-groups.json` are covered only by the `*` line (the platform owner), so the second human is **not** a required reviewer on them; `codeowners/errors` prints `0`. Any other uncovered control file found is added to RG-1.2's list. The collaborator file holds a `User` row for the platform owner, the second human and the second operator; the managed-user answer is written in the checkpoint note.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** Output as `<date>-RG-1.1-codeowners-gap-v1`. TISAX 5.2.1, 4.1.3. E-xx: none.
 
@@ -129,27 +135,33 @@ ls "$PLATFORM_REPO_DIR" "$PLATFORM_REPO_DIR/register"
 
 - **WHO:** Platform owner writes; the second human approves as code owner of `/.github/`; a second human reviewer as branch protection requires.
 - **WHERE:** Shell, then the git host.
-- **ACTION:** One owner per path, as 03 does. The reviewer of CI rules and schemas is the security reviewer once appointed, the second human until then (a re-run line is written in RG-10.1).
+- **ACTION:** One owner per path, as 03 does, written as `@login` from the RG-1.1 listing — not as an email address (RG-1.1's ACTION says why). The reviewer of CI rules and schemas is the security reviewer once appointed, the second human until then (a re-run line is written in RG-10.1). Replace the two placeholders with logins read in RG-1.1 before running the fence; the `case` guard refuses to write a CODEOWNERS file that still holds one.
 
 ```bash
-need SECOND_HUMAN_EMAIL
-SR="${SECURITY_REVIEWER_EMAIL:-}"; case "$SR" in ''|'*tbd*') SR="$SECOND_HUMAN_EMAIL";; esac
+need SECOND_HUMAN_EMAIL PLATFORM_REPO_SLUG
+SH_LOGIN="<second human git-host login, from the RG-1.1 listing>"
+SR_LOGIN="<security reviewer login, from the RG-1.1 listing; the second human's login while unappointed>"
+case "${SH_LOGIN}${SR_LOGIN}" in *'<'*) echo "replace the placeholders with the logins read in RG-1.1"; false;; esac
+grep -Fxq "$SH_LOGIN" <(cut -f1 "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-1.1-collaborators-v1.tsv") || { echo "$SH_LOGIN is not a collaborator: stop"; false; }
+grep -Fxq "$SR_LOGIN" <(cut -f1 "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-1.1-collaborators-v1.tsv") || { echo "$SR_LOGIN is not a collaborator: stop"; false; }
+git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
 git -C "$PLATFORM_REPO_DIR" switch -c rg-1-2-codeowners
 cat >> "$PLATFORM_REPO_DIR/.github/CODEOWNERS" <<EOF
-/identity/         $SECOND_HUMAN_EMAIL
-/register/schema/  $SR
-/register/models.yaml $SR
-/contract/         $SR
-/ci/               $SR
+/identity/         @$SH_LOGIN
+/register/schema/  @$SR_LOGIN
+/register/models.yaml @$SR_LOGIN
+/contract/         @$SR_LOGIN
+/ci/               @$SR_LOGIN
 EOF
 git -C "$PLATFORM_REPO_DIR" add .github/CODEOWNERS
 git -C "$PLATFORM_REPO_DIR" commit -m "RG-1.2 CODEOWNERS: identity/ to the second human; schemas, contract and CI to the security reviewer"
 git -C "$PLATFORM_REPO_DIR" push -u origin rg-1-2-codeowners
-gh pr create --repo "$repo" --head rg-1-2-codeowners --title "RG-1.2 CODEOWNERS for identity, schemas, contract, CI" --body "Closes the gap read in RG-1.1: the roster and control-group list were not owned by the second human."
+gh api "repos/$PLATFORM_REPO_SLUG/codeowners/errors?ref=rg-1-2-codeowners" --jq '.errors'
+gh pr create --repo "$PLATFORM_REPO_SLUG" --head rg-1-2-codeowners --title "RG-1.2 CODEOWNERS for identity, schemas, contract, CI" --body "Closes the gap read in RG-1.1: the roster and control-group list were not owned by the second human."
 ```
 
-  In CODEOWNERS "the last matching pattern takes the most precedence" (GitHub Docs, About code owners, as read by 03), so the lines are appended after 03's.
-- **VERIFY:** After merge: `gh api "repos/$repo/codeowners/errors" --jq '.errors | length'` prints `0`; `gh pr view rg-1-2-codeowners --repo "$repo" --json reviews --jq '[.reviews[] | select(.state=="APPROVED") | .author.login]'` includes the second human's login; opening any later pull request that touches `identity/control-groups.json` shows the second human as a requested code owner (proven in RG-4.3).
+  In CODEOWNERS "the last matching pattern takes the most precedence" (GitHub Docs, About code owners, read 2026-09-15), so the lines are appended after 03's. The errors read is taken **on the branch, before the pull request is opened** (`?ref=` selects the branch): an owner that does not resolve is a silent failure once merged, and this is the only check that catches it before it is the merge control.
+- **VERIFY:** Before the merge: the branch errors read prints `[]`. After the merge: `gh api "repos/$PLATFORM_REPO_SLUG/codeowners/errors" --jq '.errors | length'` prints `0`; `gh pr view rg-1-2-codeowners --repo "$PLATFORM_REPO_SLUG" --json reviews --jq '[.reviews[] | select(.state=="APPROVED") | .author.login]'` includes `$SH_LOGIN`; opening any later pull request that touches `identity/control-groups.json` shows the second human as a requested code owner (proven in RG-4.3). A non-empty errors array before the merge is a stop: correct the login and force nothing.
 - **ROLLBACK:** A reverting pull request under the same protection.
 - **EVIDENCE:** Merge commit and approvals as `<date>-RG-1.2-codeowners-merge-v1`. E-xx: none. TISAX 5.2.1, 4.1.3.
 
@@ -160,13 +172,13 @@ gh pr create --repo "$repo" --head rg-1-2-codeowners --title "RG-1.2 CODEOWNERS 
 - **ACTION:** The endpoint and body are GitHub's REST "Set default workflow permissions" for a repository and an organisation, parameter `can_approve_pull_request_reviews` ("Whether GitHub Actions can approve pull requests"), read 2026-09-15.
 
 ```bash
-gh api "repos/$repo/actions/permissions/workflow"
-gh api -X PUT "repos/$repo/actions/permissions/workflow" -F default_workflow_permissions=read -F can_approve_pull_request_reviews=false
-gh api "orgs/${repo%%/*}/actions/permissions/workflow"
+gh api "repos/$PLATFORM_REPO_SLUG/actions/permissions/workflow"
+gh api -X PUT "repos/$PLATFORM_REPO_SLUG/actions/permissions/workflow" -F default_workflow_permissions=read -F can_approve_pull_request_reviews=false
+gh api "orgs/${PLATFORM_REPO_SLUG%%/*}/actions/permissions/workflow"
 ```
 
   If the organisation-level read shows `can_approve_pull_request_reviews: true`, the second human asks the git-host organisation owner to set it to `false` there as well (same body on `orgs/{org}/actions/permissions/workflow`); the repository setting is not relied on alone.
-- **VERIFY:** `gh api "repos/$repo/actions/permissions/workflow" --jq '[.default_workflow_permissions, .can_approve_pull_request_reviews] | @tsv'` prints `read	false`; the organisation read prints `false` for the second field.
+- **VERIFY:** `gh api "repos/$PLATFORM_REPO_SLUG/actions/permissions/workflow" --jq '[.default_workflow_permissions, .can_approve_pull_request_reviews] | @tsv'` prints `read	false`; the organisation read prints `false` for the second field.
 - **ROLLBACK:** The same PUT with the previous values read in the first command, only under a reviewed decision.
 - **EVIDENCE:** Both reads as `<date>-RG-1.3-actions-cannot-approve-v1`. E-xx: none. TISAX 5.2.1, 4.1.3.
 
@@ -179,7 +191,7 @@ gh api "orgs/${repo%%/*}/actions/permissions/workflow"
 ```bash
 git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
 git -C "$PLATFORM_REPO_DIR" switch -c rg-1-4-git-humans
-gh api "repos/$repo/collaborators?affiliation=all" --paginate --jq '.[] | [.login, .type, .role_name] | @tsv' > "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-1.4-collaborators-v1.tsv"
+gh api "repos/$PLATFORM_REPO_SLUG/collaborators?affiliation=all" --paginate --jq '.[] | [.login, .type, .role_name] | @tsv' > "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-1.4-collaborators-v1.tsv"
 cat > "$PLATFORM_REPO_DIR/identity/git-humans.yaml" <<'EOF'
 # Named humans whose approvals count (R-08). Changed only by a merged pull request with the second human as code owner.
 schema: git-humans/v1
@@ -234,6 +246,7 @@ python3.12 -m venv "$HOME/platform/venv-register"
 git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
 git -C "$PLATFORM_REPO_DIR" switch -c rg-2-schemas
 mkdir -p "$PLATFORM_REPO_DIR/register/schema" "$PLATFORM_REPO_DIR/register/operators" "$PLATFORM_REPO_DIR/register/fixtures" "$PLATFORM_REPO_DIR/contract/1.0.0"
+mkdir -p "$PLATFORM_REPO_DIR/register/fixtures/schema" "$PLATFORM_REPO_DIR/register/operators/fixtures" "$PLATFORM_REPO_DIR/contract/1.0.0/fixtures"
 cat > "$PLATFORM_REPO_DIR/register/schema/register-row.schema.json" <<'JSON'
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -471,7 +484,17 @@ check-jsonschema --schemafile "$PLATFORM_REPO_DIR/register/schema/models.schema.
 
 - **WHO:** Platform owner.
 - **WHERE:** Shell, branch `rg-2-schemas`.
-- **ACTION:** Fixtures are data: `pass-*` must validate, `fail-*` must be refused. They are the regression set the CI of RG-3.3 runs. The rows below cover every schema-level refusal of RG-2.2.
+- **ACTION:** Fixtures are data: `pass-*` must validate, `fail-*` must be refused. They are the regression set the CI of RG-3.3 runs, and RG-3.2's rule fixtures are built on top of them, so an empty fixture directory here would make both vacuous.
+
+  **Write the files first.** The three `pass-*` files are written by hand from 05 §3.2's tier table and SD-02 (the `pass-05-9-2-example.yaml` manifest fixture is 05 §9.2 copied verbatim). Every `fail-*` file is then produced by copying its `pass-*` parent and making **exactly the one change** the "Built from" column names — nothing else — so a refusal can only come from the rule under test:
+
+```bash
+cd "$PLATFORM_REPO_DIR"
+cp register/fixtures/schema/pass-psa-prod-pending.yaml register/fixtures/schema/fail-psa-prod-super-admin-one-pending.yaml
+"${EDITOR:-vi}" register/fixtures/schema/fail-psa-prod-super-admin-one-pending.yaml   # privilege: super_admin; G20 stays pending
+```
+
+  and so on for each `fail-*` row of the table (parent: `pass-psa-prod-pending.yaml` for the four `fail-psa-prod-*` and `fail-art49-pending-prod`; `pass-psa-nonprod-twin.yaml` for `fail-psa-nonprod-with-checklist`; `pass-canary-r.yaml` for `fail-tier-w-no-grader`, `fail-tier-p-verifier-platform`, `fail-owner-group-pattern`, `fail-tier-x-publish`, `fail-reserved-agent-id`; `pass-05-9-2-example.yaml` for the two contract failures). The operators fixture is the one file under `register/operators/fixtures/`. `git status` after the writes must list 18 new fixture files and nothing else.
 
 | Fixture file under `register/fixtures/schema/` | Built from | Expected |
 |---|---|---|
@@ -496,17 +519,24 @@ check-jsonschema --schemafile "$PLATFORM_REPO_DIR/register/schema/models.schema.
 
 ```bash
 cd "$PLATFORM_REPO_DIR"
+shopt -s nullglob          # an empty directory must expand to nothing, never to the unexpanded glob
+n_reg=$(ls register/fixtures/schema/*.yaml 2>/dev/null | wc -l | tr -d ' ')
+n_con=$(ls contract/1.0.0/fixtures/*.yaml 2>/dev/null | wc -l | tr -d ' ')
+n_ops=$(ls register/operators/fixtures/*.yaml 2>/dev/null | wc -l | tr -d ' ')
+test "$n_reg" = 14 && test "$n_con" = 3 && test "$n_ops" = 1 || { echo "fixture count is $n_reg/$n_con/$n_ops, expected 14/3/1: STOP, the run below would prove nothing"; false; }
 for f in register/fixtures/schema/pass-*.yaml; do check-jsonschema --schemafile register/schema/register-row.schema.json "$f" >/dev/null && echo "PASS-OK $f" || echo "WRONG $f"; done
-for f in register/fixtures/schema/fail-*.yaml; do check-jsonschema --schemafile register/schema/register-row.schema.json "$f" >/dev/null 2>&1 && echo "WRONG $f" || echo "FAIL-OK $f"; done
+for f in register/fixtures/schema/fail-*.yaml; do test -s "$f" || { echo "WRONG $f (empty)"; continue; }; check-jsonschema --schemafile register/schema/register-row.schema.json "$f" >/dev/null 2>&1 && echo "WRONG $f" || echo "FAIL-OK $f"; done
 for f in contract/1.0.0/fixtures/pass-*.yaml; do check-jsonschema --schemafile contract/1.0.0/manifest.schema.json "$f" >/dev/null && echo "PASS-OK $f" || echo "WRONG $f"; done
-for f in contract/1.0.0/fixtures/fail-*.yaml; do check-jsonschema --schemafile contract/1.0.0/manifest.schema.json "$f" >/dev/null 2>&1 && echo "WRONG $f" || echo "FAIL-OK $f"; done
+for f in contract/1.0.0/fixtures/fail-*.yaml; do test -s "$f" || { echo "WRONG $f (empty)"; continue; }; check-jsonschema --schemafile contract/1.0.0/manifest.schema.json "$f" >/dev/null 2>&1 && echo "WRONG $f" || echo "FAIL-OK $f"; done
+test -s register/operators/fixtures/fail-control-group.yaml || { echo "WRONG operators fixture (missing)"; false; }
 check-jsonschema --schemafile register/schema/operators.schema.json register/operators/fixtures/fail-control-group.yaml >/dev/null 2>&1 && echo "WRONG operators fixture" || echo "FAIL-OK operators fixture"
+shopt -u nullglob
 cd - >/dev/null
 ```
 
   Writer's check, not evidence: on 2026-09-15 the five schemas passed the Draft 2020-12 metaschema under `jsonschema` 4.23.0, 05 §9.2's example validated against the manifest schema, and the register-row cases of this table (pending P-SA row, flip with one pending line, green line without record, nonprod twin, nonprod with checklist, Tier W without grader, Tier P with the platform verifier, Art. 49 pending at prod, reserved id, owner-group pattern) gave the expected result. The operator repeats the run on the day; only that run is evidence.
   Each `fail-*` fixture changes exactly one thing from its `pass-*` parent, so a refusal can only come from the rule under test; check it by reading the checker's message for each (`check-jsonschema` without `>/dev/null`).
-- **VERIFY:** Every line starts `PASS-OK` or `FAIL-OK`; no `WRONG`. Each failing fixture's message names the field the table names.
+- **VERIFY:** The count assertion passes (14 register, 3 contract, 1 operators fixture files, the table's 18 rows); the run prints **18 lines**, every one starting `PASS-OK` or `FAIL-OK`, four of them `PASS-OK`; no `WRONG`. Each failing fixture's message names the field the table names. A run that prints fewer than 18 lines, or a line naming a path that still holds a `*`, is a stop: the fixtures were not written, and a green run over an empty directory proves nothing.
 - **ROLLBACK:** Correct the schema or the fixture; never delete a failing fixture to make the run green.
 - **EVIDENCE:** The run output as `<date>-RG-2.5-schema-fixtures-v1`. E-xx: E-15 (tests of the technical controls). TISAX 5.2.1.
 
@@ -520,7 +550,7 @@ cd - >/dev/null
 git -C "$PLATFORM_REPO_DIR" add register/schema register/fixtures register/models.yaml register/operators contract/1.0.0
 git -C "$PLATFORM_REPO_DIR" commit -m "RG-2 register, folders, operators, models and manifest schemas with fixtures (05 3.2, 9.2; SD-02; SD-09; SD-36)"
 git -C "$PLATFORM_REPO_DIR" push -u origin rg-2-schemas
-gh pr create --repo "$repo" --head rg-2-schemas --title "RG-2 register and manifest schemas" --body "Fixture run: <record id of RG-2.5>. Reviewer checks: tier table of 05 3.2; SD-02 gate split; nonprod P-SA rule; control-group refusal in operators."
+gh pr create --repo "$PLATFORM_REPO_SLUG" --head rg-2-schemas --title "RG-2 register and manifest schemas" --body "Fixture run: <record id of RG-2.5>. Reviewer checks: tier table of 05 3.2; SD-02 gate split; nonprod P-SA rule; control-group refusal in operators."
 ```
 
   After the merge:
@@ -566,7 +596,7 @@ git -C "$PLATFORM_REPO_DIR" switch -c rg-3-rules
 git -C "$PLATFORM_REPO_DIR" add ci/register-rules.md
 git -C "$PLATFORM_REPO_DIR" commit -m "RG-3.1 register CI rule specification R-01 to R-12"
 git -C "$PLATFORM_REPO_DIR" push -u origin rg-3-rules
-gh pr create --repo "$repo" --head rg-3-rules --title "RG-3.1 register CI rules (specification)" --body "Implementation is B-03 (BLOCKED). Fallback: RG-3.6 signed manual parse."
+gh pr create --repo "$PLATFORM_REPO_SLUG" --head rg-3-rules --title "RG-3.1 register CI rules (specification)" --body "Implementation is B-03 (BLOCKED). Fallback: RG-3.6 signed manual parse."
 ```
 
 - **VERIFY:** The merged file holds twelve rows (`grep -c '^| R-' "$PLATFORM_REPO_DIR/ci/register-rules.md"` prints `12`); the pull request carries the code owner's approval; the reviewer's comment states that R-02, R-03 and R-04 read SD-02 exactly.
@@ -597,18 +627,23 @@ gh pr create --repo "$repo" --head rg-3-rules --title "RG-3.1 register CI rules 
 - **WHERE:** Shell with `gh`.
 - **ACTION:** **BLOCKED**: Needs: RG-3.3 merged; the check names it reports. Commit it in: branch protection of `main` (03 DC-9.6). Unblocked by: `REGISTER_CI_COMMIT`. Gate waiting: DC-9.9 of 03 (bot-approval rule required). Until then: `checkpoint RG-3.4 BLOCKED - - "needs RG-3.3"`. The command, from GitHub REST "Update status check protection" (`PATCH /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks`, body `strict` and `checks[].context`, read 2026-09-15), to run once unblocked:
 
+  **The PATCH replaces the stored list**: `checks` is "The list of status checks to require in order to merge into this branch" (GitHub REST, Update status check protection, read 2026-09-15), so a body holding only the three new contexts silently drops every check 03 DC-9.6 already requires on `main`. The current list is therefore read into a record file first, the new contexts are merged into it, and the merged body is what is sent.
+
 ```bash
+need PLATFORM_REPO_SLUG BUILD_LOG_DIR
+b="$BUILD_LOG_DIR/records/$(date -u +%F)-RG-3.4-required-checks-before-v1.json"
+gh api "repos/$PLATFORM_REPO_SLUG/branches/main/protection/required_status_checks" > "$b"
+jq -r '[.strict, (.checks | map(.context) | join(","))] | @tsv' "$b"
 p=$(mktemp)
-cat > "$p" <<'EOF'
-{"strict": true, "checks": [{"context": "register-ci / schema"}, {"context": "register-ci / rules"}, {"context": "register-ci / approvals"}]}
-EOF
-gh api -X PATCH "repos/$repo/branches/main/protection/required_status_checks" --input "$p"
-rm "$p"
+jq '{strict: true, checks: ((.checks // []) + [{"context": "register-ci / schema"}, {"context": "register-ci / rules"}, {"context": "register-ci / approvals"}] | unique_by(.context))}' "$b" > "$p"
+jq -r '.checks | map(.context) | join(",")' "$p"
+gh api -X PATCH "repos/$PLATFORM_REPO_SLUG/branches/main/protection/required_status_checks" --input "$p"
+cp "$p" "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-3.4-required-checks-sent-v1.json"; rm "$p"
 ```
 
-  The three context names are placeholders for the job names RG-3.3 commits; they are read from a run of that workflow, never typed.
-- **VERIFY:** `gh api "repos/$repo/branches/main/protection/required_status_checks" --jq '[.strict, (.checks | map(.context))]'` prints `true` and the three names; DC-9.6's verify still passes.
-- **ROLLBACK:** The same PATCH with the previous body, under a reviewed decision; the change is in 03 DC-9.8's audit query.
+  The three context names are placeholders for the job names RG-3.3 commits; they are read from a run of that workflow, never typed. `strict` is set to `true` deliberately ("Require branches to be up to date before merging"); if 03 recorded `false`, keep 03's value (`(.strict)` instead of `true`) and raise it only by a reviewed decision on 03.
+- **VERIFY:** `gh api "repos/$PLATFORM_REPO_SLUG/branches/main/protection/required_status_checks" --jq '.checks | map(.context) | sort'` prints the three new names **and every context listed in the before file** — check it mechanically: `diff <(jq -r '.checks[].context' "$b" | sort) <(gh api "repos/$PLATFORM_REPO_SLUG/branches/main/protection/required_status_checks" --jq '.checks[].context' | sort) | grep '^<'` prints nothing (no pre-existing check was lost). DC-9.6's verify still passes.
+- **ROLLBACK:** The same PATCH with the body rebuilt from the before file this step wrote (`$b` in `BUILD_LOG_DIR/records/`, the only saved previous value): `jq '{strict: .strict, checks: (.checks // [] | map({context, app_id}))}' "$b" | gh api -X PATCH "repos/$PLATFORM_REPO_SLUG/branches/main/protection/required_status_checks" --input -` — the GET response also carries `url`, `contexts_url` and the deprecated `contexts`, which the PATCH body must not repeat. Under a reviewed decision; the change is in 03 DC-9.8's audit query.
 - **EVIDENCE:** The read as `<date>-RG-3.4-required-checks-v1`. E-xx: none. TISAX 5.2.1.
 
 ### RG-3.5 Negative tests on the git host — **BLOCKED**
@@ -616,8 +651,8 @@ rm "$p"
 - **WHO:** Platform owner opens the test pull requests; the second human and the second operator play the reviewers; the security reviewer observes.
 - **WHERE:** A scratch clone, then the git host.
 - **ACTION:** **BLOCKED**: Needs: RG-3.3 and RG-3.4. Commit it in: nothing is committed; every test pull request is closed unmerged. Unblocked by: `REGISTER_CI_COMMIT` and the RG-3.4 read. Gate waiting: G12 and G15's "16 (CI)" half, 31's P-SA row, 38's parse. Until then: `checkpoint RG-3.5 BLOCKED - - "needs RG-3.3, RG-3.4"`. The tests, each a pull request titled `RG-3.5 <rule> negative test (do not merge)` built from its fixture: a second `env=prod` P-SA row (R-02); the P-SA row flipped to `super_admin` with G20 at 35 days (R-03, R-05); a `stage-0` decision file while pending (R-03); a control-group membership change approved by the second operator only (R-07); a ladder raise approved by one human (R-09); a Model pin of `gemini-2.5-flash` (R-06). And one positive test: an `env=nonprod` P-SA row without a checklist passes every check (R-04).
-- **VERIFY:** Each negative pull request shows the named check failed and `mergeStateStatus` `BLOCKED` (`gh pr view <branch> --repo "$repo" --json mergeStateStatus,statusCheckRollup`); the positive one shows the checks green (and stays unmerged).
-- **ROLLBACK:** Each pull request is closed and its branch deleted (`gh pr close <branch> --repo "$repo" --delete-branch`).
+- **VERIFY:** Each negative pull request shows the named check failed and `mergeStateStatus` `BLOCKED` (`gh pr view <branch> --repo "$PLATFORM_REPO_SLUG" --json mergeStateStatus,statusCheckRollup`); the positive one shows the checks green (and stays unmerged).
+- **ROLLBACK:** Each pull request is closed and its branch deleted (`gh pr close <branch> --repo "$PLATFORM_REPO_SLUG" --delete-branch`).
 - **EVIDENCE:** Each pull request URL and check output as `<date>-RG-3.5-negative-tests-v1`. E-xx: E-15. TISAX 5.2.1, 4.1.3.
 
 ### RG-3.6 The signed manual parse while the rules are BLOCKED
@@ -643,10 +678,14 @@ for f in sorted(glob.glob(f"{root}/register/*.yaml")):
             print(f"    {g:<4} {l['status']:<8} date={l.get('date')} age_days={age} signer={l.get('signer')} record_exists={exists}")
 print("env=prod P-SA rows not retired (R-02 allows 1):", len(prod_psa), prod_psa)
 PY
-gh pr view <number> --repo "$repo" --json reviews,author --jq '.author.login, (.reviews[] | [.author.login, .state] | @tsv)'
+PR=<pull request number>          # replace before running; the guard below refuses the placeholder
+case "$PR" in *'<'*|'') echo "set PR to the pull request number under parse"; false;; esac
+gh pr view "$PR" --repo "$PLATFORM_REPO_SLUG" --json reviews,author --jq '.author.login, (.reviews[] | [.author.login, .state] | @tsv)'
 ```
 
-- **VERIFY:** The parse file exists in the pull request, names every rule of RG-3.1 with a result, and carries both required signatures (`tools/decision-check.sh` of 03 prints `OK` for it); for a P-SA flip or a Stage 0 record, R-02, R-03 and R-05 are `pass` and each G line's record was opened by both signers. A parse by one person, or by the platform owner, is refused at review.
+  Set `PR` on the first line of the second fence before pasting it; nothing else in this step is typed. This is the most-run step in the file — it is the control in force for every `env=prod` P-SA row, gate checklist, Stage 0 record, ladder raise and contract change until B-03 lands — and it is run by two signers who did not write this procedure, so no `<…>` may reach a shell.
+
+- **VERIFY:** The parse file exists in the pull request, names every rule of RG-3.1 with a result, and carries both required signatures (`tools/decision-check.sh` of 03 prints `OK` for it); for a P-SA flip or a Stage 0 record, R-02, R-03 and R-05 are `pass` and each G line's record was opened by both signers. No `<` placeholder remains in anything that was run or written (`grep -n '<' decisions/register-parses/<date>-pr$PR-parse.md` shows only prose, never a command). A parse by one person, or by the platform owner, is refused at review.
 - **ROLLBACK:** A parse found wrong is superseded by a new parse file; the merged change it allowed is reverted by pull request until the new parse passes.
 - **EVIDENCE:** Each parse file (append-only) as `<date>-RG-3.6-parse-pr<number>-v1`. E-xx: E-03 (decision record), E-15. TISAX 5.2.1, 1.4.1.
 
@@ -699,14 +738,14 @@ p = sys.argv[1]; d = json.load(open(p)); d["as_of"] = "RG-4.3-negative-test"; js
 PY
 git -C "$w/r" commit -am "RG-4.3 negative test: control-group list (do not merge)"
 git -C "$w/r" push origin rg-4-3-negative-test
-gh pr create --repo "$repo" --head rg-4-3-negative-test --title "RG-4.3 negative test (do not merge)" --body "Expect BLOCKED after one approval by the second operator: the second human is the code owner."
+gh pr create --repo "$PLATFORM_REPO_SLUG" --head rg-4-3-negative-test --title "RG-4.3 negative test (do not merge)" --body "Expect BLOCKED after one approval by the second operator: the second human is the code owner."
 ```
 
   The second operator approves. Then:
 
 ```bash
-gh pr view rg-4-3-negative-test --repo "$repo" --json mergeStateStatus,reviewDecision,reviewRequests --jq '[.mergeStateStatus, .reviewDecision, (.reviewRequests | map(.login // .name) | join(","))] | @tsv'
-gh pr close rg-4-3-negative-test --repo "$repo" --delete-branch
+gh pr view rg-4-3-negative-test --repo "$PLATFORM_REPO_SLUG" --json mergeStateStatus,reviewDecision,reviewRequests --jq '[.mergeStateStatus, .reviewDecision, (.reviewRequests | map(.login // .name) | join(","))] | @tsv'
+gh pr close rg-4-3-negative-test --repo "$PLATFORM_REPO_SLUG" --delete-branch
 rm -rf "$w"
 ```
 
@@ -749,7 +788,7 @@ gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-du
 
   `--entitlement` accepts a fully qualified entitlement name, and `--requested-duration`, `--justification` are the documented flags (`gcloud pam grants create`, GA, read 2026-09-15). The second human reads the justification before approving; PAM refuses self-approval.
 - **VERIFY:** `gcloud pam grants search --entitlement="$ENT_PROJECT_REPAIR_CORE" --caller-relationship=had-created --format="table(name,state,createTime)"` shows the newest grant `ACTIVE`.
-- **ROLLBACK:** The grant expires after one hour; end it earlier with `gcloud pam grants withdraw <grant name>` (*Assumption:* the `withdraw` command name, checked in the reference on the day; otherwise let it expire).
+- **ROLLBACK:** The grant expires after one hour; end it earlier with `gcloud pam grants revoke <grant name> --reason="setup 16: work finished early"`, taking `<grant name>` (fully qualified) from the VERIFY table. The synopsis is `gcloud pam grants revoke (GRANT : --entitlement=ENTITLEMENT --folder=FOLDER --location=LOCATION --organization=ORGANIZATION) [--async] [--reason=REASON]` (`gcloud pam grants revoke` reference, read 2026-09-15): with a short grant id instead of the full name, add the scope flags that match the entitlement — for `ENT_PROJECT_REPAIR_CORE`, `--entitlement=ent-project-repair-core --folder="$FLD_PLATFORM_CORE" --location=global` (12 scopes it at `fld-platform-core`). There is no `withdraw` subcommand; 17 and 18 use `revoke` for the same purpose.
 - **EVIDENCE:** Grant name and approver as `<date>-RG-5.2-pam-grant-v1`. E-xx: E-06. TISAX 4.1.3, 4.2.1.
 
 ### RG-5.3 Bind the registry roles
@@ -784,7 +823,7 @@ gcloud projects get-iam-policy "$CORE_PROJECT" --flatten="bindings[].members" --
 gcloud projects get-iam-policy "$CORE_PROJECT" --flatten="bindings[].members" --filter="bindings.role:(roles/owner OR roles/editor OR roles/admin OR roles/writer)" --format="table(bindings.role,bindings.members)"
 ```
 
-- **VERIFY:** The first table has exactly four rows: `roles/agentregistry.admin` → `serviceAccount:factory-apply@…`; `roles/agentregistry.viewer` → `platform-drift@…`, `platform-readers@…`, `eve-owners@…`. No `roles/agentregistry.editor` or `roles/agentregistry.user` row. The second table is empty (a basic role would carry `agentregistry.*`). The only other principal that can write the registry is a human holding `ENT_FOLDER_ADMIN` (04 §5.2 lists `roles/agentregistry.admin` in it for registry repair), which RG-5.7 proves is alerted.
+- **VERIFY:** The first table has exactly four rows: `roles/agentregistry.admin` → `serviceAccount:factory-apply@…`; `roles/agentregistry.viewer` → `platform-drift@…`, `platform-readers@…`, `eve-owners@…`. No `roles/agentregistry.editor` or `roles/agentregistry.user` row. The second table is empty (a basic role would carry `agentregistry.*`). The only other principal that can write the registry is a human holding an active `ENT_PROJECT_REPAIR_CORE` grant: 12 PA-4.2 lists `roles/agentregistry.admin` in that bundle, folder-scoped at `fld-platform-core`, which contains `CORE_PROJECT`. `ENT_FOLDER_ADMIN` does **not** carry it (12's `ent-folder-admin` is `resourcemanager.folderAdmin`, `logging.configWriter`, `modelarmor.floorSettingsAdmin`, `cloudscheduler.admin`). RG-5.7 proves that this one lawful human write is alerted.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** The file above, `evidence_add RG-5.4 registry-iam E-06 4.2.1 ...`. TISAX 4.2.1. Closes S001's "shared Agent Registry in CORE_PROJECT" item.
 
@@ -808,7 +847,7 @@ gcloud logging read 'protoPayload.serviceName="agentregistry.googleapis.com" AND
 
 ### RG-5.6 Create the registry write alert
 
-- **WHO:** Platform owner under the RG-5.2 grant. *Assumption:* 12's `ENT_PROJECT_REPAIR_CORE` bundle carries an alert-policy editing role for `CORE_PROJECT` (04 §5.2's project-repair bundle lists none); if the create is refused for permission, stop, record PENDING and re-run 12 with `roles/monitoring.alertPolicyEditor` added to that entitlement.
+- **WHO:** Platform owner under the RG-5.2 grant. The alert policy is created inside that grant: 12 PA-4.2's `ent-project-repair-core` bundle is the 04 project-repair bundle **plus** `roles/monitoring.admin`, which carries alert-policy creation; the precondition on 12 above names it. If the create is still refused for permission, stop, record PENDING and re-run 12 with `roles/monitoring.alertPolicyEditor` added to that entitlement — never widen a role here.
 - **WHERE:** Shell.
 - **ACTION:** 05 §4 "Every write is seen": an alert on `agentregistry.googleapis.com` Admin Activity writes whose principal is not the CI identity. The design places it in `LOGGING_PROJECT` on the aggregated sink; Google's log-based alert page says "when a project-level sink routes a log entry that originates in a project to a log bucket, log-based alerting policies defined in that project scan the log entry" (read 2026-09-15), which does not promise that routed-in entries from an aggregated sink are scanned. The policy is therefore made in `CORE_PROJECT`, where the entries originate, and recorded as a deviation from 05 §4 (`BD-16-3`). The second half of 05's condition (a CI write without a `pipeline_run_id` justification) needs the factory pipeline (B-01) and is added by 17.
 
@@ -822,7 +861,7 @@ W="$(mktemp -d)"
 cat > "$W/policy.json" <<EOF
 {
   "displayName": "agentregistry write by a principal other than factory-apply@ (05 section 4)",
-  "documentation": {"content": "Severity 2. A write to the shared Agent Registry in CORE_PROJECT by anyone but factory-apply@. Open an incident; check for an ENT_FOLDER_ADMIN grant; the reconciliation deletes shadow cards through CI. Setup 16 RG-5.6.", "mimeType": "text/markdown"},
+  "documentation": {"content": "Severity 2. A write to the shared Agent Registry in CORE_PROJECT by anyone but factory-apply@. Open an incident; check for an active ENT_PROJECT_REPAIR_CORE grant (the only lawful human path, 12 PA-4.2); the reconciliation deletes shadow cards through CI. Setup 16 RG-5.6.", "mimeType": "text/markdown"},
   "conditions": [{
     "displayName": "agentregistry ADMIN_WRITE not by factory-apply@",
     "conditionMatchedLog": {
@@ -847,14 +886,14 @@ fi
 
 ### RG-5.7 Prove the alert with one witnessed repair write
 
-- **WHO:** Platform owner under an `ENT_FOLDER_ADMIN` grant; **approver and witness: the second human**, who confirms the page on the paging service.
+- **WHO:** Platform owner under a **fresh `ENT_PROJECT_REPAIR_CORE` grant** (separate from RG-5.2's, with its own justification, so the drill's write stands alone in the audit log); **approver and witness: the second human**, who confirms the page on the paging service.
 - **WHERE:** Shell; the second human's paging-service application.
-- **ACTION:** A human write is lawful only as registry repair under PAM (04 §5.2 `ent-folder-admin`, 05 §4). The entry is an endpoint that no agent resolves (the `.invalid` top-level domain), deleted in the same sitting. Before requesting, read that the entitlement carries the registry role; if it does not, stop with PENDING on 12.
+- **ACTION:** A human write is lawful only as registry repair under PAM (05 §4). The entitlement that carries it is `ENT_PROJECT_REPAIR_CORE`: 12 PA-4.2 lists `roles/agentregistry.admin` in that bundle, folder-scoped at `fld-platform-core`, which contains `CORE_PROJECT`, and the same bundle's `monitoring.admin` covers any correction to RG-5.6's policy during the drill. `ENT_FOLDER_ADMIN` is **not** the entitlement for this: 12's `ent-folder-admin` is `resourcemanager.folderAdmin`, `logging.configWriter`, `modelarmor.floorSettingsAdmin` and `cloudscheduler.admin` only, so a guard written against it would never pass and the alert would never be proven. The entry is an endpoint that no agent resolves (the `.invalid` top-level domain), deleted in the same sitting. Before requesting, read that the entitlement carries the registry role; if it does not, stop with PENDING on 12 (amend `ent-project-repair-core`, approver the second human) and do not substitute another entitlement.
 
 ```bash
-need ENT_FOLDER_ADMIN CORE_PROJECT REGION
-gcloud pam entitlements describe "$ENT_FOLDER_ADMIN" --format="yaml(privilegedAccess.gcpIamAccess.roleBindings)" | grep -q "roles/agentregistry.admin" || { echo "ENT_FOLDER_ADMIN lacks agentregistry.admin: PENDING on 12"; false; }
-gcloud pam grants create --entitlement="$ENT_FOLDER_ADMIN" --requested-duration=3600s --justification="setup 16 RG-5.7: registry write-alert drill, one test endpoint created and deleted"
+need ENT_PROJECT_REPAIR_CORE CORE_PROJECT REGION FLD_PLATFORM_CORE
+gcloud pam entitlements describe "$ENT_PROJECT_REPAIR_CORE" --format="yaml(privilegedAccess.gcpIamAccess.roleBindings)" | grep -q "roles/agentregistry.admin" || { echo "ENT_PROJECT_REPAIR_CORE lacks agentregistry.admin: PENDING on 12 PA-4.2"; false; }
+gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-duration=3600s --justification="setup 16 RG-5.7: registry write-alert drill, one test endpoint created and deleted"
 D="rg-drill-$(date -u +%Y%m%d)"
 gcloud agent-registry services create "$D" --location="$REGION" --display-name="RG-5.7 alert drill" --description="meta: drill=RG-5.7 not_an_agent=true" --endpoint-spec-type=no-spec --interfaces="url=https://drill.invalid/,protocolBinding=http-json" --project="$CORE_PROJECT"
 date -u +%Y-%m-%dT%H:%M:%SZ
@@ -868,9 +907,9 @@ gcloud agent-registry services list --location="$REGION" --project="$CORE_PROJEC
 gcloud logging read "protoPayload.serviceName=\"agentregistry.googleapis.com\" AND logName:\"cloudaudit.googleapis.com%2Factivity\"" --project="$CORE_PROJECT" --freshness=1h --format="table(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail)"
 ```
 
-  Then open the drill row in `DRILL_CALENDAR`: `| DR-16-1 | Registry write alert: one repair write under ENT_FOLDER_ADMIN pages within 5 minutes | monthly (05 §4) | platform owner | second human | 16 | <today> | <record id> | <today + 1 month> | Tier R shared registry; 05 §4 |`.
+  Then open the drill row in `DRILL_CALENDAR`: `| DR-16-1 | Registry write alert: one repair write under ENT_PROJECT_REPAIR_CORE pages within 5 minutes | monthly (05 §4) | platform owner | second human | 16 | <today> | <record id> | <today + 1 month> | Tier R shared registry; 05 §4 |`. Replace `<today>`, `<today + 1 month>` and `<record id>` with absolute dates and the record id before writing the row.
 - **VERIFY:** The page reaches the paging service and the email channel within 5 minutes of the create (the second human writes the arrival time); the audit read shows `CreateService` and `DeleteService` by `sa-1-admin@`; the services list is empty again. No page within 5 minutes is a severity 2 on the monitoring baseline (05 §4): fix and repeat before RG-10.
-- **ROLLBACK:** The entry is deleted in the action; the grant expires within the hour.
+- **ROLLBACK:** The entry is deleted in the action; the grant expires within the hour, and is ended as soon as the page is confirmed with `gcloud pam grants revoke <grant name> --reason="setup 16 RG-5.7 drill finished"` (RG-5.2's rollback note).
 - **EVIDENCE:** Audit read, page time and the second human's line as `<date>-RG-5.7-registry-alert-drill-v1`; the `DR-16-1` row. E-xx: E-08 (drill). TISAX 5.2.6, 1.6.1.
 
 ## 6. The `platform_registry` dataset
@@ -902,18 +941,22 @@ bq --project_id="$CORE_PROJECT" mk --dataset --location="$BQ_LOCATION" --descrip
 - **WHERE:** Shell, following 01 §8.1's dataset access-array pattern exactly.
 - **ACTION:**
 
+  Two things to know before pasting. **The etag test is advisory, not a lock:** `bq update --source` sends no `If-Match` header, so the comparison below only narrows the window in which another writer could be overwritten; it does not make this a compare-and-set. Nobody else should be touching the dataset in this sitting — if the test ever fails, re-read and start the step again rather than forcing it. **The submitted file is narrowed** to `datasetReference` and `access` (01 §8.1's pattern): the `bq show` document also carries the output-only fields `etag`, `id`, `selfLink`, `creationTime`, `lastModifiedTime` and `type`, which are not input and must not be sent back.
+
 ```bash
 need CORE_PROJECT SA_PLATFORM_DRIFT
 W="$(mktemp -d)"
 bq --project_id="$CORE_PROJECT" show --format=prettyjson "${CORE_PROJECT}:platform_registry" > "$W/before.json"
-jq --arg sa "$SA_PLATFORM_DRIFT" '.access = ((.access + [{"role":"WRITER","userByEmail":$sa}]) | unique)' "$W/before.json" > "$W/after.json"
+jq --arg sa "$SA_PLATFORM_DRIFT" '{datasetReference, access: ((.access + [{"role":"WRITER","userByEmail":$sa}]) | unique)}' "$W/before.json" > "$W/after.json"
 jq -S '.access | sort_by(tostring)' "$W/after.json" > "$W/expected.json"
 [ "$(bq --project_id="$CORE_PROJECT" show --format=prettyjson "${CORE_PROJECT}:platform_registry" | jq -r .etag)" = "$(jq -r .etag "$W/before.json")" ] && bq --project_id="$CORE_PROJECT" update --source "$W/after.json" "${CORE_PROJECT}:platform_registry" || echo "STOP: the dataset changed since it was read, or the update failed"
 bq --project_id="$CORE_PROJECT" show --format=prettyjson "${CORE_PROJECT}:platform_registry" | jq -S '.access | sort_by(tostring)' | diff "$W/expected.json" - && echo "ACCESS MATCHES"
+bq --project_id="$CORE_PROJECT" show --format=prettyjson "${CORE_PROJECT}:platform_registry" | jq '{location, labels, description}'
 cp "$W/before.json" "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-6.2-access-before-v1.json"; rm -rf "$W"
 ```
 
-- **VERIFY:** `ACCESS MATCHES`; the access array holds `WRITER` for `platform-drift@` and no other service account. WRITER maps to `dataEditor` and can delete rows (SD-43's finding); `reconciliation` is therefore also exported daily to the evidence lake by the job (B-02), recorded as an accepted limit in `BD-16-4`.
+  If `bq update --source` with the narrowed file is refused (it must not be: `datasetReference` plus `access` is a complete dataset patch), re-run with the whole `after.json` and record the reason; the last read above proves that the narrowing dropped no `location`, label or description.
+- **VERIFY:** `ACCESS MATCHES`; the access array holds `WRITER` for `platform-drift@` and no other service account; `location`, both labels and the description are unchanged by the update. **An unmitigated limit:** WRITER maps to `dataEditor` and can delete rows (SD-43's finding), so until B-02 lands, the only copy of `reconciliation` is the one `platform-drift@` itself can delete. The daily export to the evidence lake that would mitigate it is part of the job (B-02, BLOCKED); `BD-16-4` records the risk as open, not as mitigated, and 17's Tier R record must not read it as closed.
 - **ROLLBACK:** The same pattern with the entry removed.
 - **EVIDENCE:** The before file and the read-back. E-xx: E-06. TISAX 4.2.1.
 
@@ -924,7 +967,16 @@ cp "$W/before.json" "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-6.2-access-before-
 - **WHO:** Platform owner drafts; **signatories: IT security (the second human) and ISMS**; the security reviewer ratifies through RATIFY-SR when appointed (03 DC-8.4).
 - **WHERE:** Platform repository `decisions/`, through 03's decision-record tooling.
 - **ACTION:** Topology row 36: "`roles/iam.securityReviewer`, folder-level — the named exception to the one rule (D7) … Made by the platform owner … the security reviewer signing the exception", extended by P73. Write `decisions/<date>-row-36-platform-drift-exception.md` (id `ROW36-EXC`) with: the principal `SA_PLATFORM_DRIFT`; the exact bindings of RG-7.2 and RG-7.3; two corrections read on 2026-09-15 and stated in the record: (1) `roles/cloudasset.viewer` "permits viewing assets only" and feed create, update and delete need `cloudasset.feeds.*` under Cloud Asset Owner (Cloud Asset Inventory roles page), so the folder feed of 05 §6.1 S3 is created by a human under `ENT_FOLDER_ADMIN` at the job deploy (RG-8.3), and `platform-drift@` holds no feed permission; (2) `roles/securitycenter.findingsViewer` ("Security Center Findings Viewer", "Read access to findings", SCC access-control page) is granted on `fld-agentic-platform`, not the organisation: the job reads findings of projects under the folder, and no entitlement of 12 carries organisation IAM administration; an organisation-level grant, if ever needed, is a new record. Add the drift job to Eve's drift job's expected foreign-principal set (row 36 text; made in 25).
-- **VERIFY:** `tools/decision-need.sh ROW36-EXC` prints `SIGNED`; the record lists exactly the bindings RG-7.4 later reads.
+
+  **The record must also settle one question, because RG-7.4 locks the folder set and RG-7.5 commits it as the drift job's expected-principal file, after which nothing can be added without re-opening this signed record: does the job read the folder's resources by search, or by export?** Google's Cloud Asset Inventory roles page (read 2026-09-15) grants Cloud Asset Viewer viewing of asset metadata — `cloudasset.assets.searchAllResources` and `cloudasset.assets.searchAllIamPolicies` — and **not** `cloudasset.assets.exportResource`, which sits with Cloud Asset Owner together with the `cloudasset.feeds.*` permissions this record deliberately withholds. The two options, one of which the record names:
+
+  | Option | What `platform-drift@` gets | What it costs |
+  |---|---|---|
+  | **Search** (written as the default, `cai_access: search`) | `roles/cloudasset.viewer` only, as RG-7.2 binds; the job calls `searchAllResources` over `fld-agentic-platform` and writes the rows itself into `platform_registry.cai_resources` | Search returns indexed metadata, not the full resource JSON an export gives; RG-8.1's contract must say `search-all-resources`, and B-02's code must match |
+  | **Export** (`cai_access: export`) | a role carrying `cloudasset.assets.exportResource` — a **custom role holding only that permission**, never `roles/cloudasset.owner`, whose feed permissions this record excludes | Creating an organisation custom role needs a role administrator, which no entitlement in 12 carries after the bootstrap exception is withdrawn (the same lawful-path problem as RG-7.6); the record must then name the amendment to 12 and the approver, and the role must be added to RG-7.2's loop, RG-7.4's expected set and `ci/drift/expected-principals.yaml` before RG-7.5 is merged |
+
+  Default recorded on 2026-09-15: **search**, because it needs no role beyond the three RG-7.2 binds and no amendment to 12. If the record signs **export** instead, RG-7.2, RG-7.4, RG-7.5 and RG-8.1's `reads:` line are all changed in the same sitting, and `BD-16-4` records which was signed.
+- **VERIFY:** `tools/decision-need.sh ROW36-EXC` prints `SIGNED`; the record lists exactly the bindings RG-7.4 later reads, and names `cai_access` as `search` or `export` with the consequences above.
 - **ROLLBACK:** A superseding record; the bindings are removed first.
 - **EVIDENCE:** The record. E-xx: E-03. TISAX 4.2.1, 1.4.1.
 
@@ -941,9 +993,11 @@ gcloud pam grants create --entitlement="$ENT_FOLDER_ADMIN" --requested-duration=
 for r in roles/iam.securityReviewer roles/cloudasset.viewer roles/securitycenter.findingsViewer; do
   gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="serviceAccount:${SA_PLATFORM_DRIFT}" --role="$r" --condition=None --format="value(etag)"
 done
+gcloud iam roles describe roles/cloudasset.viewer --format="value(includedPermissions)" | tr ',' '\n' | grep -E 'searchAllResources|exportResource' || true
+gcloud iam roles describe roles/iam.securityReviewer --format="yaml(includedPermissions)" > "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-7.2-securityreviewer-permissions-v1.yaml"
 ```
 
-  Folder-level inheritance: "IAM roles granted on a folder resource are inherited by all project and folder resources in that folder" (Resource hierarchy page, cited by topology row 36). `roles/cloudasset.viewer` with `roles/serviceusage.serviceUsageConsumer` is what the Cloud Asset Inventory roles page names for viewing asset metadata, and `cloudasset.assets.exportResource` is the permission the folder export needs for the `RESOURCE` content type (same page, read 2026-09-15). That `roles/iam.securityReviewer` holds the `getIamPolicy` permissions across resource types is from the Resource Manager access-control pages as found on 2026-09-15; its full permission list is read on the day with `gcloud iam roles describe roles/iam.securityReviewer` and attached to the record.
+  Folder-level inheritance: "IAM roles granted on a folder resource are inherited by all project and folder resources in that folder" (Resource hierarchy page, cited by topology row 36). `roles/cloudasset.viewer` with `roles/serviceusage.serviceUsageConsumer` is what the Cloud Asset Inventory roles page names for **viewing** asset metadata: it carries `cloudasset.assets.searchAllResources` and `cloudasset.assets.searchAllIamPolicies`, and it does **not** carry `cloudasset.assets.exportResource`, which the folder export for the `RESOURCE` content type would need and which sits with Cloud Asset Owner alongside the `cloudasset.feeds.*` permissions `ROW36-EXC` withholds (same page, read 2026-09-15). That is why RG-7.1 makes the search-or-export choice before this binding is made: if the record signed **export**, the custom role it names is added to the loop above and to RG-7.4's expected set in this same sitting. The read-back above proves on the day which permissions the role actually holds. That `roles/iam.securityReviewer` holds the `getIamPolicy` permissions across resource types is from the Resource Manager access-control pages as found on 2026-09-15; its full permission list is read on the day by the second command and attached to the record.
 - **VERIFY:** RG-7.4.
 - **ROLLBACK:** `gcloud resource-manager folders remove-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="serviceAccount:${SA_PLATFORM_DRIFT}" --role=<role> --condition=None` under a grant.
 - **EVIDENCE:** Through RG-7.4; the `gcloud iam roles describe` output attached to `ROW36-EXC`. E-xx: E-06. TISAX 4.2.1.
@@ -981,7 +1035,7 @@ need FLD_AGENTIC_PLATFORM CORE_PROJECT ORG_ID SA_PLATFORM_DRIFT
 } | tee "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-7.4-platform-drift-roles-v1.txt"
 ```
 
-- **VERIFY:** Folder: exactly `roles/cloudasset.viewer`, `roles/iam.securityReviewer`, `roles/securitycenter.findingsViewer`. `CORE_PROJECT`: exactly `roles/agentregistry.viewer`, `roles/bigquery.jobUser`, `roles/serviceusage.serviceUsageConsumer`. Organisation: nothing. No user-managed key. No binding on the account itself (nobody can impersonate it; its jobs run as it through Cloud Run's attachment, RG-8.2). The set equals `ROW36-EXC`; `WRITER` on `platform_registry` was proven in RG-6.2. No write role on any registry (05 §6.3).
+- **VERIFY:** Folder: exactly `roles/cloudasset.viewer`, `roles/iam.securityReviewer`, `roles/securitycenter.findingsViewer` — plus the export custom role only if `ROW36-EXC` signed `cai_access: export` (RG-7.1). `CORE_PROJECT`: exactly `roles/agentregistry.viewer`, `roles/bigquery.jobUser`, `roles/serviceusage.serviceUsageConsumer`. Organisation: nothing. No user-managed key. **No binding on the account itself**, and this is the end state that holds for the life of the platform: nobody standing can impersonate `platform-drift@`, and its jobs run as it through Cloud Run's attachment (RG-8.2). The `iam.serviceAccounts.actAs` that deploying such a job and creating its scheduler job need is **not** an exception to this line: it arrives as a **project-level `roles/iam.serviceAccountUser` on `CORE_PROJECT` inside a PAM grant** (`ENT_DEPLOY_CREDENTIAL_HOLDER_CORE`, 12 PA-4.3: `roles/run.developer` and `roles/iam.serviceAccountUser`), held by a human for an hour and never by a binding on this account. Before RG-8.2 is unblocked, confirm that entitlement still carries `iam.serviceAccountUser` (`gcloud pam entitlements describe "$ENT_DEPLOY_CREDENTIAL_HOLDER_CORE" --format="yaml(privilegedAccess.gcpIamAccess.roleBindings)"`); if a binding on `platform-drift@` itself is ever found here instead, it is a drift finding and is removed. The set equals `ROW36-EXC`; `WRITER` on `platform_registry` was proven in RG-6.2. No write role on any registry (05 §6.3).
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** The file, `evidence_add RG-7.4 platform-drift-roles E-06 4.2.1 ...`. TISAX 4.2.1. Closes S048 for row 36.
 
@@ -999,7 +1053,9 @@ gcloud projects get-iam-policy "$LOGGING_PROJECT" --flatten="bindings[].members"
 mkdir -p "$PLATFORM_REPO_DIR/ci/drift"
 cat > "$PLATFORM_REPO_DIR/ci/drift/expected-principals.yaml" <<EOF
 # Expected platform principals and their exact bindings; the drift job (B-02) fails on any difference. Setup 16 RG-7.5.
-row_36: {principal: "serviceAccount:${SA_PLATFORM_DRIFT}", folder: [roles/cloudasset.viewer, roles/iam.securityReviewer, roles/securitycenter.findingsViewer], core_project: [roles/agentregistry.viewer, roles/bigquery.jobUser, roles/serviceusage.serviceUsageConsumer], datasets: {platform_registry: WRITER}}
+# cai_access records ROW36-EXC's signed choice (RG-7.1): search = roles/cloudasset.viewer only (searchAllResources);
+# export = that plus the custom role holding cloudasset.assets.exportResource, which must then also appear in folder[].
+row_36: {principal: "serviceAccount:${SA_PLATFORM_DRIFT}", cai_access: search, folder: [roles/cloudasset.viewer, roles/iam.securityReviewer, roles/securitycenter.findingsViewer], core_project: [roles/agentregistry.viewer, roles/bigquery.jobUser, roles/serviceusage.serviceUsageConsumer], datasets: {platform_registry: WRITER}, act_as: "none standing; ENT_DEPLOY_CREDENTIAL_HOLDER_CORE at deploy time only"}
 row_41: {s_org_writer: "${WO}", s_folder_writer: "${WF}", logging_project: [roles/logging.logWriter]}
 registry: {admin: ["serviceAccount:${SA_FACTORY_APPLY}"], editor: [], user: []}
 row_44: {status: BLOCKED, see: "RG-7.6"}
@@ -1007,7 +1063,7 @@ EOF
 ```
 
   `gcloud logging sinks describe` with `--organization` or `--folder` and the `writerIdentity` field are 14's commands. The pull request is reviewed as RG-2.6 (code owner of `/ci/`).
-- **VERIFY:** Both writer identities hold `roles/logging.logWriter` on `LOGGING_PROJECT` (topology row 41: "as the recording page specifies for a project destination"); the committed file names them; merged with the code owner's approval. A writer identity without its role is a fault in 14: stop and re-run 14's grant.
+- **VERIFY:** Both writer identities hold `roles/logging.logWriter` on `LOGGING_PROJECT` (topology row 41: "as the recording page specifies for a project destination"); the committed file names them; `row_36.cai_access` equals what `ROW36-EXC` signed and `row_36.folder` lists exactly the roles RG-7.4 read; merged with the code owner's approval. A writer identity without its role is a fault in 14: stop and re-run 14's grant. **This file is the lock**: once merged, adding a role to `platform-drift@` means re-opening the signed `ROW36-EXC` and amending this file in the same pull request, so a role the job will need must be settled at RG-7.1, not later.
 - **ROLLBACK:** A reverting pull request.
 - **EVIDENCE:** Table and merge as `<date>-RG-7.5-row-41-readback-v1`. E-xx: E-06. TISAX 5.2.4. Closes S048 for row 41 (made in 14, now asserted).
 
@@ -1051,7 +1107,11 @@ jobs:
     schedules:
       - {name: platform-reconcile-daily, cron: "0 6 * * *", time_zone: Europe/Paris}   # 05 section 6.2
       - {name: incremental, trigger: "within 15 minutes of an S3 feed event"}
-    reads: [S1 register -> platform_registry.register, S2 AGENT_REGISTRY, S3 CAI folder export -> platform_registry.cai_resources, S4 SCC findings export, S5 tbd]
+    # S3 follows ROW36-EXC's cai_access (16 RG-7.1). With cai_access: search the job calls
+    # cloudasset.assets.searchAllResources over the folder and writes the rows itself; it has no
+    # cloudasset.assets.exportResource and must never call the export API. With cai_access: export,
+    # this line becomes "CAI folder export" and the custom role is in expected-principals.yaml.
+    reads: [S1 register -> platform_registry.register, S2 AGENT_REGISTRY, S3 CAI folder search-all-resources -> platform_registry.cai_resources, S4 SCC findings through the SCC API with CORE_PROJECT as quota project, S5 tbd]
     writes: [platform_registry.reconciliation (400-day expiry, daily export to the evidence lake), SIEM, ladder-state page, automated pull request setting status suspended]
     never: [any registry write (deletion of a shadow card is a CI pipeline run), any model call]
     heartbeat: "organisation channel; the witness while any Tier P row exists (05 section 6.2)"
@@ -1061,7 +1121,7 @@ jobs:
 git -C "$PLATFORM_REPO_DIR" add ci/jobs/platform-jobs.yaml
 git -C "$PLATFORM_REPO_DIR" commit -m "RG-8.1 platform-drift and platform-reconcile job contract and schedules"
 git -C "$PLATFORM_REPO_DIR" push -u origin rg-8-jobs
-gh pr create --repo "$repo" --head rg-8-jobs --title "RG-8.1 drift and reconciliation job contract" --body "Code is B-02 (BLOCKED)."
+gh pr create --repo "$PLATFORM_REPO_SLUG" --head rg-8-jobs --title "RG-8.1 drift and reconciliation job contract" --body "Code is B-02 (BLOCKED)."
 penv_set DRIFT_JOB "platform-drift"
 penv_set RECONCILE_JOB "platform-reconcile"
 ```
@@ -1072,7 +1132,7 @@ penv_set RECONCILE_JOB "platform-reconcile"
 
 ### RG-8.2 Deploy the two jobs — **BLOCKED**
 
-- **WHO:** Platform owner under an `ENT_PROJECT_REPAIR_CORE` grant (second human approves).
+- **WHO:** Platform owner under an `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE` grant (12 PA-4.3: `roles/run.developer` and `roles/iam.serviceAccountUser` on `CORE_PROJECT`), which is the entitlement that carries both the deploy right and the `actAs` on `platform-drift@`; second human approves.
 - **WHERE:** Shell.
 - **ACTION:** **BLOCKED**: Needs: the drift job and reconciliation job code, their table schemas for `platform_registry` (`register`, `cai_resources`, `reconciliation` with 400-day expiry) and their images built under `ci/BUILD-CONTRACT.md` and attested (plan §8 "Drift job, reconciliation job, Data Access canary"; README B-02). Commit it in: `PLATFORM_REPO_REMOTE`, `jobs/platform-drift/`, `jobs/platform-reconcile/`. Unblocked by: the image digests in `AR_PLATFORM` with green CI. Gate waiting: drift evidence for G3 and G19 (38); the reconciliation report the TISAX export attaches (05 §8.1). Until then: `checkpoint RG-8.2 BLOCKED - - "B-02 drift and reconciliation code"`. The commands, from the `gcloud run jobs deploy` reference (GA; `--image`, `--region`, `--service-account`, `--task-timeout`, `--max-retries`, `--binary-authorization` "must be set to 'default'", `--labels`; read 2026-09-15), to run once unblocked:
 
@@ -1082,19 +1142,19 @@ gcloud run jobs deploy "$DRIFT_JOB" --image="${AR_PLATFORM}/platform-drift@sha25
 gcloud run jobs deploy "$RECONCILE_JOB" --image="${AR_PLATFORM}/platform-reconcile@sha256:<digest>" --region="$REGION" --service-account="$SA_PLATFORM_DRIFT" --task-timeout=3600s --max-retries=1 --binary-authorization=default --labels=tier=core,agent=platform-reconcile --project="$CORE_PROJECT"
 ```
 
-  Deploying a job that runs as `platform-drift@` needs `iam.serviceAccounts.actAs` on it for the deployer, taken inside the grant (10 CP-6.2 lists the Artifact Registry reader for `CORE_PROJECT`'s Cloud Run service agent, made at this step).
+  Deploying a job that runs as `platform-drift@` needs `iam.serviceAccounts.actAs` on it for the deployer. It comes from the **project-level** `roles/iam.serviceAccountUser` inside the `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE` grant, for the hour of the deploy — **never** as a binding on `platform-drift@` itself, which RG-7.4 forbids and the drift job's expected-principal file (RG-7.5, `act_as: none standing`) would flag. Check the entitlement before requesting: `gcloud pam entitlements describe "$ENT_DEPLOY_CREDENTIAL_HOLDER_CORE" --format="yaml(privilegedAccess.gcpIamAccess.roleBindings)" | grep -q "roles/iam.serviceAccountUser" || { echo "PENDING on 12 PA-4.3"; false; }`. Also at this step: `securitycenter.googleapis.com` must be enabled in `CORE_PROJECT` (RG-0.1's re-run line on 10 CP-1.6) or the job's S4 read fails at the first run; and 10 CP-6.2's Artifact Registry reader for `CORE_PROJECT`'s Cloud Run service agent must be in place.
 - **VERIFY:** `gcloud run jobs describe "$DRIFT_JOB" --region="$REGION" --project="$CORE_PROJECT" --format="value(template.template.serviceAccount)"` prints `SA_PLATFORM_DRIFT` for both jobs; one manual execution of each writes its first report and `platform_registry.reconciliation` holds a zero-difference row set for the empty fleet.
 - **ROLLBACK:** `gcloud run jobs delete <job> --region="$REGION" --project="$CORE_PROJECT"`.
 - **EVIDENCE:** Describe output and first run as `<date>-RG-8.2-jobs-deploy-v1`. E-xx: E-06. TISAX 5.2.4, 1.3.1.
 
 ### RG-8.3 Schedules, invoker, folder feed and absence alarm — **BLOCKED**
 
-- **WHO:** Platform owner under `ENT_PROJECT_REPAIR_CORE` (schedules, invoker) and `ENT_FOLDER_ADMIN` (the folder feed); approver the second human.
+- **WHO:** Platform owner under `ENT_PROJECT_REPAIR_CORE` (the scheduler jobs and the invoker bindings: its bundle carries `roles/cloudscheduler.admin`), `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE` (the `actAs` on `platform-drift@` that `--oauth-service-account-email` needs, exactly as RG-8.2) and `ENT_FOLDER_ADMIN` (the folder feed); approver the second human.
 - **WHERE:** Shell.
 - **ACTION:** **BLOCKED**: Needs: RG-8.2 deployed. Commit it in: nothing beyond RG-8.1's contract. Unblocked by: RG-8.2's verify. Gate waiting: the "reconciliation live" part of the Tier R record (17 lists it BLOCKED). Until then: `checkpoint RG-8.3 BLOCKED - - "needs RG-8.2"`. Commands, from "Execute jobs on a schedule" (Cloud Run page, read 2026-09-15: `gcloud scheduler jobs create http … --uri="https://run.googleapis.com/v2/projects/PROJECT-ID/locations/CLOUD_RUN_REGION/jobs/JOB-NAME:run" --http-method POST --oauth-service-account-email …`; the account needs `roles/run.invoker`) and `gcloud asset feeds create` (`--folder`, `--asset-types`, `--content-type`, `--pubsub-topic`; read 2026-09-15):
 
 ```bash
-need CORE_PROJECT REGION SA_PLATFORM_DRIFT DRIFT_JOB RECONCILE_JOB FLD_AGENTIC_PLATFORM
+need CORE_PROJECT CORE_PROJECT_NUMBER REGION SA_PLATFORM_DRIFT DRIFT_JOB RECONCILE_JOB FLD_AGENTIC_PLATFORM ENT_DEPLOY_CREDENTIAL_HOLDER_CORE
 gcloud run jobs add-iam-policy-binding "$DRIFT_JOB" --region="$REGION" --member="serviceAccount:${SA_PLATFORM_DRIFT}" --role="roles/run.invoker" --project="$CORE_PROJECT"
 gcloud run jobs add-iam-policy-binding "$RECONCILE_JOB" --region="$REGION" --member="serviceAccount:${SA_PLATFORM_DRIFT}" --role="roles/run.invoker" --project="$CORE_PROJECT"
 gcloud scheduler jobs create http platform-drift-daily --location="$REGION" --schedule="30 5 * * *" --time-zone="Europe/Paris" --uri="https://run.googleapis.com/v2/projects/${CORE_PROJECT}/locations/${REGION}/jobs/${DRIFT_JOB}:run" --http-method=POST --oauth-service-account-email="$SA_PLATFORM_DRIFT" --project="$CORE_PROJECT"
@@ -1103,7 +1163,13 @@ gcloud pubsub topics create platform-cai-feed --project="$CORE_PROJECT"
 gcloud asset feeds create platform-drift-folder --folder="$FLD_AGENTIC_PLATFORM" --content-type=iam-policy --asset-types=".*" --pubsub-topic="projects/${CORE_PROJECT}/topics/platform-cai-feed" --billing-project="$CORE_PROJECT"
 ```
 
-  Also at this step: a resource-content feed restricted to the asset types of 05 §6.1 S3; the Cloud Asset service agent's publish right on the topic (*unverified* on 2026-09-15: the feed page did not name the role or the service agent's project; read it on the day); the 26-hour absence alert of 04 §2.6 on the drift report metric to `platform-security@`'s channel (15); the witness heartbeat from the first Tier P row (27's pattern).
+  Two identity facts settle before the scheduler jobs are created, read on 2026-09-15 from Cloud Scheduler's "Use authentication with HTTP targets" page. (1) Attaching a service account to a scheduler job with `--oauth-service-account-email` needs `iam.serviceAccounts.actAs` on that account for the operator ("To get the permission that you need to attach a service account to a resource, ask your administrator to grant you the Service Account User (`roles/iam.serviceAccountUser`) IAM role on the service account") — taken here from `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE`'s project-level role, never as a binding on `platform-drift@` (RG-7.4). (2) The Cloud Scheduler **service agent** must keep its own role: "Don't revoke the Cloud Scheduler Service Agent role (`roles/cloudscheduler.serviceAgent`) from the Cloud Scheduler service agent on your project. Doing so results in `403` responses to endpoints requiring authentication, even if your job's service account has the appropriate role." Check it before the create and record the output, because 13's member constraints and 12's standing-role sweep both touch service agents:
+
+```bash
+gcloud projects get-iam-policy "$CORE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:service-${CORE_PROJECT_NUMBER}@gcp-sa-cloudscheduler.iam.gserviceaccount.com" --format="value(bindings.role)"
+```
+
+  It must print `roles/cloudscheduler.serviceAgent`. Nothing on that page requires `roles/iam.serviceAccountTokenCreator` for the service agent on an OAuth HTTP target; if the forced run in VERIFY returns `403` with a token error, read the page again on the day before granting anything, and record what was needed. Also at this step: a resource-content feed restricted to the asset types of 05 §6.1 S3; the Cloud Asset service agent's publish right on the topic (*unverified* on 2026-09-15: the feed page did not name the role or the service agent's project; read it on the day); the 26-hour absence alert of 04 §2.6 on the drift report metric to `platform-security@`'s channel (15); the witness heartbeat from the first Tier P row (27's pattern).
 - **VERIFY:** `gcloud scheduler jobs list --location="$REGION" --project="$CORE_PROJECT"` shows both, `ENABLED`; a forced run (`gcloud scheduler jobs run platform-drift-daily --location="$REGION" --project="$CORE_PROJECT"`) starts an execution; `gcloud asset feeds list --folder="$FLD_AGENTIC_PLATFORM"` shows the feed; an IAM change on a nonprod folder produces a feed message within minutes.
 - **ROLLBACK:** `gcloud scheduler jobs delete`, `gcloud asset feeds delete`, `gcloud pubsub topics delete`, remove the invoker bindings.
 - **EVIDENCE:** Lists and the forced run as `<date>-RG-8.3-schedules-v1`. E-xx: E-06. TISAX 5.2.4.
@@ -1140,9 +1206,9 @@ gcloud asset feeds create platform-drift-folder --folder="$FLD_AGENTIC_PLATFORM"
 - **ACTION:** Mo acts only through a merged pull request with two human reviewers (05 §9.6, plan §2); its ingestion bot (40) may open pull requests and may never approve or hold write.
 
 ```bash
-gh api "repos/$repo/collaborators?affiliation=all" --paginate --jq '.[] | select(.type != "User" or (.role_name | test("write|maintain|admin"))) | [.login, .type, .role_name] | @tsv'
-gh api "orgs/${repo%%/*}/installations" --jq '.installations[] | [.app_slug, .repository_selection, (.permissions | tostring)] | @tsv'
-gh api "repos/$repo/actions/permissions/workflow" --jq '.can_approve_pull_request_reviews'
+gh api "repos/$PLATFORM_REPO_SLUG/collaborators?affiliation=all" --paginate --jq '.[] | select(.type != "User" or (.role_name | test("write|maintain|admin"))) | [.login, .type, .role_name] | @tsv'
+gh api "orgs/${PLATFORM_REPO_SLUG%%/*}/installations" --jq '.installations[] | [.app_slug, .repository_selection, (.permissions | tostring)] | @tsv'
+gh api "repos/$PLATFORM_REPO_SLUG/actions/permissions/workflow" --jq '.can_approve_pull_request_reviews'
 ```
 
   `GET /orgs/{org}/installations` needs an organisation owner; the second human runs it if the platform owner is not one.
@@ -1164,7 +1230,7 @@ d=$(date -u +%Y-%m-%d)
 printf '| BD-16-1 | %s | 16 RG-5.3 to RG-7.5 | MOD | platform-core by hand: registry IAM, write alert, platform_registry, row 36 roles, expected principals | project %s; folder %s | RG-2.6, RG-3.1, RG-8.1 merge commits; ROW36-EXC | registry admin factory-apply@ only; viewers platform-readers@, eve-owners@, platform-drift@; alert policy; dataset platform_registry EU; row 36 folder and project roles | BLOCKED: zero-diff checker is 17 | n/a (no project created) | PAM grants RG-5.2, RG-5.7, RG-7.2 | superseded by terraform import and an empty plan (B-01) | open |\n' "$d" "$CORE_PROJECT" "$FLD_AGENTIC_PLATFORM" >> "$DEVIATION_REGISTER"
 printf '| BD-16-2 | %s | 16 RG-3.6 | DEV | register CI rules R-01 to R-12 not implemented (B-03); signed manual parse by the security reviewer and the second human in force | platform repository | RG-3.1 | parse files under decisions/register-parses/ | n/a | n/a | second human; security reviewer when appointed | closed by RG-3.5 passing | open |\n' "$d" >> "$DEVIATION_REGISTER"
 printf '| BD-16-3 | %s | 16 RG-5.6 | DEV | registry write alert in CORE_PROJECT, not LOGGING_PROJECT as 05 section 4 writes; pipeline_run_id half missing | project %s | log-based alert page read 2026-09-15 | one policy | n/a | n/a | none: SD-01 | 17 adds the CI half; 05 section 4 corrected | open |\n' "$d" "$CORE_PROJECT" >> "$DEVIATION_REGISTER"
-printf '| BD-16-4 | %s | 16 RG-6.2, RG-7.1 | DEV | accepted limits: WRITER on platform_registry can delete rows (daily export to the evidence lake mitigates, B-02); findingsViewer at folder not organisation; CAI feed created by a human under ENT_FOLDER_ADMIN, not by platform-drift@ | %s | ROW36-EXC | as RG-7.4 | n/a | n/a | ROW36-EXC signatories | security reviewer ratification (RATIFY-SR) | open |\n' "$d" "$FLD_AGENTIC_PLATFORM" >> "$DEVIATION_REGISTER"
+printf '| BD-16-4 | %s | 16 RG-6.2, RG-7.1 | DEV | open limits: WRITER on platform_registry can delete rows and NOTHING mitigates it yet (the daily export to the evidence lake is inside B-02, BLOCKED: this row closes only when that export runs); platform-drift@ reads folder resources by searchAllResources, not by export, because cloudasset.viewer does not carry cloudasset.assets.exportResource (ROW36-EXC cai_access); findingsViewer at folder not organisation; CAI feed created by a human under ENT_FOLDER_ADMIN, not by platform-drift@ | %s | ROW36-EXC | as RG-7.4 | n/a | n/a | ROW36-EXC signatories | B-02 export live, then security reviewer ratification (RATIFY-SR) | open |\n' "$d" "$FLD_AGENTIC_PLATFORM" >> "$DEVIATION_REGISTER"
 printf '| BD-16-5 | %s | 16 RG-1.2 | DEV | CODEOWNERS for /ci/, /contract/, /register/schema/ name the second human until the security reviewer is appointed | platform repository | RG-1.2 merge | CODEOWNERS lines | n/a | n/a | second human | security reviewer appointed: CODEOWNERS pull request | open |\n' "$d" >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" commit -m "registers: BD-16-1 to BD-16-5 (setup 16)"
@@ -1193,16 +1259,16 @@ sitting_end
 
 ## Verification checklist for this part
 
-- [ ] CODEOWNERS covers `/identity/` (second human) and `/ci/`, `/contract/`, `/register/schema/`, `register/models.yaml` (security reviewer or second human); no CODEOWNERS errors (RG-1.1, RG-1.2).
+- [ ] CODEOWNERS covers `/identity/` (second human) and `/ci/`, `/contract/`, `/register/schema/`, `register/models.yaml` (security reviewer or second human), written as `@login` from the collaborator listing, never as an email; the errors read on the branch **before** the merge printed `[]` and the read after the merge prints `0` (RG-1.1, RG-1.2).
 - [ ] GitHub Actions cannot approve pull requests, at repository and organisation level (RG-1.3).
 - [ ] `identity/git-humans.yaml` merged; every human login has an appointment record (RG-1.4).
-- [ ] Register, folders, operators, models and manifest schemas merged; every fixture gives its expected result; `REGISTER_PATH`, `MANIFEST_SCHEMA_PATH` set (RG-2.1 to RG-2.6).
+- [ ] Register, folders, operators, models and manifest schemas merged; the 18 fixture files exist (14 register, 3 contract, 1 operators — the count assertion passed) and the run printed 18 lines, each `PASS-OK` or `FAIL-OK`; `REGISTER_PATH`, `MANIFEST_SCHEMA_PATH` set (RG-2.1 to RG-2.6).
 - [ ] `ci/register-rules.md` (R-01 to R-12) and the 24 rule fixtures merged (RG-3.1, RG-3.2); RG-3.3 to RG-3.5 BLOCKED and indexed; the manual parse procedure in force (RG-3.6, `BD-16-2`).
 - [ ] `folders.yaml` equals the live organisation; the operators convention merged; the control-group list needs the second human and a second approval (RG-4.1 to RG-4.3).
 - [ ] `AGENT_REGISTRY` set; only `factory-apply@` holds `agentregistry.admin`; viewers exactly `platform-readers@`, `eve-owners@`, `platform-drift@`; no editor or user; registry reads configured for audit (RG-5.1 to RG-5.5).
-- [ ] The write alert exists and paged within 5 minutes on the drill; `DR-16-1` opened (RG-5.6, RG-5.7) — or both `PENDING` on 15 with the re-run line.
+- [ ] The write alert exists and paged within 5 minutes on the drill, which was run under a fresh `ENT_PROJECT_REPAIR_CORE` grant (the only entitlement carrying `agentregistry.admin`), witnessed by the second human; `DR-16-1` opened (RG-5.6, RG-5.7) — or both `PENDING` on 15 with the re-run line.
 - [ ] `platform_registry` exists in `EU` with `WRITER` for `platform-drift@` only (RG-6.1, RG-6.2).
-- [ ] `ROW36-EXC` signed; `platform-drift@` holds exactly the six roles and the dataset writer; row 41 asserted in `ci/drift/expected-principals.yaml`; row 44 BLOCKED and indexed (RG-7.1 to RG-7.6).
+- [ ] `ROW36-EXC` signed, naming `cai_access` (search or export) and the consequences of that choice; `platform-drift@` holds exactly the six roles and the dataset writer, with **no binding on the account itself** (`actAs` comes from `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE` at deploy time only); row 41 and `cai_access` asserted in `ci/drift/expected-principals.yaml`; row 44 BLOCKED and indexed (RG-7.1 to RG-7.6).
 - [ ] Job contract merged; `DRIFT_JOB`, `RECONCILE_JOB` set; deploy and schedules BLOCKED (RG-8.1 to RG-8.3).
 - [ ] Ladder publication contract merged; publish workflow BLOCKED; no machine or Mo identity holds write (RG-9.1 to RG-9.3).
 - [ ] `BD-16-1` to `BD-16-5` committed; re-run and BLOCKED indexes updated; `sitting_end` OK (RG-10.1, RG-10.2).
@@ -1244,8 +1310,8 @@ Deferred:
 
 - `check-jsonschema --check-metaschema` flag name and its success message (RG-2.2).
 - Whether `protocolBinding=http-json` is accepted for an endpoint entry (RG-5.7).
-- Whether `ENT_PROJECT_REPAIR_CORE` (12) includes an alert-policy editing role (RG-5.6) and whether `ENT_FOLDER_ADMIN` carries `roles/agentregistry.admin` as 04 §5.2 lists (RG-5.7 reads it first).
-- `gcloud pam grants withdraw` as the command to end a grant early (RG-5.2).
+- Settled on 2026-09-15, kept here as what each step reads on the day: `ENT_PROJECT_REPAIR_CORE` carries `roles/monitoring.admin` (RG-5.6's alert policy) and `roles/agentregistry.admin` (RG-5.7's drill write), and `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE` carries `roles/iam.serviceAccountUser` (RG-8.2 and RG-8.3's `actAs`) — all three read from 12's catalogue, all three re-read by their step's guard before the grant is requested. `ENT_FOLDER_ADMIN` does not carry `roles/agentregistry.admin`, whatever 04 §5.2's prose says.
+- Whether the Cloud Scheduler service agent needs anything beyond `roles/cloudscheduler.serviceAgent` for an OAuth HTTP target: the authentication page names no token-creator requirement (read 2026-09-15); RG-8.3 checks the service-agent role and records what a `403` needs, if one comes.
 - The full permission list of `roles/iam.securityReviewer` (Google's role reference page did not render for the writer; RG-7.2 attaches `gcloud iam roles describe` output).
 - Whether registry `ADMIN_READ` Data Access entries arrive (08 §8 already lists it; RG-5.5 records the result).
 - The Cloud Asset service agent and role needed to publish a folder feed to a topic in `CORE_PROJECT` (RG-8.3).
@@ -1255,7 +1321,7 @@ Deferred:
 
 ## Sources
 
-Read on 2026-09-15: [gcloud agent-registry](https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry); [gcloud agent-registry services create](https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry/services/create); [services delete](https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry/services/delete); [Agent Registry setup](https://docs.cloud.google.com/agent-registry/setup); [Agent Registry roles and permissions](https://docs.cloud.google.com/agent-registry/roles-permissions); [Agent Registry locations](https://docs.cloud.google.com/agent-registry/locations); [gcloud pam grants create](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/create); [gcloud pam grants search](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/search); [gcloud pam entitlements create](https://docs.cloud.google.com/sdk/gcloud/reference/pam/entitlements/create); [PAM create entitlements](https://docs.cloud.google.com/iam/docs/pam-create-entitlements); [PAM approve or deny grants](https://docs.cloud.google.com/iam/docs/pam-approve-deny-grants); [Log-based alerting policies](https://docs.cloud.google.com/logging/docs/alerting/log-based-alerts); [Cloud Asset Inventory roles and permissions](https://docs.cloud.google.com/asset-inventory/docs/roles-permissions); [gcloud asset feeds create](https://docs.cloud.google.com/sdk/gcloud/reference/asset/feeds/create); [Monitoring asset changes](https://docs.cloud.google.com/asset-inventory/docs/monitoring-asset-changes); [SCC access control](https://docs.cloud.google.com/security-command-center/docs/access-control-org); [SDP profiling at organisation and folder level](https://docs.cloud.google.com/sensitive-data-protection/docs/profile-org-folder); [Execute Cloud Run jobs on a schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule); [gcloud run jobs deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/deploy); [bq command-line reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference); GitHub REST [workflow permissions](https://docs.github.com/en/rest/actions/permissions), [pull request reviews](https://docs.github.com/en/rest/pulls/reviews), [branch protection status checks](https://docs.github.com/en/rest/branches/branch-protection); PyPI [check-jsonschema](https://pypi.org/project/check-jsonschema/) and [PyYAML](https://pypi.org/project/PyYAML/). Cited through 03 and 10, not re-read: GitHub "About code owners", branch protection body fields, WIF deployment pipelines, the Resource Manager folder access-control page, BigQuery dataset naming.
+Read on 2026-09-15: [gcloud agent-registry](https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry); [gcloud agent-registry services create](https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry/services/create); [services delete](https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry/services/delete); [Agent Registry setup](https://docs.cloud.google.com/agent-registry/setup); [Agent Registry roles and permissions](https://docs.cloud.google.com/agent-registry/roles-permissions); [Agent Registry locations](https://docs.cloud.google.com/agent-registry/locations); [gcloud pam grants create](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/create); [gcloud pam grants search](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/search); [gcloud pam grants revoke](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/revoke); [Cloud Scheduler: use authentication with HTTP targets](https://docs.cloud.google.com/scheduler/docs/http-target-auth); [gcloud pam entitlements create](https://docs.cloud.google.com/sdk/gcloud/reference/pam/entitlements/create); [PAM create entitlements](https://docs.cloud.google.com/iam/docs/pam-create-entitlements); [PAM approve or deny grants](https://docs.cloud.google.com/iam/docs/pam-approve-deny-grants); [Log-based alerting policies](https://docs.cloud.google.com/logging/docs/alerting/log-based-alerts); [Cloud Asset Inventory roles and permissions](https://docs.cloud.google.com/asset-inventory/docs/roles-permissions); [gcloud asset feeds create](https://docs.cloud.google.com/sdk/gcloud/reference/asset/feeds/create); [Monitoring asset changes](https://docs.cloud.google.com/asset-inventory/docs/monitoring-asset-changes); [SCC access control](https://docs.cloud.google.com/security-command-center/docs/access-control-org); [SDP profiling at organisation and folder level](https://docs.cloud.google.com/sensitive-data-protection/docs/profile-org-folder); [Execute Cloud Run jobs on a schedule](https://docs.cloud.google.com/run/docs/execute/jobs-on-schedule); [gcloud run jobs deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/deploy); [bq command-line reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference); GitHub REST [workflow permissions](https://docs.github.com/en/rest/actions/permissions), [pull request reviews](https://docs.github.com/en/rest/pulls/reviews), [branch protection status checks](https://docs.github.com/en/rest/branches/branch-protection) (`checks` is "The list of status checks to require in order to merge into this branch" and replaces the stored list), [About code owners](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) ("You cannot use an email address to refer to a managed user account"; "the last matching pattern takes the most precedence"); PyPI [check-jsonschema](https://pypi.org/project/check-jsonschema/) and [PyYAML](https://pypi.org/project/PyYAML/). Cited through 03 and 10, not re-read: WIF deployment pipelines, the Resource Manager folder access-control page, BigQuery dataset naming.
 
 ## Related
 

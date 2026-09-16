@@ -79,7 +79,8 @@ flowchart TD
 - [ ] File 17: `TIER_R_RECORD` exists (the sandbox is not needed before Tier R, and 23's twin run needs FM-VERIFIER).
 - [ ] File 09: every `FLD_*` variable set. File 10: `CICD_PROJECT` and `CORE_PROJECT` set (quota projects for PAM and the policy script).
 - [ ] File 08: W-2 done, so custody records go straight to the witness through WO-3.3; otherwise paper plus a same-day scan to `EVIDENCE_INTERIM_LOCATION` (SD-27) and a line in the WO-3.1 backlog.
-- [ ] Each sandbox super admin has a workstation (or, if the platform owner is one of them, a **separate macOS user account** on his workstation) with `gcloud`, `jq`, `git`, `dig`, `whois`, file 01's helpers, and a clean browser profile per sandbox account. No sandbox credential ever enters the platform owner's `GCLOUD_CONFIG_NAME` configuration.
+- [ ] Each sandbox super admin has a workstation (or, if the platform owner is one of them, a **separate macOS user account** on his workstation) with `gcloud`, `jq`, `yq`, `git`, `dig`, `whois`, file 01's helpers, and a clean browser profile per sandbox account. `yq` is the jq wrapper for YAML that transcodes to JSON, prints JSON by default and forwards every other argument to jq; it is the single YAML tool of this set (19 §2, 20 GG-0.3, *Assumption:* 01's tool list gains it). **No step here uses Ruby**: current macOS no longer ships a Ruby runtime, so nothing load-bearing may depend on one. The platform owner's own workstation needs `yq` as well, for SB-8.2 and SB-8.4.
+- [ ] No sandbox credential ever enters the platform owner's `GCLOUD_CONFIG_NAME` configuration. The separation is the one 01 PR-2.2 and PR-3.1 build, not a habit: `~/.platform-env` exports `CLOUDSDK_ACTIVE_CONFIG_NAME="$GCLOUD_CONFIG_NAME"` (which selects the active configuration for every gcloud invocation of that shell, ahead of whatever configuration is activated on the machine) and `CLOUDSDK_CONFIG="$HOME/.config/gcloud-$GCLOUD_CONFIG_NAME"` (which is where that configuration's credentials are written) whenever `GCLOUD_CONFIG_NAME` is set. The sandbox copy's value `sandbox` therefore both selects the configuration and gives it its own credential directory. SB-1.3 proves both, and no sandbox step may run in a shell that did not source the sandbox copy.
 - [ ] A corporate safe with its sign-out log; four tamper-evident envelopes and two spares.
 
 ## People
@@ -108,7 +109,7 @@ DC-2.6 allows the platform owner and the second operator to be the two sandbox s
 
 ## The sandbox copy of the variables file
 
-Each sandbox super admin keeps, on his own workstation (or separate macOS user), a `~/.platform-env` installed from the committed template of 01 PR-2.2, holding **only** the sandbox section below and a read-only clone of the platform repository. It holds no secret and is never copied to the platform owner's configuration. A dedicated gcloud configuration named `sandbox` (set as `GCLOUD_CONFIG_NAME` in this copy) with no project is used for every sandbox command, so `penv_guard` works unchanged.
+Each sandbox super admin keeps, on his own workstation (or separate macOS user), a `~/.platform-env` installed from the committed template of 01 PR-2.2, holding **only** the sandbox section below and a read-only clone of the platform repository. It holds no secret and is never copied to the platform owner's configuration. A dedicated gcloud configuration named `sandbox` (set as `GCLOUD_CONFIG_NAME` in this copy) with no project is used for every sandbox command. `GCLOUD_CONFIG_NAME` is not a gcloud variable: 01's template turns that one value into the two gcloud does read, `CLOUDSDK_ACTIVE_CONFIG_NAME=sandbox` (the active configuration of every gcloud invocation in the shell) and `CLOUDSDK_CONFIG=$HOME/.config/gcloud-sandbox` (the directory that holds its credentials). So `penv_guard` works unchanged, and a sandbox sign-in cannot land in another configuration — including the platform owner's, when he is one of the two sandbox super admins under DC-2.6.
 
 | Variable | Set in | Sandbox copy | Tenant copy |
 |---|---|---|---|
@@ -140,6 +141,7 @@ The sandbox is a door into the nonprod folders: its customer id is admitted ther
 
 | Situation | Do |
 |---|---|
+| `gcloud config configurations list` does not show `sandbox` active, or `gcloud auth list` shows a production address on a sandbox workstation | Stop before any further sandbox command. Run nothing else in that shell; `gcloud auth revoke <the production address>` in it, open a new shell, source the sandbox copy and re-run SB-1.3's VERIFY. If a sandbox credential was obtained while another configuration was active, revoke it there too (`CLOUDSDK_CONFIG` names the directory that holds it), record a build-log entry naming both configurations, and tell the second human: it is a separation failure, not a typing slip. |
 | The sign-up says the domain is already in use (SB-2.1) | Stop. 04 PU-2.5 finds out which Google account holds it; after removal wait 24 hours (7 days if bought through a third party) and restart SB-2.1. |
 | TXT verification not recognised after 72 hours (SB-2.2) | Re-read the record with `dig`; correct the host (`@` or blank); do not add a second verification method without recording it. |
 | Sandbox super admin 1 loses a key before SB-3.1 is done | Only one super admin exists and self-recovery is still On (it is turned Off only in SB-5.1): recover with the remaining key; if both are lost, use the recovery the console offers with the second human present, record a custody incident, and re-run SB-2.6. |
@@ -211,12 +213,25 @@ penv_set SANDBOX_SA_1_EMAIL "<value from 03 DC-2.6>"
 penv_set SANDBOX_SA_2_EMAIL "<value from 03 DC-2.6>"
 penv_set SECOND_HUMAN_EMAIL "<value from 03>"
 source "$HOME/.platform-env"
-gcloud config configurations create sandbox --no-activate
+env -u CLOUDSDK_ACTIVE_CONFIG_NAME gcloud config configurations create sandbox --no-activate
+gcloud config unset project
 ```
 
-- **VERIFY:** In a new shell with the file sourced: `penv_guard` prints nothing; `gcloud config get project` prints nothing; `grep -c '^export ORG_ID=\|^export DIRECTORY_CUSTOMER_ID=' ~/.platform-env` prints `0` (no production identifier in the sandbox copy).
-- **ROLLBACK:** `gcloud config configurations delete sandbox` after activating another configuration; remove the file.
-- **EVIDENCE:** Build-log line SB-1.3 listing the names set. E-xx: none. TISAX 5.3.1.
+  The create runs with `CLOUDSDK_ACTIVE_CONFIG_NAME` removed from its environment because the second `source` already set it to `sandbox`, a configuration that does not exist until this line (01 PR-3.1 runs the same way). `--no-activate` is correct and must stay: the sourced file selects the configuration per shell through `CLOUDSDK_ACTIVE_CONFIG_NAME`, which takes precedence over whatever configuration is activated on the machine, so the machine-wide default is left untouched — on the platform owner's workstation that default is his production configuration, and it must not change. The VERIFY below proves the selection took effect; do not treat sourcing the file as proof on its own.
+- **VERIFY:** In a **new** shell with the sandbox copy sourced:
+
+```bash
+gcloud config configurations list --format='value(name,is_active)'
+gcloud auth list --format='value(account)'
+gcloud config get project 2>&1
+echo "$CLOUDSDK_CONFIG"
+penv_guard && echo "guard clean"
+grep -c '^export ORG_ID=\|^export DIRECTORY_CUSTOMER_ID=' "$HOME/.platform-env"
+```
+
+  Expected: a line `sandbox` followed by `True`, and every other configuration `False` (if the line reads `False`, or the active one is another name, stop: the file was not sourced in this shell, or `GCLOUD_CONFIG_NAME` was not written); **no account at all** at this point, and from SB-6.2 on only addresses ending in `@SANDBOX_DOMAIN` — a production address in `gcloud auth list` on a sandbox workstation is a stop and a build-log entry; no project value (an empty line or `(unset)`); `CLOUDSDK_CONFIG` is `$HOME/.config/gcloud-sandbox`, so the credentials of this configuration have their own directory; `guard clean`; `0` (no production identifier in the sandbox copy).
+- **ROLLBACK:** From a shell that did **not** source the sandbox copy: `CLOUDSDK_CONFIG="$HOME/.config/gcloud-sandbox" gcloud config configurations delete sandbox`, then `rm -rf "$HOME/.config/gcloud-sandbox"`; remove `~/.platform-env`. Nothing outside that directory is touched.
+- **EVIDENCE:** Build-log line SB-1.3 listing the names set, with the VERIFY output (configuration name and active flag, empty account list, `CLOUDSDK_CONFIG` path). E-xx: none. TISAX 5.3.1.
 
 ### SB-1.4 Confirm DNS custody of the sandbox domain
 
@@ -293,11 +308,11 @@ dig +short MX "$SANDBOX_DOMAIN"
 
 ```bash
 penv_set SANDBOX_CUSTOMER_ID "<Customer ID from Account settings > Profile>"
-case "$SANDBOX_CUSTOMER_ID" in C0*) echo "form ok";; *) echo "STOP: not a Workspace customer id";; esac
+printf '%s\n' "$SANDBOX_CUSTOMER_ID" | grep -Eq '^C[0-9A-Za-z]+$' && echo "form ok" || echo "STOP: a Workspace customer id begins with C; re-read Account settings > Profile"
 ```
 
-- **VERIFY:** `form ok`; Subscriptions shows the ordered edition. The platform owner later confirms `SANDBOX_CUSTOMER_ID` differs from `DIRECTORY_CUSTOMER_ID` (SB-6.8) and matches `gcloud organizations list` output of SB-6.2.
-- **ROLLBACK:** `penv_set --force` with a build-log line if misread.
+- **VERIFY:** `form ok`; Subscriptions shows the ordered edition. The shape test is deliberately only "C followed by alphanumerics": Google's page documents where the customer ID is found and that it is the organisation's unique id, and documents **no** `C0` prefix, so a stricter pattern would stop a correctly read id at the head of a five-sitting procedure. The authoritative check is **SB-6.2**, where `gcloud organizations describe "$SANDBOX_ORG_ID" --format='value(owner.directoryCustomerId)'` must print this exact value; SB-6.8 then confirms it differs from `DIRECTORY_CUSTOMER_ID`. Until SB-6.2 has printed it, treat the value as provisional: it is written into the B5 child policies in SB-7.3, so a misread would be applied to folders, and SB-7.4's effective read and SB-7.5's accepted grant are what prove it right.
+- **ROLLBACK:** `penv_set --force` with a build-log line if misread. If SB-6.2 or SB-7.5 shows it was misread after SB-7.4 applied it, roll Part 7 back with SB-7.4's ROLLBACK and re-run SB-7.3 with the corrected value.
 - **EVIDENCE:** Screenshot of the Profile page as `<date>-SB-2.4-customer-id-v1` (identifier, not a secret). E-xx: none. TISAX 5.2.2, 1.3.1.
 
 ### SB-2.5 Create /Admins and enforce "Only security key" there
@@ -538,20 +553,37 @@ gcloud projects list --filter="parent.id=${SANDBOX_ORG_ID}" --format="value(proj
 
 ### SB-6.5 See Admin and login events at sandbox organisation scope
 
-- **WHO:** Sandbox super admin 2 on his own workstation (a second reader of the first).
-- **WHERE:** Sandbox shell; fallback Logs Explorer at organisation scope.
-- **ACTION:** Up to 24 hours after SB-6.4, and after sandbox super admin 1 has made one harmless Admin console change (for example editing the description of `/Synthetic`) and signed in once:
+- **WHO:** Sandbox super admin 2 on his own workstation and in his own browser profile (a second reader of the first).
+- **WHERE:** **Primary:** Google Cloud console > Logging > Logs Explorer (`https://console.cloud.google.com/logs/query`) with the sandbox **organisation** selected in the resource picker. **Optional confirmation only:** the sandbox shell.
+- **ACTION:** Up to 24 hours after SB-6.4, and after sandbox super admin 1 has made one harmless Admin console change (for example editing the description of `/Synthetic`) and signed in once.
+
+  1. **The read that counts.** In the `sandbox-sa-2` profile open the Logs Explorer and select `SANDBOX_DOMAIN` — the organisation, not a project — in the resource picker at the top of the page: opened for an organisation, the Logs Explorer searches the log entries that originate in that organisation. Set the time range to the last 2 days and run, in the query editor, one query at a time:
+
+     - `protoPayload.serviceName="admin.googleapis.com"`
+     - `protoPayload.serviceName="login.googleapis.com"`
+
+     Screenshot each result showing timestamp, `protoPayload.methodName` and `protoPayload.authenticationInfo.principalEmail`. This path needs no project and no quota project, which is why it is the primary one: the sandbox organisation will never hold a project (SB-6.3).
+  2. **Optional shell confirmation.** A Logging API call made with a user credential is billed to a quota project, which must exist and have the API enabled. A sandbox super admin has none — the sandbox organisation holds no project, and `--billing-project` cannot name a platform project he has no access to — so this is a confirmation attempt whose refusal is an expected, recorded outcome, never a reason to grant anything in the sandbox organisation and never a reason to create a project there:
 
 ```bash
-need SANDBOX_ORG_ID SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL
+need SANDBOX_ORG_ID SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL BUILD_LOG_DIR
 gcloud auth login "$SANDBOX_SA_2_EMAIL" --no-launch-browser
-gcloud logging read 'protoPayload.serviceName="admin.googleapis.com"' --organization="$SANDBOX_ORG_ID" --freshness=2d --limit=5 --format="table(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail)"
-gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --organization="$SANDBOX_ORG_ID" --freshness=2d --limit=5 --format="table(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail)"
+gcloud auth list --format='value(account)'
+gcloud logging read 'protoPayload.serviceName="admin.googleapis.com"' --organization="$SANDBOX_ORG_ID" --freshness=2d --limit=5 --format="table(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail)" 2>&1 | tee "$BUILD_LOG_DIR/evidence/21/SB-6.5-admin-read.txt"
+gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --organization="$SANDBOX_ORG_ID" --freshness=2d --limit=5 --format="table(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail)" 2>&1 | tee "$BUILD_LOG_DIR/evidence/21/SB-6.5-login-read.txt"
 ```
 
-- **VERIFY:** The first read shows the `/Synthetic` change by `SANDBOX_SA_1_EMAIL`; the second shows the sign-in. Empty after 24 hours: sharing is not on, or the reader looked at the wrong scope; resolve before 24, whose twin sink depends on these entries. If `gcloud logging read` at organisation scope fails for a quota-project reason, use Logs Explorer with the organisation selected and record it.
+- **VERIFY:** `gcloud auth list` prints only `SANDBOX_SA_2_EMAIL` (SB-1.3). Then read the outcome against this table, which separates the three things an empty screen can mean — do not read them as one:
+
+  | What the reader sees | What it means | Do |
+  |---|---|---|
+  | Logs Explorer at organisation scope shows the `/Synthetic` change by `SANDBOX_SA_1_EMAIL` and the sign-in | Sharing is on and the sandbox's Workspace events land in the sandbox organisation: this **is** the X-ORG-02 proof, whatever the shell did | Screenshot both; the step is `DONE` |
+  | `gcloud logging read` prints an error naming a quota, billing or consumer project (or asks for `--billing-project`) | The documented behaviour for a user credential with no quota project; it says nothing about sharing | Record the error text as an expected outcome in the build log; **do not** retry with `--billing-project`, do not create a project, do not ask for a platform grant |
+  | Logs Explorer returns nothing, with the organisation selected and the range covering SB-6.4's recorded UTC time, more than 24 hours after it | Sharing is not on, or the wrong scope was selected | Re-read SB-6.4's state and its recorded time, re-select the organisation in the picker, then resolve before 24, whose twin sink depends on these entries |
+
+  A successful shell read is a welcome extra proof and its output is kept; it is not required.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** Output as `<date>-SB-6.5-sandbox-events-at-org-v1`. This is the X-ORG-02 proof that the sandbox's events land in the sandbox organisation and nowhere else. E-06. TISAX 5.2.4.
+- **EVIDENCE:** The two Logs Explorer screenshots (organisation shown in the resource picker, query and time range visible), plus the shell output or the recorded quota-project error, as `<date>-SB-6.5-sandbox-events-at-org-v1`. This is the X-ORG-02 proof that the sandbox's events land in the sandbox organisation and nowhere else. E-06. TISAX 5.2.4.
 
 ### SB-6.6 Read the sandbox API controls and record the twin OAuth client rule
 
@@ -789,7 +821,7 @@ grep -n '<' sandbox/sandbox.yaml
 ```
 
   Replace every `<…>` placeholder from the records named in it; the last `grep` must then print nothing. Commit, push and open the pull request.
-- **VERIFY:** `grep -n '<' sandbox/sandbox.yaml` prints nothing; `ruby -ryaml -e 'YAML.load_file("sandbox/sandbox.yaml")' && echo yaml-ok` prints `yaml-ok` (python 3.12 of 01 has no YAML module by default; *Assumption:* the workstation's Ruby has its YAML library); the pull request is merged with the second human's approval; sandbox super admin 2 comments "tenant facts confirmed" on it.
+- **VERIFY:** `grep -n '<' sandbox/sandbox.yaml` prints nothing; `yq -e . sandbox/sandbox.yaml > /dev/null && echo yaml-ok` prints `yaml-ok` (`yq` transcodes the file to JSON and hands it to jq, so a parse failure is a non-zero exit; it is the one YAML tool of this set, see the preconditions — python 3.12 of 01 has no YAML module by default, and no step here may depend on a Ruby runtime that current macOS does not ship); the pull request is merged with the second human's approval; sandbox super admin 2 comments "tenant facts confirmed" on it.
 - **ROLLBACK:** Revert pull request.
 - **EVIDENCE:** Merge commit. E-05. TISAX 5.2.2, 1.3.1.
 
@@ -852,7 +884,8 @@ gh pr create --draft --title "SB-8.3 draft nonprod rows (merged by 23 and 31)" -
 cd "$PLATFORM_REPO_DIR"
 T="$(mktemp -d)"
 for a in eve walle; do
-  ruby -ryaml -rjson -e 'r=YAML.load_file(ARGV[0]); r.delete("project_id"); r.delete("acts_on_customer"); r.delete("operators_group"); puts JSON.pretty_generate({"agent_id"=>ARGV[1],"rows"=>[r]})' "register/drafts/$a.nonprod.yaml" "$a" > "$T/$a.json"
+  yq --arg a "$a" '{agent_id: $a, rows: [del(.project_id, .acts_on_customer, .operators_group)]}' "register/drafts/$a.nonprod.yaml" > "$T/$a.json"
+  jq -e . "$T/$a.json" > /dev/null && echo "$a wrapper ok"
   check-jsonschema --schemafile register/schema/register-row.schema.json "$T/$a.json" > "$T/$a.out" 2>&1; echo "$a exit $?"
   grep -iE "gate_checklist|privilege" "$T/$a.out" || echo "$a: no checklist or privilege error"
 done
@@ -860,8 +893,10 @@ cp "$T"/*.out "$BUILD_LOG_DIR/evidence/21/"
 grep -E "^\| R-0[24] " ci/register-rules.md
 ```
 
+  `yq` transcodes the draft to JSON and forwards every other argument to jq, so `--arg` and `del()` are jq's own and the output is JSON without a second tool; the transcode drops the YAML comments (`# 23`, `# 31`), which is intended — they are notes to the humans who fill those fields in 23 and 31, not row fields, so the wrapper is read next to the draft file, never instead of it. This step is the fallback the BLOCKED SB-8.5 relies on, so it must run on a tool the preconditions require: if `yq` is missing, install it and re-run; there is no Ruby fallback.
+
   Then the manual parse, in 16 RG-3.6's form, answers four questions in writing: (1) R-02: counting `env=prod` rows with `tier: P-SA` across `register/*.yaml` gives at most one, and the Wall-E nonprod row is not counted; (2) R-04: the nonprod P-SA row carries no `gate_checklist` and is not refused for it; (3) P1: nothing in the rows asks for the production Super Admin assignment or a Stage 0 record; (4) every remaining schema error is a missing field that 23 or 31 fills from the manifest, listed by name.
-- **VERIFY:** Both runs print `no checklist or privilege error`; the remaining errors are only "required property" messages for manifest-derived fields; the `grep` prints the R-02 and R-04 rows of `ci/register-rules.md`; the signed parse record names the branch head commit.
+- **VERIFY:** Two `wrapper ok` lines (the wrapper is well-formed JSON, so a schema error is the schema's and not the transcode's); both runs print `no checklist or privilege error`; the remaining errors are only "required property" messages for manifest-derived fields; the `grep` prints the R-02 and R-04 rows of `ci/register-rules.md`; the signed parse record names the branch head commit.
 - **ROLLBACK:** None; a failed check returns to SB-8.3 or, if the schema itself refuses a nonprod checklist-free row, to 16 as a finding against RG-2.2.
 - **EVIDENCE:** The outputs and `<date>-SB-8.4-nonprod-rows-manual-parse-v1`, signed. E-05. TISAX 1.3.1, 5.3.1.
 
@@ -934,6 +969,7 @@ Deferred: none. The parts in the last column belong to those files by the plan, 
 ## Verification checklist for the whole part
 
 - [ ] SB-1.1: every gate signed; the sandbox record says "before the super-admin grant"; 13, 16 and 17 done; sandbox domain not a production domain; the second human holds no sandbox role.
+- [ ] SB-1.3: on every sandbox workstation, `gcloud config configurations list` shows `sandbox` active, `CLOUDSDK_CONFIG` is `$HOME/.config/gcloud-sandbox`, `gcloud auth list` holds no production address at any point, and the sandbox copy carries no `ORG_ID` or `DIRECTORY_CUSTOMER_ID`.
 - [ ] SB-1.2, SB-2.4: edition equals production and is Enterprise Standard or Plus; seats cover admins, twin robots and synthetic users.
 - [ ] SB-2.2, SB-2.3: domain verified; `dig MX` prints only `1 smtp.google.com.`; a test mail arrived.
 - [ ] SB-2.5 to SB-3.5: exactly two Super Admins, both in `/Admins` with "Only security key" enforced, two keys each proven, no recovery information, backup codes sealed with the spare under the other admin's custody, custody records in the witness.
@@ -942,7 +978,7 @@ Deferred: none. The parts in the last column belong to those files by the plan, 
 - [ ] SB-5.3: six-row test record with requests created for role assignment, Super Admin and 2SV; self-approval impossible; removal latency and the off-switch behaviour recorded; record in the witness.
 - [ ] SB-5.4: activity rule fired to both sandbox super admins.
 - [ ] SB-6.1 to SB-6.3: one sandbox organisation, bound to `SANDBOX_CUSTOMER_ID`; two Organization Administrators; no domain Project Creator or Billing Account Creator; no project; its own member baseline read.
-- [ ] SB-6.4, SB-6.5: sharing Enabled with its UTC time; Admin and login events read at sandbox organisation scope.
+- [ ] SB-6.4, SB-6.5: sharing Enabled with its UTC time; Admin and login events read in the Logs Explorer with the sandbox organisation selected in the resource picker (the shell read is optional and a quota-project refusal is a recorded expected outcome).
 - [ ] SB-6.6, SB-6.7: API-controls state recorded; twin OAuth client rule committed; SecOps export decided (and connected through PS-8.8 only if yes).
 - [ ] SB-6.8: `SANDBOX_CUSTOMER_ID`, `SANDBOX_ORG_ID`, `SANDBOX_OPERATORS_GROUP` in the tenant copy, distinct from production, signed by the second human.
 - [ ] SB-7.1 to SB-7.5: B5 effective values show both customers on each target nonprod folder and only the tenant customer on every production folder; sandbox bindings accepted and removed on nonprod, refused on production; no sandbox member left anywhere.
@@ -993,6 +1029,12 @@ Consumes: `SANDBOX_DOMAIN`, the order and key custody records (04); `SANDBOX_SA_
 - IAP, "Managed OAuth client" (only users of the resource's organisation) and "Custom OAuth configuration" (as cited by SD-25 and the X-ORG-03 verdict).
 - Workspace Admin Help, "Export log events to Google Security Operations" (as cited by 15 PS-7.5 and the X-ORG-15 verdict): super administrator privileges; supported editions; only events after connection; up to 24 hours.
 - gcloud references: `organizations list`, `describe`, `add-iam-policy-binding`, `remove-iam-policy-binding`, `get-iam-policy`; `resource-manager folders add-iam-policy-binding`, `remove-iam-policy-binding`, `get-iam-policy`; `logging read` (`--organization`, `--freshness`, `--limit`); `pam grants create`, `describe`, `revoke` (through 12's helpers); `projects list --filter`.
+- gcloud named configurations: `config configurations create` ("If true, activate this configuration upon create. Enabled by default, use `--no-activate` to disable"), `config configurations list` (the `IS_ACTIVE` column), and `gcloud topic configurations` ("You can activate a configuration for a single gcloud invocation using flag `--configuration my-config`, or environment variable `CLOUDSDK_ACTIVE_CONFIG_NAME=my-config`"), read with 01 PR-2.2's `CLOUDSDK_CONFIG` pattern. Used by SB-1.3.
+- "Quota project" and API system parameters: every request to a Google Cloud API is counted against a quota enforced per project; a call made with a user credential is billed to a quota project, set by `--billing-project` or the `billing/quota_project` property, and a client-based API call without one fails. Used by SB-6.5.
+- Cloud Logging, "View and analyze log entries" (Logs Explorer): a project, folder **or organisation** is selected in the resource picker, and "when the Logs Explorer page opens for folders and organizations, it searches for the log entries that originate in the folder or organization". Used by SB-6.5's primary path.
+- Workspace Admin Help, "Find your customer ID": Menu > Account > Account settings > Profile, "next to Customer ID, find your organization's unique ID"; the page documents **no** id pattern, in particular no `C0` prefix. Used by SB-2.4.
+- `yq` (the jq wrapper for YAML): it transcodes YAML to JSON and passes it to jq, no conversion of jq output is done by default (so it prints JSON), and all other command-line arguments are forwarded to jq (so `--arg` and `-e` are jq's). Used by SB-8.2 and SB-8.4, and already the YAML tool of 19 and 20.
+- Apple developer release notes: the scripting language runtimes bundled with macOS (Ruby among them) are deprecated and no longer included by default, which is why no step here depends on Ruby.
 
 ## Unverified on 2026-09-15, and what closes each
 
@@ -1004,8 +1046,10 @@ Consumes: `SANDBOX_DOMAIN`, the order and key custody records (04); `SANDBOX_SA_
 | `users.makeAdmin` coverage by multi-party approval; whether a robot super admin counts toward "two or more super admins"; a robot approval attempt | not tested here | 37, with the twin robot's credential |
 | The Admin log event names for multi-party approval requests, approvals and denials, used by SB-5.4's rule filter | SB-5.3 item 6, SB-5.4 | Read in the condition builder on the day |
 | That a sandbox organisation sink's writer identity is admitted by the sandbox customer id in B5 (Google's page lists service agents; the grant itself is not made here) | SB-7.3 | 24's first twin sink grant |
-| That `gcloud logging read --organization` works for a user credential with no default project | SB-6.5 | Run on the day; fallback Logs Explorer at organisation scope |
+| Whether `gcloud logging read --organization` runs at all for a sandbox user credential with no quota project (the documented behaviour is that a user-credential API call needs one, and the sandbox organisation will hold no project) | SB-6.5, optional confirmation only | Recorded on the day as an expected refusal or an extra proof; the X-ORG-02 proof is the Logs Explorer read at organisation scope |
 | The label text of group access settings and the "Allow users to turn on 2-Step Verification" checkbox | SB-2.5, SB-4.3 | As 06 records on the day |
-| That `check-jsonschema` validates the one-row wrapper and reports missing required properties by name; that Ruby's YAML library is present on the macOS workstation | SB-8.2, SB-8.4 | Run on the day; fallback: 16's documented parse path |
+| That `check-jsonschema` validates the one-row wrapper and reports missing required properties by name | SB-8.4 | Run on the day; fallback: 16's documented parse path |
+| That `yq` is installed on the workstation that runs SB-8.2 and SB-8.4 (19 §2 assumes 01's tool list gains it) | SB-8.2, SB-8.4 | Checked at the preconditions; if missing, install it and re-run — no Ruby fallback exists, and SB-8.4 is the fallback for the BLOCKED SB-8.5 |
+| The exact form of the Workspace customer id beyond "begins with C" (Google documents where it is found, not its pattern) | SB-2.4 | SB-6.2's `organizations describe --format='value(owner.directoryCustomerId)'`, then SB-7.4 and SB-7.5 |
 | Eve's register `tier` value for the twin row | SB-8.3 | 23's prod row |
 | Whether the sandbox organisation's drift inventory can be read by a platform identity without a grant in the sandbox organisation (it cannot under its baseline) | SB-8.2 P40 note | A P40 decision; until then the monthly sandbox-side export |

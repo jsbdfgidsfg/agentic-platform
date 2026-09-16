@@ -8,6 +8,8 @@
 - Replaces: [../../wall-e/PREREQUISITES.md](../../wall-e/PREREQUISITES.md) §1 and §2 (the decision and people tables), the "Decisions that must be closed" tables of [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md) and [../../mo/07-build-runbook.md](../../mo/07-build-runbook.md). Salvaged with corrections: D8 reads `eu` only (X-GE-13), D12 starts on day one in [02-toil-baseline.md](02-toil-baseline.md) (S084), D13 reads G1-G21 (S092). Not copied: decision 29 "before Stage 1" (X-ORG-14), decision 6 "at Stage 1" (X-RQB-01), P22 "Tier W" (S051), P52's 30 days as a value to set (X-GE-01).
 - Review findings closed here: S035, S051, S063, S130, S135, S140, S144, X-GE-12, X-GE-13, X-ORG-05, X-ORG-08, X-ORG-09, X-ORG-14, X-RQB-01, X-RQB-04, X-RQB-05 (§15). None deferred.
 - BLOCKED here: DC-9.9 (the bot-approval CI rule, code of file 16).
+- Bootstrap deviations opened here: `BD-03-1` (DC-9.1: commits made before a reviewer was named, and 02's commits reviewed inside the repository rather than as `reviews/<sha>.md`), `BD-03-2` (DC-9.5: the initial push without a pull request). Both in [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md) PR-4.1's format.
+- Open item for another file: `penv_set` in 01 PR-2.2 has no empty-value guard, so every step of this page reads a decision value in two steps (§4.2). Owner: the platform owner, as a change to 01 before 04 runs.
 - Last executed: never.
 
 ## 1. What this part builds
@@ -56,6 +58,23 @@ One record may carry several decision ids when they share signatories and a gate
 ### 4.2 Tracker
 
 `decisions/TRACKER.md` has one row per decision id: `| Id | Title | Record | Gates | Signatories | Status |`. `Record` is `*tbd*` until signed. Later files call `tools/decision-need.sh <id>...` before a gated step; it fails on `*tbd*`, on a record that does not list the id, or on a record that does not parse. On this page, `tools/...` in a VERIFY line is short for `"$PLATFORM_REPO_DIR/tools/..."`, run with `~/.platform-env` sourced.
+
+**Two idioms every step of this page uses.** Both exist because a command substitution that fails still produces a string.
+
+1. *Reading a value into a variable.* `decision-value.sh` runs under `set -euo pipefail` and exits 1 with a message on standard error when the record is unsigned or the `Values` row is missing; its standard output is then **empty**. `penv_set` (01 PR-2.2) has no empty-value guard: `penv_set NAME "$(...)"` would write `export NAME=""`, print `set NAME`, and then refuse every later correct value, because `""` is neither the new value nor `*tbd*` and the refusal branch demands `--force`. So a value is never read inline. Every step writes the two-step form, which stops on a non-zero exit before `penv_set` is reached:
+
+   ```bash
+   v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" <ID> <NAME>) && penv_set <NAME> "$v"
+   ```
+
+   An empty-value guard in `penv_set` itself would be the better place for this (`[ -n "$_pv" ] || return 2` in 01 PR-2.2's template, which files 04 to 42 would inherit). Until that change is made and reviewed, the guard lives at every call site. Open item, owner: the platform owner, to be raised as a change to 01 PR-2.2 before 04 runs.
+
+2. *Naming a record file.* A VERIFY that greps a record never writes `<record>` as the file operand: in POSIX shell an unquoted `<word>` after a command is an input redirection from a file called `word`, so `grep -c 'x' <record>` reads a file named `record` and prints `0` or `no such file or directory` — a false result that looks like a content failure. The record path is derived from the tracker into a quoted variable first:
+
+   ```bash
+   rec="$PLATFORM_REPO_DIR/decisions/$(awk -F'|' -v id=<ID> '{k=$2; gsub(/ /,"",k); if (k==id) {r=$4; gsub(/ /,"",r); print r}}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | head -n 1)"
+   test -f "$rec" || echo "FAIL: no signed record for <ID> in the tracker"
+   ```
 
 #### DC-1.1 Create `decisions/`, `tools/` and the record template
 
@@ -111,11 +130,13 @@ echo "$(date -u +%FT%TZ) DC-1.1 done" >> "$BUILD_LOG_DIR/03-decisions-and-people
 
 #### DC-1.2 Write the three decision tools and prove they refuse
 
-- WHO: platform owner; the second operator (or the second human until DC-2.4) reviews the commit.
+- WHO: platform owner; **bootstrap reviewer**: the named second human of [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md) §2.1. §4 runs before §5, so neither `SECOND_HUMAN_EMAIL` nor `SECOND_OPERATOR_EMAIL` exists yet; 01's preconditions state that the second human is known by name before this page records the appointment, and that person reviews DC-1.2 and DC-1.3. The reliance on a person named but not yet appointed is the bootstrap deviation `BD-03-1`, opened in DC-9.1 with these two commits in its scope. From DC-2.1 the same person's appointment record exists and the reviewer of every later commit is the second operator (DC-2.4) or the second human.
 - WHERE: shell with `~/.platform-env` sourced.
-- ACTION:
+- ACTION: name the bootstrap reviewer in this shell first; it is a plain shell variable, not a `penv_set` value, because it is a person's name and the variables file holds addresses only.
 
 ```bash
+export BOOTSTRAP_REVIEWER='<name>, <role>'
+case "$BOOTSTRAP_REVIEWER" in ''|*'<'*'>'*) echo "STOP: set BOOTSTRAP_REVIEWER to the named second human of 01 §2.1; do not run the rest of this block";; *) echo "reviewer $BOOTSTRAP_REVIEWER";; esac
 cat > "$PLATFORM_REPO_DIR/tools/decision-check.sh" <<'EOF'
 #!/usr/bin/env bash
 # decision-check.sh FILE... exits 0 only if every record parses and every required signature matches its body.
@@ -193,7 +214,7 @@ rm -r "$t"
 
 #### DC-1.3 Create the tracker and commit with a review record
 
-- WHO: platform owner commits; the reviewer of DC-1.2 signs the review record.
+- WHO: platform owner commits; the bootstrap reviewer of DC-1.2 (`BOOTSTRAP_REVIEWER`, the named second human of 01 §2.1) signs the review record. Covered by `BD-03-1`, opened in DC-9.1.
 - WHERE: shell with `~/.platform-env` sourced.
 - ACTION: write `decisions/TRACKER.md` with the header and one row per id of §5 and §11 (`Record` and `Status` set to `*tbd*` and `open`; each appointment id of §5 gets its own row), then:
 
@@ -202,8 +223,11 @@ git -C "$PLATFORM_REPO_DIR" add decisions/_template.md decisions/TRACKER.md tool
 git -C "$PLATFORM_REPO_DIR" commit -m "DC-1.3 decision records, tracker and checks"
 c=$(git -C "$PLATFORM_REPO_DIR" rev-parse HEAD)
 mkdir -p "$BUILD_LOG_DIR/reviews"
-printf 'commit %s\nreviewer: <name, role>\ndate: %s\nresult: approved\nevidence: %s-DC-1.3-review-v1\n' "$c" "$(date +%F)" "$(date +%F)" > "$BUILD_LOG_DIR/reviews/$c.md"
+d=$(date -u +%F)
+printf 'commit %s\nreviewer: %s\ndate: %s\nresult: approved\nevidence: %s-DC-1.3-review-v1\n' "$c" "$BOOTSTRAP_REVIEWER" "$d" "$d" > "$BUILD_LOG_DIR/reviews/$c.md"
 ```
+
+  Dates in review records are UTC (`date -u`), because `checkpoint` and `evidence_add` (01 §5) and the record-naming rule (01 §7.1) are UTC; a local-time date written late in the evening would be a day off the checkpoint line that cites it.
 
   The reviewer's approval (a mail from their own account quoting the commit hash) is saved to `EVIDENCE_INTERIM_LOCATION` under the evidence name. Until DC-9 creates the remote, every commit to the platform repository gets such a review record; DC-9.1 refuses to push without one.
 - VERIFY: no id is listed twice and every id of §11 is present:
@@ -212,9 +236,10 @@ printf 'commit %s\nreviewer: <name, role>\ndate: %s\nresult: approved\nevidence:
 awk -F'|' 'NR>2 && NF>=7 {k=$2; gsub(/ /,"",k); print k}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | sort | uniq -d
 for id in SD-01 SD-24 SD-48 D8 D13 WDEC-6 WDEC-29 E-16 TD-44 M-1 P22 P137 NAMES KEYS SH-REPORTS PPL-SH; do grep -q "^| $id |" "$PLATFORM_REPO_DIR/decisions/TRACKER.md" || echo "missing $id"; done
 test -f "$BUILD_LOG_DIR/reviews/$(git -C "$PLATFORM_REPO_DIR" rev-parse HEAD).md" && echo reviewed
+grep -q '<name, role>' "$BUILD_LOG_DIR/reviews/$(git -C "$PLATFORM_REPO_DIR" rev-parse HEAD).md" && echo "FAIL: the reviewer placeholder was written verbatim"
 ```
 
-  Expect no duplicate, no `missing` line (the sample spans every table of §5 and §11; the reviewer compares the full list by eye), and `reviewed`.
+  Expect no duplicate, no `missing` line (the sample spans every table of §5 and §11; the reviewer compares the full list by eye), `reviewed`, and no `FAIL` line.
 - ROLLBACK: `git -C "$PLATFORM_REPO_DIR" revert HEAD` (local only).
 - EVIDENCE: commit hash, review record path, reviewer mail in the interim location. E-05; TISAX 1.1-1.2, 5.2.
 
@@ -226,9 +251,11 @@ test -f "$BUILD_LOG_DIR/reviews/$(git -C "$PLATFORM_REPO_DIR" rev-parse HEAD).md
 
 ```bash
 cd "$PLATFORM_REPO_DIR"
-rec="decisions/$(date +%F)-<slug>.md"
+d=$(date -u +%F)
+rec="decisions/$d-<slug>.md"
+case "$rec" in *'<'*'>'*) echo "STOP: replace <slug> with this record's slug before running the rest of the block";; *) echo "drafting $rec";; esac
 cp decisions/_template.md "$rec"
-sed -i '' "1s/.*/# $(date +%F) — <title>/" "$rec"
+sed -i '' "1s/.*/# $d — <title>/" "$rec"
 ```
 
   (`sed -i ''` is the macOS form; on Linux use `sed -i`.) Fill ids, required signatories, every body section, the Values and Gates tables. Then compute the body hash:
@@ -269,10 +296,11 @@ Each appointment is its own record (`<date>-appointment-<role>.md`) signed by IS
 - ACTION: record body states: the person is in IT security, outside the Wall-E administration line; will hold `sa-2-admin@` (06), own `eve-owners@` (06), perform eve@'s consent sign-in (24), be required code owner on the control files (DC-9.4), receive every severity 1 and 2 page in parallel, be sole recipient of reports about the platform owner, lead the independent proof (28), and never be a witness administrator (SD-04) nor a member of any `walle-*` group. Values: `SECOND_HUMAN_EMAIL`. After acceptance:
 
 ```bash
-penv_set SECOND_HUMAN_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SH SECOND_HUMAN_EMAIL)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SH SECOND_HUMAN_EMAIL) && penv_set SECOND_HUMAN_EMAIL "$v"
 ```
 
-- VERIFY: `"$PLATFORM_REPO_DIR/tools/decision-need.sh" PPL-SH E-2` prints two `SIGNED` lines; `need SECOND_HUMAN_EMAIL` passes; the address differs from `OWNER_DAILY_ACCOUNT`: `[ "$SECOND_HUMAN_EMAIL" != "$OWNER_DAILY_ACCOUNT" ] && echo distinct`.
+  This record also closes the bootstrap gap of §4: the person who reviewed DC-1.2 and DC-1.3 as `BOOTSTRAP_REVIEWER` (named but not yet appointed, `BD-03-1`) is this appointee, and the record says so by name, so the two earliest review records are attributable to a signed appointment.
+- VERIFY: `"$PLATFORM_REPO_DIR/tools/decision-need.sh" PPL-SH E-2` prints two `SIGNED` lines; `need SECOND_HUMAN_EMAIL` passes; the address differs from `OWNER_DAILY_ACCOUNT`: `[ "$SECOND_HUMAN_EMAIL" != "$OWNER_DAILY_ACCOUNT" ] && echo distinct`; and the record names `BOOTSTRAP_REVIEWER`'s person: `grep -c 'DC-1.2' "$PLATFORM_REPO_DIR/decisions/$(awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="PPL-SH") {r=$4; gsub(/ /,"",r); print r}}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | head -n 1)"` is at least `1`.
 - ROLLBACK: a superseding appointment record; `penv_set --force SECOND_HUMAN_EMAIL <new>` with a build-log line.
 - EVIDENCE: the record; ISMS role-register entry reference. E-08; TISAX 1.1-1.2, 2.1.
 
@@ -283,7 +311,7 @@ penv_set SECOND_HUMAN_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-
 - ACTION: PPL-IC per the table. SH-REPORTS body: reports whose subject is the second human go to the security reviewer; until PPL-SR is signed they go to the incident commander; never to the second human or the platform owner (SD-10). The record names which role applies today and that the switch to SR happens in the same record that appoints SR (DC-2.3).
 
 ```bash
-penv_set INCIDENT_COMMANDER_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-IC INCIDENT_COMMANDER_EMAIL)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-IC INCIDENT_COMMANDER_EMAIL) && penv_set INCIDENT_COMMANDER_EMAIL "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh PPL-IC SH-REPORTS` both `SIGNED`; `[ "$INCIDENT_COMMANDER_EMAIL" != "$OWNER_DAILY_ACCOUNT" ] && [ "$INCIDENT_COMMANDER_EMAIL" != "$SECOND_HUMAN_EMAIL" ] && echo distinct`. The incident commander may be the second human only if the ISMS record says so; then SH-REPORTS cannot point at IC and 26 stays BLOCKED until SR is named.
@@ -297,8 +325,8 @@ penv_set INCIDENT_COMMANDER_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh
 - ACTION: if the person is not available, commit the tracker rows as `*tbd*` with a dated note of who ISMS has asked; do not sign a placeholder. On appointment, the PPL-SR record also supersedes SH-REPORTS to point at SR.
 
 ```bash
-penv_set SECURITY_REVIEWER_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SR SECURITY_REVIEWER_EMAIL)"
-penv_set VALIDATOR_CUSTODIAN_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-VC VALIDATOR_CUSTODIAN_EMAIL)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SR SECURITY_REVIEWER_EMAIL) && penv_set SECURITY_REVIEWER_EMAIL "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-VC VALIDATOR_CUSTODIAN_EMAIL) && penv_set VALIDATOR_CUSTODIAN_EMAIL "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh PPL-SR PPL-VC`; `[ "$SECURITY_REVIEWER_EMAIL" != "$OWNER_DAILY_ACCOUNT" ] && echo distinct`. Until signed, `need SECURITY_REVIEWER_EMAIL` fails, which is the intended stop for 11's custodian part, 31's production entitlement and 38.
@@ -312,8 +340,8 @@ penv_set VALIDATOR_CUSTODIAN_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.s
 - ACTION: PPL-SO also closes D5's first half (second operator); D5's second half (IT security second approver) is the security reviewer (DC-2.3). The blind grader record states the playbooks the grader must not own.
 
 ```bash
-penv_set SECOND_OPERATOR_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SO SECOND_OPERATOR_EMAIL)"
-penv_set BLIND_GRADER_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-BG BLIND_GRADER_EMAIL)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SO SECOND_OPERATOR_EMAIL) && penv_set SECOND_OPERATOR_EMAIL "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-BG BLIND_GRADER_EMAIL) && penv_set BLIND_GRADER_EMAIL "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh PPL-SO PPL-BG D5`; SO differs from PO and SH.
@@ -327,8 +355,8 @@ penv_set BLIND_GRADER_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-
 - ACTION: each record states: not a tenant super admin now or later, not the platform owner, the second human or the second operator; administers the witness organisation from their own workstation copy of the witness section; is the other administrator's recovery path (self-recovery Off in the witness, SD-28); holds two hardware keys (04). The tenant email is for contact only; witness accounts are created in 08.
 
 ```bash
-penv_set WITNESS_ADMIN_1_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-WA1 WITNESS_ADMIN_1_EMAIL)"
-penv_set WITNESS_ADMIN_2_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-WA2 WITNESS_ADMIN_2_EMAIL)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-WA1 WITNESS_ADMIN_1_EMAIL) && penv_set WITNESS_ADMIN_1_EMAIL "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-WA2 WITNESS_ADMIN_2_EMAIL) && penv_set WITNESS_ADMIN_2_EMAIL "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh PPL-WA1 PPL-WA2`; the two addresses differ from each other and from `OWNER_DAILY_ACCOUNT`, `SECOND_HUMAN_EMAIL` and `SECOND_OPERATOR_EMAIL`:
@@ -349,8 +377,8 @@ printf '%s\n' "$WITNESS_ADMIN_1_EMAIL" "$WITNESS_ADMIN_2_EMAIL" "$OWNER_DAILY_AC
   Once the superseding record carries both addresses:
 
 ```bash
-penv_set SANDBOX_SA_1_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SB1 SANDBOX_SA_1_EMAIL)"
-penv_set SANDBOX_SA_2_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SB2 SANDBOX_SA_2_EMAIL)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SB1 SANDBOX_SA_1_EMAIL) && penv_set SANDBOX_SA_1_EMAIL "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SB2 SANDBOX_SA_2_EMAIL) && penv_set SANDBOX_SA_2_EMAIL "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh PPL-SB1 PPL-SB2`; `need SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL`; `[ "$SANDBOX_SA_1_EMAIL" != "$SANDBOX_SA_2_EMAIL" ] && echo distinct`.
@@ -364,8 +392,8 @@ penv_set SANDBOX_SA_2_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-
 - ACTION:
 
 ```bash
-penv_set BILLING_ADMIN_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-BA BILLING_ADMIN_EMAIL)"
-penv_set MO_OWNER_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-MO MO_OWNER_EMAIL)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-BA BILLING_ADMIN_EMAIL) && penv_set BILLING_ADMIN_EMAIL "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-MO MO_OWNER_EMAIL) && penv_set MO_OWNER_EMAIL "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh PPL-BA PPL-MO`; `[ "$BILLING_ADMIN_EMAIL" != "$OWNER_DAILY_ACCOUNT" ] && echo distinct`.
@@ -404,7 +432,7 @@ penv_set MO_OWNER_EMAIL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-MO M
   Values: `DPO_CONTACT` (a role mailbox where one exists).
 
 ```bash
-penv_set DPO_CONTACT "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" D7-LETTER DPO_CONTACT)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" D7-LETTER DPO_CONTACT) && penv_set DPO_CONTACT "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh D7-LETTER`; the sent mail saved as `<date>-DC-3.1-d7-letter-v1` in the interim location; the record date is on or before 2026-09-21.
@@ -454,11 +482,15 @@ penv_set DPO_CONTACT "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" D7-LETTER D
   Both issuer strings are as Google's page "Configure Workload Identity Federation with deployment pipelines" shows them on 2026-09-15 (the GitHub one with its trailing slash). A self-managed host is not covered by that page; its issuer is `*tbd*` and 10 stops.
 
 ```bash
-penv_set GIT_HOST "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P22 GIT_HOST)"
-penv_set GIT_OIDC_ISSUER "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P22 GIT_OIDC_ISSUER)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P22 GIT_HOST) && penv_set GIT_HOST "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P22 GIT_OIDC_ISSUER) && penv_set GIT_OIDC_ISSUER "$v"
 ```
 
-- VERIFY: `tools/decision-need.sh P22 SD-14 M-7`; `need GIT_HOST GIT_OIDC_ISSUER`; `case "$GIT_OIDC_ISSUER" in https://*) echo ok;; esac`.
+- VERIFY: `tools/decision-need.sh P22 SD-14 M-7`; `need GIT_HOST GIT_OIDC_ISSUER`; then, with both arms so an empty or wrong value is seen rather than silently passing:
+
+```bash
+case "$GIT_OIDC_ISSUER" in https://*) echo ok;; *) echo "FAIL: the issuer is not an https URL ('$GIT_OIDC_ISSUER'); 10's workload identity provider and 13's B19 stop";; esac
+```
 - ROLLBACK: superseding record before 10 creates the provider; after that, 10's provider is updated in the same change.
 - EVIDENCE: record. E-05; TISAX 5.2.
 
@@ -489,11 +521,16 @@ gcloud billing accounts describe "<candidate-billing-account-id>" --format="valu
   Values: `SCC_BILLING_MODEL`, `SIEM_KIND`.
 
 ```bash
-penv_set SCC_BILLING_MODEL "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P11 SCC_BILLING_MODEL)"
-penv_set SIEM_KIND "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P10 SIEM_KIND)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P11 SCC_BILLING_MODEL) && penv_set SCC_BILLING_MODEL "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P10 SIEM_KIND) && penv_set SIEM_KIND "$v"
 ```
 
-- VERIFY: `tools/decision-need.sh P31 SD-16 P11 SD-15 P10`; `case "$SCC_BILLING_MODEL" in payg-org|subscription) echo ok;; esac`; `case "$SIEM_KIND" in secops|existing) echo ok;; esac`.
+- VERIFY: `tools/decision-need.sh P31 SD-16 P11 SD-15 P10`; then both values against their closed lists, each with a failing arm:
+
+```bash
+case "$SCC_BILLING_MODEL" in payg-org|subscription) echo ok;; *) echo "FAIL: SCC_BILLING_MODEL is '$SCC_BILLING_MODEL'; 04's purchase and 09's activation stop";; esac
+case "$SIEM_KIND" in secops|existing) echo ok;; *) echo "FAIL: SIEM_KIND is '$SIEM_KIND'; 04's purchase and 15 part B stop";; esac
+```
 - ROLLBACK: superseding record before 04 places an order or 09 activates.
 - EVIDENCE: the describe output (no id redaction needed; it is not a secret) in the build log; record. E-11 (supplier file); TISAX 6.1.
 
@@ -532,8 +569,8 @@ penv_set SIEM_KIND "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P10 SIEM_KIND
   Values: `EVIDENCE_RETENTION_DAYS`, `IDENTITY_RETENTION_DAYS` (integers, or `*tbd*` while the DPO has not answered).
 
 ```bash
-penv_set EVIDENCE_RETENTION_DAYS "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 EVIDENCE_RETENTION_DAYS)"
-penv_set IDENTITY_RETENTION_DAYS "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 IDENTITY_RETENTION_DAYS)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 EVIDENCE_RETENTION_DAYS) && penv_set EVIDENCE_RETENTION_DAYS "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 IDENTITY_RETENTION_DAYS) && penv_set IDENTITY_RETENTION_DAYS "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh P13 E-14 M-5 P52 SD-20`; `case "$EVIDENCE_RETENTION_DAYS" in ''|*[!0-9]*) echo "not an integer: every lock in 08, 14 and 23 refuses";; *) echo "lock value $EVIDENCE_RETENTION_DAYS";; esac`.
@@ -574,12 +611,14 @@ Project ids are permanent and are never reusable, even after deletion; key rings
   | Log bucket | `platform-evidence-logs`, `platform-identity-logs` | as named | 14 |
   | Workspace | robot addresses `walle@`, `eve@`; OU paths `ADMIN_OU`, `BREAK_GLASS_OU`, `SERVICE_IDENTITY_OU`, `PILOT_OU`, `SANDBOX_OU`; group addresses of 06 and 30 | as in the plan's variables table; OU paths *tbd* where not given | 06, 24, 30 |
   | OAuth | Wall-E and Eve OAuth app names shown at consent (D1) | *tbd* | 24, 32 |
+  | Repository | `PLATFORM_REPO_NAME` (the repository half of the slug; the organisation half is typed in DC-9.2 and stored as `GIT_ORG`) | *tbd* | DC-9.2 |
 
   SD-23 closes S135: Eve's locked bucket is in `europe-west1`, not the EU multi-region; 23 checks the location before the lock. SD-33 closes S144: no `walle_metrics*` dataset is ever created. Retired names that must not appear: `walle_metrics*`, `LOGS_DATASET`, `FOLDER_ID`.
 
 ```bash
-for v in MO_METRICS_DS MO_ARCHIVE_DS MO_PRIVATE_DS MO_VIEWS_DS EVE_EVIDENCE_LOCATION; do
-  penv_set "$v" "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES "$v")"
+for n in MO_METRICS_DS MO_ARCHIVE_DS MO_PRIVATE_DS MO_VIEWS_DS EVE_EVIDENCE_LOCATION; do
+  v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES "$n") || { echo "STOP: no signed value for $n in the NAMES record; nothing written"; break; }
+  penv_set "$n" "$v"
 done
 ```
 
@@ -609,9 +648,18 @@ for v in MO_METRICS_DS MO_ARCHIVE_DS MO_PRIVATE_DS MO_VIEWS_DS; do printenv "$v"
   | `eve` | `EVE_PROJECT` | `europe-west1` | `eve-evidence`, `eve-approval` (41) | 23 |
   | `eve-eu` | `EVE_PROJECT` | `europe` | `eve-evidence-eu` | 23 |
 
-- VERIFY: `tools/decision-need.sh KEYS SD-47`; `grep -c 'eve-eu' <record>` is at least `1`.
+- VERIFY: `tools/decision-need.sh KEYS SD-47`, then the record's own content, read through its tracker row:
+
+```bash
+rec="$PLATFORM_REPO_DIR/decisions/$(awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="KEYS") {r=$4; gsub(/ /,"",r); print r}}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | head -n 1)"
+test -f "$rec" || echo "FAIL: no signed KEYS record named in the tracker"
+grep -c 'eve-eu' "$rec"
+grep -c 'eve-evidence-eu' "$rec"
+```
+
+  Expect a path that exists, no `FAIL` line, and both counts at least `1`: without the `eve-eu` ring in `europe`, 23 cannot give the `EU` `eve.*` datasets a key and stops.
 - ROLLBACK: superseding record before 11 or 23 creates a ring. **IRREVERSIBLE once a ring exists.**
-- EVIDENCE: record. TISAX 5.1 (the cryptography table).
+- EVIDENCE: record; the two counts in the build log. E-xx: none (key configuration, 01 §7.2); TISAX 5.1.1 (the cryptography table).
 
 ## 9. Platform model, privilege and the Eve and Mo decisions
 
@@ -644,8 +692,8 @@ for v in MO_METRICS_DS MO_ARCHIVE_DS MO_PRIVATE_DS MO_VIEWS_DS; do printenv "$v"
   Values: `BUSINESS_TZ`, `BUSINESS_HOURS` (or `*tbd*`, in which case H-1 runs flat windows).
 
 ```bash
-penv_set BUSINESS_TZ "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-15 BUSINESS_TZ)"
-penv_set BUSINESS_HOURS "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-15 BUSINESS_HOURS)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-15 BUSINESS_TZ) && penv_set BUSINESS_TZ "$v"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-15 BUSINESS_HOURS) && penv_set BUSINESS_HOURS "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh SD-10 SD-12 SD-03 SD-07 SD-08 SD-26 SD-31 SD-32 E-1 E-16 TD-44 CC-33 E-18 WDEC-15`; the record's signature table has a row `SH`. **23 refuses its first step without SD-10 and SD-12; 24 refuses its first step without SD-31, E-16 and TD-44.**
@@ -680,7 +728,16 @@ penv_set BUSINESS_HOURS "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-15 
 - WHO: platform owner; SH; ITSEC (G8); IC (G17); ISMS.
 - WHERE: record per DC-1.4 (`<date>-super-admin-gate.md`).
 - ACTION: body: the gate lines are **G1-G21** (G1-G18 of SETUP Phase 2, G19 Tier W rows, G20 K7 drill on `fld-agents-p-sa-nonprod` younger than 30 days, G21 Tier C gate closed), not G1-G11; the enforceable gate is the second human's multi-party approval given only against a merged, parsed checklist (38). G8: the penetration-test window (start and end dates, supplier from 04), run in 37 against the sandbox twin before 38. G17: the crisis-scenario tabletop date, run in 38 with the incident commander. Dates may be *tbd* at signing; a superseding record fixes them, and 37 and 38 refuse without a date.
-- VERIFY: `tools/decision-need.sh D13 SD-36 G8-WINDOW G17-DATE`; `grep -c 'G21' <record>` at least `1`.
+- VERIFY: `tools/decision-need.sh D13 SD-36 G8-WINDOW G17-DATE`, then the gate line count in the record itself:
+
+```bash
+rec="$PLATFORM_REPO_DIR/decisions/$(awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="D13") {r=$4; gsub(/ /,"",r); print r}}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | head -n 1)"
+test -f "$rec" || echo "FAIL: no signed D13 record named in the tracker"
+grep -c 'G21' "$rec"
+grep -c 'G1-G11' "$rec"
+```
+
+  Expect the `G21` count at least `1` and the `G1-G11` count `0`: a record still reading G1-G11 is the superseded gate and 38 refuses it.
 - ROLLBACK: superseding record.
 - EVIDENCE: record. E-10; TISAX 1.6, 5.2.
 
@@ -691,7 +748,7 @@ penv_set BUSINESS_HOURS "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-15 
 - ACTION: close **before 35 and before 40's Mo-11**, not at Stage 1. On the pin date, read the candidate's model page and the "Google model endpoint locations" table and record in the body, with the page URLs and the retrieval date: model id; launch stage GA; served on the `eu` multi-region endpoint; ML-processing locations; Standard PayGo locations; retirement date. Accept only if GA on `eu`, retirement at least 6 months after the planned Stage 1 date, and not a Gemini 2.5 model (the 2.5 family on `europe-west1` retires on 2026-10-16 by the Vertex AI release note of 2026-04-02; plan for that date). The review's candidate on 2026-09-15 was `gemini-3.5-flash`. The body also states: the model client location is set to `eu` in agent code; `GOOGLE_CLOUD_LOCATION` is never set in engine `env_vars`; CI refuses a pin retiring within 90 days; 35 verifies one call on the `eu` endpoint. Values: `MODEL_ID`.
 
 ```bash
-penv_set MODEL_ID "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-6 MODEL_ID)"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-6 MODEL_ID) && penv_set MODEL_ID "$v"
 ```
 
 - VERIFY: `tools/decision-need.sh WDEC-6 SD-09`; `need MODEL_ID`; `case "$MODEL_ID" in gemini-2.5*|gemini-2-5*) echo "REFUSED: 2.5 family";; *) echo ok;; esac`.
@@ -703,7 +760,16 @@ penv_set MODEL_ID "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-6 MODEL_I
 - WHO: security reviewer. Runs once PPL-SR is signed, and before 30 (Tier W).
 - WHERE: record per DC-1.4 (`<date>-security-reviewer-ratification.md`).
 - ACTION: the reviewer lists every record signed by ITSEC in place of SR (DC-4.1, DC-4.3, DC-6.1, DC-8.1) by file name and body hash, and either ratifies each or opens a superseding record; signs SD-43's accepted limit; confirms the SH-REPORTS switch (DC-2.3).
-- VERIFY: `tools/decision-need.sh RATIFY-SR`; every file name in the record exists: `awk -F'|' '/^## Values/{s=1} s && /\.md/ {gsub(/ /,"",$3); print $3}' <record> | while read f; do test -f "$PLATFORM_REPO_DIR/decisions/$f" || echo "missing $f"; done` prints nothing.
+- VERIFY: `tools/decision-need.sh RATIFY-SR`, then that every record the ratification names exists:
+
+```bash
+rec="$PLATFORM_REPO_DIR/decisions/$(awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="RATIFY-SR") {r=$4; gsub(/ /,"",r); print r}}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | head -n 1)"
+test -f "$rec" || echo "FAIL: no signed RATIFY-SR record named in the tracker"
+awk -F'|' '/^## Values$/{s=1;next} /^## /{s=0} s && /\.md/ {x=$3; gsub(/[ `]/,"",x); if (x != "") print x}' "$rec" | while read -r f; do test -f "$PLATFORM_REPO_DIR/decisions/$f" || echo "missing $f"; done
+"$PLATFORM_REPO_DIR/tools/decision-check.sh" "$PLATFORM_REPO_DIR"/decisions/20*.md | grep -c '^OK'
+```
+
+  Expect no `FAIL` line, no `missing` line, and the `OK` count equal to the number of records in `decisions/`: a ratification that names a record which no longer parses is not a ratification.
 - ROLLBACK: superseding record.
 - EVIDENCE: record. E-03; TISAX 1.4.
 
@@ -837,40 +903,99 @@ penv_set MODEL_ID "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-6 MODEL_I
 
 ## 12. The platform repository
 
-Runs once DC-4.3 is signed and before 06 commits the roster. DC-9.2 to DC-9.7 run in one shell sitting that holds `repo`; any later shell re-derives it with `repo=$(printf '%s' "$PLATFORM_REPO_REMOTE" | sed -E 's#^https://github.com/##; s#\.git$##')`. The steps are written for GitHub. If P22 chooses GitLab, §12.1 gives the equivalent settings and DC-9.2 to DC-9.8 are re-issued as a dated revision of this page before execution; nothing is improvised at the keyboard.
+Runs once DC-4.3 is signed and before 06 commits the roster. The steps are written for GitHub. If P22 chooses GitLab, §12.1 gives the equivalent settings and DC-9.2 to DC-9.8 are re-issued as a dated revision of this page before execution; nothing is improvised at the keyboard.
 
-#### DC-9.1 Prove every local commit has a review record
-
-- WHO: platform owner; second operator (or SH) confirms the list.
-- WHERE: shell with `~/.platform-env` sourced.
-- ACTION:
+**The repository slug is a stored value, not a shell variable that dies with the sitting.** DC-9.2 writes `GIT_ORG` (the git-host organisation) and `PLATFORM_REPO_SLUG` (`<org>/<name>`) with `penv_set`, because DC-9.8 is run weekly by IT security from their own shell, not by the person who ran DC-9.2, and because a slug re-derived from `PLATFORM_REPO_REMOTE` by stripping `https://github.com/` returns the whole URL unchanged for an SSH remote or a GitLab remote, which then produces malformed `gh api` paths. Every step of §12 after DC-9.2 opens with:
 
 ```bash
 source ~/.platform-env
-need PLATFORM_REPO_DIR BUILD_LOG_DIR GIT_HOST
-"$PLATFORM_REPO_DIR/tools/decision-need.sh" P22 SD-14 M-7
-git -C "$PLATFORM_REPO_DIR" rev-list --reverse HEAD > "$BUILD_LOG_DIR/03-prepush-commits.txt"
-while read -r c; do test -f "$BUILD_LOG_DIR/reviews/$c.md" || echo "NO REVIEW $c"; done < "$BUILD_LOG_DIR/03-prepush-commits.txt"
+need GIT_ORG PLATFORM_REPO_SLUG
+repo="$PLATFORM_REPO_SLUG"
+case "$repo" in */*) echo "repo $repo";; *) echo "STOP: PLATFORM_REPO_SLUG is not <org>/<name>; re-read DC-9.2";; esac
 ```
 
-- VERIFY: the loop prints nothing. A commit without a record gets one now (the reviewer reads the diff with `git -C "$PLATFORM_REPO_DIR" show <sha>`) or is reverted before the push.
-- ROLLBACK: none; read only.
-- EVIDENCE: `03-prepush-commits.txt` and the review records. E-05; TISAX 5.2.
+#### DC-9.1 Prove every local commit has a review record, and open the bootstrap deviation for the ones that cannot
+
+- WHO: platform owner; second operator (or SH) confirms both lists and signs the deviation row.
+- WHERE: shell with `~/.platform-env` sourced.
+- PRECONDITION: the deviation register exists in PR-4.1's thirteen-column form. `grep -c '^| Id |' "$DEVIATION_REGISTER"` prints `2` (the first table's header and the Closures header). If it does not, stop: [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md) PR-4.1 has not run.
+- ACTION: a handful of commits reach this point without a `reviews/<sha>.md` record, and no step of this set can retrofit one. 01 PR-2.2 commits `env/platform-env.template` before any reviewer is named at all; 02 TB-3.2 (once after each of the four ISO weeks), TB-4.1 and TB-4.4 commit under `metrics/`, and their review artefact is the second operator's signed `metrics/reviews/<date>-toil-baseline-review.md` **inside** the repository, not a `<sha>.md` in the build log. Those commits are listed by sha and covered by one bootstrap deviation, `BD-03-1`; every other commit must have a record, and the push does not run until it does.
+
+```bash
+source ~/.platform-env
+need PLATFORM_REPO_DIR BUILD_LOG_DIR GIT_HOST DEVIATION_REGISTER SECOND_HUMAN_EMAIL
+"$PLATFORM_REPO_DIR/tools/decision-need.sh" P22 SD-14 M-7
+confirmer="${SECOND_OPERATOR_EMAIL:-$SECOND_HUMAN_EMAIL}"
+case "$confirmer" in ''|'*tbd*') confirmer="$SECOND_HUMAN_EMAIL";; esac
+echo "confirmer $confirmer"
+git -C "$PLATFORM_REPO_DIR" rev-list --reverse HEAD > "$BUILD_LOG_DIR/03-prepush-commits.txt"
+: > "$BUILD_LOG_DIR/03-prepush-unreviewed.txt"
+: > "$BUILD_LOG_DIR/03-prepush-exempt.txt"
+while read -r c; do
+  if [ -f "$BUILD_LOG_DIR/reviews/$c.md" ]; then continue; fi
+  if git -C "$PLATFORM_REPO_DIR" show --name-only --pretty=format: "$c" | sed '/^$/d' | grep -qvE '^(env/|metrics/)'; then
+    printf '%s\n' "$c" >> "$BUILD_LOG_DIR/03-prepush-unreviewed.txt"
+  else
+    printf '%s\n' "$c" >> "$BUILD_LOG_DIR/03-prepush-exempt.txt"
+  fi
+done < "$BUILD_LOG_DIR/03-prepush-commits.txt"
+wc -l < "$BUILD_LOG_DIR/03-prepush-unreviewed.txt"
+wc -l < "$BUILD_LOG_DIR/03-prepush-exempt.txt"
+while read -r c; do git -C "$PLATFORM_REPO_DIR" show --stat --oneline --no-patch "$c"; done < "$BUILD_LOG_DIR/03-prepush-exempt.txt"
+```
+
+  The confirmer — the second operator (DC-2.4), or the second human while PPL-SO is still `*tbd*` — reads each exempt commit's diff (`git -C "$PLATFORM_REPO_DIR" show <sha>`) and approves the list by mail from their own account, saved to `EVIDENCE_INTERIM_LOCATION` as `<date>-DC-9.1-exempt-commits-v1`. Then the deviation row, written into the **first** table of the register (never appended to the file end, which would land inside the Closures table and corrupt it) and committed in the build-log repository the way PR-4.1 does:
+
+```bash
+row="| BD-03-1 | $(date -u +%F) | 03 DC-9.1 | DEV | commits made before a reviewer was named or reviewed inside the repository | repo $PLATFORM_REPO_DIR | $BUILD_LOG_DIR/03-prepush-exempt.txt | per-commit review records for every other commit; 02's signed metrics/reviews record for the metrics commits | BLOCKED: no factory | - | $confirmer | closed when 01 PR-2.2 and 02 write reviews/<sha>.md, at the Tier W gate at the latest | open |"
+tmp=$(mktemp)
+awk -v row="$row" '
+  /^\|---\|/ && !seen { seen=1; print; next }
+  seen && !done && $0 !~ /^\|/ { print row; done=1 }
+  { print }
+  END { if (seen && !done) print row }' "$DEVIATION_REGISTER" > "$tmp" && mv "$tmp" "$DEVIATION_REGISTER"
+git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" "$BUILD_LOG_DIR/03-prepush-commits.txt" "$BUILD_LOG_DIR/03-prepush-exempt.txt"
+git -C "$BUILD_LOG_DIR" commit -m "BD-03-1 bootstrap commits without a reviews/<sha>.md record"
+```
+
+  Then, once the VERIFY below passes: `checkpoint DC-9.1 DONE "$confirmer" - "BD-03-1 opened"`.
+
+- VERIFY: `wc -l < "$BUILD_LOG_DIR/03-prepush-unreviewed.txt"` prints `0`; the exempt count equals the commits 01 and 02 made (one from 01 PR-2.2, one per 02 TB-3.2 weekly checkpoint, one each from TB-4.1 and TB-4.4 — at most seven) and every exempt commit touches only `env/` or `metrics/`, which the `git show --stat` listing proves line by line; `grep -c '^| BD-03-1 |' "$DEVIATION_REGISTER"` prints `1` and `awk '/^## Closures$/{print NR}' "$DEVIATION_REGISTER"` prints a line number greater than the `BD-03-1` row's, so the row is in the first table. A commit in `03-prepush-unreviewed.txt` gets a record now (the reviewer reads the diff and the record is written as in DC-1.3) or is reverted before the push; the push does not run while that file is non-empty.
+- ROLLBACK: the register row is append-only; a wrong row is closed by a Closures line, never edited. The read half is read only.
+- EVIDENCE: `03-prepush-commits.txt`, `03-prepush-exempt.txt`, the review records, the second operator's approval mail, the `BD-03-1` row. E-xx: E-05; TISAX 5.2.1, 1.4.1.
 
 #### DC-9.2 Create the repository on the git host
 
 - WHO: platform owner as organisation owner on the git host; ITSEC witnesses the settings in DC-9.6.
 - WHERE: shell; `gh` signed in (`gh auth status`).
-- ACTION: the repository name is the one in NAMES (`*tbd*` until signed).
+- ACTION: the repository name is the one in NAMES (`*tbd*` until signed). Both halves of the slug are stored with `penv_set`, so DC-9.8's weekly run by IT security and every later file resolve them without this sitting's shell.
 
 ```bash
-repo="<git-org>/<name-from-NAMES>"
+source ~/.platform-env
+need PLATFORM_REPO_DIR BUILD_LOG_DIR GIT_HOST
+"$PLATFORM_REPO_DIR/tools/decision-need.sh" P22 SD-14 NAMES
+gh auth status
+org="<git-host-organisation>"
+case "$org" in ''|*'<'*'>'*) echo "STOP: replace <git-host-organisation> with the name; nothing written";; *) penv_set GIT_ORG "$org";; esac
+need GIT_ORG
+name=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES PLATFORM_REPO_NAME) && penv_set PLATFORM_REPO_SLUG "$GIT_ORG/$name"
+need GIT_ORG PLATFORM_REPO_SLUG
+repo="$PLATFORM_REPO_SLUG"
 gh repo create "$repo" --private --description "Agentic platform: register, policies, rosters, decisions" --disable-wiki
 ```
 
-- VERIFY: `gh repo view "$repo" --json visibility,defaultBranchRef --jq '.visibility'` prints `PRIVATE`.
+  `PLATFORM_REPO_NAME` is a row of the NAMES record's Values table (DC-5.1, the `Repository` row); if it is absent, `decision-value.sh` exits non-zero and `PLATFORM_REPO_SLUG` is not written, which is the intended stop.
+- VERIFY:
+
+```bash
+gh repo view "$repo" --json visibility --jq '.visibility'
+case "$PLATFORM_REPO_SLUG" in */*) echo ok;; *) echo "FAIL: PLATFORM_REPO_SLUG is '$PLATFORM_REPO_SLUG', not <org>/<name>";; esac
+grep -c '^export GIT_ORG=' ~/.platform-env
+```
+
+  Expect `PRIVATE`, `ok`, and `1`.
 - ROLLBACK: before any push, `gh repo delete "$repo"` (asks for confirmation; permanent). After the push, not rolled back: the protected history is evidence.
-- EVIDENCE: build-log line with the repository URL. E-05; TISAX 5.2.
+- EVIDENCE: build-log line with the repository URL, `GIT_ORG` and `PLATFORM_REPO_SLUG`. E-xx: none (repository configuration, 01 §7.2); TISAX 5.2.1.
 
 #### DC-9.3 Write access for humans only
 
@@ -879,18 +1004,37 @@ gh repo create "$repo" --private --description "Agentic platform: register, poli
 - ACTION: grant write only to the named humans' accounts (platform owner, second human, second operator; the security reviewer and Mo owner when appointed), through a team whose members are those accounts. No bot account, machine user or app installation receives write or maintain. Then list:
 
 ```bash
-gh api "repos/$repo/collaborators?affiliation=all" --paginate --jq '.[] | [.login, .type, .role_name] | @tsv'
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG
+repo="$PLATFORM_REPO_SLUG"
+gh api "repos/$repo/collaborators?affiliation=all" --paginate --jq '.[] | [.login, .type, .role_name] | @tsv' | tee "$BUILD_LOG_DIR/03-DC-9.3-collaborators-$(date -u +%F).tsv"
+awk -F'\t' '$2 != "User" {print "FAIL non-user with access: " $0}' "$BUILD_LOG_DIR/03-DC-9.3-collaborators-$(date -u +%F).tsv"
 ```
 
-- VERIFY: every row has type `User`; every login with a role other than `read` or `triage` is on the appointment records. App installations with write access are read by eye in the organisation settings under GitHub Apps; none may have repository write on this repository, and the finding is written to the build log.
-- ROLLBACK: remove the grant (`gh api -X DELETE "repos/$repo/collaborators/<login>"`).
-- EVIDENCE: the listing in the build log. TISAX 4.1-4.2, 5.2.
+- VERIFY: the `awk` prints nothing (every row has type `User`); every login with a role other than `read` or `triage` is on the appointment records, checked line by line against `decisions/` by the platform owner with ITSEC. App installations with write access are read by eye in the organisation settings under **Your organisations → Settings → Third-party Access → GitHub Apps**; none may have repository write on this repository, and the finding is written to the build log with the date. The same listing is repeated weekly with DC-9.8 while DC-9.9 is BLOCKED.
+- ROLLBACK: remove the grant (`gh api -X DELETE "repos/$repo/collaborators/<login>"`, with the login quoted).
+- EVIDENCE: the dated listing in the build log. E-xx: none (repository access configuration, 01 §7.2); TISAX 4.1.3, 5.2.1.
 
 #### DC-9.4 Commit CODEOWNERS with the second human on the control files
 
 - WHO: platform owner writes; SH reviews the commit (review record).
 - WHERE: shell with `~/.platform-env` sourced.
-- ACTION: CODEOWNERS identifies owners by the email verified on their git-host account. Only one owner is listed on each control path, because any listed owner's approval satisfies the rule. Paths are fixed here; 06, 15 and 16 place `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `ONCALL_FILE` and the ladder under them.
+- ACTION: CODEOWNERS identifies owners by the email verified on their git-host account. GitHub honours an email owner only when that address is a **verified** address on a GitHub account that has **write** access to the repository; otherwise the entry is an unknown owner, no code owner is assigned to the path, and `require_code_owner_reviews` (DC-9.6) has nothing to require — the protection looks set and protects nothing. So the two addresses are proven before the file is committed, not after the push. Only one owner is listed on each control path, because any listed owner's approval satisfies the rule. Paths are fixed here; 06, 15 and 16 place `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `ONCALL_FILE` and the ladder under them.
+
+  Pre-commit check, both halves required:
+
+```bash
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG SECOND_HUMAN_EMAIL OWNER_DAILY_ACCOUNT
+repo="$PLATFORM_REPO_SLUG"
+for a in "$OWNER_DAILY_ACCOUNT" "$SECOND_HUMAN_EMAIL"; do
+  printf '%s\t' "$a"
+  gh api "search/users?q=$a+in:email" --jq '.total_count'
+done
+gh api "repos/$repo/collaborators?affiliation=all" --jq '.[] | select(.role_name=="write" or .role_name=="admin" or .role_name=="maintain") | .login'
+```
+
+  A `total_count` of `1` names the account. A `0` proves nothing either way — GitHub's user search matches only addresses the account has made public — so the second half is mandatory whatever the count says: each of the two people replies from their own account, "`<address>` is a verified email on my GitHub account `<login>`, which has write access to `<repo>`", and that reply is quoted in the review record of this commit and saved to `EVIDENCE_INTERIM_LOCATION` as `<date>-DC-9.4-codeowner-<role>-v1`. The two logins must appear in the collaborator listing above. If either address cannot be verified, the entry is written as `@<login>` instead of the address, and the change of form is noted in the review record.
 
 ```bash
 need SECOND_HUMAN_EMAIL OWNER_DAILY_ACCOUNT
@@ -910,37 +1054,86 @@ git -C "$PLATFORM_REPO_DIR" add .github/CODEOWNERS
 git -C "$PLATFORM_REPO_DIR" commit -m "DC-9.4 CODEOWNERS: second human on control files"
 ```
 
-  Then the review record as in DC-1.3, reviewer SH.
-- VERIFY: `grep -c "$SECOND_HUMAN_EMAIL" "$PLATFORM_REPO_DIR/.github/CODEOWNERS"` prints `8`; after the push (DC-9.5), the git host shows no CODEOWNERS errors: `gh api "repos/$repo/codeowners/errors" --jq '.errors | length'` prints `0`.
+  Then the review record as in DC-1.3, reviewer SH, quoting both verification replies.
+- VERIFY:
+
+```bash
+grep -c "$SECOND_HUMAN_EMAIL" "$PLATFORM_REPO_DIR/.github/CODEOWNERS"
+```
+
+  prints `8`. After the push (DC-9.5) and before DC-9.6 is run, the git host's own parse of the file:
+
+```bash
+gh api "repos/$repo/codeowners/errors?ref=main" --jq '.errors | length'
+gh api "repos/$repo/codeowners/errors?ref=main" --jq '.errors[] | [.line, .kind, .message] | @tsv'
+```
+
+  The length must be `0`. A non-zero length **stops DC-9.6**: branch protection is not applied while an owner is unknown, because `require_code_owner_reviews` over a file with an unknown owner requires nobody. The listed errors are fixed by a new commit and a new push before DC-9.6, and the second attempt's output is kept as well. (`ref` accepts a branch, tag or commit and defaults to the default branch — GitHub REST "List CODEOWNERS errors", read 2026-09-16.)
 - ROLLBACK: revert the commit (reviewed).
-- EVIDENCE: commit, review record. TISAX 4.1-4.2, 5.2.
+- EVIDENCE: commit, review record with the two verification replies, both `codeowners/errors` outputs. E-xx: none (CODEOWNERS configuration, 01 §7.2); TISAX 4.1.3, 5.2.1, 5.3.1.
 
 #### DC-9.5 Push the local history and set the remote
 
-- WHO: platform owner.
+- WHO: platform owner; witness: the second human on screen (the push is the one write to `main` nobody reviews as a pull request).
 - WHERE: shell with `~/.platform-env` sourced.
-- ACTION: the push is the one moment a commit reaches `main` without a pull request; each such commit already has a signed review record (DC-9.1) and the push is a bootstrap deviation entry.
+- ACTION: the push is the one moment a commit reaches `main` without a pull request; each such commit already has a signed review record, or sits in `BD-03-1`'s exempt list (DC-9.1).
+
+> **IRREVERSIBLE**: pushed history. Once `main` exists on the git host the commits are public
+> to everyone with read access, the branch is the base of every later pull request, and DC-9.6
+> then forbids force-push and deletion; a mistake is corrected by a reverting pull request, never
+> by rewriting what was pushed. Confirm before running: DC-9.1's
+> `03-prepush-unreviewed.txt` is empty and `BD-03-1` is in the register; DC-9.2's VERIFY printed
+> `PRIVATE`; DC-9.4's CODEOWNERS commit is the current `HEAD`; `git -C "$PLATFORM_REPO_DIR" log
+> --oneline` is read aloud against `03-prepush-commits.txt`; `grep -rIiE 'password|secret|token'
+> "$PLATFORM_REPO_DIR"` shows only prose (§13). Gate: the signed P22 / SD-14 / M-7 record
+> (`decisions/<date>-git-host-and-repository.md`), which DC-9.1's ACTION has already proved with
+> `decision-need.sh`.
 
 ```bash
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG BUILD_LOG_DIR DEVIATION_REGISTER SECOND_HUMAN_EMAIL
+repo="$PLATFORM_REPO_SLUG"
+test -s "$PLATFORM_REPO_DIR/decisions/$(awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="P22") {r=$4; gsub(/ /,"",r); print r}}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | head -n 1)" || echo "STOP: gate record missing; do not push"
+test ! -s "$BUILD_LOG_DIR/03-prepush-unreviewed.txt" || echo "STOP: unreviewed commits remain; do not push"
+checkpoint DC-9.5 START "$SECOND_HUMAN_EMAIL" - "irreversible: initial push"
 remote="https://github.com/$repo.git"
 git -C "$PLATFORM_REPO_DIR" branch -M main
 git -C "$PLATFORM_REPO_DIR" remote add origin "$remote"
 git -C "$PLATFORM_REPO_DIR" push -u origin main
 penv_set PLATFORM_REPO_REMOTE "$remote"
-printf '%s|DC-9.5|initial push of %s commits with review records|%s\n' "$(date +%F)" "$(wc -l < "$BUILD_LOG_DIR/03-prepush-commits.txt" | tr -d ' ')" "$remote" >> "$DEVIATION_REGISTER"
 ```
 
-- VERIFY: `git -C "$PLATFORM_REPO_DIR" rev-parse HEAD` equals `gh api "repos/$repo/branches/main" --jq .commit.sha`; `need PLATFORM_REPO_REMOTE`.
-- ROLLBACK: none for pushed history; mistakes are reverted through pull requests after DC-9.6.
-- EVIDENCE: deviation register line; build log. E-05; TISAX 5.2.
+  Then the deviation row, in PR-4.1's thirteen-column form, inserted at the end of the register's **first** table and committed in the build-log repository:
+
+```bash
+row="| BD-03-2 | $(date -u +%F) | 03 DC-9.5 | DEV | initial push of the local history without a pull request | repo $repo | $BUILD_LOG_DIR/03-prepush-commits.txt ($(wc -l < "$BUILD_LOG_DIR/03-prepush-commits.txt" | tr -d ' ') commits) | protected history on main with a per-commit review record, BD-03-1 exemptions aside | BLOCKED: no factory | - | $SECOND_HUMAN_EMAIL | superseded by DC-9.6 | open |"
+tmp=$(mktemp)
+awk -v row="$row" '
+  /^\|---\|/ && !seen { seen=1; print; next }
+  seen && !done && $0 !~ /^\|/ { print row; done=1 }
+  { print }
+  END { if (seen && !done) print row }' "$DEVIATION_REGISTER" > "$tmp" && mv "$tmp" "$DEVIATION_REGISTER"
+git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
+git -C "$BUILD_LOG_DIR" commit -m "BD-03-2 initial push of the platform repository"
+checkpoint DC-9.5 DONE "$SECOND_HUMAN_EMAIL" - "BD-03-2 opened"
+```
+
+- VERIFY: `git -C "$PLATFORM_REPO_DIR" rev-parse HEAD` equals `gh api "repos/$repo/branches/main" --jq .commit.sha`; `need PLATFORM_REPO_REMOTE` passes; `grep -c '^| BD-03-2 |' "$DEVIATION_REGISTER"` prints `1`, and its line number is smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"`, which proves the row is in the deviation table and not inside the Closures table that 17 reads at the Tier R gate and 42 consolidates.
+- ROLLBACK: **none for pushed history.** Mistakes are reverted through pull requests after DC-9.6; the register row is closed by a Closures line, never edited.
+- EVIDENCE: `BD-03-2` row, the push output and the two sha values in the build log, the witness line. E-xx: E-05; TISAX 5.2.1, 1.4.1.
 
 #### DC-9.6 Branch protection: two human reviewers, code owners, administrators included
 
 - WHO: platform owner applies; ITSEC witnesses on screen.
 - WHERE: shell.
+- PRECONDITION: DC-9.4's `codeowners/errors?ref=main` printed `0`. Do not run this step while it does not: `require_code_owner_reviews` over a file with an unknown owner requires nobody, and the protection would read as set while protecting nothing.
 - ACTION: status checks are added by 16 when the register CI exists.
 
 ```bash
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG
+repo="$PLATFORM_REPO_SLUG"
+gh api "repos/$repo/codeowners/errors?ref=main" --jq '.errors | length'
 p=$(mktemp)
 cat > "$p" <<'EOF'
 {
@@ -968,9 +1161,9 @@ rm "$p"
 gh api "repos/$repo/branches/main/protection" --jq '{reviews: .required_pull_request_reviews.required_approving_review_count, codeowners: .required_pull_request_reviews.require_code_owner_reviews, lastpush: .required_pull_request_reviews.require_last_push_approval, admins: .enforce_admins.enabled, force: .allow_force_pushes.enabled, deletions: .allow_deletions.enabled}'
 ```
 
-  Expect `reviews` 2, `codeowners` true, `lastpush` true, `admins` true, `force` false, `deletions` false.
+  Expect `reviews` 2, `codeowners` true, `lastpush` true, `admins` true, `force` false, `deletions` false, and the `codeowners/errors` length still `0`.
 - ROLLBACK: `gh api -X DELETE "repos/$repo/branches/main/protection"` only under a reviewed decision; the deletion itself is audited (DC-9.8).
-- EVIDENCE: the verify JSON in the build log; ITSEC's witness line. TISAX 5.2.
+- EVIDENCE: the verify JSON and the errors length in the build log; ITSEC's witness line. E-xx: none (branch-protection configuration, 01 §7.2); TISAX 5.2.1, 5.3.1.
 
 #### DC-9.7 Negative tests: a direct push and a one-approval merge are refused
 
@@ -979,6 +1172,9 @@ gh api "repos/$repo/branches/main/protection" --jq '{reviews: .required_pull_req
 - ACTION:
 
 ```bash
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG PLATFORM_REPO_REMOTE
+repo="$PLATFORM_REPO_SLUG"
 w=$(mktemp -d)
 git clone "$PLATFORM_REPO_REMOTE" "$w/r"
 git -C "$w/r" commit --allow-empty -m "DC-9.7 negative test: direct push"
@@ -1003,32 +1199,62 @@ rm -rf "$w"
 
 - VERIFY: the direct push prints a protected-branch refusal and `exit=1` (non-zero); the pull request shows `BLOCKED` and `REVIEW_REQUIRED` after one approval.
 - ROLLBACK: the pull request is closed and its branch deleted in the action.
-- EVIDENCE: refusal text and PR state in the build log. TISAX 5.2.
+- EVIDENCE: refusal text and PR state in the build log. E-xx: none (branch-protection test, 01 §7.2); TISAX 5.2.1, 5.3.1.
 
 #### DC-9.8 Audit administrator bypass
 
 - WHO: ITSEC runs weekly until 15 part B puts the query in the SIEM; the platform owner never runs it alone.
-- WHERE: shell as a git-host organisation owner. Assumption: the organisation is on a GitHub plan that exposes the organisation audit-log API.
+- WHERE: shell as a git-host organisation owner, on the runner's own workstation, `~/.platform-env` sourced. Assumption: the organisation is on a GitHub plan that exposes the organisation audit-log API.
+- PRECONDITION: the runner is not the person who ran DC-9.2, so nothing from that sitting's shell survives. `GIT_ORG` and `PLATFORM_REPO_SLUG` are read from the variables file, which DC-9.2 wrote; if IT security's workstation has no `~/.platform-env`, the platform owner hands over the two values in writing and the runner exports them at the top of the block. Never edit the organisation name into the command by hand: a mistyped organisation returns an empty audit log, which reads exactly like a clean week.
 - ACTION:
 
 ```bash
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG BUILD_LOG_DIR
+repo="$PLATFORM_REPO_SLUG"
+gh api "orgs/$GIT_ORG" --jq '.login'
+out="$BUILD_LOG_DIR/03-DC-9.8-bypass-audit-$(date -u +%F).tsv"
+: > "$out"
 for a in protected_branch.policy_override protected_branch.review_policy_override protected_branch.update_admin_enforced protected_branch.destroy repository_ruleset.update repository_ruleset.destroy; do
-  gh api "orgs/<git-org>/audit-log?phrase=action:$a+repo:$repo" --paginate --jq '.[] | [.["@timestamp"], .action, .actor] | @tsv'
+  gh api "orgs/$GIT_ORG/audit-log?phrase=action:$a+repo:$repo" --paginate --jq '.[] | [.["@timestamp"], .action, .actor] | @tsv' >> "$out"
 done
+wc -l < "$out"
+cat "$out"
 ```
 
-- VERIFY: on the day of DC-9.6 the output is empty apart from the protection set-up itself; any later `policy_override` is a severity 2 finding to the incident commander.
+- VERIFY: `gh api "orgs/$GIT_ORG"` prints the organisation login, which proves the name resolved (an empty audit log from a mistyped organisation is otherwise indistinguishable from a clean week). On the day of DC-9.6 the file holds only the protection set-up itself; on a later week the expected line count is `0`. Any `policy_override`, `update_admin_enforced` or `destroy` line is a severity 2 finding raised to the incident commander (`INCIDENT_COMMANDER_EMAIL`) the same day, with the line quoted.
 - ROLLBACK: none; read only.
-- EVIDENCE: dated output in the build log; the weekly entry in `DRILL_CALENDAR` until 15 takes it over. TISAX 5.2, 1.5.
+- EVIDENCE: the dated file in the build log, kept even when empty (an absent file is not evidence of a clean week); the weekly entry in `DRILL_CALENDAR` until 15 part B takes the query over. E-xx: E-06 (audit data); TISAX 5.2.1, 1.5.1.
 
 #### DC-9.9 Refuse approvals by service accounts and bot users — **BLOCKED**
 
-- WHO: platform owner writes the rule; security reviewer (or ITSEC) reviews.
+- WHO: platform owner writes the rule; security reviewer (or ITSEC until PPL-SR is signed) reviews.
 - WHERE: platform repository CI.
-- ACTION: **BLOCKED until the bot-approval CI rule is committed to the platform repository by file [16-register-and-shared-registry.md](16-register-and-shared-registry.md)** (plan §8, "gate-checklist parser, bot-approval and ladder-raise CI rules"). The git host counts any approval from an account with write access; it does not tell humans from machine users. The rule must fail a pull request whose approvals include any account not on the appointment records, and must be a required status check added to DC-9.6's protection. Interim control, until committed: DC-9.3 keeps write access to named humans only, and ITSEC repeats DC-9.3's listing weekly with DC-9.8.
-- VERIFY: once committed: a test pull request approved by a non-human account fails the check.
+
+> **BLOCKED**: Needs: the bot-approval CI rule. Commit it in: the platform repository,
+> `.github/workflows/bot-approval.yml`, by [16-register-and-shared-registry.md](16-register-and-shared-registry.md)
+> (plan §8, "gate-checklist parser, bot-approval and ladder-raise CI rules"). Unblocked by: the
+> commit id of that workflow with a green run on a test pull request, recorded with
+> `penv_set BOT_APPROVAL_RULE_COMMIT <sha>`. Gate waiting: DC-9.6's `required_status_checks`,
+> which stays `null` until the check has a name to require. Until then:
+> `checkpoint DC-9.9 BLOCKED - - "bot-approval rule not committed"`, and this step's row in
+> README's BLOCKED index.
+
+- ACTION (written in full, executed only when unblocked): the git host counts any approval from an account with write access; it does not tell humans from machine users, and `required_approving_review_count: 2` is satisfied by two machine approvals. The rule must fail a pull request whose approvals include any account not on the appointment records of §5, and is then added to DC-9.6's protection as a required status check:
+
+```bash
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG BOT_APPROVAL_RULE_COMMIT
+repo="$PLATFORM_REPO_SLUG"
+p=$(mktemp)
+gh api "repos/$repo/branches/main/protection" --jq '.' > "$p.current"
+```
+
+  The protection body of DC-9.6 is re-sent with `"required_status_checks": {"strict": true, "contexts": ["bot-approval"]}` in place of `null`, everything else unchanged, under a reviewed change.
+- Interim control, until committed: DC-9.3 keeps write access to named humans only, and ITSEC repeats DC-9.3's collaborator listing weekly in the same sitting as DC-9.8; a login that is not on an appointment record is removed the same day.
+- VERIFY: once committed, a test pull request approved by a non-human account fails the check and cannot be merged; `gh api "repos/$repo/branches/main/protection" --jq '.required_status_checks.contexts'` lists `bot-approval`. While BLOCKED, the verify is the weekly DC-9.3 listing showing type `User` on every row.
 - ROLLBACK: remove the required check through a reviewed change.
-- EVIDENCE: the weekly DC-9.3 listing until then. TISAX 5.2.
+- EVIDENCE: while BLOCKED, the dated weekly DC-9.3 listings and the `BLOCKED` checkpoint line; once unblocked, the workflow commit, the failing test pull request and the new protection JSON. E-xx: none (CI configuration, 01 §7.2); TISAX 5.2.1, 5.3.1.
 
 #### DC-9.10 Merge the bootstrap review records through the protected path
 
@@ -1037,11 +1263,21 @@ done
 - ACTION: the review records of the commits pushed in DC-9.5 join the repository they describe, under review, so the pushed history and its approvals travel together.
 
 ```bash
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG PLATFORM_REPO_REMOTE BUILD_LOG_DIR
+repo="$PLATFORM_REPO_SLUG"
 w=$(mktemp -d)
 git clone "$PLATFORM_REPO_REMOTE" "$w/r"
 git -C "$w/r" checkout -b dc-9-10-bootstrap-reviews
 mkdir -p "$w/r/decisions/bootstrap-reviews"
-while read -r c; do cp "$BUILD_LOG_DIR/reviews/$c.md" "$w/r/decisions/bootstrap-reviews/$c.md"; done < "$BUILD_LOG_DIR/03-prepush-commits.txt"
+while read -r c; do
+  if [ -f "$BUILD_LOG_DIR/reviews/$c.md" ]; then
+    cp "$BUILD_LOG_DIR/reviews/$c.md" "$w/r/decisions/bootstrap-reviews/$c.md"
+  else
+    grep -qx "$c" "$BUILD_LOG_DIR/03-prepush-exempt.txt" || echo "STOP: $c has neither a review record nor a BD-03-1 exemption"
+  fi
+done < "$BUILD_LOG_DIR/03-prepush-commits.txt"
+cp "$BUILD_LOG_DIR/03-prepush-exempt.txt" "$w/r/decisions/bootstrap-reviews/BD-03-1-exempt-commits.txt"
 git -C "$w/r" add decisions/bootstrap-reviews
 git -C "$w/r" commit -m "DC-9.10 review records of the bootstrap push"
 git -C "$w/r" push origin dc-9-10-bootstrap-reviews
@@ -1049,7 +1285,14 @@ gh pr create --repo "$repo" --head dc-9-10-bootstrap-reviews --title "DC-9.10 bo
 ```
 
   After two approvals, one of them the second human's, merge in the git host's interface; then `rm -rf "$w"`.
-- VERIFY: `gh pr view dc-9-10-bootstrap-reviews --repo "$repo" --json state --jq .state` prints `MERGED`; the file count under `decisions/bootstrap-reviews/` on `main` equals the line count of `03-prepush-commits.txt`.
+- VERIFY: `gh pr view dc-9-10-bootstrap-reviews --repo "$repo" --json state --jq .state` prints `MERGED`; the loop printed no `STOP` line; and the review-record count under `decisions/bootstrap-reviews/` on `main` equals the commits pushed minus the `BD-03-1` exemptions:
+
+```bash
+gh api "repos/$repo/contents/decisions/bootstrap-reviews?ref=main" --jq '[.[] | select(.name | endswith(".md"))] | length'
+expr "$(wc -l < "$BUILD_LOG_DIR/03-prepush-commits.txt" | tr -d ' ')" - "$(wc -l < "$BUILD_LOG_DIR/03-prepush-exempt.txt" | tr -d ' ')"
+```
+
+  The two numbers must be equal, and `BD-03-1-exempt-commits.txt` must be present alongside them.
 - ROLLBACK: before merge, close the pull request; after merge, a reverting pull request under the same protection.
 - EVIDENCE: the merged pull request URL with its two approvals. E-05; TISAX 5.2.
 
@@ -1072,7 +1315,9 @@ gh pr create --repo "$repo" --head dc-9-10-bootstrap-reviews --title "DC-9.10 bo
 - [ ] `tools/decision-need.sh` over the ids gating 04 to 09 prints `SIGNED` for each: `D7-LETTER PPL-SH E-2 PPL-IC SH-REPORTS PPL-WA1 PPL-WA2 PPL-BA SD-01 SD-04 SD-12 SD-13 SD-14 SD-15 SD-16 SD-17 SD-21 SD-27 SD-28 SD-29 SD-30 SD-38 SD-45 D8 P1 P10 P11 P14 P22 P31 WDEC-29 G3-ROSTER NAMES`.
 - [ ] The D7 letter left on or before 2026-09-21.
 - [ ] `need MODEL_ID` is expected to fail until DC-8.3; every other variable in §14's list is set or deliberately `*tbd*` with its tracker row open.
-- [ ] `PLATFORM_REPO_REMOTE` is set; DC-9.6's verify JSON matches; DC-9.7's refusals are recorded.
+- [ ] `PLATFORM_REPO_REMOTE`, `GIT_ORG` and `PLATFORM_REPO_SLUG` are set; DC-9.4's `codeowners/errors` length is `0`; DC-9.6's verify JSON matches; DC-9.7's refusals are recorded.
+- [ ] The deviation register holds `BD-03-1` and `BD-03-2`, both in the first table (their line numbers are smaller than the `## Closures` heading's) and both in PR-4.1's thirteen-column form: `awk -F'|' '/^\| BD-03-/ {print $2, NF}' "$DEVIATION_REGISTER"` prints `15` fields for each (13 columns between 14 pipes).
+- [ ] `DC-9.9` has a `BLOCKED` checkpoint line and a row in README's BLOCKED index; no other step of this file is BLOCKED.
 - [ ] No wiki page, no build-log line and no record contains a secret; `grep -rIiE 'password|secret|token' "$PLATFORM_REPO_DIR/decisions"` shows only prose about secrets, never a value.
 - [ ] Every record's evidence mails are in `EVIDENCE_INTERIM_LOCATION` and each has an `EVIDENCE_REGISTER` line.
 - [ ] The count record (DC-2.8) says five humans at the grant.
@@ -1091,6 +1336,7 @@ gh pr create --repo "$repo" --head dc-9-10-bootstrap-reviews --title "DC-9.10 bo
 | `BILLING_ADMIN_EMAIL` | 07, 14 | empty |
 | `MO_OWNER_EMAIL` | 22, 29, 40 | empty |
 | `DPO_CONTACT` | 19, 25 | empty |
+| `GIT_ORG`, `PLATFORM_REPO_SLUG` | DC-9.3 to DC-9.10; 15 part B (the bypass query moves to the SIEM); 16 (CI rules on the same repository) | empty, or not of the form `<org>/<name>`; IT security's weekly DC-9.8 reads them from the variables file, never from a sitting's shell |
 | `GIT_HOST`, `GIT_OIDC_ISSUER`, `PLATFORM_REPO_REMOTE` | 06, 10, 13, 15, 16 | empty; 06 and 16 also check that `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `ONCALL_FILE` and the ladder sit under `/roster/`, `/control-groups/`, `/oncall/`, `/ladder/` so CODEOWNERS covers them |
 | `SIEM_KIND`, `SCC_BILLING_MODEL` | 04, 09, 15 | not one of the listed values |
 | `EVIDENCE_RETENTION_DAYS`, `IDENTITY_RETENTION_DAYS` | 08, 14, 23 | not an integer at a lock |
@@ -1124,7 +1370,7 @@ gh pr create --repo "$repo" --head dc-9-10-bootstrap-reviews --title "DC-9.10 bo
 
 Deferred: none. The executing halves of these findings are in the gated files (05, 07, 08, 09, 21, 22, 23, 24, 35, 36, 40), each of which refuses to run on an unsigned record.
 
-## 16. Facts checked on 2026-09-15
+## 16. Facts checked on 2026-09-15, with the git-host rows re-read on 2026-09-16
 
 | Fact used | Source |
 |---|---|
@@ -1141,7 +1387,9 @@ Deferred: none. The executing halves of these findings are in the gated files (0
 | Admin roles: `Menu > Account > Admin roles`, select the role, **View admins** | Workspace Admin Help, "Assign specific admin roles" |
 | WIF issuers: `https://token.actions.githubusercontent.com/`, `https://gitlab.com` | IAM, "Configure Workload Identity Federation with deployment pipelines" |
 | Branch protection body fields; approvals count from write access or code owners; administrators exempt unless enforced | GitHub REST "Branch protection"; GitHub Docs "About protected branches" |
-| CODEOWNERS location, email owners, write access needed, any owner's approval suffices | GitHub Docs "About code owners" |
+| CODEOWNERS location (`.github/`, root or `docs/`), owners referred to by an email address added to their account, users and teams need explicit write access, an unknown owner means no code owner is assigned, any one owner's approval suffices | GitHub Docs "About code owners" (re-read 2026-09-16) |
+| `GET /repos/{owner}/{repo}/codeowners/errors` takes a `ref` query parameter (branch, tag or commit; default the default branch) and returns an `errors` array with `line`, `kind` and `message` | GitHub REST "List CODEOWNERS errors" (read 2026-09-16) |
+| The `in:email` qualifier exists in user search; searching by email domain is refused for privacy and the examples match public profile addresses only. Assumption: an address the account keeps private returns no match, so a `total_count` of `0` proves nothing and the owner's own confirmation is required | GitHub Docs "Searching users" (read 2026-09-16) |
 | `gh repo create` flags | GitHub CLI manual |
 | Audit events `protected_branch.policy_override` and related; `GET /orgs/{org}/audit-log` needs an organisation owner | GitHub Enterprise Cloud audit-log events; REST "Get the audit log for an organization" |
 | GitLab protected-branch and approval attributes | GitLab API "Protected branches", "Merge request approvals" |

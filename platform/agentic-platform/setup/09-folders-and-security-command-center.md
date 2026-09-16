@@ -19,7 +19,7 @@ This part builds the platform boundary and the Google-run detection desk above i
 2. **Three organisation-level tag keys** and their folder bindings: `agp-tier`, `agp-tisax-scope` and `agp-env`. The design names all three ([02 §3.6](../02-landing-zone-and-tiers.md), P38). The plan's variable list and 03's names register name only the first two. `TAG_KEY_ENV` is added here and reported back for plan §5, and `agp-env` is created only once a superseding names record signs it (FS-0.2). Folders cannot carry labels, so these tags are the folders' only classification.
 3. **Essential Contacts** at `fld-agentic-platform`: the security and technical categories go to `platform-security@` and `platform-owners@` ([02 §3.7](../02-landing-zone-and-tiers.md)).
 4. **The observability default storage location `europe-west1`** on `fld-agentic-platform`. It is set before any project exists, so every later project's `_Trace` observability bucket defaults to Belgium. **The Cloud Logging folder default storage location is not set.** It would also move each new project's `_Required` bucket out of `global`, and Google states that Sensitive Actions then cannot scan those logs (SD-17, X-RQB-03). Each project instead routes `_Default` to a regional bucket ([10](10-core-projects-and-ci-identities.md), [17](17-factory-module-equivalents-and-tier-r-gate.md)).
-5. **SCC Premium activated at the organisation with `eu` data residency**, under the payer named in P11. It is activated before any location policy exists ([13](13-organisation-policies-deny-and-pab.md) applies the first). The tier and residency are read back into `SCC_TIER`, and the SCC service agent is recorded.
+5. **SCC Premium activated at the organisation with `eu` data residency**, under the payer named in P11. It is activated before any location policy exists ([13](13-organisation-policies-deny-and-pab.md) applies the first). The tier and residency are read back into `SCC_TIER` by an account that holds an SCC role, and the four service agents activation creates are recorded from the organisation's IAM policy.
 
 What this file does **not** do:
 
@@ -57,7 +57,7 @@ flowchart TD
 - [ ] [03](03-decisions-and-people.md) records are signed: SD-01, SD-15, SD-17, P11 (the SCC payer, with `SCC_BILLING_MODEL` set), P94 (residency `eu`, carried in the P11/SD-15 record) and **NAMES**, the names register holding the tag keys (03 DC-5.1); `tools/decision-need.sh` exists. `PLATFORM_REPO_REMOTE` exists, or FS-4.2 commits locally with a signed review record (SD-14).
 - [ ] [06](06-organisation-bootstrap-and-roster.md) is done: `SA_1_ADMIN` holds Organization Administrator, Folder Creator, Project Creator and PAM Admin under the dated exception, and today is before `BOOTSTRAP_EXCEPTION_EXPIRY`. `GRP_PLATFORM_SECURITY` and `GRP_PLATFORM_OWNERS` exist.
 - [ ] [07](07-billing-account.md) is done. This file creates no project, but 10 follows it directly.
-- [ ] For FS-7 only: the IT security person who signed P11 is available for a 1 to 2 hour sitting and holds, or can witness a time-bound grant of, Security Center Admin and Organization Administrator at the organisation. If `SCC_BILLING_MODEL=subscription`, the contract from [04](04-purchases-and-lead-times.md) is in hand. If `payg-org`, 03's record shows that finance signed and that cost-centre owners were notified. Google charges organisation-level pay-as-you-go usage "to the billing accounts associated with the projects in your organization" ([activate Premium](https://docs.cloud.google.com/security-command-center/docs/activate-scc-for-an-organization), checked 2026-09-15).
+- [ ] For FS-7 only: the IT security person who signed P11 is available for a 1 to 2 hour sitting and holds, or can witness a time-bound grant of, Security Center Admin and Organization Administrator at the organisation. **Under path A that person must hold Security Center Admin themselves, because they also run the FS-7.5 and FS-7.7 reads**; under path B the platform owner's `fs-bootstrap-sccadmin` grant of FS-7.3 must still be live when those reads run. `SA_1_ADMIN` holds no SCC role from 06. If `SCC_BILLING_MODEL=subscription`, the contract from [04](04-purchases-and-lead-times.md) is in hand. If `payg-org`, 03's record shows that finance signed and that cost-centre owners were notified. Google charges organisation-level pay-as-you-go usage "to the billing accounts associated with the projects in your organization" ([activate Premium](https://docs.cloud.google.com/security-command-center/docs/activate-scc-for-an-organization), checked 2026-09-15).
 - [ ] Workstation: gcloud with the `beta` component (FS-2.1 uses `gcloud beta observability`), `curl`, `python3`, `git`. Two browser profiles: `SA_1_ADMIN`, and the IT security person's own account for FS-7.
 
 ## People
@@ -65,7 +65,7 @@ flowchart TD
 | Role | Does | Present when |
 |---|---|---|
 | Platform owner, signed in as `SA_1_ADMIN` | Every step except FS-7.1 and the activation itself when IT security performs it | Whole file (about 1 day) |
-| IT security, the P11 signatory | Confirms payer and residency (FS-7.1). Activates SCC from its own account, or witnesses the platform owner doing it (FS-7.3, FS-7.4). Co-signs the SCC evidence (FS-7.5) | FS-7, 1 to 2 hours, plus the first-scan wait of up to 24 hours |
+| IT security, the P11 signatory, holding `roles/securitycenter.admin` (and `roles/securitycenter.adminViewer` where its account is read-only) and Organization Administrator | Confirms payer and residency (FS-7.1). Activates SCC from its own account, or witnesses the platform owner doing it (FS-7.3, FS-7.4). **Under path A, runs the shell reads of FS-7.5 and FS-7.7 from its own account**, because Organization Administrator carries no `securitycenter.*` permission. Co-signs the SCC evidence (FS-7.5) | FS-7, 1 to 2 hours, plus the first-scan wait of up to 24 hours |
 | Reviewers of `register/folders.yaml` named by CODEOWNERS in the platform repository (03) | Review the pull request. This is not a sitting | FS-4.2 |
 
 No second person is needed for folders, tags, contacts or the observability location: SD-01 records them as a one-person bootstrap, reviewed at [42](42-gates-drills-and-evidence.md). Every grant, folder and tag made here lands in the organisation's Admin Activity audit log, which Eve reads from [25](25-eve-human-super-admin-detections.md).
@@ -161,7 +161,7 @@ gcloud org-policies describe iam.allowedPolicyMemberDomains --organization="$ORG
 gcloud org-policies describe essentialcontacts.managed.allowedContactDomains --organization="$ORG_ID" --effective
 ```
 
-- **VERIFY:** Record each output in the build log. A permission error on one of the organisation-level describes (logging or observability settings) is recorded, not a stop; ask the organisation's owner of that setting for the value and its date instead. Then check these conditions:
+- **VERIFY:** Record each output in the build log. A permission error on one of the organisation-level describes (logging or observability settings) is **expected**, recorded, and not a stop: `gcloud logging settings describe --organization=` needs `logging.settings.get`, which sits in `roles/logging.admin` and not in Organization Administrator or `roles/logging.viewer` ([access control with IAM](https://docs.cloud.google.com/logging/docs/access-control), [default resource settings](https://docs.cloud.google.com/logging/docs/default-settings), checked 2026-09-15), and no step grants it at the organisation. This file never sets an organisation-level logging value, so the read is informational: ask the organisation's owner of that setting for the value and its date, record the answer with its date, and treat the folder-level read of FS-2.2 (under FS-1.2's time-bound `roles/logging.admin` on `fld-agentic-platform`) as the binding one. Then check these conditions:
 
 | Output | Expected | If not |
 |---|---|---|
@@ -209,11 +209,12 @@ gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN
 gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN AND bindings.condition.title:fs-bootstrap" --format="table(bindings.role,bindings.condition.title,bindings.condition.expression)"
 ```
 
-- **ROLLBACK:** FS-8.1 removes both grants. To remove them early:
+- **ROLLBACK:** FS-8.1 removes both grants. To remove them early, run FS-8.1's block, which deletes only the binding carrying the `fs-bootstrap-*` condition. **Never `--all`:** Google defines it as "remove all bindings with this role and principal, irrespective of any conditions" ([organizations remove-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/organizations/remove-iam-policy-binding), checked 2026-09-15), so it would also strip a standing binding from [06](06-organisation-bootstrap-and-roster.md). To remove one role by hand, pass the exact condition back:
 
 ```bash
-gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/resourcemanager.tagAdmin" --all
-gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/resourcemanager.tagUser" --all
+printf '{"title":"fs-bootstrap-tagadmin","description":"09 FS-0.5 SD-01 bootstrap","expression":"request.time < timestamp(\\"%s\\")"}\n' "$GRANT_UNTIL" > /tmp/fs-cond.json
+gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/resourcemanager.tagAdmin" --condition-from-file=/tmp/fs-cond.json
+rm -f /tmp/fs-cond.json
 ```
 
 - **EVIDENCE:** The get-iam-policy table in the build log under `FS-0.5`. Input to deviation row `BD-09-2` (kind DEV: time-bound self-grants instead of PAM), written in FS-8.2. TISAX 4.1.3, 4.2.1. EU AI Act E-05.
@@ -265,12 +266,21 @@ gcloud resource-manager folders delete "$FLD_AGENTIC_PLATFORM"
 curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -d '{"permissions":["observability.settings.get","observability.settings.update","logging.settings.get","essentialcontacts.contacts.create","essentialcontacts.contacts.list","resourcemanager.hierarchyNodes.createTagBinding"]}' "https://cloudresourcemanager.googleapis.com/v3/folders/${FLD_AGENTIC_PLATFORM}:testIamPermissions"
 gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="roles/observability.editor" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-obs,description=09 FS-1.2 SD-01 bootstrap"
 gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="roles/essentialcontacts.admin" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-contacts,description=09 FS-1.2 SD-01 bootstrap"
-gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="roles/logging.viewer" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-logview,description=09 FS-1.2 SD-01 bootstrap"
+gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="roles/logging.admin" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-logadmin,description=09 FS-1.2 SD-01 bootstrap describe only"
 ```
 
-  Skip any `add-iam-policy-binding` line whose permissions the probe already echoed. Observability Editor carries `observability.settings.update` ([observability bucket defaults](https://docs.cloud.google.com/stackdriver/docs/observability/set-defaults-for-observability-buckets)). Essential Contacts Admin manages contacts ([manage Essential Contacts](https://docs.cloud.google.com/resource-manager/docs/manage-essential-contacts)). `Assumption:` Logs Viewer carries `logging.settings.get`; the re-probe proves it, and if it does not, use `roles/logging.configWriter` with the same condition, **used for describe only**.
-- **VERIFY:** After propagation, re-run the curl line. All six permissions are echoed.
-- **ROLLBACK:** FS-8.1 removes these grants. Early removal uses the same `remove-iam-policy-binding ... --all` form on the folder.
+  Skip any `add-iam-policy-binding` line whose permissions the probe already echoed. Observability Editor carries `observability.settings.update` ([observability bucket defaults](https://docs.cloud.google.com/stackdriver/docs/observability/set-defaults-for-observability-buckets)). Essential Contacts Admin manages contacts ([manage Essential Contacts](https://docs.cloud.google.com/resource-manager/docs/manage-essential-contacts)).
+  **Logs Viewer is not the right role here.** `roles/logging.viewer` covers buckets, views, sinks, exclusions and log entries, and carries no `logging.settings.*` permission; `logging.settings.get` and `logging.settings.update` are in `roles/logging.admin` ([access control with IAM](https://docs.cloud.google.com/logging/docs/access-control), checked 2026-09-15). [Default resource settings](https://docs.cloud.google.com/logging/docs/default-settings) requires "your IAM role on the organization or folder includes `logging.settings.get`" for the read that FS-2.2 runs. Logging Admin is granted here **for describe only**: no step in this file or any later file runs `gcloud logging settings update` on this folder or any folder under it (FS-2.2). `Assumption:` `roles/logging.configWriter` was considered as the narrower option, but Google's access-control page does not list `logging.settings.*` under it, so the confirmed role is used. FS-8.1 removes it. The same substitution applies to FS-0.3's organisation-level `gcloud logging settings describe`: that read needs `logging.settings.get` at the organisation, which `SA_1_ADMIN` does not hold, so FS-0.3's permission-error clause is the expected path there and the value is asked of the organisation's Cloud Logging owner.
+- **VERIFY:** After propagation (`Assumption:` usually under 7 minutes), re-run the curl line. All six permissions are echoed. If Resource Manager answers `400 INVALID_ARGUMENT` naming a permission as not valid for a folder, drop that permission from the list, re-run, and record which one was dropped, exactly as FS-0.4 does at the organisation. `Assumption:` v3 `folders:testIamPermissions` validates the supplied permissions against the resource; the method's reference page states only that wildcards are rejected ([folders.testIamPermissions](https://docs.cloud.google.com/resource-manager/reference/rest/v3/folders/testIamPermissions)). Prove each dropped permission directly instead, and record the output under `FS-1.2`:
+
+```bash
+gcloud beta observability settings describe --location=global --folder="$FLD_AGENTIC_PLATFORM"
+gcloud essential-contacts list --folder="$FLD_AGENTIC_PLATFORM"
+gcloud logging settings describe --folder="$FLD_AGENTIC_PLATFORM"
+```
+
+  Each must return without a permission error. A permission error on any of the three stops the file: the matching grant above did not take.
+- **ROLLBACK:** FS-8.1 removes these grants. To remove one early, read the folder policy first and delete the one binding that carries the `fs-bootstrap-*` condition, as FS-8.1 does; never `--all`, which would also strip an unconditional binding of the same role.
 - **EVIDENCE:** Probe outputs before and after, in the build log under `FS-1.2`. Input to `BD-09-2`. TISAX 4.1.3, 4.2.1.
 
 ### FS-2.1 Set the observability default storage location to `europe-west1`
@@ -297,8 +307,14 @@ gcloud beta observability settings describe --location=global --folder="$FLD_AGE
 
 ### FS-2.2 Leave the Cloud Logging folder default unset, and prove it
 
-- **WHO:** Platform owner.
+- **WHO:** Platform owner, holding the time-bound `roles/logging.admin` on `fld-agentic-platform` from **FS-1.2** (Logs Viewer does not carry `logging.settings.get`).
 - **WHERE:** The shell.
+- **PRECONDITION:** FS-1.2's `fs-bootstrap-logadmin` binding is present and its condition has not expired. Check before running, and re-grant as in FS-1.2 with a fresh `GRANT_UNTIL` if it has:
+
+```bash
+gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN AND bindings.condition.title:fs-bootstrap-logadmin" --format="value(bindings.role,bindings.condition.expression)"
+```
+
 - **ACTION:** **Do not run `gcloud logging settings update --folder=... --storage-location=...` on this folder or any folder under it, in this file or later.** That setting decides where new projects' `_Required` and `_Default` buckets go ([default resource settings](https://docs.cloud.google.com/logging/docs/default-settings), updated 2026-09-09). Google states that "if you have specified a storage location for the `_Required` logs bucket in a certain project, folder, or organization, logs from that project, folder, or organization cannot be scanned for sensitive actions" ([Sensitive Actions overview](https://docs.cloud.google.com/security-command-center/docs/concepts-sensitive-actions-overview), updated 2026-09-14). 07 §3 relies on Sensitive Actions. Regional `_Default` logs come from each project's own bucket and sink redirect in 10 and 17. Only a read is run:
 
 ```bash
@@ -446,7 +462,13 @@ print(len(rows), "folders written")
 PY
 ```
 
-- **VERIFY:** The script prints `22 folders written`. `grep -c 'variable: FLD_' "$PLATFORM_REPO_DIR/register/folders.yaml"` prints `22`, and `grep -c 'id: "[0-9]*"$'` on the same file prints `22`.
+- **VERIFY:** The script prints `22 folders written`, and both counts below print `22`. The second uses `[0-9]+`, not `[0-9]*`, so an `id: ""` line from an unset `FLD_*` variable is not counted; the generator itself would already fail with a Python `KeyError` on an unset variable, so this is a second line of defence.
+
+```bash
+grep -c 'variable: FLD_' "$PLATFORM_REPO_DIR/register/folders.yaml"
+grep -cE 'id: "[0-9]+"$' "$PLATFORM_REPO_DIR/register/folders.yaml"
+```
+
 - **ROLLBACK:** Before commit, delete the file and the branch: `git -C "$PLATFORM_REPO_DIR" switch - && git -C "$PLATFORM_REPO_DIR" branch -D "folders-<date>"`.
 - **EVIDENCE:** The file itself, through FS-4.2. TISAX 1.3.1.
 
@@ -627,7 +649,11 @@ gcloud essential-contacts compute --notification-categories=security --folder="$
   3. Residency `eu` (P94). Premium in `eu` loses only the Security Health Analytics "resources scanned" counts on the Compliance page. AI Discovery, the Gemini inventory and Model Armor are restricted only in KSA ([data residency](https://docs.cloud.google.com/security-command-center/docs/data-residency-support), updated 2026-09-14).
   4. Google's page says some Cloud Run Threat Detection and Container Threat Detection detectors "can't be enabled" with residency, without naming them. IT security records the list from the account team, or records it as *tbd*, to be taken from FS-7.7's read.
   5. The Model Armor allowance, recorded against `GEMINI_PROJECT`'s Model Armor line: 2 million tokens a month included with organisation-level Premium, 3 billion with a subscription (pricing page, as verified by the review on 2026-09-15).
-  6. Who activates: IT security from its own account (path A), or the platform owner with IT security watching (path B). Under path B, `SA_1_ADMIN` needs a time-bound `roles/securitycenter.admin` at the organisation. Google requires Security Center Admin and Organization Administrator (same page).
+  6. Who activates, **and who runs the read-back steps FS-7.5 to FS-7.7**. Organization Administrator carries only `resourcemanager.*` permissions ([Resource Manager roles](https://docs.cloud.google.com/iam/docs/roles-permissions/resourcemanager)), so `SA_1_ADMIN` has no Security Command Center access of its own and cannot read findings, settings or services without a grant.
+     - **Path A** — IT security activates from its own account, holding Security Center Admin and Organization Administrator ([IAM for organisation-level activations](https://docs.cloud.google.com/security-command-center/docs/access-control-org)). **IT security also performs the shell reads of FS-7.5 and FS-7.7 from its own account**, with the platform owner present and recording. No SCC role is granted to `SA_1_ADMIN` at all.
+     - **Path B** — the platform owner performs, with IT security watching. `SA_1_ADMIN` then needs a time-bound `roles/securitycenter.admin` at the organisation, granted in FS-7.3 with the condition title `fs-bootstrap-sccadmin` and a window long enough to cover FS-7.3 **through FS-7.7** (12 hours, never past `BOOTSTRAP_EXCEPTION_EXPIRY`). FS-8.1 removes it and `BD-09-2` records it.
+
+     Write the chosen path into the FS-7.1 record. Every later step in FS-7 names its performer by path. Under both paths the same person holds Security Center Admin while FS-7.5 to FS-7.7 run; a "permission denied" from `gcloud scc` is a sign the wrong account is signed in, or that the path-B window has lapsed.
 - **VERIFY:** A record `decisions/<date>-scc-activation-sitting.md` listing items 1 to 6 with their answers, signed by IT security and the platform owner.
 - **ROLLBACK:** None needed. The step makes a record only.
 - **EVIDENCE:** The signed record scanned to `EVIDENCE_INTERIM_LOCATION` as `<date>-FS-7.1-scc-sitting-v1`, and an `EVIDENCE_REGISTER` line. TISAX 6.1.1, 7.1.2. EU AI Act E-11 (supplier file).
@@ -655,12 +681,15 @@ gcloud essential-contacts compute --notification-categories=security --folder="$
 
 - **WHO:** Path A: IT security activates from its own account, and the platform owner watches. Path B: the platform owner as `SA_1_ADMIN` activates with a time-bound Security Center Admin grant, and IT security watches. Either way, one performs and the other witnesses.
 - **WHERE:** Console. **Use the EU jurisdictional console `https://console.eu.cloud.google.com`.** Google says: "If you want to enable data residency, then you must use the jurisdictional Google Cloud console" ([activation overview](https://docs.cloud.google.com/security-command-center/docs/activate-scc-overview), updated 2026-09-14). Path: Security Command Center welcome page (`/projectselector2/security/command-center/welcome?supportedpurview=organizationId` on that host).
-- **ACTION:** Path B only, first:
+- **ACTION:** Path B only, first. The window is 12 hours, not 4: the same grant must still be live for the read-backs of **FS-7.5, FS-7.6 and FS-7.7**, and the first SCC scan can take up to 24 hours. Never past `BOOTSTRAP_EXCEPTION_EXPIRY`.
 
 ```bash
-GRANT_UNTIL=$(python3 -c 'import datetime as d;print((d.datetime.now(d.timezone.utc)+d.timedelta(hours=4)).strftime("%Y-%m-%dT%H:%M:%SZ"))')
+GRANT_UNTIL=$(python3 -c 'import datetime as d;print((d.datetime.now(d.timezone.utc)+d.timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%SZ"))')
+echo "SCC grant ends at $GRANT_UNTIL; exception ends $BOOTSTRAP_EXCEPTION_EXPIRY"
 gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/securitycenter.admin" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-sccadmin,description=09 FS-7.3 SD-15 witnessed by IT security"
 ```
+
+  If FS-7.5 to FS-7.7 are reached after the window has lapsed (for example after waiting for the first scan), re-grant with the same condition title and a fresh `GRANT_UNTIL`, and record the re-grant under `BD-09-2`. Under path A this block is not run at all, and IT security performs the reads from its own account.
 
   Then, in the console (steps from [activate Premium](https://docs.cloud.google.com/security-command-center/docs/activate-premium-tier), updated 2026-09-14):
   1. Select the organisation `ORG_ID`, then **Select**.
@@ -684,9 +713,15 @@ gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN
 
 ### FS-7.5 Read back the tier and residency and record `SCC_TIER`
 
-- **WHO:** Platform owner, with IT security co-signing.
-- **WHERE:** EU console, **Settings > Tier details** and **Settings > Setup details**, then the shell.
-- **ACTION:** Read the Tier and Billing status rows and the residency location. Then corroborate from the shell through the EU regional endpoint. With residency enabled, findings must be read through `securitycenter.eu.rep.googleapis.com` with `--location=eu` (same page):
+- **WHO:** The console reading is taken by the platform owner with IT security present. **The shell corroboration is run by whoever holds Security Center Admin:** under path A, IT security from its own account (`roles/securitycenter.admin`, plus `roles/securitycenter.adminViewer` for findings if its account holds only that; both are organisation-level SCC roles, [IAM for organisation-level activations](https://docs.cloud.google.com/security-command-center/docs/access-control-org)); under path B, the platform owner as `SA_1_ADMIN` while the `fs-bootstrap-sccadmin` grant of FS-7.3 is live. IT security co-signs either way.
+- **WHERE:** EU console, **Settings > Tier details** and **Settings > Setup details**, then the shell of the performer named above.
+- **PRECONDITION (path B only):** the grant is still live. If this prints nothing, re-grant as in FS-7.3 before continuing; `roles/resourcemanager.organizationAdmin` gives no `securitycenter.*` permission, so without it every command below returns permission denied.
+
+```bash
+gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN AND bindings.condition.title:fs-bootstrap-sccadmin" --format="value(bindings.role,bindings.condition.expression)"
+```
+
+- **ACTION:** Read the Tier and Billing status rows and the residency location. Then corroborate from the shell through the EU regional endpoint. With residency enabled, findings must be read through `securitycenter.eu.rep.googleapis.com` with `--location=eu` (same page). `PARENT` and `--location=eu` are the documented form ([gcloud scc findings list](https://docs.cloud.google.com/sdk/gcloud/reference/scc/findings/list)), so a failure here is authorisation, not syntax:
 
 ```bash
 gcloud config set api_endpoint_overrides/securitycenter https://securitycenter.eu.rep.googleapis.com/
@@ -694,7 +729,7 @@ gcloud scc findings list "$ORG_ID" --location=eu --limit=1 --format="value(findi
 gcloud config unset api_endpoint_overrides/securitycenter
 ```
 
-- **VERIFY:** Tier details shows **Premium** and a billing status consistent with FS-7.1 (trial or pay-as-you-go, or subscription). Setup details shows data residency **eu**. The `findings list` command exits 0; it may print nothing before the first scan, and a returned name contains `/locations/eu/`. `Assumption:` a call with `--location=eu` fails where residency is not `eu`; the console reading is the authority. Only when both readings agree:
+- **VERIFY:** Tier details shows **Premium** and a billing status consistent with FS-7.1 (trial or pay-as-you-go, or subscription). Setup details shows data residency **eu**. The `findings list` command exits 0; it may print nothing before the first scan, and a returned name contains `/locations/eu/`. A `PERMISSION_DENIED` is not a reading: it means the command ran under an account without an SCC role. Stop, fix the performer or the grant per the WHO and PRECONDITION above, and re-run — never record `SCC_TIER` from the console alone, because [13](13-organisation-policies-deny-and-pab.md) gates its first location policy on this variable. `Assumption:` a call with `--location=eu` fails where residency is not `eu`; the console reading is the authority on residency. Only when both readings agree:
 
 ```bash
 penv_set SCC_TIER "PREMIUM/eu"
@@ -705,31 +740,52 @@ penv_set SCC_TIER "PREMIUM/eu"
 
 ### FS-7.6 Record the SCC service agents and their roles
 
-- **WHO:** Platform owner.
+- **WHO:** Platform owner as `SA_1_ADMIN`. This step reads only the organisation's IAM policy, which Organization Administrator covers ([Resource Manager roles](https://docs.cloud.google.com/iam/docs/roles-permissions/resourcemanager)); no SCC role is needed.
 - **WHERE:** The shell.
-- **ACTION:** Activation creates service agents and grants them roles, including the Cloud Security Command Center Service Agent (same page). Its address has the form `service-org-ORGANIZATION_ID@security-center-api.iam.gserviceaccount.com` and it holds `roles/securitycenter.serviceAgent` ([IAM for organisation-level activations](https://docs.cloud.google.com/security-command-center/docs/access-control-org)). Record every service agent binding at the organisation, so 13's deny policies and principal access boundaries, and Eve's roster of expected principals, know them.
+- **ACTION:** Organisation-level activation creates **four** service agents — Cloud Security Command Center, Cloud Security Compliance, Container Threat Detection and Data Security Posture Management — and grants them roles ([activate Premium](https://docs.cloud.google.com/security-command-center/docs/activate-premium-tier), updated 2026-09-14). Record every service-agent binding at the organisation, so 13's deny policies and principal access boundaries, and Eve's roster of expected principals, know them. **The role-based query is the authority.** Run it first and record every member it returns:
 
 ```bash
-gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.members:service-org-${ORG_ID}@security-center-api.iam.gserviceaccount.com" --format="value(bindings.role)"
-gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.role:serviceAgent" --format="table(bindings.role,bindings.members)"
+gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.role:serviceAgent" --format="table(bindings.role,bindings.members)" | tee "$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-FS-7.6-scc-service-agents-v1.txt"
 ```
 
-- **VERIFY:** The first command prints `roles/securitycenter.serviceAgent`. The second lists it among the other Google service agents activation created (compliance, Container Threat Detection, Data Security Posture Management). If the first prints nothing, check FS-0.3's domain restriction record with IT security; SCC cannot discover assets without the grant.
+  Then a cross-check on one address form, whose result is **recorded, never treated as a failure**. `Assumption:` the Cloud Security Command Center Service Agent has the address `service-org-ORGANIZATION_ID@security-center-api.iam.gserviceaccount.com` and holds `roles/securitycenter.serviceAgent`. Google's activation page names the four agents but publishes no address form, and [IAM for organisation-level activations](https://docs.cloud.google.com/security-command-center/docs/access-control-org) does not confirm it either. An empty result therefore means the address form has changed or differs, not that anything is wrong:
+
+```bash
+gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.members:service-org-${ORG_ID}@security-center-api.iam.gserviceaccount.com" --format="value(bindings.role)" || true
+```
+
+- **VERIFY:** The role-based query returns at least one binding for each of the four agents above, matched by the agent name in the member address rather than by a guessed form; write the four addresses and their roles into the record, and hand that list to [13](13-organisation-policies-deny-and-pab.md) and [25](25-eve-human-super-admin-detections.md). If the role-based query returns **nothing at all**, that is the failure: stop, check FS-0.3's `iam.allowedPolicyMemberDomains` record with IT security, because under domain-restricted sharing "service accounts must be in an allowed domain" and SCC cannot discover assets without the grants. If it returns fewer than four agents, record which are missing against FS-7.7's enablement read (a service that activation did not turn on has no agent) and raise it with IT security before closing FS-7. The address cross-check printing nothing is recorded as a line in the same file and is not a finding.
 - **ROLLBACK:** None. Never remove a service agent grant; SCC stops working.
-- **EVIDENCE:** Both outputs as `<date>-FS-7.6-scc-service-agents-v1.txt`. TISAX 4.1.3, 4.2.1. EU AI Act E-05.
+- **EVIDENCE:** The role-based table and the cross-check result as `<date>-FS-7.6-scc-service-agents-v1.txt`, with an `EVIDENCE_REGISTER` line. TISAX 4.1.3, 4.2.1. EU AI Act E-05.
 
 ### FS-7.7 Record the enabled services and the residency detector diff
 
-- **WHO:** Platform owner, with IT security for the diff.
-- **WHERE:** The shell.
-- **ACTION:** List the SCC services and their enablement at the organisation ([gcloud scc manage services list](https://docs.cloud.google.com/sdk/gcloud/reference/scc/manage/services/list)). Compare Cloud Run Threat Detection and Container Threat Detection modules against FS-7.1 item 4.
+- **WHO:** The performer named in FS-7.1 item 6, **holding Security Center Admin**: under path A, IT security from its own account; under path B, the platform owner as `SA_1_ADMIN` while the `fs-bootstrap-sccadmin` grant of FS-7.3 is live. Organization Administrator alone cannot read Security Center Management, so this step returns permission denied if run by an account with no SCC role. IT security is present for the diff either way.
+- **WHERE:** The shell of that performer.
+- **PRECONDITION (path B only):** the FS-7.3 grant is still live — the same check as FS-7.5's precondition. Re-grant with the same condition title if it has lapsed.
+- **ACTION:** List the SCC services and their enablement at the organisation ([gcloud scc manage services list](https://docs.cloud.google.com/sdk/gcloud/reference/scc/manage/services/list), checked 2026-09-15: `--organization` takes the full `organizations/ID` form in Google's own example, and the command has no `--location` flag). Compare Cloud Run Threat Detection and Container Threat Detection modules against FS-7.1 item 4.
 
 ```bash
 gcloud scc manage services list --organization="organizations/$ORG_ID" --format=yaml > "$BUILD_LOG_DIR/FS-7.7-scc-services.yaml"
 grep -E "name:|EnablementState" "$BUILD_LOG_DIR/FS-7.7-scc-services.yaml"
 ```
 
-- **VERIFY:** The file lists Event Threat Detection, Security Health Analytics and the other Premium services with an enablement state. Premium turns on "nine detection services" (activate Premium page). Every detector that FS-7.1 named as disabled by residency, or that the file shows disabled, is written into a list. For each one that 07's catalogue relies on, 15 or 17 moves the rule to the SIEM over Cloud Audit Logs as a dated row in the compliance mapping (07 §3).
+- **VERIFY:** Read the **names** back from `FS-7.7-scc-services.yaml` and check each one against the [activate Premium](https://docs.cloud.google.com/security-command-center/docs/activate-premium-tier) page **on the day**, not against a count: the list of what Premium turns on changes, and a number would either read as a false discrepancy or hide a missing service. On 2026-09-15 that page listed ten services at organisation level:
+
+  | Service | Note |
+  |---|---|
+  | AI Protection | Touches the Model Armor line of FS-7.1 item 5 and 07 §3's catalogue; record its state explicitly |
+  | Compliance Manager | New name on the Premium list; record its state explicitly and tell 42, which keeps the compliance mapping |
+  | Container Threat Detection | Residency may disable detectors (FS-7.1 item 4) |
+  | Data Security Posture Management | — |
+  | Event Threat Detection | 07 §3 relies on it; its Workspace findings need the log sharing of [14](14-central-logging-and-billing-export.md) |
+  | Security Health Analytics | In `eu` it loses only the "resources scanned" counts (FS-7.1 item 3) |
+  | Security Posture | — |
+  | Virtual Machine Threat Detection | — |
+  | Vulnerability Assessment | — |
+  | Web Security Scanner | — |
+
+  Any name on the page that the file does not show, and any name the file shows that the page does not list, is written into the record with the date of the page read. Every detector that FS-7.1 named as disabled by residency, or that the file shows disabled, is written into the same list. For each one that 07's catalogue relies on, 15 or 17 moves the rule to the SIEM over Cloud Audit Logs as a dated row in the compliance mapping (07 §3).
 - **ROLLBACK:** None. The step only reads.
 - **EVIDENCE:** `FS-7.7-scc-services.yaml` and the disabled-detector list as `<date>-FS-7.7-scc-detector-diff-v1`. TISAX 1.5.1. EU AI Act E-05. It is also the supplier file row for Preview services outside the Data Location terms (07 §3, E-11).
 
@@ -754,20 +810,55 @@ bq query --project_id="$LOGGING_PROJECT" --use_legacy_sql=false 'SELECT invoice.
 - **WHERE:** The shell.
 - **ACTION:** The conditions expire by themselves, but an expired conditional binding still sits in the policy. Remove each one explicitly so that 12's check finds no leftover binding.
 
-```bash
-for r in roles/resourcemanager.tagAdmin roles/resourcemanager.tagUser roles/securitycenter.admin; do gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="$r" --all 2>/dev/null || echo "not bound: $r"; done
-for r in roles/observability.editor roles/essentialcontacts.admin roles/logging.viewer roles/logging.configWriter; do gcloud resource-manager folders remove-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="$r" --all 2>/dev/null || echo "not bound: $r"; done
-```
-
-  **Only remove bindings that carry an `fs-bootstrap-*` condition.** Before running the loop, check with the VERIFY commands that `SA_1_ADMIN` holds none of these roles unconditionally from 06. If one does, remove that role from the loop, because `--all` would also remove the standing binding.
-- **VERIFY:** Both commands print nothing:
+  **Never use `--all` here.** `--all` removes every binding for that member and role, conditional or not, so it would also strip a standing unconditional binding created in [06](06-organisation-bootstrap-and-roster.md) (`SA_1_ADMIN` holds Organization Administrator, Folder Creator, Project Creator and PAM Admin unconditionally under the dated exception, and 06 may have granted more). The block below reads the policy first, refuses to touch a role held unconditionally, and removes only the binding whose condition title starts with `fs-bootstrap`, by passing that exact condition back with `--condition-from-file`.
 
 ```bash
-gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.condition.title:fs-bootstrap" --format="value(bindings.role)"
-gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN" --format="value(bindings.role)"
+need ORG_ID SA_1_ADMIN FLD_AGENTIC_PLATFORM
+python3 - <<'PY'
+import json, os, subprocess, sys, tempfile
+member = "user:" + os.environ["SA_1_ADMIN"]
+targets = [("org", os.environ["ORG_ID"],
+            ["roles/resourcemanager.tagAdmin","roles/resourcemanager.tagUser","roles/securitycenter.admin"]),
+           ("folder", os.environ["FLD_AGENTIC_PLATFORM"],
+            ["roles/observability.editor","roles/essentialcontacts.admin","roles/logging.admin"])]
+def get(kind, rid):
+    cmd = ["gcloud","organizations","get-iam-policy",rid] if kind=="org" else ["gcloud","resource-manager","folders","get-iam-policy",rid]
+    return json.loads(subprocess.run(cmd+["--format=json"],check=True,capture_output=True,text=True).stdout)
+def remove(kind, rid, role, cond_file):
+    cmd = ["gcloud","organizations","remove-iam-policy-binding",rid] if kind=="org" else ["gcloud","resource-manager","folders","remove-iam-policy-binding",rid]
+    subprocess.run(cmd+[f"--member={member}",f"--role={role}",f"--condition-from-file={cond_file}"],check=True)
+bad = 0
+for kind, rid, roles in targets:
+    pol = get(kind, rid)
+    for role in roles:
+        for b in pol.get("bindings", []):
+            if b.get("role") != role or member not in b.get("members", []):
+                continue
+            cond = b.get("condition")
+            if not cond:
+                print("FAIL unconditional binding, not removed:", kind, rid, role); bad += 1; continue
+            if not cond.get("title","").startswith("fs-bootstrap"):
+                print("SKIP other condition, not removed:", kind, rid, role, cond.get("title")); continue
+            with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+                json.dump({k: cond[k] for k in ("title","description","expression") if k in cond}, fh); path = fh.name
+            print("removing", kind, rid, role, cond["title"])
+            remove(kind, rid, role, path); os.unlink(path)
+print("FS-8.1: nothing removed unconditionally" if not bad else f"FAIL: {bad} unconditional binding(s) found")
+sys.exit(1 if bad else 0)
+PY
 ```
 
-- **ROLLBACK:** Re-grant as in FS-0.5 or FS-1.2 if a step must be repeated.
+  A `FAIL unconditional binding` line stops the step: that role is a standing grant from 06 and must not be removed here; 12 withdraws the 06 exception. Record the line, remove nothing by hand, and continue with the remaining roles. A `SKIP other condition` line means a condition this file did not create; leave it and report it to IT security.
+- **VERIFY:** The script prints `FS-8.1: nothing removed unconditionally` and exits 0, and both reads below then print nothing. The second read lists any remaining `fs-bootstrap-*` binding on the folder rather than every binding, so a standing folder grant does not read as a failure:
+
+```bash
+gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.condition.title:fs-bootstrap" --format="value(bindings.role,bindings.condition.title)"
+gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN AND bindings.condition.title:fs-bootstrap" --format="value(bindings.role,bindings.condition.title)"
+```
+
+  Also record, for 12, the full list of what `SA_1_ADMIN` still holds on the folder: `gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN" --format="value(bindings.role,bindings.condition.title)"`.
+- **ROLLBACK:** If a step of this file must be repeated, re-grant the time-bound role exactly as FS-0.5 (organisation: `roles/resourcemanager.tagAdmin`, `roles/resourcemanager.tagUser`), FS-1.2 (folder: `roles/observability.editor`, `roles/essentialcontacts.admin`, `roles/logging.admin`) or FS-7.3 (organisation: `roles/securitycenter.admin`) created it, with a fresh `GRANT_UNTIL` and the same `fs-bootstrap-*` condition title, and add a line to `BD-09-2`.
+  If a **standing** binding was nevertheless removed by mistake, it is restored from the step in [06](06-organisation-bootstrap-and-roster.md) that created it, not from this file: Organization Administrator, Folder Creator, Project Creator and PAM Admin on `SA_1_ADMIN` come from 06's organisation-roles step under the dated exception (`BOOTSTRAP_EXCEPTION_EXPIRY`), and any other standing role on `SA_1_ADMIN` is listed in 06's produced-principals record. Restore it with the same role, member and expiry as 06 recorded, record the loss and the restore in the build log under `FS-8.1`, and tell the second human, because an unexplained organisation-IAM change is exactly what Eve reports from [25](25-eve-human-super-admin-detections.md).
 - **EVIDENCE:** Both empty outputs in the build log under `FS-8.1`. The removal date goes into `BD-09-2`, written in FS-8.2 (the register is append-only). TISAX 4.1.3, 4.2.1.
 
 ### FS-8.2 Write the bootstrap deviation register rows
@@ -780,7 +871,7 @@ gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten
 need DEVIATION_REGISTER FLD_AGENTIC_PLATFORM BOOTSTRAP_EXCEPTION_EXPIRY
 d=$(date -u +%Y-%m-%d)
 printf '| BD-09-1 | %s | 09 FS-1.1 to FS-6.1 | MOD | platform-core: folder tree, tags, Essential Contacts, observability default (02 2.1, 3.6, 3.7; SD-17) | organisation %s; folder %s and descendants | 02 2.1 tree; P38 vocabulary; NAMES record; folders.yaml commit <commit> | 22 folders; tag keys agp-tier, agp-tisax-scope, agp-env <or PENDING>; 14 values; 23 bindings; 2 contacts; observability default europe-west1; Logging folder default unset; labels, APIs, policies and grants none (folders carry no labels; policies 13; grants 10 and 12) | BUILD_LOG_DIR/records/<date>-FS-3.4-tree-diff-v1.txt; <date>-FS-5.6-effective-tags-v1.txt; FS-2.1 and FS-2.2 describes | n/a (no project) | none: SD-01 one-person bootstrap, reviewed at 42 | superseded by terraform import and an empty plan when the factory exists (B-01); Tier W gate at the latest | open |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM" >> "$DEVIATION_REGISTER"
-printf '| BD-09-2 | %s | 09 FS-0.5, FS-1.2, FS-7.3 | DEV | time-bound self-grants through Organization Administrator instead of PAM (no entitlement before 12) | organisation %s; folder %s | FS-0.4 and FS-1.2 probes | tagAdmin, tagUser (organisation); observability.editor, essentialcontacts.admin, logging viewer (folder); securitycenter.admin (organisation, path B only); each with an fs-bootstrap-* condition of at most 12 hours | FS-8.1 empty get-iam-policy outputs | n/a | none: SD-01; FS-7.3 witnessed by IT security | removed <date of FS-8.1>; within BOOTSTRAP_EXCEPTION_EXPIRY %s | closed |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM" "$BOOTSTRAP_EXCEPTION_EXPIRY" >> "$DEVIATION_REGISTER"
+printf '| BD-09-2 | %s | 09 FS-0.5, FS-1.2, FS-7.3 | DEV | time-bound self-grants through Organization Administrator instead of PAM (no entitlement before 12) | organisation %s; folder %s | FS-0.4 and FS-1.2 probes | tagAdmin, tagUser (organisation); observability.editor, essentialcontacts.admin, logging.admin for describe only (folder); securitycenter.admin (organisation, path B only, 12 hours to cover FS-7.3 to FS-7.7, re-granted under the same condition title if the window lapsed); each with an fs-bootstrap-* condition of at most 12 hours | FS-8.1 removal by condition title, with no unconditional binding touched, and the two empty get-iam-policy outputs | n/a | none: SD-01; FS-7.3 witnessed by IT security | removed <date of FS-8.1>; within BOOTSTRAP_EXCEPTION_EXPIRY %s | closed |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM" "$BOOTSTRAP_EXCEPTION_EXPIRY" >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" commit -m "registers: BD-09-1, BD-09-2 (setup 09)"
 ```
@@ -825,9 +916,10 @@ sitting_end
 - [ ] FS-2.2: `gcloud logging settings describe --folder="$FLD_AGENTIC_PLATFORM"` shows no `storageLocation` other than `global`, and no `kmsKeyName`.
 - [ ] FS-5.6 prints `tags: 22 folders match`. `TAG_KEY_TIER`, `TAG_KEY_ENV` and `TAG_KEY_TISAX` are set.
 - [ ] FS-6.1: `gcloud essential-contacts compute --notification-categories=security --folder="$FLD_AGENTS_P_SA_PROD"` lists both groups.
-- [ ] FS-7.5: `SCC_TIER=PREMIUM/eu`, from two agreeing readings co-signed by IT security.
-- [ ] FS-7.6 and FS-7.7: service agents and services recorded, and the disabled-detector list handed to 15.
-- [ ] FS-8.1: no `fs-bootstrap-*` binding remains at the organisation or on `fld-agentic-platform`.
+- [ ] FS-7.5: `SCC_TIER=PREMIUM/eu`, from two agreeing readings co-signed by IT security, the shell reading taken by an account holding an SCC role (path A: IT security; path B: `SA_1_ADMIN` under the live `fs-bootstrap-sccadmin` grant). No `PERMISSION_DENIED` was recorded as a reading.
+- [ ] FS-7.6: the role-based `bindings.role:serviceAgent` query returned the four activation service agents (Cloud Security Command Center, Cloud Security Compliance, Container Threat Detection, Data Security Posture Management), and the address-form cross-check result is recorded either way.
+- [ ] FS-7.7: the service names in `FS-7.7-scc-services.yaml` were checked one by one against the activation page on the day (ten on 2026-09-15, AI Protection and Compliance Manager included), not against a count; the disabled-detector list is handed to 15.
+- [ ] FS-8.1: no `fs-bootstrap-*` binding remains at the organisation or on `fld-agentic-platform`, the removal script printed `nothing removed unconditionally`, and `SA_1_ADMIN` still holds every standing role that 06 granted.
 - [ ] FS-8.2: the deviation register entry is complete. FS-7.8 is listed in the README re-run index against 14.
 - [ ] No organisation policy was created or changed by this file (compare `gcloud org-policies list --organization="$ORG_ID"` with FS-0.3).
 
@@ -862,8 +954,13 @@ Google pages, all checked 2026-09-15:
 - https://docs.cloud.google.com/security-command-center/docs/data-residency-support — locations, restrictions, deactivation warning
 - https://docs.cloud.google.com/security-command-center/docs/modify-data-residency-encryption — migration rules
 - https://docs.cloud.google.com/security-command-center/docs/regional-endpoints — EU endpoint and console
-- https://docs.cloud.google.com/security-command-center/docs/access-control-org — the service agent address and role
-- https://docs.cloud.google.com/sdk/gcloud/reference/scc/manage/services/list
+- https://docs.cloud.google.com/security-command-center/docs/access-control-org — the organisation-level SCC roles (Security Center Admin plus Organization Administrator; Security Center Admin Viewer for assets and findings). It does **not** publish the service agent address form
+- https://docs.cloud.google.com/sdk/gcloud/reference/scc/manage/services/list — `--organization=organizations/ID` in Google's example; no `--location` flag
+- https://docs.cloud.google.com/sdk/gcloud/reference/scc/findings/list — `PARENT` with `--location=eu`
+- https://docs.cloud.google.com/iam/docs/roles-permissions/resourcemanager — `roles/resourcemanager.organizationAdmin` carries only `resourcemanager.*` permissions, so it grants no SCC access
+- https://docs.cloud.google.com/logging/docs/access-control — `roles/logging.viewer` has no `logging.settings.*`; `logging.settings.get` and `.update` are in `roles/logging.admin`
+- https://docs.cloud.google.com/sdk/gcloud/reference/organizations/remove-iam-policy-binding and https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/folders/remove-iam-policy-binding — `--all` removes bindings "irrespective of any conditions"; `--condition-from-file` takes a JSON or YAML file with `title`, `description` and `expression`
+- https://docs.cloud.google.com/resource-manager/reference/rest/v3/folders/testIamPermissions — the probe method of FS-1.2
 - https://docs.cloud.google.com/docs/quotas/set-quota-project — the quota-project caveat of FS-2.1
 - https://cloud.google.com/security-command-center/pricing — as verified by the review on 2026-09-15 (X-RQB-04)
 
