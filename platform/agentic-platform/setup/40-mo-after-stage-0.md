@@ -104,6 +104,25 @@ penv_guard
 R="$BUILD_LOG_DIR/records/$(date -u +%F)-MA"
 ```
 
+Dataset `access` entries are added with one helper, defined once per sitting, which is [01](01-prerequisites-and-conventions.md) §8.1's BigQuery pattern and nothing more: its own `mktemp -d`, the etag compared immediately before the write, `unique` so a re-run adds nothing twice, and a read-back diff. It is the same shape as [22](22-mo-foundations.md)'s `mo_ds_access` and [29](29-mo-eve-quality-pack.md)'s `eq_access`; it is written out here because this file adds entries to datasets in two projects.
+
+```bash
+mo_ds_add() {   # mo_ds_add PROJECT DATASET ROLE MEMBER_EMAIL
+  [ $# -eq 4 ] || { echo "usage: mo_ds_add PROJECT DATASET ROLE MEMBER_EMAIL" >&2; return 2; }
+  W="$(mktemp -d)" || return 1
+  bq --project_id="$1" show --format=prettyjson "${1}:${2}" > "$W/before.json" || { echo "STOP: read failed" >&2; rm -rf "$W"; return 1; }
+  jq --arg r "$3" --arg m "$4" '.access = ((.access + [{"role":$r,"userByEmail":$m}]) | unique)' "$W/before.json" > "$W/after.json" || { rm -rf "$W"; return 1; }
+  jq -S '.access | sort_by(tostring)' "$W/after.json" > "$W/expected.json"
+  if [ "$(bq --project_id="$1" show --format=prettyjson "${1}:${2}" | jq -r .etag)" = "$(jq -r .etag "$W/before.json")" ]; then
+    bq --project_id="$1" update --source "$W/after.json" "${1}:${2}" || { echo "STOP: update failed" >&2; rm -rf "$W"; return 1; }
+  else
+    echo "STOP: ${1}:${2} changed since it was read" >&2; rm -rf "$W"; return 1
+  fi
+  bq --project_id="$1" show --format=prettyjson "${1}:${2}" | jq -S '.access | sort_by(tostring)' | diff "$W/expected.json" - && echo "ACCESS MATCHES ${1}:${2} $3 $4"
+  cp "$W/before.json" "${R}-dsaccess-${2}-before-$(date -u +%H%M%S).json"; rm -rf "$W"
+}
+```
+
 ## 0. The sitting
 
 ### MA-0.1 Open the sitting and check the gates
@@ -239,7 +258,7 @@ checkpoint MA-1.4 START
 gcloud iam service-accounts create mo-reporter --project="$MO_PROJECT" --display-name="Mo T1 reporter. Renders artefacts and drops bundles. Computes nothing, grades nothing, merges nothing."
 penv_set SA_MO_REPORTER "mo-reporter@${MO_PROJECT}.iam.gserviceaccount.com"
 gcloud projects add-iam-policy-binding "$MO_PROJECT" --member="serviceAccount:${SA_MO_REPORTER}" --role=roles/bigquery.jobUser --condition=None
-"$PLATFORM_REPO_DIR/tools/grant-dataset.sh" "$MO_PROJECT" "$MO_VIEWS_DS" READER "$SA_MO_REPORTER"
+mo_ds_add "$MO_PROJECT" "$MO_VIEWS_DS" READER "$SA_MO_REPORTER"
 ```
 
 - **VERIFY:**
@@ -250,8 +269,8 @@ gcloud projects get-iam-policy "$MO_PROJECT" --flatten='bindings[].members' --fi
 for DS in "$MO_METRICS_DS" "$MO_ARCHIVE_DS" "$MO_PRIVATE_DS"; do bq --project_id="$MO_PROJECT" show --format=prettyjson "${MO_PROJECT}:${DS}" | jq -r --arg m "$SA_MO_REPORTER" '[.access[] | select(.userByEmail == $m)] | length'; done
 ```
 
-  The account exists and is not disabled. Its **only** project-level role is `roles/bigquery.jobUser`. The three counts are `0`, `0`, `0`: the reporter reads the authorised views and nothing underneath them, which is the whole point of [36](36-wall-e-joins-to-eve-and-mo.md)'s view layer. `grant-dataset.sh` is 01 §8.1's access-array helper, with the etag compared immediately before the write and a read-back diff.
-- **ROLLBACK:** Remove the `READER` entry with the same helper, remove the `jobUser` binding, then `gcloud iam service-accounts delete "$SA_MO_REPORTER" --project="$MO_PROJECT"`. A deleted service account's address is unusable for 30 days.
+  The account exists and is not disabled. Its **only** project-level role is `roles/bigquery.jobUser`. The three counts are `0`, `0`, `0`: the reporter reads the authorised views and nothing underneath them, which is the whole point of [36](36-wall-e-joins-to-eve-and-mo.md)'s view layer. `mo_ds_add` is the sitting helper above: 01 §8.1's access-array pattern, with the etag compared immediately before the write and a read-back diff, and it printed `ACCESS MATCHES`.
+- **ROLLBACK:** Remove the `READER` entry by repeating the helper's pattern with it deleted, remove the `jobUser` binding, then `gcloud iam service-accounts delete "$SA_MO_REPORTER" --project="$MO_PROJECT"`. A deleted service account's address is unusable for 30 days.
 - **EVIDENCE:** The three outputs as `${R}-1.4-reporter-identity-v1.txt`. E-05. TISAX 4.1.1.
 
 ### MA-1.5 Bind `objectCreator`, and nothing more
@@ -343,7 +362,7 @@ Mo's absence must be strictly more restrictive than its presence, and the detect
 
 The order here is: **writer identity, then permission, then descriptor, then a data point, then the channel, then the policy.** Each step's verify is the precondition of the next.
 
-The 24-hour number is the same one the validator enforces in §7: a watermark older than 24 hours makes the validator refuse **every** promotion. That is what makes this an control rather than a dashboard.
+The 24-hour number is the same one the validator enforces in §7: a watermark older than 24 hours makes the validator refuse **every** promotion. That is what makes this a control rather than a dashboard.
 
 ### MA-2.1 Grant the writer identity `roles/monitoring.metricWriter`
 
@@ -460,12 +479,24 @@ gcloud projects get-iam-policy "$MO_PROJECT" --flatten='bindings[].members' --fi
 
 ```bash
 checkpoint MA-2.5 START
-jq '.add_roles = ((.add_roles // []) + ["roles/monitoring.editor"] | unique) | .justification["roles/monitoring.editor"] = "setup 40 MA-2.6 and MA-2.7: the freshness channel and the absence policy in MO_PROJECT"' "$PLATFORM_REPO_DIR/pam/overrides/mo.json" > "$PLATFORM_REPO_DIR/pam/overrides/mo.json.new"
-mv "$PLATFORM_REPO_DIR/pam/overrides/mo.json.new" "$PLATFORM_REPO_DIR/pam/overrides/mo.json"
+git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
+git -C "$PLATFORM_REPO_DIR" switch -c ma-2-repair-template-imp
+python3.12 - <<'PY'
+import json, pathlib
+p = pathlib.Path("pam/templates/ent-project-repair.template.json")
+t = json.loads(p.read_text())
+o = t.setdefault("tier_overrides", {}).setdefault("IMP", {"add_roles": [], "remove_roles": [], "reasons": {}})
+o["add_roles"] = sorted(set(o.get("add_roles", []) + ["roles/monitoring.editor"]))
+o["reasons"]["roles/monitoring.editor"] = "setup 40 MA-2.6 and MA-2.7: create the freshness channels and the threshold-and-absence policy in MO_PROJECT; the agent repair bundle carries no monitoring role and monitoring.admin belongs to ent-project-repair-core only"
+p.write_text(json.dumps(t, indent=2, sort_keys=True) + "\n")
+PY
+python3.12 "$PLATFORM_REPO_DIR/pam/generate.py" --template ent-project-repair --agent mo --tier IMP --project-variable MO_PROJECT --approver "user:${SECOND_HUMAN_EMAIL}" --requester "group:mo-owners@${DOMAIN}"
+jq -r '[.privilegedAccess.gcpIamAccess.roleBindings[].role] | sort | join("\n")' "$PLATFORM_REPO_DIR/pam/entitlements/ent-project-repair-mo.json"
+git -C "$PLATFORM_REPO_DIR" add pam/templates/ent-project-repair.template.json pam/entitlements/ent-project-repair-mo.json
 ```
 
-  Merge that as a reviewed pull request, then re-render and re-apply per [12](12-privileged-access-catalogue.md) PA-4.*, and request a fresh grant of `ENT_PROJECT_REPAIR_MO` — the one held since MA-0.3 carries the old role set.
-- **VERIFY:** `gcloud pam entitlements describe "${ENT_PROJECT_REPAIR_MO##*/}" --project="$MO_PROJECT" --location=global --billing-project="$CICD_PROJECT" --format='value(privilegedAccess.gcpIamAccess.roleBindings[].role)'` lists `roles/monitoring.editor`. 12's `CATALOGUE ZERO DIFF` check passes. The new grant is `ACTIVE`.
+  Merge that as a reviewed pull request, then re-apply the catalogue per [12](12-privileged-access-catalogue.md) PA-4.*, and request a fresh grant of `ENT_PROJECT_REPAIR_MO` — the one held since MA-0.3 carries the old role set.
+- **VERIFY:** The rendered role list contains `roles/monitoring.editor` and is otherwise unchanged from the agent bundle. `gcloud pam entitlements describe "${ENT_PROJECT_REPAIR_MO##*/}" --project="$MO_PROJECT" --location=global --billing-project="$CICD_PROJECT" --format='value(privilegedAccess.gcpIamAccess.roleBindings[].role)'` lists it. 12's `CATALOGUE ZERO DIFF` check passes. The new grant is `ACTIVE`.
 - **ROLLBACK:** Revert the pull request and re-apply; the role disappears at the next grant. MA-2.6 and MA-2.7 then record `PENDING` against this step rather than being attempted with an Owner.
 - **EVIDENCE:** The entitlement's role list and the zero-diff output as `${R}-2.5-entitlement-amend-v1.txt`. E-05. TISAX 4.1.1.
 
@@ -870,9 +901,11 @@ python3 -c "import sys,yaml,re; d=yaml.safe_load(open(sys.argv[1])); m=[g['email
 - **ROLLBACK:** None: a recorded assessment is amended, never withdrawn.
 - **EVIDENCE:** The signed assessment page reference as `<date>-MA-5.5-mo-processor-v1` in `EVIDENCE_INTERIM_LOCATION`. E-07, E-09. TISAX 8.1.
 
-# After Stage 1
+---
 
-Everything below happens against a dated stage decision record. §6 to §8 are the **S2 exit**; §9 is S3; §10 is S4 and optional.
+**After Stage 1.** Everything below happens against a dated stage decision record. §6 to §8 are the **S2 exit**; §9 is S3; §10 is S4 and optional.
+
+---
 
 ## 6. Mo-9: the CI ingestion identity, from the one pool the platform has (closes S046)
 
@@ -949,11 +982,11 @@ gcloud iam workload-identity-pools list --location=global --project="$CICD_PROJE
 checkpoint MA-6.4 START
 need MO_PROPOSALS SA_MO_INGEST MO_ARCHIVE_DS MO_METRICS_DS
 gcloud storage buckets add-iam-policy-binding "$MO_PROPOSALS" --project="$MO_PROJECT" --member="serviceAccount:${SA_MO_INGEST}" --role=roles/storage.objectViewer
-"$PLATFORM_REPO_DIR/tools/grant-dataset.sh" "$MO_PROJECT" "$MO_ARCHIVE_DS" READER "$SA_MO_INGEST" --metadata-only
-"$PLATFORM_REPO_DIR/tools/grant-dataset.sh" "$MO_PROJECT" "$MO_METRICS_DS" READER "$SA_MO_INGEST" --metadata-only
+mo_ds_add "$MO_PROJECT" "$MO_ARCHIVE_DS" roles/bigquery.metadataViewer "$SA_MO_INGEST"
+mo_ds_add "$MO_PROJECT" "$MO_METRICS_DS" roles/bigquery.metadataViewer "$SA_MO_INGEST"
 ```
 
-  *Assumption:* `grant-dataset.sh --metadata-only` writes an `iamMember`/`role` entry whose role is the dataset-level form of `roles/bigquery.metadataViewer`; 01 §8.1's helper takes the role as given and asserts it back. If the BigQuery access array refuses that role at dataset level, fall back to a project-level `roles/bigquery.metadataViewer` **on `MO_PROJECT` only**, record it as `BD-40-1`, and add it to MA-11.1's enumeration so the widening is visible.
+  *Assumption:* a BigQuery dataset `access` array accepts `roles/bigquery.metadataViewer` as an entry role; `mo_ds_add` passes the role through unchanged and reads it back, so a refusal or a normalisation shows in its diff rather than passing silently. If the BigQuery access array refuses that role at dataset level, fall back to a project-level `roles/bigquery.metadataViewer` **on `MO_PROJECT` only**, record it as `BD-40-1`, and add it to MA-11.1's enumeration so the widening is visible.
 - **VERIFY:**
 
 ```bash
@@ -962,7 +995,7 @@ for DS in "$MO_ARCHIVE_DS" "$MO_METRICS_DS" "$MO_PRIVATE_DS" "$MO_VIEWS_DS"; do 
 ```
 
   The bucket has three bindings and no more. The dataset loop prints a metadata-viewer role for the archive and metrics datasets and **nothing** for `MO_PRIVATE_DS` and `MO_VIEWS_DS`: ingestion has no business near the surrogate mapping, and no business reading the views a bundle's evidence is drawn from.
-- **ROLLBACK:** Remove the bucket binding and both dataset entries with the same helper. Ingestion then rejects every bundle at the snapshot check, which fails closed.
+- **ROLLBACK:** Remove the bucket binding, and both dataset entries by repeating the helper's pattern with the entries deleted instead of added. Ingestion then rejects every bundle at the snapshot check, which fails closed.
 - **EVIDENCE:** Both outputs as `${R}-6.4-ingest-reads-v1.txt`. E-05. TISAX 4.1.1.
 
 ### MA-6.5 Prove the ingestion identity is not a Mo identity
@@ -1342,12 +1375,12 @@ penv_set MO_SPANS_DS "walle_spans"
 
 ```bash
 checkpoint MA-9.3 START
-"$PLATFORM_REPO_DIR/tools/grant-dataset.sh" "$WALLE_PROJECT" "$MO_SPANS_DS" READER "$SA_MO_METRICS"
+mo_ds_add "$WALLE_PROJECT" "$MO_SPANS_DS" READER "$SA_MO_METRICS"
 ```
 
   This widens `mo-metrics@`'s read surface by one dataset of trace data and is an **S3-only** row in `mo/02-identity-and-access.md` §2.1; it is not part of the S0 grant set and is not re-granted by any earlier file.
 - **VERIFY:** `bq show --format=prettyjson "${WALLE_PROJECT}:${MO_SPANS_DS}" | jq '[.access[] | {role, who: (.userByEmail // .iamMember // .specialGroup // "view")}]'` shows one `READER` entry for `SA_MO_METRICS` and no other foreign principal. `mo-analyst@`, `mo-reporter@` and (later) `mo-narrator@` are **not** on it.
-- **ROLLBACK:** Remove the entry with the same helper.
+- **ROLLBACK:** Remove the entry by repeating the helper's pattern with the entry deleted instead of added, then read back.
 - **EVIDENCE:** The access array as `${R}-9.3-spans-reader-v1.json`. E-05. TISAX 4.1.1.
 
 ### MA-9.4 Verify the join, not the count (closes S154's verify half)
@@ -1439,7 +1472,7 @@ gcloud iam service-accounts create mo-narrator --project="$MO_PROJECT" --display
 penv_set SA_MO_NARRATOR "mo-narrator@${MO_PROJECT}.iam.gserviceaccount.com"
 gcloud projects add-iam-policy-binding "$MO_PROJECT" --member="serviceAccount:${SA_MO_NARRATOR}" --role=roles/aiplatform.user --condition=None
 gcloud projects add-iam-policy-binding "$MO_PROJECT" --member="serviceAccount:${SA_MO_NARRATOR}" --role=roles/bigquery.jobUser --condition=None
-"$PLATFORM_REPO_DIR/tools/grant-dataset.sh" "$MO_PROJECT" "$MO_VIEWS_DS" READER "$SA_MO_NARRATOR"
+mo_ds_add "$MO_PROJECT" "$MO_VIEWS_DS" READER "$SA_MO_NARRATOR"
 ```
 
   `aiplatform.user` in `MO_PROJECT`, where the job runs; nothing in `WALLE_PROJECT`, and no engine anywhere. The dataset grant is on the **dataset that contains the authorised views**, which is what Google requires of the querying principal: a table-level binding on a view alone leaves the query failing on the underlying table. Never on `MO_METRICS_DS`, never on `MO_ARCHIVE_DS`, never on `MO_PRIVATE_DS`, never on `walle_audit`.
