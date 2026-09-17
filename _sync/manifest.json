@@ -2,8 +2,8 @@
   "files": {
     "README.md": {
       "file_id": "1IxmBIqkvTw37e5OqRfuJEmb823-vdz27gBPwYAeGsLE",
-      "local_hash": "bfe45820b970755352d86345f7cc439fdf02037a1c999b866e43522183996abe",
-      "remote_modified": "2026-09-17T03:28:07.607Z"
+      "local_hash": "71ef3553ba7f1499f149fa5e13a24efd7e98ea45e9c7a3db27ec8777a442a81e",
+      "remote_modified": "2026-09-17T20:48:37.837Z"
     },
     "backlog.md": {
       "file_id": "1QfRnrCWrp0TOoH635DNpyzislk_QQbgjdouDl3UUR94",
@@ -120,10 +120,35 @@
       "local_hash": "4526807cce38b771cc5ab1d0c39b0151bf73d8c2c15301a544ab6a5d9a17f164",
       "remote_modified": "2026-09-16T15:04:45.891Z"
     },
+    "platform/agentic-platform/3-day/README.md": {
+      "file_id": "1YVkHlrtWtPKvr4VAM6knEPCHMUv06n0OysxzInSd9H8",
+      "local_hash": "048ec48a5899b0c9c01d5ecf43bfd6ad214809514adbb5c39089f04356d197d2",
+      "remote_modified": "2026-09-17T20:48:39.915Z"
+    },
+    "platform/agentic-platform/3-day/code.md": {
+      "file_id": "1Rog7_LI35_-4NoPHepoSkXnn-lZ2cm80ua4ZMinhJoQ",
+      "local_hash": "5247f7e37cf6bf5ecf39826c281acb6a540b033c5e23a2516cf28491523cbf81",
+      "remote_modified": "2026-09-17T20:48:42.871Z"
+    },
+    "platform/agentic-platform/3-day/day-1-platform-and-eve.md": {
+      "file_id": "1fdTEKFuCRQyfdyQqBWQ1EPu0wafcZeA12gQkIjloLRo",
+      "local_hash": "ed56aef3fc2fa628bf86e790861fdac8e4a2bc35e967b49ce87d6b6becb8cf7b",
+      "remote_modified": "2026-09-17T20:48:45.934Z"
+    },
+    "platform/agentic-platform/3-day/day-2-the-doer.md": {
+      "file_id": "16LNzslZ-NCQeO5uAT3cOB4lYAAAC7RqL7ZDHTP3ItLE",
+      "local_hash": "68a4d16d7cf8ce0456dccadc6fec2a68b453d4d133a7b366108a1be329f7a7ae",
+      "remote_modified": "2026-09-17T20:48:48.797Z"
+    },
+    "platform/agentic-platform/3-day/day-3-mo-demonstration-and-handover.md": {
+      "file_id": "1xG8XvCJ1Ch9c3mLdfJdbfn6Gvy_Ctq3uRhvDnWax88Q",
+      "local_hash": "c517bca3de1db798db419fe50d6a9ec1f27c0e7996bb252f74ade3e0342e8577",
+      "remote_modified": "2026-09-17T20:48:51.762Z"
+    },
     "platform/agentic-platform/README.md": {
       "file_id": "1vrxnoz3WpLNjz5b3i0ulNk-ivIZ9GeESJxvz9VPwVm4",
-      "local_hash": "29cbea483f3c4047f356f34586cf0e28af44e06865aa672e16e85a3482172c01",
-      "remote_modified": "2026-09-17T03:28:15.974Z"
+      "local_hash": "c67e90829d3367bff32479b09ad615888fd55c2ddb23687909049c6a2f80cb9b",
+      "remote_modified": "2026-09-17T20:48:55.505Z"
     },
     "platform/agentic-platform/brief/00-front-matter.md": {
       "file_id": "1utr9B71xiZpszcLscfyVwJEhrwd5j3ars8t5jFz7U-M",
@@ -298,7 +323,7 @@
     "platform/agentic-platform/pov/01-conventions-and-variables.md": {
       "file_id": "1Hl5pBM7hqRjWm141jMOD0cstt_FtI_wEfyuR83umNpQ",
       "local_hash": "24cacaf71d2af103f4da3cd5e1eff8e745e76190d04112f6354bd8eac194479a",
-      "remote_modified": "2026-09-17T03:39:54.504Z"
+      "remote_modified": "2026-09-17T03:39:55.744Z"
     },
     "platform/agentic-platform/pov/02-decisions-people-and-the-retrospective-baseline.md": {
       "file_id": "1CMwGZe5dF-_qoLcp0oGwJY4KZhLLUVDtKXAaHlbF-S8",
@@ -338,12 +363,12 @@
     "platform/agentic-platform/pov/09-the-demonstration-deviations-and-the-hand-over.md": {
       "file_id": "1Ob-KRAAgCWNWdDDYmVQDrbDbhJX5wvDcdJsAcvf7eYY",
       "local_hash": "56533b22baacb8b61eddc2b45f99f9a92f2a669ac545ed7b7f18c3b55fc677f3",
-      "remote_modified": "2026-09-17T03:39:57.575Z"
+      "remote_modified": "2026-09-17T03:39:59.519Z"
     },
     "platform/agentic-platform/pov/README.md": {
       "file_id": "1tTj0n3kCs94IQO9KdN_4nXbaxDdIDPERuHQEF-_KSAw",
-      "local_hash": "334ce85cb15ac65b18b412e1fcb58992e484a1f6cefa02dc6b25fcaada532fc0",
-      "remote_modified": "2026-09-17T03:38:48.570Z"
+      "local_hash": "50548c453bccccdcdf9a35d07921ae490f3c30d720ff26efddcf1ee8263e90b7",
+      "remote_modified": "2026-09-17T20:48:59.777Z"
     },
     "platform/agentic-platform/setup/01-prerequisites-and-conventions.md": {
       "file_id": "1QNHADtbKT4n3WhY4Kr2TqBhC6XCl7RPtiNEuAByB0U0",
@@ -853,6 +878,7 @@
     "people": "1j7eE-g1TDSSXUTRnTzeDeRLhlTvv3God",
     "platform": "10Tug5CiVs9mi5A2IZ444xmRy2N8bFOl4",
     "platform/agentic-platform": "1tuJJr0jSxIaq3zZGr9FgsluinmAMPVU7",
+    "platform/agentic-platform/3-day": "12PN_0MC8yu2iLwNkukX3Fk-HdpzdzhP1",
     "platform/agentic-platform/brief": "17SunY7PXieJukddTg5x7puIDGkd_MxHr",
     "platform/agentic-platform/pov": "1JbrdZ0Yi-TZ7hJNCd415jmmomrrCSSBE",
     "platform/agentic-platform/setup": "1ONFgPjjhjHjUoTNRXqCZ_P3LPrwD3nXp",
