@@ -12,6 +12,19 @@
   seven-field step; the format is restated in §6 for reference.
 - Full-set counterpart: [../setup/README.md](../setup/README.md). That page stays the full build's
   entry point. This page replaces nothing.
+- **Smaller counterpart, added 2026-09-17: the three-day build,
+  [../3-day/README.md](../3-day/README.md).** Two people, six person-days, three business days,
+  answering the owner's request of 2026-09-17 for something two IT experts can implement with a
+  simple procedure. It is a *demonstration of machinery under control on four synthetic accounts*,
+  not a proof of value: one organisational-unit-scoped Workspace admin privilege, one reversible
+  pair of actions, a forced dry run and a two-person approved execution, Eve reading the admin
+  audit log through the Admin SDK Reports API and live before any doer exists, and Mo counting the
+  doer's own rows against a volume baseline. It claims no saved minutes and is not compliance
+  evidence. **Where the two meet:** the three-day build uses this set's names, schemas and folders,
+  names for each piece the POV file and step that takes it further (its §12), and hands over to
+  this set once its standing IAM grants, its custom admin role and its synthetic accounts are
+  unwound (its §10). It replaces nothing here; this set remains the step between it and the full
+  build.
 - Maturity: never executed. Nothing in the POV is built. Where a file and this page disagree,
   **the file is right and this page is corrected** (§13), unless the file breaks a rule of this
   page, which is a defect in the file (§2).

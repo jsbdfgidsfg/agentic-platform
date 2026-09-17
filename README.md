@@ -33,6 +33,7 @@ Scope: agentic platform on **GCP** + **Google Workspace**, Gemini Enterprise adm
 - **Open questions / backlog** → [backlog.md](backlog.md)
 - **Agentic platform: design set** → [platform/agentic-platform/README.md](platform/agentic-platform/README.md)
 - **Agentic platform: proof of value (POV build)** → [platform/agentic-platform/pov/README.md](platform/agentic-platform/pov/README.md)
+- **Agentic platform: three-day build (2 people, 6 person-days, synthetic accounts)** → [platform/agentic-platform/3-day/README.md](platform/agentic-platform/3-day/README.md)
 - **Agentic platform: architecture brief** → [platform/agentic-platform/brief/README.md](platform/agentic-platform/brief/README.md)
 
 ## Conventions
