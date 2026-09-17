@@ -60,7 +60,7 @@ that has to be torn down has failed.
 
 The closing report (file 09) uses this sentence and no other, with the two dates filled in:
 
-> Between <start date> and <end date>, on the production tenant, with three hands-on people, one
+> Between `<start date>` and `<end date>`, on the production tenant, with three hands-on people, one
 > engineer and the named approvers listed in the README's §5.2a, and no new contract for a product
 > or service with a lead time longer than weeks, the platform's containment machinery was built
 > and run: a governed Gemini Enterprise with admission as a register row, a Model Armor floor, an

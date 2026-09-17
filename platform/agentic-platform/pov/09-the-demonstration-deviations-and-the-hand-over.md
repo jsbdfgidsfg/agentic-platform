@@ -1219,7 +1219,7 @@ softened**; below it, `POV_GAP_STATEMENT` in full; then the stop-or-continue dec
 calendar figures of `POV_STAGE_DATES` (POV-1 and POV-2), so no reader is told "three weeks" alone.
 The sentence is this one, identical to README §1.1, and no other:
 
-> Between <start date> and <end date>, on the production tenant, with three hands-on people, one
+> Between `<start date>` and `<end date>`, on the production tenant, with three hands-on people, one
 > engineer and the named approvers listed in the README's §5.2a, and no new contract for a product
 > or service with a lead time longer than weeks, the platform's containment machinery was built
 > and run: a governed Gemini Enterprise with admission as a register row, a Model Armor floor, an
