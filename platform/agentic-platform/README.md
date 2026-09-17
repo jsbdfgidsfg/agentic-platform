@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-17
 - Maturity: **design — nothing built.** No folder, no factory run, no project made by the
   factory, no gateway, no registry entry, no sink, no SIEM, no witness organisation, no robot
   account with Super Admin. The four projects of [../project-topology.md](../project-topology.md)
@@ -69,6 +69,7 @@ AI Act or TISAX outcomes, only the mechanisms and the evidence; the full list is
 | [11-tisax.md](11-tisax.md) | The target (label, level, scope), module scope, shared responsibility with Google and the supplier file, the control-by-control mapping, the super-admin deviation record, separation of duties as a counted minimum per stage, supplier onboarding and exit, assurance cadence, the risk register and the legal register | P133–P141 |
 | [12-open-decisions.md](12-open-decisions.md) | The register of record: all 143 decisions in one sequence, grouped by the gate they block, with why each matters, the recommendation, owner, where it is recorded, the disagreements between pages, and the index into Wall-E's, Eve's and Mo's registers | P1–P143 |
 | [13-setup-procedure-review.md](13-setup-procedure-review.md) | The review of the manual setup procedures (platform, Wall-E, Eve, Mo) on 2026-09-15: the verdict on whether setup can start, one master setup order across every procedure with the stages that have no procedure yet, the verified findings per procedure, and the ordered fix plan | — |
+| [pov/README.md](pov/README.md) | The proof-of-value build (added 2026-09-16): nine human-executed files that stand the platform and the three agents up at Tier C, R and W on the production tenant, with no Super Admin to any agent and no long-lead purchase, using the full build's names and schemas so that [setup/README.md](setup/README.md) continues from it and keeps the super-admin grant | — |
 
 Two pages outside this folder are part of the design and are pointed at, not copied:
 [../project-topology.md](../project-topology.md) (the four projects and every cross-project

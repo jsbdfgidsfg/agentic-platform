@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-17
 - What this is: the one entry point to the human-executed setup procedures in this folder, files
   [01](01-prerequisites-and-conventions.md) to [42](42-gates-drills-and-evidence.md). It gives
   the reading and execution order, who must be present, time estimates, the resume rule, the
@@ -25,6 +25,20 @@
   file is right and this page is corrected** (§12).
 - Maintained by: the platform owner, under the amendment rule of §12. Every role reads §1 to §6
   of this page and [01](01-prerequisites-and-conventions.md) before their first sitting.
+
+**A proof-of-value set exists (added 2026-09-16).** [../pov/README.md](../pov/README.md) is a
+small, human-executed set of nine files for the platform owner, the operator, the second person
+and one engineer who must show the platform and the three agents working in weeks rather than
+quarters, with no long-lead purchase. It is Track A only: it runs on the production tenant at Tier
+C, R and W (plus at most one optional Tier P row on a synthetic organisational unit), and grants
+Super Admin to no agent. Its doer is a separate agent, so `walle`, `WALLE_PROJECT` and
+`walle_audit` stay reserved for this set (PV-D-08). Every name, schema, folder and variable it
+creates is this set's own, so this set continues from it rather than replacing it: the hand-over is
+[../pov/09-the-demonstration-deviations-and-the-hand-over.md](../pov/09-the-demonstration-deviations-and-the-hand-over.md),
+where each POV deviation PV-D-01 to PV-D-16 names the file here that unwinds it. **This set alone
+owns the super-admin grant** ([38](38-super-admin-gate-and-grant.md)), the sandbox twin, the
+witness organisation and every P-SA gate; nothing the POV produces is evidence for them. This page
+is otherwise unchanged by the POV.
 
 ## 1. What the set builds, and what it replaces
 
@@ -584,7 +598,7 @@ quarterly review (§12).
 | `K7_FIRST_DRILL_RECORD` | 18 | KS-6.5 | the first enforced K7 drill |
 | `K7_JOB`, `K7_POLICY_DIR` | 18 | KS-5.2, KS-4.1 | the K7 job (B-04) and its policy files; 15 PS-8.9 re-runs against `K7_JOB` |
 | `K7_PSA_DRILL_RECORD` | 37 | WR-10.4 | G20's drill on `fld-agents-p-sa-nonprod` |
-| `KEY_BINAUTHZ`, `KEY_BINAUTHZ_PROMOTED` | 11 | KV-5.2 | the two Binary Authorization signing keys |
+| `KEY_BINAUTHZ`, `KEY_BINAUTHZ_PROMOTED`, `KR_SUPPLY_CHAIN` | 11 | KV-5.1, KV-5.2 | the supply-chain key ring (**IRREVERSIBLE** name) and the two Binary Authorization signing keys |
 | `KEY_GEMINI_CMEK`, `KR_GEMINI` | 11 | KV-4.1, KV-4.2 | the Gemini key ring and key |
 | `KEY_PLATFORM_LOGS`, `KR_LOGGING` | 11 | KV-2.1, KV-2.2 | the logging key ring and key (**IRREVERSIBLE** names) |
 | `KEY_WALLE_CONTENT_LOGS` | 34 | WI-7.3 | the content-log key (**IRREVERSIBLE** name) |

@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-17
 - Maturity: all three agents designed, nothing built; they are the platform's first three
   tenants, and the platform HLD ([agentic-platform/01-hld.md](agentic-platform/01-hld.md)) says
   where their designs change.
@@ -27,6 +27,16 @@ a second `super_admin` row while one is not `retired`.
 | **Mo** ([design](mo/README.md)) | Continuous improvement of Wall-E **and Eve**. Measures outcomes, produces promotion-readiness scorecards and Eve quality packs, proposes changes; one Mo per platform keyed on `agent_id` | — (machine) | BigQuery, pull requests | Wall-E audit tables, traces; Eve's `eve_quality` dataset (findings, verdicts, attestations, pages, incidents minus narrative, seeded-fault runs) | improvers (`fld-improvers`) | `none` | `minimal` ([10](agentic-platform/10-eu-ai-act.md) §3.4) | The platform owner | `idea` |
 | `factory-groups@` (platform machine, not an agent) | Makes agent groups from the register; refuses the control groups in code | — | — | the register | platform core | `workspace_role:groups_admin` (P65) | *tbd* (no classification recorded) | platform owner | `idea` |
 | ~~Edge AI v2~~ ([design](edge-ai-v2/README.md)) | Superseded by Wall-E on 2026-09-08. Kept for its identity and policy-engine reasoning. | — | — | — | — | — | — | The platform owner | `retired` |
+
+**What the proof of value reaches (added 2026-09-16).** The POV set,
+[agentic-platform/pov/](agentic-platform/pov/README.md), does not change any row above. On the
+production tenant it builds **Eve** at `tier: CTL` in `fld-controllers-prod` with `privilege:
+none` (no Workspace credential, PV-D-07), reporting on every human super admin; **Mo** at `tier:
+IMP` in `fld-improvers-prod` with `privilege: none`; and, in place of Wall-E, a **separate doer
+agent** at Tier W with `privilege: none` (L1 to L3 at most), plus at most one optional Tier P row
+with two delegated roles on a synthetic organisational unit. **Wall-E itself is not built by the
+POV**: its names stay reserved, and its P-SA row and Super Admin grant belong to the full build
+([agentic-platform/pov/README.md](agentic-platform/pov/README.md) §3, PV-D-08, PV-D-09).
 
 Status values and their lifecycle, `suspended` included, are
 [05 §3.2](agentic-platform/05-registry-and-autonomy-contract.md#32-mandatory-fields-per-tier).
