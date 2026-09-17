@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-17
 - Last executed: never
 - Stage: review §2 stage 10 (the `KMS_PROJECT` keys, the Binary Authorization attestors in `CICD_PROJECT`) and the Tier W row "validator custodian" (review §3 M8).
 - Step prefix: KV. Steps: 37.
@@ -371,9 +371,10 @@ The design has three attestors in `CICD_PROJECT`. `built-by-cloud-build` is crea
 
 ```bash
 gcloud kms keyrings create supply-chain --location=europe-west1 --project="$CICD_PROJECT"
+penv_set KR_SUPPLY_CHAIN "projects/${CICD_PROJECT}/locations/europe-west1/keyRings/supply-chain"
 ```
 
-- **VERIFY:** `gcloud kms keyrings describe supply-chain --location=europe-west1 --project="$CICD_PROJECT" --format="value(name)"` prints the ring name.
+- **VERIFY:** `gcloud kms keyrings describe supply-chain --location=europe-west1 --project="$CICD_PROJECT" --format="value(name)"` prints the ring name, and it equals `$KR_SUPPLY_CHAIN`. The variable is recorded as KV-2.1, KV-3.1 and KV-4.1 record their rings; a proof-of-value build sets the same value first, so `penv_set` prints it unchanged.
 - **ROLLBACK:** **IRREVERSIBLE.** Gate: the signed key table rows for class B (`CICD_PROJECT`, ring `supply-chain`, `europe-west1`), checked in KV-0.1.
 - **EVIDENCE:** Output as `<date>-KV-5.1-kr-supply-chain-v1`. TISAX 5.1.1, 5.3.1. EU AI Act E-05.
 

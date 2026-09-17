@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-17
 - Stage: review §2 stage 4 (GE-0 and GE-1 of [03 §16](../03-gemini-enterprise-environment.md#16-runbook-bringing-the-environment-to-baseline), extended). Runs any time from week one, in parallel with files 02, 03, 04 and 08.
 - Step prefix: `GI`. 39 steps, none BLOCKED (no code is needed), none IRREVERSIBLE (nothing is written to the cloud or the tenant).
 - Replaces: the GE-0 and GE-1 rows of 03 §16, step 1 of [topology §7.4](../../project-topology.md), and the D8 check of `wall-e/SETUP.md` §1.1. It keeps their intent (record the project, the number, the app and its location before anything regional) and drops 'Standard/Plus' (X-GE-18) and 'eu or global' (X-GE-13).
@@ -62,7 +62,7 @@ flowchart LR
 - [ ] `DOMAIN`, `ORG_ID`, `GE_LOCATION` (value `eu`), `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, `EVIDENCE_INTERIM_LOCATION`, `GCLOUD_CONFIG_NAME`, `WORKSPACE_EDITION` are set (01).
 - [ ] The D8 row in the decision tracker of `03-decisions-and-people.md` reads 'eu only; a global or us app stops the build and opens a decision record' (SD-21). The stop rule below applies whether or not the row is signed yet.
 - [ ] The operator's workstation has `gcloud`, `curl` (7.76 or later, for `--fail-with-body`), `jq`, `git` and `shasum`.
-- [ ] The gcloud `alpha` and `beta` components are installed (`gcloud components install alpha beta`; `gcloud components list` shows both Installed). GI-8.3 needs `alpha` (Agent Registry is documented only there) and GI-8.4 falls back to `beta`. Without them those steps error with `Invalid choice`, which reads as an absent registry and silently shortens GI-8.5's import list.
+- [ ] gcloud is current and the `beta` component is installed (`gcloud components install beta`; `gcloud components list` shows it Installed). GI-8.3 uses the GA `gcloud agent-registry` group, which ships with gcloud itself, and GI-8.4 falls back to `beta`. An outdated gcloud errors with `Invalid choice`, which reads as an absent registry and silently shortens GI-8.5's import list.
 - [ ] The operator's account holds, today, the Gemini Enterprise Admin role (`roles/discoveryengine.agentspaceAdmin`) on the app's project, and Workspace super admin or the Service Settings privilege. `roles/discoveryengine.viewer` alone is not enough: it lacks `discoveryengine.userStores.listUserLicenses` ([03 §4](../03-gemini-enterprise-environment.md#4-administration-who-holds-what-standing-or-elevated)).
 - [ ] No change window is needed and no user is told: nothing here writes.
 
@@ -688,11 +688,11 @@ gi_done GI-8.2
 
 - **WHO:** platform owner. Solo.
 - **WHERE:** shell.
-- **PRECONDITION:** `gcloud components list` shows the `alpha` and `beta` components installed (§2). Agent Registry is documented only on the **alpha** track (`gcloud alpha agent-registry ...`, API `agentregistry/v1alpha`); a bare `gcloud agent-registry` is not a command on a standard gcloud and errors with `Invalid choice`, which must never be read as 'no registry'.
-- **ACTION:** an `eu` app's gateway accepts registries in `global`, `eu` or `europe-west1` (agent-gateway-ge-deploy page). The four subgroups `agents`, `endpoints`, `mcp-servers` and `services` all exist under `gcloud alpha agent-registry`.
+- **PRECONDITION:** gcloud is current (§2). Agent Registry is on the **GA** track (`gcloud agent-registry ...`, reference updated 2026-06-23); an alpha variant also exists and is not used here, because Google says alpha commands may change without notice. On an outdated gcloud, `gcloud agent-registry` errors with `Invalid choice`, which must never be read as 'no registry'.
+- **ACTION:** an `eu` app's gateway accepts registries in `global`, `eu` or `europe-west1` (agent-gateway-ge-deploy page). The four subgroups `agents`, `endpoints`, `mcp-servers` and `services` all exist under the GA `gcloud agent-registry` group.
 ```bash
-gcloud components install alpha beta --quiet
-for loc in global eu europe-west1; do for kind in agents endpoints mcp-servers services; do f="$(gi_file GI-8.3 registry-$kind-$loc json)"; gcloud alpha agent-registry $kind list --location="$loc" --project="$GEMINI_PROJECT" --format=json > "$f" 2>&1 || echo "failed: $kind $loc (see $f)"; done; done
+gcloud components install beta --quiet
+for loc in global eu europe-west1; do for kind in agents endpoints mcp-servers services; do f="$(gi_file GI-8.3 registry-$kind-$loc json)"; gcloud agent-registry $kind list --location="$loc" --project="$GEMINI_PROJECT" --format=json > "$f" 2>&1 || echo "failed: $kind $loc (see $f)"; done; done
 grep -liE 'Invalid choice|unrecognized arguments|Invalid command|is not a valid' "$GE_INVENTORY_DIR"/*-GI-8.3-registry-*.json && { echo "STOP: command track wrong, re-run GI-8.3"; gi_done GI-8.3 "STOP: command track wrong; registry state unknown"; } || gi_done GI-8.3
 ```
 - **VERIFY:** each file holds a JSON list or Google's error text, and the `grep` prints no file. Read the saved error text by case, never as one case:
@@ -700,7 +700,7 @@ grep -liE 'Invalid choice|unrecognized arguments|Invalid command|is not a valid'
   | Saved text | Reading | Action |
   |---|---|---|
   | a JSON list (possibly empty) | authoritative | record it |
-  | `Invalid choice`, `unrecognized arguments`, `Invalid command`, `is not a valid` | **command track wrong** | re-run with the alpha track installed; never record 'no registry' |
+  | `Invalid choice`, `unrecognized arguments`, `Invalid command`, `is not a valid` | **gcloud too old** | run `gcloud components update`, then re-run; never record 'no registry' |
   | `SERVICE_DISABLED`, `has not been used in project`, or `PERMISSION_DENIED` | the API is off, or this account cannot read it | record 'no registry readable in this project' with the error string, and a PENDING re-run in file 20 before GE-10 |
 
   Only the third row may be read as absence. A registry recorded as absent when it exists drops every registered agent, endpoint and MCP server from GI-8.5, which file 20 imports before binding the gateway (X-GE-04).
@@ -942,7 +942,7 @@ Read on 2026-09-15; the date after each page is Google's 'last updated'.
 - https://docs.cloud.google.com/iam/docs/roles-permissions/discoveryengine — read permissions by role (`engines.get`, `engines.list`, `assistants.get`, `agents.list` held by `viewer` and `agentspaceAdmin`); 2026-09-14
 - https://docs.cloud.google.com/model-armor/reference/rest/v1/projects.locations.templates/get; https://docs.cloud.google.com/model-armor/data-residency — `modelarmor.LOCATION.rep.googleapis.com`; 2026-08-19, 2026-09-10
 - gcloud reference: `projects describe`, `projects get-iam-policy`, `projects get-ancestors`, `projects get-ancestors-iam-policy --include-deny`, `services list --enabled`, `asset search-all-resources`, `asset search-all-iam-policies`, `org-policies describe --effective`, `org-policies list`, `identity groups memberships list`, `components install`, `config get`, wide flag `--billing-project`; https://docs.cloud.google.com/sdk/gcloud/reference; 2026-05-27 to 2026-09-09
-- https://docs.cloud.google.com/sdk/gcloud/reference/alpha/agent-registry — the group exists on the **alpha** track only ('might change without notice'), with subgroups `agents`, `bindings`, `endpoints`, `mcp-servers`, `operations`, `publishers`, `services`, `skills`; API `agentregistry/v1alpha`; https://docs.cloud.google.com/sdk/gcloud/reference/alpha/agent-registry/agents/list — `gcloud alpha agent-registry agents list --location=LOCATION [--project=...]`, `--location` required; 2026-09-15
+- https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry — the group is **GA**, updated 2026-06-23, read 2026-09-16, with command groups `agents`, `bindings`, `endpoints`, `mcp-servers`, `operations`, `services`; the page notes an alpha variant (`gcloud alpha agent-registry`, which adds `publishers` and `skills`). `list` takes `--location`, which is required.
 - https://docs.cloud.google.com/sdk/gcloud/reference/network-services/agent-gateways/list and https://docs.cloud.google.com/sdk/gcloud/reference/beta/network-services/agent-gateways/list — `agent-gateways list --location=LOCATION` documented on GA, beta and alpha; GI-8.4 takes GA and falls back to beta; 2026-09-15
 - https://docs.cloud.google.com/asset-inventory/docs/searching-resources — the API must be enabled in the project the command runs from; 2026-09-03
 - https://docs.cloud.google.com/asset-inventory/docs/supported-asset-types — `discoveryengine.googleapis.com/Engine`, `DataStore`, `Collection`, `Assistant`; 2026-09-03
@@ -955,7 +955,7 @@ Not verified, and how each is handled:
 - That `sessionConfig.sessionTtl` is the field behind the console retention setting: GI-3.2 reads both and takes the larger.
 - That `licenseCount` on a project's `licenseConfig` is the distributed figure (Google's field text says 'Number of licenses purchased'): GI-2.4 records the console distribution as well.
 - The exact JSON keys of each agent definition type: GI-8.2 selects keys ending in `Definition` rather than naming them.
-- Whether `gcloud alpha agent-registry` behaves as its reference page documents against a live project: the group is alpha and Google warns it 'might change without notice'; GI-8.3 saves Google's own error text and classifies it in three cases rather than assuming absence.
+- Whether `gcloud agent-registry $kind list` returns the same object shape on a live project as its GA reference documents; GI-8.3 saves Google's own error text and classifies it in three cases rather than assuming absence, and GI-8.5 is filled by eye from the saved files, so no field is parsed.
 - Whether `gcloud org-policies describe` accepts the managed constraint names as written: GI-6.3 records Google's error text if not.
 - Whether `--billing-project` satisfies the Cloud Asset 'enabled in the project you run from' rule: GI-1.5 and GI-6.2 record a PENDING re-run on refusal.
 - The Frontline Starter tier's edition, and Assistant-tab availability for mixed tiers: `Assumption:` rows in GI-2.3.

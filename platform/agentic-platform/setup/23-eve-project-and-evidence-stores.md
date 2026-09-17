@@ -3,7 +3,7 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-17
 - Last executed: never
 - Stage: review §2 stage 22 (Eve's register row and the FM-VERIFIER runs), the dataset half of stage 24 and the bucket of stage 30, re-cut as **Eve-H part 1** (plan SD-10). Runs after the Tier R record of [17](17-factory-module-equivalents-and-tier-r-gate.md) and after [21](21-sandbox-tenant-and-nonprod-foundation.md) (the twin's id and the sandbox customer). **It does not wait on [22](22-mo-foundations.md)**, and no BLOCKED Mo input holds it (plan SD-45).
 - Step prefix: `EP`. Steps: 45. BLOCKED steps: EP-5.2 on its first run, EP-5.3 (the `eve` tables), EP-6.2 and EP-6.3 (the table-level writer bindings and their negative proof) — all on README **B-07**, which holds nine schema files of which the **eight `eve23` files** gate this file and the ninth (`eve36`) gates 36 (§5). Steps that record `PENDING` rather than `BLOCKED`: EP-3.8 and EP-4.5 (the twin's key and datasets, until the key table names a twin ring), EP-5.4 (the mirror dataset and table, made in 36), EP-7.4's live create-only proof (26) and EP-7.7's `keys/` prefix grant (41).
@@ -178,7 +178,7 @@ git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff
 git -C "$PLATFORM_REPO_DIR" switch -c ep-1-controller-schema
 S="$PLATFORM_REPO_DIR/register/schema/register-row.schema.json"
 jq '(.["$defs"].row.properties.tier.enum) |= ((. + ["CTL"]) | unique)
-  | (.["$defs"].row.properties.owner_group.not.pattern) = "^(platform|mo)-owners@"
+  | (.["$defs"].row.properties.owner_group.not.pattern) = "^platform-owners@"
   | (.["$defs"].row.allOf) += [{"if":{"properties":{"tier":{"const":"CTL"}},"required":["tier"]},
       "then":{"required":["env","folder","recovery_class","manifest_sha","contract_version","verifier_owner"],
               "properties":{"folder":{"enum":["FLD_CONTROLLERS_PROD","FLD_CONTROLLERS_NONPROD"]},
@@ -221,6 +221,8 @@ git -C "$PLATFORM_REPO_DIR" add "$S" contract/1.0.0/controller-manifest.schema.j
 git -C "$PLATFORM_REPO_DIR" commit -m "register: controller tier CTL and controller manifest schema (setup 23 EP-1.1)"
 git -C "$PLATFORM_REPO_DIR" push -u origin ep-1-controller-schema
 ```
+
+  The `owner_group` value is `^platform-owners@`, exactly the value 22 MO-1.1 sets. Both steps must set the same value, because 22 and this file run in parallel and each assignment replaces the whole pattern: a value that refused `mo-owners@` here would undo 22's release of Mo's own row whenever 22 merged first, and 22's precondition stops on exactly that. `eve-owners@` and `mo-owners@` each own only their own row; the register rules and code owners, not this pattern, keep them there.
 
   Two fixtures go in the same pull request: `register/fixtures/schema/pass-ctl-eve.yaml` (EP-1.3's prod row with a `manifest_sha` of 64 zeros) and `register/fixtures/schema/fail-ctl-with-model-pin.yaml` (tier `CTL` carrying `model_pin: gemini-…`, refused because a controller that can call a model is not a deterministic verifier — 17 FM-4.2's denial in policy, restated in the schema). Why the row rules: `verifier: none` (nothing verifies the verifier; the witness copy and the second human's blind proof stand in its place), `privilege: none` and `risk_class: READ` (Eve holds a read-only Workspace role, 24), `publish_to_gemini: false`, `metric_pack: light`, and `verifier_owner` required because Eve is the verifier other rows name. The `owner_group` `not` pattern of 16 RG-2.2 refused `platform-owners@`, `eve-owners@` and `mo-owners@`; 16 anticipated this amendment ("22 and 23 amend this pattern by pull request if their signed rows name them"). Only `eve-owners@` is released, and only because Eve's own row is the one row it owns.
 - **VERIFY:** Both `check-jsonschema --check-metaschema` lines print success; 16 RG-2.5's loop prints `PASS-OK` for `pass-ctl-eve.yaml`, `FAIL-OK` for `fail-ctl-with-model-pin.yaml` and unchanged results for every earlier fixture, including 22's `IMP` fixtures if that pull request merged first; `git -C "$PLATFORM_REPO_DIR" show origin/main:register/schema/register-row.schema.json | jq -r '.["$defs"].row.properties.owner_group.not.pattern'` prints `^(platform|mo)-owners@` after the merge. The pull request carries the code owner's approval and an RG-3.6 parse file signed by the second human.
@@ -1530,7 +1532,7 @@ sitting_end
 ## 10. Verification checklist for the whole part
 
 - [ ] EP-0.1, EP-0.2: eleven decision ids `SIGNED`; `TIER_R_RECORD` present; `SA_WALLE_DEPLOYER` non-empty; `EVIDENCE_RETENTION_DAYS` and `IDENTITY_RETENTION_DAYS` integers; `EVE_EVIDENCE_LOCATION` `europe-west1`; no Mo checkpoint required.
-- [ ] EP-1.1: the row schema accepts `CTL` and refuses a `CTL` row with a model pin; the controller manifest schema merged with both fixtures; `owner_group` releases `eve-owners@` only.
+- [ ] EP-1.1: the row schema accepts `CTL` and refuses a `CTL` row with a model pin; the controller manifest schema merged with both fixtures; `owner_group.not.pattern` is `^platform-owners@`, the value 22 MO-1.1 sets, so both orders of the two merges give the same schema.
 - [ ] EP-1.2: `eve-owners@` is a security group owned by the second human, and the platform owner is not an owner.
 - [ ] EP-1.3: `register/eve.yaml` (prod and nonprod) and `eve/agent-manifest.yaml` merged **before** any project; both `manifest_sha` values match; the 21 draft removed; the RG-3.6 parse signed.
 - [ ] EP-1.4: `deny-eve-project-foreign` merged with two rules, at the path the run spec names; **every principal string is one of the five documented deny-policy forms** (folder `type/ServiceAgent` and project `type/ServiceAccount`, never `principalSet://goog/cloudResourceFolder/…`); every permission ticked against the supported-permissions page; the agent-project-number re-run line written.

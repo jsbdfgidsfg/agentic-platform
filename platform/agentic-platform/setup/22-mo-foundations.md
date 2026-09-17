@@ -3,7 +3,7 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-17
 - Last executed: never
 - Stage: review §2 stage 22 (Mo's register row and the FM-IMPROVER run) and the Wall-E-independent half of stage 25 (Mo-1 to Mo-3 of the superseded Mo runbook). Runs after the Tier R record of [17](17-factory-module-equivalents-and-tier-r-gate.md). **This file gates no part of Eve.** It may run before, during or after files 23 to 28; a BLOCKED Mo input never holds Eve-H (plan SD-45, README §3.4). Wall-E (file 30) starts with this file complete or with its BLOCKED steps indexed.
 - Step prefix: `MO`. Steps: 38. BLOCKED steps: MO-6.5 (Mo's 19 table schemas), MO-7.5 (verdict fixtures), MO-7.6 (the `z` agreement check against `gates.yaml`). MO-5.2 is the build-inputs gate itself: it writes `MO_INPUTS_COMMIT` or a `BLOCKED` line for README B-14, and MO-6.5, MO-7.5 and MO-7.6 read that line. Steps that record `PENDING` rather than `BLOCKED`: MO-2.4 (the twin, while P40 is unsigned), MO-9.3 (the sweep over `WALLE_PROJECT`, which does not exist until 31), MO-10.2 (grants other files make).
@@ -158,7 +158,7 @@ git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff
 git -C "$PLATFORM_REPO_DIR" switch -c mo-1-improver-schema
 S="$PLATFORM_REPO_DIR/register/schema/register-row.schema.json"
 jq '(.["$defs"].row.properties.tier.enum) |= ((. + ["IMP"]) | unique)
-  | (.["$defs"].row.properties.agent_id.pattern) = "^[a-z][a-z0-9-]{1,30}$"
+  | (.properties.agent_id.pattern) = "^[a-z][a-z0-9-]{1,30}$"
   | (.["$defs"].row.properties.owner_group.not.pattern) = "^platform-owners@"
   | (.["$defs"].row.allOf) += [{"if":{"properties":{"tier":{"const":"IMP"}},"required":["tier"]},
       "then":{"required":["env","folder","recovery_class","manifest_sha","contract_version"],
@@ -207,14 +207,14 @@ git -C "$PLATFORM_REPO_DIR" push -u origin mo-1-improver-schema
 
 | Row property | 16 RG-2.2's value | This step sets | Why |
 |---|---|---|---|
-| `agent_id.pattern` | `^[a-z][a-z0-9-]{2,30}$` | `^[a-z][a-z0-9-]{1,30}$` | `mo` is two characters; the old pattern requires three. No existing row changes |
+| `agent_id.pattern` (top level: 16 RG-2.2 keeps `agent_id` in `.properties`, not under `$defs.row`) | `^[a-z][a-z0-9-]{2,30}$` | `^[a-z][a-z0-9-]{1,30}$` | `mo` is two characters; the old pattern requires three. No existing row changes |
 | `owner_group.not.pattern` | refuses `platform-owners@`, `eve-owners@` and `mo-owners@` | `^platform-owners@` | releases `eve-owners@` and `mo-owners@`, each of which owns exactly its own row (16 anticipated the amendment); `platform-owners@` stays refused for ever, which the third fixture tests |
 
   Without both assignments MO-1.3's `check-jsonschema` refuses the Mo row twice over — on the two-character `agent_id` and on `owner_group: mo-owners@` — so neither is optional.
 - **VERIFY:** Both `check-jsonschema --check-metaschema` lines print success; RG-2.5's loop prints `PASS-OK` for `pass-imp-mo.yaml`, `FAIL-OK` for both failing fixtures and unchanged results for every earlier fixture; after the merge
 
 ```bash
-git -C "$PLATFORM_REPO_DIR" show origin/main:register/schema/register-row.schema.json | jq -r '[.["$defs"].row.properties.agent_id.pattern, .["$defs"].row.properties.owner_group.not.pattern] | @tsv'
+git -C "$PLATFORM_REPO_DIR" show origin/main:register/schema/register-row.schema.json | jq -r '[.properties.agent_id.pattern, .["$defs"].row.properties.owner_group.not.pattern] | @tsv'
 ```
 
   prints `^[a-z][a-z0-9-]{1,30}$` and `^platform-owners@` (and prints the same after 23 EP-1.1 merges, in either order); the pull request is merged with the code owner's approval and an RG-3.6 parse file signed by the second human.
@@ -306,7 +306,7 @@ rows:
     contract_version: 1.0.0
 EOF
 test "$(jq -r '.["$defs"].row.properties.owner_group.not.pattern' "$PLATFORM_REPO_DIR/register/schema/register-row.schema.json")" = '^platform-owners@' && echo "owner_group pattern releases mo-owners@ (MO-1.1)" || echo "STOP: MO-1.1's owner_group amendment is not on main; mo-owners@ would be refused"
-test "$(jq -r '.["$defs"].row.properties.agent_id.pattern' "$PLATFORM_REPO_DIR/register/schema/register-row.schema.json")" = '^[a-z][a-z0-9-]{1,30}$' && echo "agent_id pattern admits two characters (MO-1.1)" || echo "STOP: MO-1.1's agent_id amendment is not on main"
+test "$(jq -r '.properties.agent_id.pattern' "$PLATFORM_REPO_DIR/register/schema/register-row.schema.json")" = '^[a-z][a-z0-9-]{1,30}$' && echo "agent_id pattern admits two characters (MO-1.1)" || echo "STOP: MO-1.1's agent_id amendment is not on main"
 check-jsonschema --schemafile "$PLATFORM_REPO_DIR/register/schema/register-row.schema.json" "$PLATFORM_REPO_DIR/register/mo.yaml"
 check-jsonschema --schemafile "$PLATFORM_REPO_DIR/contract/1.0.0/improver-manifest.schema.json" "$PLATFORM_REPO_DIR/mo/agent-manifest.yaml"
 grep -n 'walle_metrics' "$PLATFORM_REPO_DIR/register/mo.yaml" "$PLATFORM_REPO_DIR/mo/agent-manifest.yaml" && echo "STOP: retired name" || echo "no retired name"
@@ -1022,14 +1022,25 @@ git -C "$PLATFORM_REPO_DIR" show "${TOIL_COMMIT}:${TOIL_BASELINE_FILE}" > "$T/to
 git -C "$PLATFORM_REPO_DIR" show "origin/main:mo/schemas/toil_baseline_csv.json" > "$T/csv.json"
 bq --project_id="$MO_PROJECT" show "${MO_PROJECT}:${MO_ARCHIVE_DS}.toil_baseline_${SHORT}" >/dev/null 2>&1 && { echo "archive copy for ${SHORT} exists: this commit is already loaded"; } || \
 bq --project_id="$MO_PROJECT" --location=EU load --source_format=CSV --skip_leading_rows=1 "${MO_PROJECT}:${MO_ARCHIVE_DS}.toil_baseline_${SHORT}" "$T/toil.csv" "$T/csv.json"
-bq --project_id="$MO_PROJECT" --location=EU query --use_legacy_sql=false --parameter="commit:STRING:${TOIL_COMMIT}" \
-  "CREATE OR REPLACE TABLE \`${MO_PROJECT}.${MO_METRICS_DS}.toil_baseline\` (
-     agent_id STRING NOT NULL, source_commit STRING NOT NULL, loaded_at TIMESTAMP NOT NULL,
-     record_type STRING NOT NULL, \`date\` DATE, iso_week STRING, task_id STRING, handling_minutes FLOAT64,
-     interrupted STRING, recorder STRING, month STRING, hours FLOAT64)
-   OPTIONS(description='Toil baseline (02), keyed on agent_id; rebuilt from the commit-named archive copy on each merge; no expiry (S150)', labels=[('agent','mo')])
-   AS SELECT 'walle' AS agent_id, @commit AS source_commit, CURRENT_TIMESTAMP() AS loaded_at, * FROM \`${MO_PROJECT}.${MO_ARCHIVE_DS}.toil_baseline_${SHORT}\`"
 git -C "$PLATFORM_REPO_DIR" show "origin/main:mo/schemas/mo_toil_baseline.json" > "$T/keyed.json"
+AGENT=walle
+# The table is shared by every agent (SD-33: platform_metrics is agent-neutral, every table keyed on agent_id).
+# Create it once from the committed schema; never CREATE OR REPLACE it, which would drop every other agent's rows.
+bq --project_id="$MO_PROJECT" show "${MO_PROJECT}:${MO_METRICS_DS}.toil_baseline" >/dev/null 2>&1 || \
+  bq --project_id="$MO_PROJECT" mk --table --description="Toil baseline (02), keyed on agent_id; each agent's rows rebuilt from its commit-named archive copy; no expiry (S150)" --label=agent:mo "${MO_PROJECT}:${MO_METRICS_DS}.toil_baseline" "$T/keyed.json"
+OTHERS_BEFORE="$(bq --project_id="$MO_PROJECT" --location=EU query --use_legacy_sql=false --format=csv "SELECT COUNT(*) FROM \`${MO_PROJECT}.${MO_METRICS_DS}.toil_baseline\` WHERE agent_id != '${AGENT}'" | tail -n 1)"
+# Replace this agent's rows only, in one transaction, from the archive copy of this commit.
+# Both values are inlined, not bound as parameters: AGENT is the fixed word above, and TOIL_COMMIT was
+# checked against ^[0-9a-f]{40}$ at the top of this block, so neither can carry anything but its own value.
+printf '%s' "$AGENT" | grep -Eqx '[a-z][a-z0-9-]{1,30}' && printf '%s' "$TOIL_COMMIT" | grep -Eqx '[0-9a-f]{40}' || { echo "STOP: AGENT or TOIL_COMMIT is malformed"; unset TOIL_COMMIT; }
+need TOIL_COMMIT
+bq --project_id="$MO_PROJECT" --location=EU query --use_legacy_sql=false \
+  "BEGIN TRANSACTION;
+   DELETE FROM \`${MO_PROJECT}.${MO_METRICS_DS}.toil_baseline\` WHERE agent_id = '${AGENT}';
+   INSERT INTO \`${MO_PROJECT}.${MO_METRICS_DS}.toil_baseline\`
+     (agent_id, source_commit, loaded_at, record_type, \`date\`, iso_week, task_id, handling_minutes, interrupted, recorder, month, hours)
+   SELECT '${AGENT}', '${TOIL_COMMIT}', CURRENT_TIMESTAMP(), * FROM \`${MO_PROJECT}.${MO_ARCHIVE_DS}.toil_baseline_${SHORT}\`;
+   COMMIT TRANSACTION;"
 bq --project_id="$MO_PROJECT" show --schema "${MO_PROJECT}:${MO_METRICS_DS}.toil_baseline" > "$T/live.json"
 NORM='[.[] | {name, mode: (.mode // "NULLABLE"), type: (.type | ascii_upcase | if . == "FLOAT64" then "FLOAT" elif . == "INT64" then "INTEGER" elif . == "BOOL" then "BOOLEAN" else . end)}] | sort_by(.name)'   # a read returns the REST type names (FLOAT, INTEGER, BOOLEAN); the committed file uses the GoogleSQL ones
 diff <(jq -S "$NORM" "$T/keyed.json") <(jq -S "$NORM" "$T/live.json") && echo "LIVE SCHEMA EQUALS mo_toil_baseline.json" || echo "STOP: the live table does not match the committed schema; do not go on"
@@ -1037,9 +1048,8 @@ cp "$T/live.json" "${R}-8.2-live-schema-v1.json"
 rm -rf "$T"
 ```
 
-  **Why the DDL carries a column list.** `CREATE TABLE ... AS SELECT` with no column list derives the schema from the query, and a query cannot express `REQUIRED`: every column would be `NULLABLE`, so the live table could never equal `mo/schemas/mo_toil_baseline.json`, whose first four fields are `REQUIRED`, and the schema the review signed off would create nothing. The DDL reference allows a column definition list together with `AS query_statement`; when both are present BigQuery **ignores the names in the query and matches the columns by position**, and `NOT NULL` in the list creates the column in `REQUIRED` mode. The twelve columns are therefore listed in the committed schema's order: the three keys, then the nine CSV columns of `toil_baseline_csv.json` in 02's order, which is the order `SELECT *` returns from the archive copy. If MO-8.1's schema ever changes, this list and the archive schema change with it in the same pull request — the `diff` against `bq show --schema` above is the check that they have not drifted. The alternative form, `bq mk --table "${MO_PROJECT}:${MO_METRICS_DS}.toil_baseline" "$T/keyed.json"` followed by a `bq query --destination_table --append_table`, is equally correct and is the fallback if the column list is refused.
+  **Why the table is created once, and only this agent's rows are replaced.** `platform_metrics` is agent-neutral and every table in it is keyed on `agent_id` (SD-33), so `toil_baseline` holds one baseline per agent. `CREATE OR REPLACE TABLE` would rebuild the whole table from Wall-E's copy and silently drop every other agent's rows, including a proof-of-value doer's ([../pov/08-mo-and-the-value-report.md](../pov/08-mo-and-the-value-report.md) PM-5.2, which appends under its own `agent_id`). The table is therefore created once, with `bq mk` from `mo/schemas/mo_toil_baseline.json`, which keeps the four `REQUIRED` modes that a `CREATE TABLE ... AS SELECT` cannot express. Each re-run replaces this agent's rows in one transaction (`DELETE` then `INSERT` under `BEGIN TRANSACTION` and `COMMIT TRANSACTION`), so the agent's rows always equal its latest commit and no other agent's row is read or written. `OTHERS_BEFORE` is recorded so the VERIFY can prove that.
 
-  `labels=[('agent','mo')]` is the documented `CREATE TABLE` option form (DDL reference, `labels` as `ARRAY<STRUCT<STRING,STRING>>`, example `labels=[("org_unit", "development")]`); if the dialect refuses the single quotes, use double quotes, and only if the option itself is refused drop it and set the label with `bq --project_id="$MO_PROJECT" update --set_label agent:mo "${MO_PROJECT}:${MO_METRICS_DS}.toil_baseline"`. `@commit` is a **value** in the select list, which is what query parameters are for; parameters may not stand for identifiers or table names (parameterized-queries reference), and none does here. *Unverified* (§14): whether the job accepts a parameter on a `CREATE OR REPLACE TABLE ... AS SELECT` statement rather than a bare `SELECT`. If it is refused, drop `--parameter` and inline the sha, which the guard above has already proved to be 40 hexadecimal characters: `... SELECT 'walle' AS agent_id, '${TOIL_COMMIT}' AS source_commit, ...`. `CREATE OR REPLACE` removes nothing but the previous keyed table, whose rows are all in an earlier archive copy.
 - **VERIFY:**
 
 ```bash
@@ -1047,20 +1057,27 @@ for TB in "${MO_ARCHIVE_DS}.toil_baseline_${SHORT}" "${MO_METRICS_DS}.toil_basel
 git -C "$PLATFORM_REPO_DIR" show "${TOIL_COMMIT}:${TOIL_BASELINE_FILE}" | tail -n +2 | grep -c .
 ```
 
-  Both tables show the same `numRows`, equal to the CSV's data-line count, `no-expiry` and `unpartitioned`; the gate precondition printed `MO-8.1's two schemas present at origin/main`, never a `STOP`; and the schema comparison printed `LIVE SCHEMA EQUALS mo_toil_baseline.json` — in particular `agent_id`, `source_commit`, `loaded_at` and `record_type` are `REQUIRED` in the live table:
+  The archive table's `numRows` equals the CSV's data-line count; both tables show `no-expiry` and `unpartitioned` (the shared table's `numRows` also counts other agents, so it is not compared); the gate precondition printed `MO-8.1's two schemas present at origin/main`, never a `STOP`; and the schema comparison printed `LIVE SCHEMA EQUALS mo_toil_baseline.json` — in particular `agent_id`, `source_commit`, `loaded_at` and `record_type` are `REQUIRED` in the live table:
 
 ```bash
 bq --project_id="$MO_PROJECT" show --schema "${MO_PROJECT}:${MO_METRICS_DS}.toil_baseline" | jq -r '[.[] | select(.mode == "REQUIRED") | .name] | join(",")'
 ```
 
-  prints `agent_id,source_commit,loaded_at,record_type`. Then the copy of Mo-0's verify, over BigQuery:
+  prints `agent_id,source_commit,loaded_at,record_type`. Then prove this agent's rows equal the archive copy and no other agent's row changed:
 
 ```bash
-bq --project_id="$MO_PROJECT" --location=EU query --use_legacy_sql=false --format=csv "SELECT COUNT(DISTINCT IF(record_type='instance', iso_week, NULL)) AS iso_weeks, COUNT(DISTINCT IF(record_type='instance', task_id, NULL)) AS tasks, COUNTIF(record_type='task_median') AS medians, COUNTIF(record_type='operating_hours') AS hours_rows, COUNT(DISTINCT agent_id) AS agents, ANY_VALUE(source_commit) = '${TOIL_COMMIT}' AS commit_ok FROM \`${MO_PROJECT}.${MO_METRICS_DS}.toil_baseline\`"
+bq --project_id="$MO_PROJECT" --location=EU query --use_legacy_sql=false --format=csv "SELECT COUNTIF(agent_id = '${AGENT}') AS mine, COUNTIF(agent_id != '${AGENT}') AS others FROM \`${MO_PROJECT}.${MO_METRICS_DS}.toil_baseline\`" | tail -n 1
+echo "others before: ${OTHERS_BEFORE}"
+```
+
+  `mine` equals the archive's `numRows`, and `others` equals `OTHERS_BEFORE`. Then the copy of Mo-0's verify, over BigQuery, for this agent only:
+
+```bash
+bq --project_id="$MO_PROJECT" --location=EU query --use_legacy_sql=false --format=csv "SELECT COUNT(DISTINCT IF(record_type='instance', iso_week, NULL)) AS iso_weeks, COUNT(DISTINCT IF(record_type='instance', task_id, NULL)) AS tasks, COUNTIF(record_type='task_median') AS medians, COUNTIF(record_type='operating_hours') AS hours_rows, COUNT(DISTINCT agent_id) AS agents, ANY_VALUE(source_commit) = '${TOIL_COMMIT}' AS commit_ok FROM \`${MO_PROJECT}.${MO_METRICS_DS}.toil_baseline\` WHERE agent_id = 'walle'"
 ```
 
   `iso_weeks` at least 4, `tasks` 3, `medians` 3, `hours_rows` at least 1, `agents` 1, `commit_ok` `true`. A missing operating-hours row is the common failure (Mo-0): stop and return to 02.
-- **ROLLBACK:** The keyed table is rebuilt from the previous archive copy with the same `CREATE OR REPLACE`, reading `toil_baseline_<previous short sha>`. The archive copies are never deleted; a wrong copy is superseded by the next commit's copy and the build log records which is authoritative.
+- **ROLLBACK:** This agent's rows are rebuilt from the previous archive copy with the same transaction, reading `toil_baseline_<previous short sha>`; never `CREATE OR REPLACE`, which would drop every other agent's rows. The archive copies are never deleted; a wrong copy is superseded by the next commit's copy and the build log records which is authoritative.
 - **EVIDENCE:** The show lines, the count and the verify query as `${R}-8.2-toil-load-v1.txt`, `evidence_add MO-8.2 toil-baseline E-09 5.2.4 ...`. E-09 (post-market monitoring denominator). TISAX 5.2.4, 1.3.1. Close the README re-run row "Toil baseline four weeks complete" with this step's `DONE`. Closes S150's load half.
 
 ### MO-8.3 Record the baseline as a retention exception
@@ -1325,7 +1342,7 @@ Deferred: none without an owner. Recorded items with an owner and a file: Mo's c
 - Whether `gcloud policy-intelligence troubleshoot-policy iam` evaluates BigQuery dataset access entries for a service account (MO-10.1); the reference documents the full resource name form but no BigQuery page confirms dataset-ACL evaluation.
 - The exact default access entries BigQuery adds when a dataset is created without an access list, in particular the creator's `OWNER` entry (MO-6.4); the step reads `before.json` and replaces whatever it holds with the two entries §6 fixes. That a dataset must keep at least one `OWNER` is **not** unverified: it is documented (§16) and is why the array has two entries and not one.
 - Whether a budget read returns `projects/<number>` or `projects/<id>` in `budgetFilter.projects` (MO-2.3).
-- Whether a `--parameter` may be bound to a `CREATE OR REPLACE TABLE ... AS SELECT` statement rather than a bare `SELECT` (MO-8.2). The parameter is a value in the select list, which the parameterized-queries reference allows (it forbids parameters only as identifiers, column names and table names), but no page confirms the DDL case; the step carries the inlined-sha fallback, gated on the 40-hex guard. The `labels` table option itself was settled on 2026-09-15 and is no longer an assumption (DDL reference).
+- Whether query parameters may be bound inside a multi-statement query: neither the [transactions](https://docs.cloud.google.com/bigquery/docs/transactions) page nor the [multi-statement queries](https://docs.cloud.google.com/bigquery/docs/multi-statement-queries) page (both updated 2026-09-15, read 2026-09-16) says so, and parameters are not on the latter's list of fields a multi-statement query cannot set. MO-8.2 therefore binds none: it inlines `AGENT` and `TOIL_COMMIT`, both validated first. Verified the same day: `DELETE` and `INSERT` on one table may share a transaction, DDL that creates a permanent table may not (so `bq mk` runs before the transaction), and a concurrent mutating job on the same table is cancelled rather than interleaved.
 - The CI-free manual parse can read the new `IMP` rules only by eye until 16's RG-3.3 exists (MO-1.1, MO-1.3).
 - The value name `MO_PARTITION_EXPIRY_DAYS` in the M-5 record and `MO_TWIN_REQUIRED` in a future P40 record (MO-6.5, MO-0.2).
 - `CORE_PROJECT`'s regional secret count and Eve's two secret names at the time of the sweep (MO-9.3).

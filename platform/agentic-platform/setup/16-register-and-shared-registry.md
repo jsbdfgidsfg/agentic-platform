@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-17
 - Last executed: never
 - Stage: review §2 stage 14 (shared registry, a Tier R item). Runs after 14 and before 17; 15 part A may run beside it (the registry write alert takes its channels from 15, or waits PENDING).
 - Step prefix: RG. Steps: 43. BLOCKED steps: RG-3.3, RG-3.4, RG-3.5, RG-7.6, RG-8.2, RG-8.3, RG-9.2 (the register CI rules, the gate-checklist parser, the drift and reconciliation jobs, the ladder-publish workflow and the SDP discovery configuration have no code or no lawful path yet). The signed manual parse of RG-3.6 is the fallback while they are BLOCKED.
@@ -538,7 +538,7 @@ cd - >/dev/null
   Each `fail-*` fixture changes exactly one thing from its `pass-*` parent, so a refusal can only come from the rule under test; check it by reading the checker's message for each (`check-jsonschema` without `>/dev/null`).
 - **VERIFY:** The count assertion passes (14 register, 3 contract, 1 operators fixture files, the table's 18 rows); the run prints **18 lines**, every one starting `PASS-OK` or `FAIL-OK`, four of them `PASS-OK`; no `WRONG`. Each failing fixture's message names the field the table names. A run that prints fewer than 18 lines, or a line naming a path that still holds a `*`, is a stop: the fixtures were not written, and a green run over an empty directory proves nothing.
 - **ROLLBACK:** Correct the schema or the fixture; never delete a failing fixture to make the run green.
-- **EVIDENCE:** The run output as `<date>-RG-2.5-schema-fixtures-v1`. E-xx: E-15 (tests of the technical controls). TISAX 5.2.1.
+- **EVIDENCE:** The run output as `<date>-RG-2.5-schema-fixtures-v1`. E-xx: none (01 §7.2: a CI result carries E-15 only when it is an Article 50 content test, and a schema fixture run is not). TISAX 5.2.1.
 
 ### RG-2.6 Merge the schemas and record the paths
 
@@ -601,7 +601,7 @@ gh pr create --repo "$PLATFORM_REPO_SLUG" --head rg-3-rules --title "RG-3.1 regi
 
 - **VERIFY:** The merged file holds twelve rows (`grep -c '^| R-' "$PLATFORM_REPO_DIR/ci/register-rules.md"` prints `12`); the pull request carries the code owner's approval; the reviewer's comment states that R-02, R-03 and R-04 read SD-02 exactly.
 - **ROLLBACK:** A reverting pull request.
-- **EVIDENCE:** Merge commit as `<date>-RG-3.1-rules-spec-v1`. E-xx: E-15. TISAX 5.2.1, 1.4.1.
+- **EVIDENCE:** Merge commit as `<date>-RG-3.1-rules-spec-v1`. E-xx: none (01 §7.2). TISAX 5.2.1, 1.4.1.
 
 ### RG-3.2 Write the rule fixtures
 
@@ -610,7 +610,7 @@ gh pr create --repo "$PLATFORM_REPO_SLUG" --head rg-3-rules --title "RG-3.1 regi
 - **ACTION:** For each fixture named in RG-3.1, commit a directory `register/fixtures/rules/<fixture>/` holding the files the rule reads (register files, a `ladder.yaml` before and after, a `reviews.json` in the shape of GitHub's "List reviews for a pull request" response with `user.login`, `user.type` and `state`, a `decisions/` stub) and `expect.txt` with `pass` or `fail: <rule id>`. Every register file in a fixture must itself pass the schema (RG-2.5's loop run over `register/fixtures/rules/*/register/*.yaml`), so that a rule fixture fails for the rule, never for the schema.
 - **VERIFY:** `ls "$PLATFORM_REPO_DIR/register/fixtures/rules" | wc -l` equals the number of fixture names in RG-3.1 (24); `grep -L . "$PLATFORM_REPO_DIR"/register/fixtures/rules/*/expect.txt` prints nothing; the schema loop prints only `PASS-OK`.
 - **ROLLBACK:** A reverting pull request.
-- **EVIDENCE:** Merge commit as `<date>-RG-3.2-rule-fixtures-v1`. E-xx: E-15. TISAX 5.2.1.
+- **EVIDENCE:** Merge commit as `<date>-RG-3.2-rule-fixtures-v1`. E-xx: none (01 §7.2). TISAX 5.2.1.
 
 ### RG-3.3 Implement the register CI — **BLOCKED**
 
@@ -619,7 +619,7 @@ gh pr create --repo "$PLATFORM_REPO_SLUG" --head rg-3-rules --title "RG-3.1 regi
 - **ACTION:** **BLOCKED**: Needs: the implementation of R-01 to R-10 and R-12 (the register CI rules, the G1-G21 gate-checklist parser, the bot-approval and ladder-raise rules; plan §8 "Gate-checklist parser, bot-approval and ladder-raise CI rules" and "Register CI rules and the platform validator"). Commit it in: `PLATFORM_REPO_REMOTE`, `ci/register/`, with a workflow on `pull_request` and `pull_request_review` events that runs every fixture of RG-2.5 and RG-3.2 before the rules and fails when any fixture result differs from `expect.txt`. The workflow runs with `permissions: contents: read, pull-requests: read`, never `write`, and pins every action by commit SHA (09 §1.7). Unblocked by: the merge commit with green CI on all fixtures, recorded in the build log as `REGISTER_CI_COMMIT` (a local sitting value; not a plan variable). Gate waiting: the Tier R record's "shared registry" row names this as a BLOCKED item (17), 31's P-SA row merge and 38's parse use RG-3.6 until then. Until then: `checkpoint RG-3.3 BLOCKED - - "B-03 register CI code"`.
 - **VERIFY:** Once unblocked: the workflow run on the merge commit lists every fixture with its expected result; a pull request adding `r02-second-prod-psa`'s files outside `fixtures/` is refused with R-02's message.
 - **ROLLBACK:** Revert the workflow by pull request; RG-3.6 applies again.
-- **EVIDENCE:** Workflow run URL and commit as `<date>-RG-3.3-register-ci-v1`. E-xx: E-15. TISAX 5.2.1.
+- **EVIDENCE:** Workflow run URL and commit as `<date>-RG-3.3-register-ci-v1`. E-xx: none (01 §7.2). TISAX 5.2.1.
 
 ### RG-3.4 Make the checks required — **BLOCKED**
 
@@ -653,7 +653,7 @@ cp "$p" "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-3.4-required-checks-sent-v1.js
 - **ACTION:** **BLOCKED**: Needs: RG-3.3 and RG-3.4. Commit it in: nothing is committed; every test pull request is closed unmerged. Unblocked by: `REGISTER_CI_COMMIT` and the RG-3.4 read. Gate waiting: G12 and G15's "16 (CI)" half, 31's P-SA row, 38's parse. Until then: `checkpoint RG-3.5 BLOCKED - - "needs RG-3.3, RG-3.4"`. The tests, each a pull request titled `RG-3.5 <rule> negative test (do not merge)` built from its fixture: a second `env=prod` P-SA row (R-02); the P-SA row flipped to `super_admin` with G20 at 35 days (R-03, R-05); a `stage-0` decision file while pending (R-03); a control-group membership change approved by the second operator only (R-07); a ladder raise approved by one human (R-09); a Model pin of `gemini-2.5-flash` (R-06). And one positive test: an `env=nonprod` P-SA row without a checklist passes every check (R-04).
 - **VERIFY:** Each negative pull request shows the named check failed and `mergeStateStatus` `BLOCKED` (`gh pr view <branch> --repo "$PLATFORM_REPO_SLUG" --json mergeStateStatus,statusCheckRollup`); the positive one shows the checks green (and stays unmerged).
 - **ROLLBACK:** Each pull request is closed and its branch deleted (`gh pr close <branch> --repo "$PLATFORM_REPO_SLUG" --delete-branch`).
-- **EVIDENCE:** Each pull request URL and check output as `<date>-RG-3.5-negative-tests-v1`. E-xx: E-15. TISAX 5.2.1, 4.1.3.
+- **EVIDENCE:** Each pull request URL and check output as `<date>-RG-3.5-negative-tests-v1`. E-xx: none (01 §7.2). TISAX 5.2.1, 4.1.3.
 
 ### RG-3.6 The signed manual parse while the rules are BLOCKED
 
@@ -687,7 +687,7 @@ gh pr view "$PR" --repo "$PLATFORM_REPO_SLUG" --json reviews,author --jq '.autho
 
 - **VERIFY:** The parse file exists in the pull request, names every rule of RG-3.1 with a result, and carries both required signatures (`tools/decision-check.sh` of 03 prints `OK` for it); for a P-SA flip or a Stage 0 record, R-02, R-03 and R-05 are `pass` and each G line's record was opened by both signers. No `<` placeholder remains in anything that was run or written (`grep -n '<' decisions/register-parses/<date>-pr$PR-parse.md` shows only prose, never a command). A parse by one person, or by the platform owner, is refused at review.
 - **ROLLBACK:** A parse found wrong is superseded by a new parse file; the merged change it allowed is reverted by pull request until the new parse passes.
-- **EVIDENCE:** Each parse file (append-only) as `<date>-RG-3.6-parse-pr<number>-v1`. E-xx: E-03 (decision record), E-15. TISAX 5.2.1, 1.4.1.
+- **EVIDENCE:** Each parse file (append-only) as `<date>-RG-3.6-parse-pr<number>-v1`. E-xx: E-03 (decision record). TISAX 5.2.1, 1.4.1.
 
 ## 4. Folders, operators and the control-group list under the rules
 
