@@ -2,8 +2,8 @@
   "files": {
     "README.md": {
       "file_id": "1IxmBIqkvTw37e5OqRfuJEmb823-vdz27gBPwYAeGsLE",
-      "local_hash": "71ef3553ba7f1499f149fa5e13a24efd7e98ea45e9c7a3db27ec8777a442a81e",
-      "remote_modified": "2026-09-17T20:48:37.837Z"
+      "local_hash": "08ce8991eb688b98f1313e14eda37c5ce187702de70d1a7ee4494091abe60a66",
+      "remote_modified": "2026-09-18T16:37:51.320Z"
     },
     "backlog.md": {
       "file_id": "1QfRnrCWrp0TOoH635DNpyzislk_QQbgjdouDl3UUR94",
@@ -52,13 +52,13 @@
     },
     "platform/agentic-platform/00-objective-review.md": {
       "file_id": "1rHI86KKyRtQCYZMVw1Ks7KkrPGsZvmqucWKJy2VOrBE",
-      "local_hash": "ef9b31df6f3d6e1a993450cd983e72cd7f4ec0b7944721b1acce36f9f4f68dda",
-      "remote_modified": "2026-09-16T15:03:26.563Z"
+      "local_hash": "a20b359b684f3594d340273f363728ab306ffdb6e1407b3bfde048bd1f2c5eda",
+      "remote_modified": "2026-09-18T16:37:56.707Z"
     },
     "platform/agentic-platform/01-hld.md": {
       "file_id": "1SyY49d9u-joa73VBSFAHXpiRg_itQMdo3P1VWVeCGnA",
-      "local_hash": "d48ef3a68c78761c43612193836dd35f4cdbf201e9ecefdfb937cc631f68e695",
-      "remote_modified": "2026-09-16T15:03:31.651Z"
+      "local_hash": "f81ccbdda56ae7d4f4fc2f29db38a8f1ecbbe3af09da91aced7a779e67803877",
+      "remote_modified": "2026-09-18T16:38:02.273Z"
     },
     "platform/agentic-platform/02-landing-zone-and-tiers.md": {
       "file_id": "1qM9ek_TjRhDnGTG7FeK6qU3F2tmwEJ3t3qDWIZ4GKmY",
@@ -72,8 +72,8 @@
     },
     "platform/agentic-platform/04-identity-and-privileged-access.md": {
       "file_id": "1pFkcdJu5mK6Ncmrgnpld9JWr3yAlVUvPGT33kiy0EuI",
-      "local_hash": "3c177002094493ac421d23f2ed43f4dab9d776d934380af142a9038dfa649082",
-      "remote_modified": "2026-09-16T15:03:52.507Z"
+      "local_hash": "53ca456e6be64e806615552f783fe06b5ef832f2cd866fb8f85dce7c7edd8a21",
+      "remote_modified": "2026-09-18T16:38:07.585Z"
     },
     "platform/agentic-platform/05-registry-and-autonomy-contract.md": {
       "file_id": "1CzadZIqTcPPGYs3qzbBJqKaHIrRbBQKm9Wz4R8OdYRQ",
@@ -82,8 +82,8 @@
     },
     "platform/agentic-platform/06-gateways-model-armor-perimeter.md": {
       "file_id": "1w6ktRXbjlAARRBrqpBbf0xj9gDHxJGPh3yEzhQ4A-3s",
-      "local_hash": "4b1928d1ea734a6b3f6e5a6c6f957d8db997b2be97829054da039ff5fcab12f8",
-      "remote_modified": "2026-09-16T15:04:02.869Z"
+      "local_hash": "dafe5139cd032a48a022cf0a86c782b53399c06a2b0f4517b2c8e49d8a8cbe34",
+      "remote_modified": "2026-09-18T16:38:12.075Z"
     },
     "platform/agentic-platform/07-monitoring-detection-incident-response.md": {
       "file_id": "1OnAGIp5dR9L3jPmlYYdBbBnjK5TKKeHtaT4i9t3JOc0",
@@ -102,53 +102,93 @@
     },
     "platform/agentic-platform/10-eu-ai-act.md": {
       "file_id": "17QF1WwFuIYxVzsSX-VusmZv9EWbCjtvkVAtXF05aGKY",
-      "local_hash": "b3962af00ab00363fc874c9bb0934f2d5254619fac4cddedcc842969caa80c81",
-      "remote_modified": "2026-09-16T15:04:25.774Z"
+      "local_hash": "a199bcfdb9efb915a3f9be248cc4c8f85af1d2257b4c3f9bc66ad61c406203b7",
+      "remote_modified": "2026-09-18T16:38:16.408Z"
     },
     "platform/agentic-platform/11-tisax.md": {
       "file_id": "1YxOwQWQ0BuDxueLXvXAWya56PXhiCsConNNqTPCQ01c",
-      "local_hash": "9f7fcf4e7f6e75566c87d5a0d3e5eb694166576705c9030a5301934b17dee1fb",
-      "remote_modified": "2026-09-16T15:04:31.749Z"
+      "local_hash": "d5e1603b3ce912dc28fb11f0056b2ce8b4e65cb4ae2fd265cef4b703df9a859c",
+      "remote_modified": "2026-09-18T16:38:21.877Z"
     },
     "platform/agentic-platform/12-open-decisions.md": {
       "file_id": "1_IdP5M4lTk9JcMfrVE6BUXAQUo1ij1IYcICC90ploYQ",
-      "local_hash": "5c7beacee5fe2895ef59b3603e48126de1c55b6beecdc7eaefd6daf7d4554511",
-      "remote_modified": "2026-09-17T03:28:13.043Z"
+      "local_hash": "ad986256e3e28679509938a60d19f28c7e0d3c7dcf75a6c3c7a93ed736f50597",
+      "remote_modified": "2026-09-18T16:38:28.971Z"
     },
     "platform/agentic-platform/13-setup-procedure-review.md": {
       "file_id": "1iVEBGCdCAfjbS1VSbC-61uBIB2gKGBNvHpRXE_Pw1CE",
-      "local_hash": "4526807cce38b771cc5ab1d0c39b0151bf73d8c2c15301a544ab6a5d9a17f164",
-      "remote_modified": "2026-09-16T15:04:45.891Z"
+      "local_hash": "34074f34f0a5d2fdc82b99693d52f68b63fcdfca05bc7b9363f36d958ead5626",
+      "remote_modified": "2026-09-18T16:38:36.043Z"
+    },
+    "platform/agentic-platform/14-crosscheck-review.md": {
+      "file_id": "1pURkhc5Jk__pjWbnFFZcp9yI_PGnBe6IJB-dkfMwoY8",
+      "local_hash": "cd12c0e291a984b1d35c1006203f3ef00f348f64cd1a4f4b820de3b00d25ed03",
+      "remote_modified": "2026-09-18T16:38:40.157Z"
     },
     "platform/agentic-platform/3-day/README.md": {
       "file_id": "1YVkHlrtWtPKvr4VAM6knEPCHMUv06n0OysxzInSd9H8",
-      "local_hash": "048ec48a5899b0c9c01d5ecf43bfd6ad214809514adbb5c39089f04356d197d2",
-      "remote_modified": "2026-09-17T20:48:39.915Z"
+      "local_hash": "f168483ab6825b056d206ee2e0d192593fb67e6d49013c84f96095349a5233c7",
+      "remote_modified": "2026-09-18T16:43:57.932Z"
     },
     "platform/agentic-platform/3-day/code.md": {
       "file_id": "1Rog7_LI35_-4NoPHepoSkXnn-lZ2cm80ua4ZMinhJoQ",
-      "local_hash": "5247f7e37cf6bf5ecf39826c281acb6a540b033c5e23a2516cf28491523cbf81",
-      "remote_modified": "2026-09-17T20:48:42.871Z"
+      "local_hash": "3f9aefbf176b064c670732ee55abb5be341ccc3a1edda1e26a06837c5c5a1a5a",
+      "remote_modified": "2026-09-18T16:44:00.866Z"
     },
     "platform/agentic-platform/3-day/day-1-platform-and-eve.md": {
       "file_id": "1fdTEKFuCRQyfdyQqBWQ1EPu0wafcZeA12gQkIjloLRo",
-      "local_hash": "ed56aef3fc2fa628bf86e790861fdac8e4a2bc35e967b49ce87d6b6becb8cf7b",
-      "remote_modified": "2026-09-17T20:48:45.934Z"
+      "local_hash": "06145a0e9fce6dab3ab6cd593d322c30fd37ab8c551d8ac069e22e9bd3e07c2d",
+      "remote_modified": "2026-09-18T16:44:04.111Z"
     },
     "platform/agentic-platform/3-day/day-2-the-doer.md": {
       "file_id": "16LNzslZ-NCQeO5uAT3cOB4lYAAAC7RqL7ZDHTP3ItLE",
-      "local_hash": "68a4d16d7cf8ce0456dccadc6fec2a68b453d4d133a7b366108a1be329f7a7ae",
-      "remote_modified": "2026-09-17T20:48:48.797Z"
+      "local_hash": "1df8455582ef6794c382313bb913f82ffab1253b5501d38b4d8d6ad5d72142f4",
+      "remote_modified": "2026-09-18T16:44:08.041Z"
     },
     "platform/agentic-platform/3-day/day-3-mo-demonstration-and-handover.md": {
       "file_id": "1xG8XvCJ1Ch9c3mLdfJdbfn6Gvy_Ctq3uRhvDnWax88Q",
-      "local_hash": "c517bca3de1db798db419fe50d6a9ec1f27c0e7996bb252f74ade3e0342e8577",
-      "remote_modified": "2026-09-17T20:48:51.762Z"
+      "local_hash": "389bbb434eae7727907224982db46ab2183ded0aa8d80df9493300ef060bf7a5",
+      "remote_modified": "2026-09-18T16:44:10.919Z"
     },
     "platform/agentic-platform/README.md": {
       "file_id": "1vrxnoz3WpLNjz5b3i0ulNk-ivIZ9GeESJxvz9VPwVm4",
-      "local_hash": "c67e90829d3367bff32479b09ad615888fd55c2ddb23687909049c6a2f80cb9b",
-      "remote_modified": "2026-09-17T20:48:55.505Z"
+      "local_hash": "58d09bd37c213efc08103168a5549092c6e4e0f49fae59a46e403965577da06e",
+      "remote_modified": "2026-09-18T16:38:44.543Z"
+    },
+    "platform/agentic-platform/audiences/README.md": {
+      "file_id": "1Dnp7ezXthxaAt9cW6A-jIFl05EJSZuOiGxzvOJmq_cY",
+      "local_hash": "c0f013f1184af83752a186fd7fdea179bf224caebf12cdf06787c2f6509fa233",
+      "remote_modified": "2026-09-18T16:38:47.746Z"
+    },
+    "platform/agentic-platform/audiences/c-level-presentation.md": {
+      "file_id": "1wUap0ihGyyN-QQP7ubok_0hivM_aHWiMuSQlluf8xCE",
+      "local_hash": "e6464c407b4202c8df471a3c9f9c11bfb0998c5604ff36b1e4334dbf2e9b40af",
+      "remote_modified": "2026-09-18T16:38:50.561Z"
+    },
+    "platform/agentic-platform/audiences/compliance-and-regulation.md": {
+      "file_id": "129X0Q1_oqXtUfrIwtjiK5lNGATJ_sf_icnNekl8M8_o",
+      "local_hash": "86a3494025ed67951e8ead0e97877d889ed0bcc713291a7c90f926c78f6c388a",
+      "remote_modified": "2026-09-18T16:38:53.599Z"
+    },
+    "platform/agentic-platform/audiences/enterprise-architecture.md": {
+      "file_id": "1EHeRPKOXN8_b877NK3MvKjlS1XIAB06n3Kz4APSFL00",
+      "local_hash": "52af0ea0444f9607da8559081b60346683fe99457b9edc74c03ef19638da0f1b",
+      "remote_modified": "2026-09-18T16:38:57.033Z"
+    },
+    "platform/agentic-platform/audiences/executive-brief.md": {
+      "file_id": "11CC4sTlg57r-W0n39Q5AdZPS8QdXpiahRlrbeq9LxOc",
+      "local_hash": "1dd5e4493b1d9ba9ee4aab5c1b8365dd1aecf578012b0ae8a5b839b739667e99",
+      "remote_modified": "2026-09-18T16:38:59.512Z"
+    },
+    "platform/agentic-platform/audiences/hr-and-works-council.md": {
+      "file_id": "1L9C9qaP61RKiMGfVAWEBo5CiKUy3_hlVR1ExwzFWlLA",
+      "local_hash": "034a4a985de25ea94503a8ec4777ac42b86261762b1662f54a12790313832142",
+      "remote_modified": "2026-09-18T16:39:02.643Z"
+    },
+    "platform/agentic-platform/audiences/security-team.md": {
+      "file_id": "1gOPsv_wtRgRjqqoHVM2VxSsYzu1-ZNA82QfH3nIw2CY",
+      "local_hash": "2d50db56015fbfd5517281ae1cc7b5a62c18bd1aeef77a5fc23a67bdc26b237a",
+      "remote_modified": "2026-09-18T16:39:06.028Z"
     },
     "platform/agentic-platform/brief/00-front-matter.md": {
       "file_id": "1utr9B71xiZpszcLscfyVwJEhrwd5j3ars8t5jFz7U-M",
@@ -162,8 +202,8 @@
     },
     "platform/agentic-platform/brief/02-executive-summary.md": {
       "file_id": "1axagyqQmtyKITwPjLV9SP_V_ZbtT4Wdv5BbpJRN6IEA",
-      "local_hash": "71d6611deeb78f88af2cb03a31c4670b30084f7e88cb3a6499206f5e54baebeb",
-      "remote_modified": "2026-09-16T15:05:02.262Z"
+      "local_hash": "88c225102a3f0993c6e99459a1e5909a2dfbac6bb68cf93cd37f3381a655010f",
+      "remote_modified": "2026-09-18T16:39:08.559Z"
     },
     "platform/agentic-platform/brief/03-objective.md": {
       "file_id": "1hAPnN366QS4O_NK-bBVecn7iut2sUkfh_tRxUGrLgLU",
@@ -247,8 +287,8 @@
     },
     "platform/agentic-platform/brief/19-eve.md": {
       "file_id": "1dVitQcF5iENTV6KIh6JYuoChsEhFRkpydaZtLwMFCX4",
-      "local_hash": "738776ecd4ae2676323e4fdc66a28f72b4d809dc8f02c4934237465837d09569",
-      "remote_modified": "2026-09-16T15:06:16.887Z"
+      "local_hash": "29f71e1a8256e8acb8bd1176e31a390f2241cb249bf96fbff7b84dd45e6f6676",
+      "remote_modified": "2026-09-18T16:39:11.962Z"
     },
     "platform/agentic-platform/brief/20-mo.md": {
       "file_id": "1_bMVkbTdTxBEODDgEyBX-bmoN7Chl_qxJ_Q_gVzNSek",
@@ -292,18 +332,18 @@
     },
     "platform/agentic-platform/brief/28-operating-model.md": {
       "file_id": "1a0o5BqRLAjp_DI1iS036wi9Tft7s-45IKVUpBI_8JCw",
-      "local_hash": "a4cbe9e5f9d6c352f4695e2035d95f88c5f0975881425138bbedc0681384ed8e",
-      "remote_modified": "2026-09-16T15:06:48.472Z"
+      "local_hash": "4e57bed32fe351727372c88a97719a4c0f40f73c68865ddee720794ebd64f4f7",
+      "remote_modified": "2026-09-18T16:39:15.239Z"
     },
     "platform/agentic-platform/brief/29-roadmap-and-cost.md": {
       "file_id": "1X1dwuD4E9I7FaIq3wEb9WEnUb3PQAOo4HWisRAYl13E",
-      "local_hash": "b972247c39a3d33f9785a6af4be88c2dfbe8cc26c51f631e65ca8ad3b9f088fb",
-      "remote_modified": "2026-09-16T15:06:51.636Z"
+      "local_hash": "23d1824cf3a56ff8f3558ffefb0d1e71c8c26e847a308ba09e9229335e4d4697",
+      "remote_modified": "2026-09-18T16:39:18.749Z"
     },
     "platform/agentic-platform/brief/30-decisions-awaiting-owner.md": {
       "file_id": "1su7IimG6D6MLLV3nwqW1FVDwbW8TszTkH1Zv00gYdCI",
-      "local_hash": "f79a6f2265d45a4eb2fc90a30d25b1051d86218abae54ea3d8c12117ef0a4134",
-      "remote_modified": "2026-09-16T15:06:55.172Z"
+      "local_hash": "d6c09bc982dc8b83eec07b30ad0d692b0386fabeb88e9bd610a8af658a284eb1",
+      "remote_modified": "2026-09-18T16:39:22.118Z"
     },
     "platform/agentic-platform/brief/31-glossary.md": {
       "file_id": "1rabllL1v0c0Bq3lPDwppD55pPnjBXCnBDBs0ButqpHQ",
@@ -312,13 +352,73 @@
     },
     "platform/agentic-platform/brief/32-document-map.md": {
       "file_id": "1Udx-Gy2K7ubol4jIF_KlcJeXumoHveNgAZUhsHmLT8o",
-      "local_hash": "e85354ddd2864aa7c982e2cd7ddc7c294cd4a93c6b1dae039c77e01ead87a26f",
-      "remote_modified": "2026-09-16T15:07:03.668Z"
+      "local_hash": "a02733068c9683fb303bc83cb0084efa3484214b44510872791bd66ee2118dd9",
+      "remote_modified": "2026-09-18T16:39:25.583Z"
     },
     "platform/agentic-platform/brief/README.md": {
       "file_id": "1SaVccTEW9VPudFDDd28J3pivFrhqCmGodfJIJaQa5Dw",
       "local_hash": "e6914ffb95c4ef6889c1f74dd89c467da762613a325b9216fbb1cc7554c949f9",
       "remote_modified": "2026-09-16T15:07:06.951Z"
+    },
+    "platform/agentic-platform/pitch/pitch.md": {
+      "file_id": "1BgAoZRL_L5reO62_5Mp-JFkJ2ndFNRz-W0dQ_QeMAQw",
+      "local_hash": "08717f31653f1fe1b9ea6fd694f65da9c1d3c86424eaf532af1609f9fc35f9fa",
+      "remote_modified": "2026-09-18T16:39:29.205Z"
+    },
+    "platform/agentic-platform/pitch/sales-presentation.md": {
+      "file_id": "1kaEJQywDesPDXZBo4S_QCgV7du6CPsk-capGsYWZHh4",
+      "local_hash": "8f8dd1a2f839f840bbc8589d988683ee1e8bb8560ee8c9ab8870901b85f806de",
+      "remote_modified": "2026-09-18T16:39:32.026Z"
+    },
+    "platform/agentic-platform/plain/01-what-we-are-building.md": {
+      "file_id": "1ZrIcl2jcbIkLNa4Y2KoDjYmVTuALBI6_MLVCZfO1xfE",
+      "local_hash": "5b418d6ec4a5c093abd3638f453ab90affe860f8f05be6ee9d80a33e61b04908",
+      "remote_modified": "2026-09-18T16:39:34.646Z"
+    },
+    "platform/agentic-platform/plain/02-the-three-agents.md": {
+      "file_id": "1Mm7Z1VNNfNZ96dNlOkGy2qTVGnAzFc-NXDS-zI67pUE",
+      "local_hash": "e04ab4397b71e489f9871e196529b674bc4e95e531aca0dd1d55eaff1f68a7d8",
+      "remote_modified": "2026-09-18T16:39:37.110Z"
+    },
+    "platform/agentic-platform/plain/03-how-it-is-kept-safe.md": {
+      "file_id": "1qQyxI86hiGIG34FQq3FPburX2LvNwjFWfKCdpS3iph8",
+      "local_hash": "e6d58f3622bed0223ca2f95e6286c98c8914804133da8038b24c3530ea7bec99",
+      "remote_modified": "2026-09-18T16:39:39.761Z"
+    },
+    "platform/agentic-platform/plain/04-people-and-decisions.md": {
+      "file_id": "1egoK9F0kkmo59Xp9mvZ08Qb_VFEUxA-yfwp07QfMoSA",
+      "local_hash": "bd83ecf9ebaf78c7fac0a809714d73e9b83c47b73819bf8085797a1978e98bae",
+      "remote_modified": "2026-09-18T16:39:42.783Z"
+    },
+    "platform/agentic-platform/plain/05-the-law-and-the-standards.md": {
+      "file_id": "1fHj9u-bK6-TnkwMlc_qwYbsrkkrmy70SPd6Pxi2vpTM",
+      "local_hash": "6dc5b83d2eca65183702ce4fd88699914a5d9b9873cedc48d6799d86604c7e5d",
+      "remote_modified": "2026-09-18T16:39:45.399Z"
+    },
+    "platform/agentic-platform/plain/06-three-ways-to-start.md": {
+      "file_id": "1zMKiBaDxqA7YRVM1sm5IQZgYrvW-yHzLGAW1hMMBExw",
+      "local_hash": "8efb5e1efe12a16d293173695a298c33a5043fbfaa68c31ccb6b5b17bfcc1f68",
+      "remote_modified": "2026-09-18T16:39:48.902Z"
+    },
+    "platform/agentic-platform/plain/07-what-it-costs-and-what-you-get.md": {
+      "file_id": "1zmzKn6-mCx_BzYb1z3FLoc4M6_B2DLtaoj84JtpxsQc",
+      "local_hash": "7414bc37c2b9a0cb8911cb881f1c6a16c93eb53b4a4d46678281be204da3932b",
+      "remote_modified": "2026-09-18T16:39:51.645Z"
+    },
+    "platform/agentic-platform/plain/08-glossary.md": {
+      "file_id": "1OLyJLlyyIqY0ZktNZG9OJ_MyL1pdmVc6hWyBl6mY3qs",
+      "local_hash": "8a215324030ce22821bc4d9ae89366e516b0ee819ded1d17aa5c4258433fd745",
+      "remote_modified": "2026-09-18T16:39:54.601Z"
+    },
+    "platform/agentic-platform/plain/09-questions-people-ask.md": {
+      "file_id": "1A8OrcoLu4C_Zt1f5bqdQYeDV4VSsAGRMK8Ihnz5T7IE",
+      "local_hash": "561329213fe10a9426ab1654342a415090da7dba77cbb801e5a187bb66090fa6",
+      "remote_modified": "2026-09-18T16:39:57.372Z"
+    },
+    "platform/agentic-platform/plain/README.md": {
+      "file_id": "1jcXv62rNbhGKvWVx6fAc9W_h99oWs1kFEugxF0c8LLM",
+      "local_hash": "9617f376d8d8010b41c81737dab0e0c4f03c3e1c2c761a1eeb0d88bc0fea4c8e",
+      "remote_modified": "2026-09-18T16:39:59.911Z"
     },
     "platform/agentic-platform/pov/01-conventions-and-variables.md": {
       "file_id": "1Hl5pBM7hqRjWm141jMOD0cstt_FtI_wEfyuR83umNpQ",
@@ -367,8 +467,8 @@
     },
     "platform/agentic-platform/pov/README.md": {
       "file_id": "1tTj0n3kCs94IQO9KdN_4nXbaxDdIDPERuHQEF-_KSAw",
-      "local_hash": "50548c453bccccdcdf9a35d07921ae490f3c30d720ff26efddcf1ee8263e90b7",
-      "remote_modified": "2026-09-17T20:48:59.777Z"
+      "local_hash": "11d2ddf6ece94e928166ce4ca681a8fcfac55447a25ddb1f8dbd01f41ddb8235",
+      "remote_modified": "2026-09-18T16:40:04.607Z"
     },
     "platform/agentic-platform/setup/01-prerequisites-and-conventions.md": {
       "file_id": "1QNHADtbKT4n3WhY4Kr2TqBhC6XCl7RPtiNEuAByB0U0",
@@ -557,8 +657,8 @@
     },
     "platform/agentic-platform/setup/38-super-admin-gate-and-grant.md": {
       "file_id": "1z6RrSDA9vxsu9yKe2GTvb9BA3IjjwroeBikfVIVFvAU",
-      "local_hash": "5058c2af08610d2be2cc529003b088d58608d365b6b9ab3ad02e4a0a5ab078d2",
-      "remote_modified": "2026-09-16T15:11:06.587Z"
+      "local_hash": "f0450bb20d83b02a3de18a22b8715d8a808f11f952fd7bc93238c7035569d06e",
+      "remote_modified": "2026-09-18T16:40:12.127Z"
     },
     "platform/agentic-platform/setup/39-wall-e-stage-0.md": {
       "file_id": "1pvy8kfNOQvW1zTpYzEe3Xv2FvMZT7cYqVMBv61ZIkhA",
@@ -662,8 +762,8 @@
     },
     "platform/eve/07-build-runbook.md": {
       "file_id": "1NV4avhk35c6D5W4Fde6f_EV0VpDm7UUtQ5ReYcRlCJ8",
-      "local_hash": "f583ee374843e516a7ef81724507ddc0eac511f1c408cc230cd7c7e3e4b9a7e0",
-      "remote_modified": "2026-09-16T15:12:45.887Z"
+      "local_hash": "47b29d3c8bccf8b0f4ba72f5ad9f7a3cdb9793cca7dd18e66a8a8998a38a686e",
+      "remote_modified": "2026-09-18T16:40:15.299Z"
     },
     "platform/eve/08-contract-changes.md": {
       "file_id": "1xaiSEcDedqnOdmmMU-0qDQQZitTsP9kNkkJ-0yqJtUY",
@@ -677,8 +777,8 @@
     },
     "platform/eve/README.md": {
       "file_id": "1JOV36J64Xf69CBFAXEm8DY9FGsrJjMUboa63r6QSh3s",
-      "local_hash": "7b9b13d8af8f8573488346ac7eec1290c0589c19fca02a6850d7ff98dcff82e7",
-      "remote_modified": "2026-09-16T15:12:57.179Z"
+      "local_hash": "55b8cd2cadc01ba65fed3a26d70feee3d7ddbd7f55fc63a706dbc294f58990f7",
+      "remote_modified": "2026-09-18T16:40:18.791Z"
     },
     "platform/gcp-projects.md": {
       "file_id": "1hwWL1dJQ18aZWiuWkKJDPKV5Ar9VS9H3eCQgT6Hkh0g",
@@ -737,8 +837,8 @@
     },
     "platform/mo/README.md": {
       "file_id": "1cHWvyfRxYArbOVbHW54hDPJvzt0yQXzzvURRZj3U0ZU",
-      "local_hash": "75d45e508770e24cc3c7e05c3e2fd3115cb5a1341f1000ca61d7993a5bf45c49",
-      "remote_modified": "2026-09-16T15:13:44.120Z"
+      "local_hash": "14601bc6d7848a893855800046d5941a5bbdbff27dc5ea190bacc949220b6453",
+      "remote_modified": "2026-09-18T16:40:21.695Z"
     },
     "platform/overview.md": {
       "file_id": "1FflAsB8jAzm-CwktVkkYnPMKn2ETLJndGM0Esd7qZtA",
@@ -757,8 +857,8 @@
     },
     "platform/wall-e/02-identity-and-auth.md": {
       "file_id": "1Jg1guKxA6FzWj-asGuTp6-TcarfJ5KKeR9YxUnODEoM",
-      "local_hash": "1e7a25addb1e6bc68d93007dbe450d60e35d98a3e6cfcd8be9e4ddb65ad46a9b",
-      "remote_modified": "2026-09-16T15:14:00.677Z"
+      "local_hash": "61929137a7bd7bb03cfb72e1b17b3ad82e7596169d67ae204e062f3fe6cb348e",
+      "remote_modified": "2026-09-18T16:40:25.552Z"
     },
     "platform/wall-e/03-lld.md": {
       "file_id": "1SqfvQMgVJ3eGcB2ezX4LsfGCTXnfw1EvZ4_2QJuJW5w",
@@ -812,13 +912,13 @@
     },
     "platform/wall-e/13-agent-interconnection.md": {
       "file_id": "1ZYRUuxwZW8FIAD2R-tJT0yXnzwIYdPj86joJHu1RM7s",
-      "local_hash": "2cf6458f94b0f7be7067278edf2402eb6ae06b3a2d267516f9128e1e2cd1531d",
-      "remote_modified": "2026-09-16T15:14:42.507Z"
+      "local_hash": "1538c06aa732a484611a65c1db2a70d77afbd79e8b527ae09f3fdb7551d12270",
+      "remote_modified": "2026-09-18T16:40:29.254Z"
     },
     "platform/wall-e/14-hld-challenge.md": {
       "file_id": "11BqfuwdvuA1Eg-sQVicE7rUhGsd3qVQN3DAqjDlvBnA",
-      "local_hash": "f74e26cb8128e3dc2c051e02ed17eb93a28ab5fce757d0c5cac86fd4889ea96e",
-      "remote_modified": "2026-09-16T15:14:48.047Z"
+      "local_hash": "042757c2749e96062779cf2a1e829e0d8e157b1d3c7b11476ba74eb2dc2f793e",
+      "remote_modified": "2026-09-18T16:40:36.298Z"
     },
     "platform/wall-e/ARCHITECTURE.md": {
       "file_id": "1G31hpZtmWleLsXNzYLxRFo2-lJSG_trdIYFpLAW5wzg",
@@ -832,8 +932,8 @@
     },
     "platform/wall-e/README.md": {
       "file_id": "1t3jmMHGzFYUlAlPKh_9M2QpmPDxMrG7IMpj39vibr_4",
-      "local_hash": "cc5fd37c33beb6e7196d0048b1441524ebcca130d5f570b9d57450751b1db9fb",
-      "remote_modified": "2026-09-16T15:14:58.312Z"
+      "local_hash": "7f84a9f344093238dae6dcd3c75d5f0df922b5cf774a816dc9b5497cdafdf677",
+      "remote_modified": "2026-09-18T16:40:39.750Z"
     },
     "platform/wall-e/SETUP.md": {
       "file_id": "1lRSiD57up5qabwsps7-z86Xmu2ZcWOkAT7uzghpnBx8",
@@ -842,8 +942,8 @@
     },
     "platform/wall-e/setup/README.md": {
       "file_id": "1oq9K-swUaE0x1Q9U8fao8otnC0u27aLS_qTtyjp0idw",
-      "local_hash": "7d170bb9ca3013bfb1dffeebd84931cfad407b774b89fc747144ff4057d54f81",
-      "remote_modified": "2026-09-16T15:15:08.147Z"
+      "local_hash": "59cd56a182cfffb3380f37826ce7c9a80a9802f006e32393cde9a077805f4b43",
+      "remote_modified": "2026-09-18T16:40:43.766Z"
     },
     "reference/README.md": {
       "file_id": "1fI0R77nE6UHxZqsWJ-JUEOTMjKaqVyBZPRUbFdlnylo",
@@ -879,7 +979,10 @@
     "platform": "10Tug5CiVs9mi5A2IZ444xmRy2N8bFOl4",
     "platform/agentic-platform": "1tuJJr0jSxIaq3zZGr9FgsluinmAMPVU7",
     "platform/agentic-platform/3-day": "12PN_0MC8yu2iLwNkukX3Fk-HdpzdzhP1",
+    "platform/agentic-platform/audiences": "1fiobUsKvxJNZlWddKKpRMtR6FS30JZhB",
     "platform/agentic-platform/brief": "17SunY7PXieJukddTg5x7puIDGkd_MxHr",
+    "platform/agentic-platform/pitch": "1HNlgEo8-FKxATWKlyLWq6jjv3J63r7D0",
+    "platform/agentic-platform/plain": "1qc3o_aqKNExSE8qCqUPRnjwlQXyQw6GT",
     "platform/agentic-platform/pov": "1JbrdZ0Yi-TZ7hJNCd415jmmomrrCSSBE",
     "platform/agentic-platform/setup": "1ONFgPjjhjHjUoTNRXqCZ_P3LPrwD3nXp",
     "platform/edge-ai-v2": "1Rxc6xAd39RI3NTfnzwC6wI1uaxqQlHkb",
