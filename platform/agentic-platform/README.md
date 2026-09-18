@@ -2,7 +2,12 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-17
+- Last reviewed: 2026-09-18
+- 2026-09-18: the page counts corrected to fifteen pages (00–14) and the register of record to
+  P1–P204 (Status, Documents row 12, Maturity, with a Maturity row for the three build sets);
+  the builder's step 7 no longer says the Tier C runbook needs no factory — it imports the app's
+  project through the factory's `tenant-app` module and runs after Tier R (setup/README §3.1,
+  SD-13).
 - Maturity: **design — nothing built.** No folder, no factory run, no project made by the
   factory, no gateway, no registry entry, no sink, no SIEM, no witness organisation, no robot
   account with Super Admin. The four projects of [../project-topology.md](../project-topology.md)
@@ -10,14 +15,28 @@
   exist on 2026-09-13, written so that a security reviewer can find what is enforced and what
   is only detected, and so that whoever builds it can start from the factory and the register
   without re-deriving a decision.
-- What this set is: thirteen pages (00–12). [01-hld.md](01-hld.md) is the parent; pages 02–11
-  each detail one part of it and record their decisions; [12-open-decisions.md](12-open-decisions.md)
-  is the register of record, P1–P143.
+- What this set is: fifteen design pages (00–14), three build sets (setup/, pov/, 3-day/) and
+  the brief. [01-hld.md](01-hld.md) is the parent; pages 02–11 each detail one part of it and
+  record their decisions; [12-open-decisions.md](12-open-decisions.md) is the register of record,
+  P1–P204 (P144–P191 proposed by the setup procedures on 2026-09-15, P192–P204 by the proof of
+  value on 2026-09-16).
 - Objective: `.agent-work/OBJECTIVE.md` (outside the wiki), restated in
   [00-objective-review.md](00-objective-review.md) §1. No page loosens the platform's standing
   constraints — no domain-wide delegation, no credential in the model, humans raise autonomy,
   and Wall-E's Super Admin (P33) designed around rather than re-argued — stated in full in
   [01-hld.md Status](01-hld.md#status).
+- Cross-checked on 2026-09-18: [14-crosscheck-review.md](14-crosscheck-review.md) reviewed the
+  whole set — objective, design pages, register, brief, the three agent sets, setup/, pov/,
+  3-day/ and the two decision records — and lists 65 findings (4 high, 35 medium, 26 low); 38
+  of them, every high and medium row, were fixed in their pages the same day, the twenty-eight
+  three-day corrections were carried, and 27 low rows stay open; its §8 names what must still
+  change before the documents are handed to HR, security, compliance, architecture and the board.
+- Added 2026-09-18, written from the same review: [plain/](plain/README.md), the platform in
+  plain words for any reader; [audiences/](audiences/README.md), one document each for HR and the
+  works council, the security team, compliance and regulation, enterprise architecture, the board
+  (a deck with speaker notes) and the sponsor (the executive brief); and [pitch/](pitch/sales-presentation.md),
+  the sales presentation and the pitch scripts. None of them defines a fact; every number in them
+  links to the page that does.
 - Conventions on every page: `Assumption:` marks inferred facts; *tbd* marks values nobody has
   decided; every Google product, launch stage, IAM role, organisation-policy constraint, API,
   article and date carries a source verified on 2026-09-13 or says "unverified"; no company
@@ -67,10 +86,14 @@ AI Act or TISAX outcomes, only the mechanisms and the evidence; the full list is
 | [09-supply-chain-secrets-recovery.md](09-supply-chain-secrets-recovery.md) | Binary Authorization and attested images, the vulnerability gate, HSM everywhere and the key project, secrets, CMEK exceptions, recovery classes and the restore-boots-halted mechanism, the code-execution tier, and AGI-class containment (what Tier X would be and why it stays closed) | P115–P124 |
 | [10-eu-ai-act.md](10-eu-ai-act.md) | The regulatory state as amended, provider and deployer roles, the classification of every system (Wall-E's Art. 6 path, F7's profiling boundary, Eve, `eve-advisor`, Mo, the tenant app), the obligation crosswalk with owner and evidence per article, the evidence register, and what "bulletproof" can mean | P125–P132 |
 | [11-tisax.md](11-tisax.md) | The target (label, level, scope), module scope, shared responsibility with Google and the supplier file, the control-by-control mapping, the super-admin deviation record, separation of duties as a counted minimum per stage, supplier onboarding and exit, assurance cadence, the risk register and the legal register | P133–P141 |
-| [12-open-decisions.md](12-open-decisions.md) | The register of record: all 143 decisions in one sequence, grouped by the gate they block, with why each matters, the recommendation, owner, where it is recorded, the disagreements between pages, and the index into Wall-E's, Eve's and Mo's registers | P1–P143 |
+| [12-open-decisions.md](12-open-decisions.md) | The register of record: all 204 decisions in one sequence, grouped by the gate they block, with why each matters, the recommendation, owner, where it is recorded, the disagreements between pages, and the index into Wall-E's, Eve's and Mo's registers | P1–P204 |
 | [13-setup-procedure-review.md](13-setup-procedure-review.md) | The review of the manual setup procedures (platform, Wall-E, Eve, Mo) on 2026-09-15: the verdict on whether setup can start, one master setup order across every procedure with the stages that have no procedure yet, the verified findings per procedure, and the ordered fix plan | — |
+| [14-crosscheck-review.md](14-crosscheck-review.md) | The cross-check of the whole documentation on 2026-09-18: the verdict on whether the set answers the objective, every element checked against the others, objective against design against brief, the three build paths side by side with their hand-over chain, the security verdict and the standing risk per path, the dated path to the EU AI Act and to TISAX with the employee-data and works-council angle, the findings register X-01 to X-65 (4 high, 35 medium, 26 low), what is sound, and the short list that must change before the documents are handed to HR, security, compliance, architecture and the board | — |
 | [pov/README.md](pov/README.md) | The proof-of-value build (added 2026-09-16): nine human-executed files that stand the platform and the three agents up at Tier C, R and W on the production tenant, with no Super Admin to any agent and no long-lead purchase, using the full build's names and schemas so that [setup/README.md](setup/README.md) continues from it and keeps the super-admin grant | — |
 | [3-day/README.md](3-day/README.md) | The three-day build (added 2026-09-17): four human-executed files that two IT experts run in three business days and six person-days, standing up four projects, Eve over the admin audit log through the Reports API, a doer holding one organisational-unit-scoped Workspace admin privilege over four synthetic accounts with a forced dry run and a two-person approved execution, and Mo's scorecard. A demonstration of machinery under control, not compliance evidence and not a production grant; it hands over to [pov/README.md](pov/README.md) once its grants, custom admin role and synthetic accounts are unwound | — |
+| [plain/README.md](plain/README.md) | The platform in plain words (added 2026-09-18): ten short pages for any reader — what is being built, the three agents, how it is kept safe, people and decisions, the law and the standards, three ways to start, what it costs and what you get, a glossary and the questions people ask; every term defined where it is used, every number linked to the page that defines it, nothing claimed beyond the source | — |
+| [audiences/README.md](audiences/README.md) | The audience documents (added 2026-09-18): HR and the works council, the security team, compliance and regulation, enterprise architecture, the board and C-level presentation (seventeen slides and four backup slides with speaker notes, printed in [audiences/dist/](audiences/dist/)) and the executive brief; each written for an expert in their own field, defining nothing and linking to the page that does | — |
+| [pitch/sales-presentation.md](pitch/sales-presentation.md) | The sales presentation (added 2026-09-18): seventeen slides and four backup slides with speaker notes for an audience outside the programme, printed in [pitch/dist/](pitch/dist/), with [pitch/pitch.md](pitch/pitch.md): the thirty-second, two-minute and ten-minute scripts, the demonstration storyboard, the objections with grounded answers, and the words never to use | — |
 
 Two pages outside this folder are part of the design and are pointed at, not copied:
 [../project-topology.md](../project-topology.md) (the four projects and every cross-project
@@ -127,7 +150,9 @@ The builder's question is "what do I create first, and what does the factory ref
 6. [04-identity-and-privileged-access.md](04-identity-and-privileged-access.md) §3–§5 — the deny
    policy, the PAB and the PAM catalogue are folder-level and go in with the folder.
 7. [03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) §16 — the runbook
-   to bring the tenant app to baseline (Tier C), which needs no factory.
+   to bring the tenant app to baseline (Tier C); it imports the app's project through the
+   factory's `tenant-app` module, so it runs after the folder and core projects exist — in the
+   build, after Tier R ([setup/README.md](setup/README.md) §3.1, SD-13).
 8. [06-gateways-model-armor-perimeter.md](06-gateways-model-armor-perimeter.md) §2–§3 — the
    first agent project's gateway and templates; §4.3 — the two spikes to run in nonprod before
    any Tier W project.
@@ -145,8 +170,9 @@ supersedes the per-agent runbooks (`../wall-e/SETUP.md`, `../wall-e/PREREQUISITE
 
 | Thing | State |
 |---|---|
-| The design | complete for pages 00–12; decisions P1–P143 recorded; page-to-page disagreements resolved in [12-open-decisions.md](12-open-decisions.md) §7, whose rows 10–14 stay open until the agent sets carry them; the agent-set changes are the propagation stage of HLD §18 (P143), not yet run |
-| The organisation | one administrator, no SOC, no second super admin outside his own line, no security reviewer, no Eve owner, no DPO engaged, no ISMS names supplied (HLD §0.3) |
+| The design | complete for pages 00–12; decisions P1–P204 recorded; page-to-page disagreements resolved in [12-open-decisions.md](12-open-decisions.md) §7, whose rows 10–14 stay open until the agent sets carry them; the agent-set changes are the propagation stage of HLD §18 (P143), not yet run |
+| The build sets | [setup/](setup/README.md), [pov/](pov/README.md) and [3-day/](3-day/README.md) written 2026-09-15 to 2026-09-17, never executed; their decisions P144–P204 are proposed, none signed |
+| The organisation | one administrator, no SOC, no second super admin outside the administrator's own line, no security reviewer, no Eve owner, no DPO engaged, no ISMS names supplied (HLD §0.3) |
 | Google Cloud | no `fld-agentic-platform`, no factory, no project of the four; `GEMINI_PROJECT` exists as the tenant app's project and is to be imported |
 | Google Workspace | the tenant exists with Gemini Enterprise licences; no robot account, no robot OU, no multi-party approval, no sandbox tenant |
 | Verification | every Google and regulatory fact cited on pages 02–11 was checked against its URL on 2026-09-13; items that could not be verified are listed per page under "Unverified" and stay *tbd* |

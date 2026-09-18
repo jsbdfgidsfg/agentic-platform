@@ -35,6 +35,10 @@ Scope: agentic platform on **GCP** + **Google Workspace**, Gemini Enterprise adm
 - **Agentic platform: proof of value (POV build)** → [platform/agentic-platform/pov/README.md](platform/agentic-platform/pov/README.md)
 - **Agentic platform: three-day build (2 people, 6 person-days, synthetic accounts)** → [platform/agentic-platform/3-day/README.md](platform/agentic-platform/3-day/README.md)
 - **Agentic platform: architecture brief** → [platform/agentic-platform/brief/README.md](platform/agentic-platform/brief/README.md)
+- **Agentic platform: in plain words, for any reader** → [platform/agentic-platform/plain/README.md](platform/agentic-platform/plain/README.md)
+- **Agentic platform: documents per audience** (HR and works council, security, compliance, architecture, C-level deck, executive brief) → [platform/agentic-platform/audiences/README.md](platform/agentic-platform/audiences/README.md)
+- **Agentic platform: sales presentation and pitch** → [platform/agentic-platform/pitch/sales-presentation.md](platform/agentic-platform/pitch/sales-presentation.md), [pitch.md](platform/agentic-platform/pitch/pitch.md)
+- **Agentic platform: cross-check review (2026-09-18)** → [platform/agentic-platform/14-crosscheck-review.md](platform/agentic-platform/14-crosscheck-review.md)
 
 ## Conventions
 
