@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- 2026-09-18: added "Eve's first job: the human super admins (2026-09-15)", carrying HLD §13.2's scope from the first run and the order of setup 23 to 28.
 
 ## What you will understand by the end
 
@@ -253,6 +254,12 @@ Through S2, Eve v0 is twelve scheduled queries, the ten ladder metrics plus reco
 At S3 entry, halting and demoting go live. **S3 exit requires every one of twelve seeded invariant-class faults caught, with two negative controls silent**, after at least 30 days ([the exit gate](../../eve/05-stages.md#the-s3-exit-gate-twelve-seeded-faults-and-two-negative-controls)). The negative controls stop an always-refusing Eve passing. Agreement with human verdicts is reported for information only; a disagreement is the finding. Wall-E's ladder page still reads 95 % on seeded faults and agreement ([Wall-E's S3](../../wall-e/05-autonomy-ladder.md#s3--batch-approval)); Eve's contract change CC-7 replaces that line before S3 exit, since 95 % over twelve invariant classes lets one class go entirely undetected ([CC-7](../../eve/08-contract-changes.md#1-the-contract-change-table)). A second grader who is not the ladder owner must exist by S3 exit (E-13). S4 entry adds the key, the gate and the first binding cells.
 
 None of the gate layer should be built until an L3 to L4 promotion can state in numbers how much approval work it removes. **L3 with human approval is a legitimate permanent end state.** Durations and sequence are in Chapter 24, Roadmap and cost.
+
+### Eve's first job: the human super admins (2026-09-15)
+
+The staging above describes Eve as Wall-E's controller; Eve's first job comes earlier. On 2026-09-15 the owner asked that the observe-and-report layer watch every human super admin from Eve's first run, before Wall-E exists ([platform HLD §13.2](../01-hld.md#132-eve--independent-controller-two-paths-a-witness-outside-the-tenant-a-second-human), [Eve LLD §14.1](../../eve/03-lld.md#141-scope-from-the-first-run-the-human-super-admins-2026-09-15), P153 to P155). Nothing in the detection catalogue, the roster check or the reporting contract changes shape; the actor set does. From the first run the Reports API poll retrieves every application for every user, the catalogue's actor set is the committed roster, delegated administrators, break-glass accounts and every live admin-role holder, and `walle@` joins the robot set only when it exists. Before `walle-actions` exists there is nothing to halt, so a halting rule pages severity 1 and records a pending halt target; the halt call joins when Wall-E does. Findings go to the second human outside the administration line, with a copy in the witness, and a report whose subject holds authority over the platform, the platform owner included, goes to the second human only.
+
+The full build ([setup 23 to 28](../setup/README.md#3-the-order)) builds it in this order, in parallel with Mo and never waiting on it: the project, datasets and the retention-locked evidence bucket (23); `eve@`, the one-sitting consent and the six-stream sink (24); the detections over the human super admins, with their schedules created, proven and left paused (25); the reporting contract and the witness export, which resumes the schedules after the route test (26); the witness administrators' create-only grants and the absence alarms (27); and the second human's independent proof on a seeded super-admin action, followed by the sandbox drills (28). The block ends with `EVE_H_LIVE_RECORD`, which the second human signs knowing what Eve does not see, and on which Wall-E's first file and every later one depend.
 
 ## When Eve is wrong, compromised or alone
 

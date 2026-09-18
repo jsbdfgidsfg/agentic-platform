@@ -2,7 +2,12 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- 2026-09-18: F5's Art. 6(3) derogation now claims condition (a) first, with (b) as the
+  secondary reading (§0, §3.1.2, §9); the worker information duty of §4.10 gains an earlier
+  trigger — before Eve's first stream about human administrators and before the identity log
+  store's first copy, with the SD-11 record as companion — and its default `Assumption:` moves
+  from information to consultation, with consent where co-determination applies (§4.10, §9).
 - Maturity: detailed design under [01-hld.md](01-hld.md). Nothing is built;
   nothing is registered; no legal entity has signed anything. This page details the HLD's §14.1
   "EU AI Act" (the per-system classification table, the article-by-article table and the
@@ -49,8 +54,9 @@ organisation is their deployer; Eve's control path is not an AI system. Wall-E's
 intended purpose is **the catalogue**: administration of Workspace accounts, groups, licences
 and mailboxes on operator request or on catalogued triggers, within the hard-denied list. On
 that purpose Wall-E is Annex III 4(b)-adjacent and the provider claims the Art. 6(3) derogation
-— condition (a) for the catalogue's procedural families and condition (b) for the suspension
-family, which executes a decision taken elsewhere — documents it under Art. 6(4), registers
+— condition (a) for the catalogue's procedural families and for the suspension family, which
+executes a decision taken elsewhere, with (b) as a secondary reading for suspension — documents
+it under Art. 6(4), registers
 under Art. 49(2) **before the first write**, and adopts Art. 9–15 voluntarily as the
 engineering baseline. The one family that could carry profiling — licence reclaim by
 inactivity — is redesigned so that **no AI output selects a person by behaviour** (§3.1.4, P126);
@@ -211,7 +217,7 @@ this table keeps only the classification and the caps this page sets.
 | F2b Free notify (`gmail.send`, `chat.message.send`, calendar) | no decision about a person; Art. 50 | (a) | free text is the model's; the disclosure line is the action service's (§4.7) | L2 (unchanged) |
 | F3 / F3b Membership, access groups | "allocate tasks" is not touched: membership follows an operator's request, not a trait or behaviour | (a) | explicit targets, class check, security groups blocked (N3) | L4 / L3 (unchanged) |
 | F4 / F4b Profile fields, OU move | no; a profile field or OU is an administrative attribute, not a term of employment | (a) | `SAFE_USER_FIELDS`, OU allowlist | L4 / L3 (unchanged) |
-| **F5 Suspend** | **yes — it executes the technical consequence of a termination or leave decision** | **(b) improves the result of a previously completed human activity** — the human activity is the HR decision, the "result" is the tenant state; secondary (a) | the decision is taken elsewhere (HR system of record or a named operator), the plan carries the decision reference (`decision_ref`, P125), pre-state is shown before approval, the inverse (F6) is human-only. The draft guidelines' test is that the system must not "materially influence the outcome"; a suspension that follows a recorded decision influences nothing | **L4, and only on a T2 event from the HR system of record; T1 scheduled and T0 chat never above L3**; holds never expire outside business hours |
+| **F5 Suspend** | **yes — it executes the technical consequence of a termination or leave decision** | **(a) narrow procedural task** — the system executes a decision recorded elsewhere (`decision_ref`), so the AI output does not materially influence the outcome; secondary (b), if legal reads the "result" of the previously completed human activity (the HR decision) as the tenant state — Recital 53's examples for (b) are the language improvement of drafted text, which is why (b) is not the primary claim | the decision is taken elsewhere (HR system of record or a named operator), the plan carries the decision reference (`decision_ref`, P125), pre-state is shown before approval, the inverse (F6) is human-only. The draft guidelines' test is that the system must not "materially influence the outcome"; a suspension that follows a recorded decision influences nothing | **L4, and only on a T2 event from the HR system of record; T1 scheduled and T0 chat never above L3**; holds never expire outside business hours |
 | F6 Restore | reverses F5 | (a) | permanently L3 | L3 (unchanged) |
 | **F7 Licences** | **potentially — if the target set is chosen by inactivity, the system "evaluates behaviour"** | split (§3.1.4): F7-suspended follows F5's reasoning; F7-inactive is (a) only because the *human* chooses the targets | see §3.1.4 | F7-suspended L4; **F7-inactive L3 until P18 is answered, and the selection never automated at any level** |
 | F9 Own mailbox, F10 Rollback | no | (a) | robot's own resources | unchanged |
@@ -220,8 +226,8 @@ this table keeps only the classification and the caps this page sets.
 | Band C (`/v1/handoff`) | no — output is console steps for a human super admin who then acts | not an output acting on a person | the hard-denied check runs first (HLD §13.1; [../wall-e/03-lld.md](../wall-e/03-lld.md#the-three-bands)) | none |
 
 **Result.** Annex III 4(b)-adjacent; the derogation is claimed under Art. 6(3)(a) for the
-catalogue and band B and under Art. 6(3)(b) for F5, with the profiling exclusion answered by
-design in §3.1.4. Register row: `ai_act_class: annex_iii_adjacent`, `ai_act_role: both`,
+catalogue, band B and F5, with Art. 6(3)(b) as F5's secondary reading, and with the profiling
+exclusion answered by design in §3.1.4. Register row: `ai_act_class: annex_iii_adjacent`, `ai_act_role: both`,
 `art_6_4_assessment: 10-eu-ai-act.md#wall-e` (this section, dated and signed at P28),
 `art_49_registration: pending` until the EU database id exists — and
 [05-registry-and-autonomy-contract.md](05-registry-and-autonomy-contract.md) §8.2 refuses
@@ -666,11 +672,20 @@ adopted now); GDPR Art. 88 and national information-and-consultation rules on ne
 and "monitoring systems at the work place" apply regardless of the Act's dates; and it is the
 longest-lead item in the plan (HLD brief 81). The HLD's tier gate already lists "works-council
 information given" among the preconditions of the super-admin grant (§0.4); this page moves it
-to the Stage 1 gate of any Tier W agent that acts on employee accounts.
+to the Stage 1 gate of any Tier W agent that acts on employee accounts **and, earlier, before
+Eve's observe-and-report layer copies its first stream about human administrators and before
+the identity log store's first copy — whichever comes first** — with the DPO's SD-11 record as
+the companion artefact ([setup/24](setup/24-eve-workspace-identity-and-audit-feeds.md) EW-0.2;
+[pov/06](pov/06-eve-over-the-human-super-admins.md) PE-0.2). The reason for the earlier trigger:
+on the platform's own order ([11](11-tisax.md) §6.3; HLD §0.4)
+Eve's layer over the human super admins and the identity log store go live before the grant,
+which precedes Stage 0 and Stage 1, and both are "monitoring systems at the work place" under
+GDPR Art. 88(2) from their first stream whatever the Act says about Eve; a representative body
+informed at Stage 1 would learn of monitoring that had already started.
 
 | Duty | Mechanism | Owner | Evidence |
 |---|---|---|---|
-| Inform workers' representatives (Art. 26(7); national law) | a dated information pack: the intended-purpose paragraph, the family table with level caps, the never-list, the monitoring that exists (Eve, reconciliation), what is logged about whom and for how long (08), the explanation path below; `Assumption:` where national law requires consultation rather than information, the consultation record | HR/communications with the DPO; legal | E-12 |
+| Inform workers' representatives (Art. 26(7); national law) | a dated information pack: the intended-purpose paragraph, the family table with level caps, the never-list, the monitoring that exists (Eve, reconciliation), what is logged about whom and for how long (08), the explanation path below; `Assumption:` consultation, and consent where co-determination applies, in the likely jurisdictions; information only where HR's answer says so — the consultation or consent record is then the evidence | HR/communications with the DPO; legal | E-12 |
 | Inform affected employees (Art. 26(11); GDPR Art. 13/14) | the employee notice (HLD brief 81) names Wall-E as an AI system acting on accounts, the decisions it executes and does not take, and the contact | DPO | E-12 |
 | Explain on request (Art. 86; GDPR Art. 22(3) where a decision is solely automated — none is, by design: F5/F7 follow a human decision or a human target list) | an employee subject to an executed action asks HR; HR obtains, from the operator surface, the frozen plan's rationale, the pre-state, the trigger and the decision reference, **redacted of other persons and of the raw prompt**, and answers within *tbd* business days; every request is logged (`explanation_requests`, counted in Mo's Art. 72 loop) | HR (the path), agent owner (the export), DPO | E-12 |
 | Employee representatives in the tabletop and post-incident review where an incident affected employees | 07 §12.3 | incident commander | E-10 |
@@ -787,9 +802,9 @@ generation toggles as a basis of the Art. 5 determination (§3.1).
 | Whether the Omnibus changed the Art. 71 database timeline or the Art. 49(2) registration timing | the Art. 71 page shows no amendment; the Omnibus text was read only in summary | legal reads Regulation (EU) 2026/1744 Art. 1 amendments to Art. 49 and 71 |
 | The Commission's Art. 72(3) post-market-monitoring template (implementing act) | date and adoption status not verified | AI compliance owner tracks; §4.4 re-cut when adopted |
 | The adoption date of the final Art. 6 classification guidelines | "end 2026" from secondary sources | calendar trigger in §3.1.6 |
-| The draft Art. 6 guidelines' treatment of systems that execute a decision already taken | the design's reading; DLA Piper confirms "must not materially influence the outcome"; the draft text itself not read | legal reads the draft; the F5 condition in §3.1.2 confirmed (b) or moved to (a) only |
+| The draft Art. 6 guidelines' treatment of systems that execute a decision already taken | the design's reading; DLA Piper confirms "must not materially influence the outcome"; the draft text itself not read; Recital 53's examples for (b) are the language improvement of drafted text, which is why §3.1.2 claims (a) first for F5 (reviewed on 2026-09-18) | legal reads the draft; the F5 condition in §3.1.2 confirmed (a), or (b) restored as primary if legal reads the "result" as the tenant state |
 | The market surveillance authority competent for P23's entity | depends on the entity and national designation | legal, after P23 |
-| National information-and-consultation rules applicable to the entity (information vs consultation; timing) | `Assumption:` information before putting into service; consultation where required | HR and legal, before Stage 1 |
+| National information-and-consultation rules applicable to the entity (information vs consultation; timing) | `Assumption:` consultation, and consent where co-determination applies; information only where HR's answer says so (§4.10, reviewed on 2026-09-18) | HR and legal, before Eve's first stream about human administrators and before Stage 1 |
 | Whether the organisation is an SME or small mid-cap for the Art. 11 simplified documentation form and Art. 99 reduced penalties | not assessed | legal (likely not, for the organisation as a whole) |
 | The Gmail custom header name for the F2b disclosure and its survival through recipients' mail systems | not designed | platform owner at build; a CI content test |
 | Accessibility of the operator surface (Art. 16(l), Directives 2016/2102 and 2019/882) | not assessed | agent owner with the ISMS |

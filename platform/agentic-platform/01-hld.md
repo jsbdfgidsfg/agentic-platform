@@ -2,7 +2,11 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-09-18
+- 2026-09-18: §0.6 row R3 now qualified — the human prompt is Wall-E's mandate, not its only
+  trigger; band A earns T1–T3 through the ladder, band B stays `chat` only; the owner's
+  confirmation is a register row still to be appended at P205. §0.4 row X now counts §11.5's
+  conditions as six, one met and five not (was "four").
 - Maturity: platform HLD, 2026-09-13. Nothing is built. This is the page every other page of the
   `platform/agentic-platform/` set and the three agent sets point at.
 - Inputs: the objective of 2026-09-13 and the review of the documentation against it
@@ -10,7 +14,7 @@
   this page answers); working notes outside the wiki under `.agent-work/hld/` (copying them into
   `review/` is *tbd*).
 - Angle: designed for the organisation that exists on 2026-09-13 — **one administrator, no SOC,
-  no second super admin outside his own line** — with a growth path to hundreds of agents.
+  no second super admin outside the administrator's own line** — with a growth path to hundreds of agents.
   Every control names who runs it. A tier does not open until the people and services it needs
   exist (§0.4). If a control is not operable by the people at the tier where it is required,
   the control is wrong, not the people.
@@ -158,7 +162,7 @@ Every role has a training outline and completion record refreshed at each stage 
 | **R read tools** | Factory, folder baseline, central logging, shared registry exist | as C | nobody new |
 | **W write agents** | Autonomy contract, platform verifier, validator custodian, nonprod folder, one restore drill done; for any Tier W agent acting on employee accounts, works-council information given before its Stage 1 (P129; it stays a precondition of the grant as well) | Binary Authorization pipeline (no licence cost; build time) | second operator; security reviewer (part-time from IT security); blind grader |
 | **P privileged** and the **P-SA super-admin singleton** | Everything in W plus every precondition of the super-admin grant green — Eve's observe-and-report layer, the witness, a SIEM with 24x7 acknowledgement, two human super admins, the penetration test, the DPIA, the works-council information, the signed deviation, the two lists and the perimeter decision; the checklist is [11-tisax.md §6.3](11-tisax.md#63-compensations-as-preconditions--the-checklist-the-gate-reads) | Google SecOps in the EU (or the organisation's SIEM); a managed detection and response retainer covering the super-admin detection set; PagerDuty or equivalent; hardware keys | a second human super admin **outside the Wall-E administration line** as Eve owner; a DPO engagement; an incident commander from IT security |
-| **X AGI-class** | **Not open.** §11.5 lists the conditions; on 2026-09-13 one (the sandbox stage) is met and four are not | GKE Agent Sandbox tier in `europe-west1` (GA per Google's post of 2026-05-21 — [09-supply-chain-secrets-recovery.md](09-supply-chain-secrets-recovery.md) §4.1, P122); a second model family for advisory monitors | an AI-safety reviewer role; a provider capability-evaluation report per model pin |
+| **X AGI-class** | **Not open.** §11.5 lists the six conditions; on 2026-09-13 one (the sandbox stage) is met and five are not (§11.5; [09 §5.4](09-supply-chain-secrets-recovery.md#54-the-honest-line-restated-with-what-changed-on-2026-09-13)) | GKE Agent Sandbox tier in `europe-west1` (GA per Google's post of 2026-05-21 — [09-supply-chain-secrets-recovery.md](09-supply-chain-secrets-recovery.md) §4.1, P122); a second model family for advisory monitors | an AI-safety reviewer role; a provider capability-evaluation report per model pin |
 
 The super-admin grant is therefore a **gate with its own checklist**, not a runbook phase. The
 grant happens on the day the last row of the P line is green, and "the four owner groups are one
@@ -190,7 +194,7 @@ explicitly declined:
 |---|---|---|---|
 | R1 | Secure Gemini Enterprise environment; agent identity, registry, Model Armor | §2, §4.1, §5, §6 | — |
 | R2 | Other security elements, with the correct path | §3.3, §4.5, §7, §8, §9, §11.4 | — |
-| R3 | Wall-E executes on a human prompt | §13.1 band A, T0 | — |
+| R3 | Wall-E executes on a human prompt | §13.1 band A, T0 | qualified: the human prompt is the origin of Wall-E's mandate, not its only trigger — a band A family earns scheduled, event and inbox triggers (T1–T3) through the ladder (§12.1, §12.2), and only band A can; band B is `chat` only (§13.1). The owner confirms this reading — register row *tbd*, to be appended at P205 in [12-open-decisions.md](12-open-decisions.md) |
 | R4 | Any super-admin-level action | §13.1 bands A/B/C | the literal reading is declined: band C is instructions to a human and the hard-denied list is refused in every lane (P28) |
 | R5 | Dedicated licensed user account with Super Admin | §13.1, P33 | — |
 | R6 | Eve controls and reports any misbehaviour | §13.2 detection catalogue, reconciliation over every stream, P34 | "any" ends where enumeration ends; the reporting path is report-only |

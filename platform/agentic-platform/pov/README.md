@@ -3,7 +3,12 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-17
+- Last reviewed: 2026-09-18
+- Reviewed on 2026-09-18: the three-day hand-over bullet now names what that set leaves
+  running (`eve-reader@`'s token and the poller, stopped before 06 PE-0.2 under PV-D-07) and
+  what happens to its four projects, and says "suspended", not "unwound", of the synthetic
+  accounts; §4's full-build figures (85 to 90 person-days, thirteen appointments, thirteen
+  purchase steps) are marked Assumption with their derivation.
 - What this is: the one entry point to the proof-of-value (POV) procedures in this folder, files
   [01](01-conventions-and-variables.md) to [09](09-the-demonstration-deviations-and-the-hand-over.md).
   It holds the claim, the absolutes, the two stages, the order, the step-prefix index, the variable
@@ -22,8 +27,16 @@
   doer's own rows against a volume baseline. It claims no saved minutes and is not compliance
   evidence. **Where the two meet:** the three-day build uses this set's names, schemas and folders,
   names for each piece the POV file and step that takes it further (its §12), and hands over to
-  this set once its standing IAM grants, its custom admin role and its synthetic accounts are
-  unwound (its §10). It replaces nothing here; this set remains the step between it and the full
+  this set once its standing IAM grants and its custom admin role are unwound and its synthetic
+  accounts suspended (its §10). Two things its §10 leaves running on purpose (rows 11 and 12):
+  `eve-reader@` with a live Reports-API refresh token, and the scheduled poller. Because PV-D-07
+  and P199 hold from the POV's first day (Eve holds no Workspace credential), the poller is
+  stopped and `eve-reader@`'s token version disabled before 06 PE-0.2, or the exception is
+  recorded under PV-08's DPO record as PV-D-07's unwind exercised early. Its four projects are
+  adopted as `CORE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT` and the Tier P project only where the
+  id passes 02 PD-3.2's form check (with its `SUFFIX=d3`, the Eve and Mo ids do not, since the
+  optional suffix is four hexadecimal characters); otherwise they stay as history under PV-13's
+  no-teardown clause. It replaces nothing here; this set remains the step between it and the full
   build.
 - Maturity: never executed. Nothing in the POV is built. Where a file and this page disagree,
   **the file is right and this page is corrected** (§13), unless the file breaks a rule of this
@@ -222,8 +235,11 @@ break (Assumption).
   Assumption, every figure.
 - Against the full build ([../setup/README.md](../setup/README.md) §3.4 and
   [../setup/04](../setup/04-purchases-and-lead-times.md)): 6 to 7 months to Stage 0 (not before
-  2027-03), 9 to 12 months to Mo's first merged proposal, 85 to 90 person-days hands-on, thirteen
-  appointments, thirteen purchase rows.
+  2027-03), 9 to 12 months to Mo's first merged proposal. Assumption, the three figures below,
+  since no setup page states them as totals: 85 to 90 person-days hands-on, summed from the
+  hands-on cells of setup/README §3.2 on 2026-09-16; thirteen appointment records
+  ([../setup/03](../setup/03-decisions-and-people.md) §5, PPL-SH to PPL-MO and SH-REPORTS);
+  thirteen purchase steps (setup/04 PU-2.1 to PU-2.13).
 - **A sponsor told "three weeks" has been misled about both stages.** Say "six to nine weeks" and
   "about four to five months with a dedicated engineer" on the first slide.
 

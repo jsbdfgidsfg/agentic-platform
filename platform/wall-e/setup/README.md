@@ -331,7 +331,7 @@ project; **Eve's** role holds nothing beyond its resolved read set
 (`eve_role_is_read_only`), and the robot holds **no** role before the tier gate and
 **exactly one**, Super Admin, after it, with no retired Wall-E role still assigned
 (`role_assignments`; before P33 on 2026-09-13 it asserted one customer-scoped reader role and the Stage 1
-write role assigned to nobody; it does not assert Eve's role while her role or account is absent — FAIL
+write role assigned to nobody; it does not assert Eve's role while its role or account is absent — FAIL
 after the grant, a stated gap before it); the secrets are regional and the service pins a
 version **number** that still exists and is `ENABLED`, never `latest`; every
 committed PEM under `contracts/eve-public-keys/` carries a `BEGIN PUBLIC KEY`

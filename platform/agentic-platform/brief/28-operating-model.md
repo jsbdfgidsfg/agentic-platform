@@ -12,7 +12,7 @@ By the end you will know the roles, which duties one person may never combine, h
 
 ## Who exists on 2026-09-13
 
-One administrator: no security operations centre, no second super admin outside his own line, no security reviewer, no Eve owner, no engaged data protection officer (DPO), and no names supplied by the ISMS ([README, maturity](../README.md#maturity-what-exists-on-2026-09-13)). Platform owner, agent owner, deployer, operator, approver, grader, security reviewer, Eve's owner, Mo's owner and the recipient of Eve's pages are one person. Every "second person" in a control is today the first person again, and TISAX control 1.2.2 on separation of duties is the finding most likely to stop an assessment.
+One administrator: no security operations centre, no second super admin outside the administrator's own line, no security reviewer, no Eve owner, no engaged data protection officer (DPO), and no names supplied by the ISMS ([README, maturity](../README.md#maturity-what-exists-on-2026-09-13)). Platform owner, agent owner, deployer, operator, approver, grader, security reviewer, Eve's owner, Mo's owner and the recipient of Eve's pages are one person. Every "second person" in a control is today the first person again, and TISAX control 1.2.2 on separation of duties is the finding most likely to stop an assessment.
 
 Under the operability principle (Chapter 4, The principles), a tier whose control needs a person who does not exist waits, so the gap shows as a closed tier, not a control nobody runs. Only Tiers C and R open with the people who exist; each gate's full contents are Chapter 24, Roadmap and cost.
 

@@ -103,7 +103,7 @@ The gate each row blocks is in the final table; this section says why each answe
 - **P68, proposed.** Approve the roster of three super admins: two humans, one outside the Wall-E administration line, plus `walle@`; shared with the second human, it waits for a name.
 - **P34, proposed.** The owner holds the Eve owner role until the second human is named; P34 also needs the security reviewer, so it waits for both.
 
-He also owns the proposed rows P1 (the tier model), P15 (with IT security) and P16 (with the security reviewer).
+The owner also owns the proposed rows P1 (the tier model), P15 (with IT security) and P16 (with the security reviewer).
 
 ### IT security
 

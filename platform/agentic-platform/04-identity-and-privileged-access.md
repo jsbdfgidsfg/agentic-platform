@@ -2,7 +2,9 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- 2026-09-18: K6 stated as a two-person act under multi-party approval in §9.7 and §8.4, with
+  the one-person fallback if the sandbox tenant shows `users.makeAdmin` is not covered.
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md) §4 (identity), §4.4
   (privileged access), §4.5 (deny policies and Principal Access Boundaries), §4.6 (the robot
   accounts), §11.4 (the fleet kill switch K7) and §13.1 items 6 and 7 (account hygiene, kill
@@ -673,7 +675,11 @@ the super-admin grant.** What it buys, graded:
 What it does not buy, stated: MPA does not cover `users.makeAdmin` as such (it covers role
 assignment — `Assumption:` `makeAdmin` is a Super Admin role assignment and therefore covered;
 verify at build with a nonprod tenant), `users.delete`, OU moves, sink or "Share data with
-Google Cloud" settings, or activity rules — those stay code-refused and detected. The robot
+Google Cloud" settings, or activity rules — those stay code-refused and detected. The
+consequence for K6 (§9.7) is stated once here: the on-duty human super admin requests; the
+other approves under multi-party approval — two people, and the rota file `oncall.yaml` names
+the second; if the sandbox tenant shows `makeAdmin` is not covered, K6 is one person and the
+first row of the table above is re-graded to code plus detection for that method. The robot
 must never be an MPA approver: the action services never call the approval surface (hard-denied
 class `escalation_denied`), the approver set is the two human admin accounts plus the delegated
 MPA role held by nobody else, and an approval event whose actor is `walle@` is severity 1.
@@ -820,7 +826,7 @@ This section is decision **P67**.
 | K3 cut the agent off | remove `run.invoker` from the agent principal | a project IAM admin | ~1 min | KF-2 is K3 for every agent at once, by deny instead of by unbinding; KF-4 is the same for engine queries |
 | K4 kill the credential | the action service revokes its own refresh token | one operator call | seconds | **independent of K7**; pulled with K7 whenever the credential is suspect; K7 makes the K4 endpoint unreachable under KF-1, so **K4 is called before K7** in the P-SA runbook, or through the Admin console (K5) after |
 | K5 revoke the grant / suspend the robot | the robot account `walle@` in the tenant (`tokens.delete`, `users.update` `suspended: true`) | Admin console, a human super admin | seconds to pull; pulled within 30 min of a severity-1 acknowledgement | independent; the two-person rota (§8.5) |
-| K6 remove Super Admin from the robot | the robot's role in the tenant | Admin console, a human super admin (`users.makeAdmin false`) | within 60 min | independent; the switch that survives a token already minted (HLD §13.1 item 7) |
+| K6 remove Super Admin from the robot | the robot's role in the tenant | Admin console (`users.makeAdmin false`): the on-duty human super admin requests; the other approves under multi-party approval (§8.4) — two people, and the rota file `oncall.yaml` names the second; if the sandbox tenant shows `makeAdmin` is not covered, K6 is one person and §8.4's first row is re-graded to code plus detection for that method | within 60 min | independent; the switch that survives a token already minted (HLD §13.1 item 7) |
 | **K7** fleet stop | tier folders or the fleet | `platform-approvers@`, the SIEM rule, the job | KF-1 < 60 s; < 5 min end to end | above |
 
 The Time column states the containment targets of

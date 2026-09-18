@@ -2,7 +2,11 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- 2026-09-18: §4.3 rewritten for the pre-spike state — ingress `all` with IAM-only invoke and the
+  audience check is the expected state for engine-called services, recorded as a dated deviation
+  (the full build's `BD-33-2`); the custom module flags it as informational and severity 2 applies
+  only to an invoker set beyond named service accounts. §4.6 summary row aligned.
 - Parent: [01-hld.md](01-hld.md) §6 (gateways and Model Armor), §8.1 (network model), §3.3
   (the gateway custom constraint and `run.allowedIngress`), §15 boundaries B1, B2, B3 and B6.
   This page details those sections and does not contradict them; where the HLD left a value
@@ -519,10 +523,10 @@ and the (a) backstop is recorded as unreachable for that tier until Google chang
 |---|---|
 | Rule | No Cloud Run service that holds a credential (every action service, Eve's gate and reconciler, the approval surface) accepts ingress from the internet |
 | Mechanism (target) | `constraints/run.allowedIngress` = `internal-and-cloud-load-balancing` on `fld-agents-w`, `fld-agents-p`, `fld-agents-p-sa`, `fld-controllers` and `fld-platform-core` (values verified, §8 row R1), held in Terraform on 2026-09-13 and **applied on the day spike 1 passes** (HLD §3.3) |
-| Mechanism (until then) | IAM-only invoke (`run.invoker` on named principals; no `allUsers`, no `allAuthenticatedUsers`) is the enforced boundary; a Security Health Analytics custom module over `run.googleapis.com/Service` (a supported type, §8 row S5) flags any service in those folders whose ingress is `all` — detection |
+| Mechanism (until then) | IAM-only invoke (`run.invoker` on named service accounts only; no `allUsers`, no `allAuthenticatedUsers`) plus the service's check of the ID token's audience is the enforced boundary. Ingress `all` is the **expected** pre-spike state for every service the engine calls: Agent Runtime egresses from a Google-managed project that Cloud Run treats as external, so `internal` ingress blocks the engine (the symptom is a timeout, not an error — [setup/33](setup/33-wall-e-action-services-and-approval-surfaces.md) WS-3.2). Each project records it as a dated deviation with spike 1 as the closing condition (the full build's `BD-33-2`). A Security Health Analytics custom module over `run.googleapis.com/Service` (a supported type, §8 row S5) flags any service in those folders whose ingress is `all` as **informational** until the constraint is applied — detection |
 | Owner | platform owner; the security reviewer signs the day-one application at Tier P |
 | Verified by | the drift job on the constraint; the custom module; the monthly synthetic invocation that calls each action service's `run.app` URL directly from outside and expects a refusal |
-| On failure | a service with ingress `all` after the policy is applied cannot exist (Google refuses the deploy); before the policy, it is a severity 2 finding and the deploy is rolled back by CI |
+| On failure | a service with ingress `all` after the policy is applied cannot exist (Google refuses the deploy); before the policy, ingress `all` alone is not a failure — severity 2, with the deploy rolled back by CI, applies only to a service whose `run.invoker` set holds anything but named service accounts, or whose ingress `all` has no dated deviation record |
 | Grade | enforcement after spike 1; detection before |
 | Scope note | the constraint governs Cloud Run **services**; Cloud Run **jobs** (Eve's export, the K7 job, Mo's readers) have no ingress and are outside it — they are reached by nobody, which is the point |
 
@@ -612,7 +616,7 @@ per-tier table; HLD §8.1 summarises it):
 
 | Control | Resource | Owner | Verified | On failure | Grade |
 |---|---|---|---|---|---|
-| Never internet-reachable | `run.allowedIngress` on five folders | platform owner | drift job; SHA module; monthly direct-call probe | Google refuses (after spike 1); severity 2 (before) | enforcement / detection |
+| Never internet-reachable | `run.allowedIngress` on five folders | platform owner | drift job; SHA module; monthly direct-call probe | Google refuses (after spike 1); before it, ingress `all` is a recorded deviation and severity 2 applies only to an invoker set beyond named service accounts (§4.3) | enforcement / detection |
 | Gateways born perimeter-ready (P89) | connectivity template `ALL_TRAFFIC` on every W+ prod gateway | platform owner (the factory applies it) | asset feed; module output | a gateway without a template is a drift finding and is recreated by the factory | enforcement (the module cannot emit a W+ prod gateway without it) |
 | Tier perimeters (after spike 2) | VPC-SC perimeters per tier folder, prod and nonprod | platform owner; security reviewer signs | dry-run violation logs for 30 days before enforcement; the flow table as the rule source | a violation is a SIEM case; an enforcement mistake fails closed and is a sev 3 page | enforcement |
 | The two spikes | one throwaway project | platform owner | the artefacts of §4.3 | the super-admin grant waits (HLD §0.4, P line) | gate (a precondition, not a runtime control) |

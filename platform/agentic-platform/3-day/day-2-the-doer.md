@@ -3,11 +3,21 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-17
-- Steps T2-1 to T2-27. Run date 2026-09-23. Two people, 08:30 to 17:30.
+- Last reviewed: 2026-09-18. Corrected on 2026-09-18 against [README.md](README.md) §6.1: the
+  doer's foundation and OAuth client are read back from day 1, not created; one Directory-scoped
+  credential is established at T2-1a and the guard reports a 403 as a 403; the two read-only steps
+  T2-6 and T2-8 run in person B's parallel block; the opening gate reads `MAX(ingested_at)`; the
+  scope test uses the exact `NONPROD_OU` path; `steward-plan` deploys from its own directory; the
+  job's logs are read with `gcloud logging read`; the live negatives name the denial reasons the
+  code actually raises; the re-consent after K4 uses the same client.
+- Reviewed on 2026-09-18: T2-25's clear of the halt no longer claims to "take two people"; it is
+  one person writing `off` with the other initialling the line, a rule of the room and not a
+  control, as [README.md](README.md) §10 row 9 says; T2-11 now says why `steward-actions@` holds
+  `secretVersionAdder` and what that implies.
+- Steps T2-1 to T2-27, plus T2-1a. Run date 2026-09-23. Two people, 08:30 to 17:30.
 - Compressed from [pov/07](../pov/07-the-doer-tier-w-and-the-optional-tier-p.md) §1 to §7. Every
   command, flag, scope, privilege name and console path below was checked against Google's current
-  documentation on 2026-09-17; see Sources.
+  documentation on 2026-09-17, or on 2026-09-18 where a step says so; see Sources.
 
 Part of the three-day build. Entry point: [README.md](README.md). Previous day:
 [day-1-platform-and-eve.md](day-1-platform-and-eve.md). Next day:
@@ -26,21 +36,25 @@ The proof that Eve was live before the doer existed is T2-13: Eve pages the doer
 
 ## The day at a glance
 
-Working day 08:30 to 17:30, 60 minutes for lunch. 390 of 480 usable minutes are allocated to each
-person; the remaining 90 minutes are slack, reserved and not optimistic.
+Working day 08:30 to 17:30, 90 minutes for lunch: **450 usable minutes** per person. The blocks
+below allocate **375 minutes** to each person; the remaining **75 minutes** are the reserve (the
+gaps at 10:00, 14:15 and 15:45, and 17:00 to 17:30), spent on overruns and not planned into.
+Before 2026-09-18 this page allocated 390 and claimed 90 of slack against a 60-minute lunch it did
+not have; the figures here are restated from the table.
 
 | Block | Time | Who | What |
 |---|---|---|---|
-| D2-C1 | 08:30-10:00 | Both | T2-1 to T2-8. The robot, two keys counted by eye, the move into the service-identity OU, the role assigned scoped to `PILOT_OU` with person B approving and re-reading it. **The assignment lands by about 09:45.** |
-| D2-A1 | 10:15-11:45 | A | T2-9 to T2-12. The audit tables read back and the writer narrowed to one identity on one dataset; the secrets checked; the container built; `--selftest` runs all eleven results offline before anything is deployed. |
-| D2-B1 | 10:15-11:45 | B | T2-13 to T2-15. Confirm Eve paged the role assignment; commit the catalogue of one reversible pair; write the approval procedure. |
+| D2-C1 | 08:30-10:00 (90) | Both | T2-1, T2-1a, T2-2 to T2-5, T2-7. The day opened and one Directory-scoped credential established; the robot, two keys counted by eye, the move into the service-identity OU, the before-state read, the role assigned scoped to `PILOT_OU` with person B approving and re-reading it. **The assignment lands by about 09:45.** |
+| D2-A1 | 10:15-11:45 (90) | A | T2-9 to T2-12. The audit tables, the writer, the secrets and the two levers read back from day 1; the two directories built; `--selftest` runs all twelve results offline before anything is deployed. |
+| D2-B1 | 10:15-11:45 (90) | B | T2-6, T2-8, T2-13 to T2-15. The delegation baseline and the synthetic-population guard, both read-only, moved here so that the morning is not two people at one keyboard; confirm Eve paged the role assignment; commit the catalogue of one reversible pair; write the approval procedure. |
 | | 11:45-13:15 | Both | Break. |
-| D2-C2 | 13:15-14:30 | Both | T2-16 to T2-21. The doer's OAuth client, marked Trusted; the second consent sitting, one scope; `steward-actions` deployed as the only credential holder; `steward-plan` deployed holding nothing; the delegation-absence proof, second half. |
-| D2-C3 | 14:45-16:00 | Both | T2-22 to T2-24. The witnessed results: six refusals, one approved execution and its inverse, and the model that holds nothing. |
-| D2-C4 | 16:15-17:15 | Both | T2-25 to T2-27. K0 and K4, both pulled by person B and timed, the re-consent inside the same sitting, and the close. |
+| D2-C2 | 13:15-14:15 (60) | Both | T2-16 to T2-21. The doer's client confirmed Trusted (built yesterday); the second consent sitting, one scope; `steward-actions` deployed as the only credential holder; `steward-plan` deployed holding nothing; the delegation-absence proof, second half. |
+| D2-C3 | 14:30-15:45 (75) | Both | T2-22 to T2-24. The witnessed results: seven refusals, one approved execution and its inverse, and the model that holds nothing. |
+| D2-C4 | 16:00-17:00 (60) | Both | T2-25 to T2-27. K0 and K4, both pulled by person B and timed, the re-consent to the same client inside the same sitting, and the close. |
 
-**The tightest block is D2-C3.** It is 75 minutes for nine results. It only fits because T2-12 ran
-the same set offline four hours earlier. If a result fails there, fix it before lunch, not at 14:45.
+**The tightest block is D2-C3.** It is 75 minutes for ten results. It only fits because T2-12 ran
+the same set offline four hours earlier. If a result fails there, fix it before lunch, not at 14:30.
+The first execution is at about 14:45, five hours after the assignment.
 
 ---
 
@@ -49,7 +63,9 @@ the same set offline four hours earlier. If a result fails there, fix it before 
 Do not begin T2-2 until every line is true. Person B reads them aloud; person A answers.
 
 - [ ] Day 1 closed. `eve-reports-poller` has run on its schedule at least twice this morning and
-      `eve.ws_activities` has rows with a `ts` inside the last 30 minutes.
+      `eve.ws_activities` has rows with an `ingested_at` inside the last 30 minutes (`ingested_at`
+      is when the poller landed the row; there is no `ts` column in that table, and `event_time`
+      can legitimately be hours old on a quiet tenant).
 - [ ] The seeded test of day 1 passed: person B alone received the alert and recorded the latency.
 - [ ] `PILOT_OU` exists at the path in `names.env` and holds exactly four accounts, all matching
       `pilot-user-NN@$ORG_DOMAIN`, none an administrator.
@@ -62,20 +78,25 @@ Do not begin T2-2 until every line is true. Person B reads them aloud; person A 
       Person B never types into person A's session today, and person A never approves anything.
 
 ```bash
-set -a; . "$HOME/agp-3day/names.env"; set +a
+set -a; . "$HOME/agp-3day/names.env"; set +a; . "$HOME/agp-3day/tools/penv.sh"
 : "${ORG_DOMAIN:?}" "${CUSTOMER_ID:?}" "${CORE_PROJECT:?}" "${DOER_PROJECT:?}" "${EVE_PROJECT:?}" \
   "${MO_PROJECT:?}" "${REGION:?}" "${BQ_LOCATION:?}" "${PILOT_OU:?}" "${SERVICE_IDENTITY_OU:?}" \
-  "${NONPROD_OU:?}" "${AGENT_ID:?}" && echo "day 1 names present"
+  "${STAGING_OU:?}" "${NONPROD_OU:?}" "${AGENT_ID:?}" "${SYNTHETIC_PREFIX:?}" "${DOER_ROBOT:?}" \
+  "${PERSON_A_EMAIL:?}" "${PERSON_B_EMAIL:?}" "${STEWARD_OAUTH_CLIENT_ID:?}" "${EVE_CHANNEL:?}" \
+  && echo "day 1 names present"
 bq query --project_id="$EVE_PROJECT" --use_legacy_sql=false --format=csv \
-  "SELECT MAX(ts) AS newest FROM \`${EVE_PROJECT}.eve.ws_activities\`"
+  "SELECT MAX(ingested_at) AS landed, MAX(event_time) AS newest_event FROM \`${EVE_PROJECT}.eve.ws_activities\`"
 ```
 
-`newest` must be inside the last 30 minutes. If it is not, Eve is not live and today does not
-start: fix the poller first, out of today's slack.
+`landed` must be inside the last 30 minutes. If it is not, Eve is not live and today does not
+start: fix the poller first, out of today's reserve. (`newest_event` is informational: a quiet
+tenant has old events and a live poller at the same time.)
 
-Day 1 fixed `AGENT_ID=steward`, `REGION=europe-west1`, `BQ_LOCATION=EU`, `PILOT_OU=/pilot`,
-`SERVICE_IDENTITY_OU=/service-identities`, `NONPROD_OU=/nonprod`, and the four synthetic accounts
-`pilot-user-01@` to `pilot-user-04@`. T2-1 adds today's five names to the same file.
+Day 1 fixed every name in `names.env`, including today's: `SYNTHETIC_PREFIX=pilot-user-`,
+`DOER_ROBOT`, `STAGING_OU=/staging`, `PERSON_A_EMAIL`, `STEWARD_OAUTH_CLIENT_ID` (T1-14a) and the
+four synthetic accounts `pilot-user-01@` to `pilot-user-04@`. **Today adds no name by hand**; the
+values learned today (`PILOT_ROLE_ID` at T2-7, `STEWARD_ACTIONS_URL` at T2-18) are appended with
+`penv`.
 
 ---
 
@@ -89,27 +110,60 @@ before the first execution at about 15:00.
 ### T2-1 Open the day
 
 - **WHO:** Both. **WHERE:** one terminal, screen visible to both.
-- **DO:** Read the "Before you start" list aloud and tick it. Add today's names to the same file,
-  and open the run log.
+- **DO:** Read the "Before you start" list aloud and tick it. Open the run log. Add nothing to
+  `names.env`: every name today needs was written at day-1 T1-1.
 
 ```bash
-cat >> "$HOME/agp-3day/names.env" <<EOF
-export STAGING_OU="/staging"                         # created in T2-2, deleted in the day-3 unwind
-export DOER_ROBOT="steward-robot@\${ORG_DOMAIN}"
-export SYNTHETIC_PREFIX="pilot-user-"                # must match the accounts day 1 actually created
-export PERSON_A_EMAIL="a@\${ORG_DOMAIN}"             # Assumption: replace with the builder's address
-export PERSON_B_EMAIL="\${PERSON_B_EMAIL:-b@\${ORG_DOMAIN}}"
-EOF
-set -a; . "$HOME/agp-3day/names.env"; set +a
+set -a; . "$HOME/agp-3day/names.env"; set +a; . "$HOME/agp-3day/tools/penv.sh"
 [ "$PERSON_A_EMAIL" != "$PERSON_B_EMAIL" ] && echo "two people, two addresses" || echo "STOP: one address"
+[ "$SYNTHETIC_PREFIX" = "pilot-user-" ] && [ "$PILOT_OU" = "/pilot" ] && echo "absolute 7 names as day 1 created them" || echo "STOP: names.env disagrees with T1-16"
 printf '%s  day 2 opened. PILOT_OU holds synthetic accounts only. Nothing mutating touches a real account today.\n' \
   "$(date -u +%FT%TZ)" >> "$RUN_LOG"
 ```
 
-- **PROVES:** `two people, two addresses`. The run log carries the opening line, the date, both
-  roles and the four project ids. If day 1 finished early and T2-16 was pulled forward,
-  `STEWARD_OAUTH_CLIENT_ID` is already in `names.env`: note it and skip to T2-17 when you get there.
+- **PROVES:** `two people, two addresses` and `absolute 7 names as day 1 created them`. The run
+  log carries the opening line, the date, both roles and the four project ids.
 - **UNDO:** Not applicable.
+
+### T2-1a One Directory-scoped credential for the read-backs, established once
+
+- **WHO:** A logs in; B writes the scope grant in the run log. **WHERE:** A's terminal and A's own
+  browser profile (the administrator one, not the robot's).
+- **WHY:** T2-5, T2-8 and day-3 T3-19's read-backs call Admin SDK Directory endpoints. The plain
+  gcloud user credential behind `gcloud auth print-access-token` carries `cloud-platform` only,
+  and `users.list` accepts `admin.directory.user`, `admin.directory.user.readonly` or
+  `cloud-platform` (Directory API `users.list` reference, read 2026-09-18) but the tenant's app
+  access control and the Admin SDK's own checks make a read-only Directory scope the honest thing
+  to hold. Without it the guard reads a 403 body as an empty user list and prints `count=0`,
+  which stops the day for the wrong reason. `gcloud auth application-default login` takes
+  `--scopes` ("The names of the scopes to authorize for", reference read 2026-09-18), and
+  `gcloud auth application-default print-access-token` then mints a token carrying them.
+- **DO:**
+
+```bash
+gcloud auth application-default login \
+  --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.rolemanagement.readonly
+DTOK() { gcloud auth application-default print-access-token; }
+curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $(DTOK)" \
+  "https://admin.googleapis.com/admin/directory/v1/users/${EVE_READER}?projection=basic&viewType=admin_view"
+printf '%s  T2-1a person A holds an application-default credential with cloud-platform, admin.directory.user.readonly and admin.directory.rolemanagement.readonly; revoked at T3-19.\n' \
+  "$(date -u +%FT%TZ)" >> "$RUN_LOG"
+```
+
+- **PROVES:** `200`. A `403` here means the scope did not take or the tenant blocks the Google
+  Cloud SDK client for the Admin SDK; the fallback for every Directory read today is the APIs
+  Explorer on the reference page, signed in as person A, which T2-5 already names. Never widen to
+  `admin.directory.user`: every read-back is a read.
+- **This credential is a refresh token on person A's disk**, in the well-known Application Default
+  Credentials location, scoped to read the directory. It is the one credential a human holds on
+  disk in these three days, it is named in the run log, and day-3 T3-19 revokes it with
+  `gcloud auth application-default revoke`, which "deletes the local credential file" (reference
+  read 2026-09-18).
+- **UNDO:** `gcloud auth application-default revoke`.
+
+`DTOK` is used by T2-5, T2-8 and T2-21 for Directory reads. `TOK` (T2-22 onwards) is a different
+thing: an identity token for the action service. Do not confuse them; one reads the directory,
+the other proves who is calling.
 
 ### T2-2 Create the robot in the staging OU, with no recovery channel
 
@@ -169,33 +223,24 @@ this new account a password-only window; if it is, shorten it and move the robot
 
 - **WHO:** A runs; B reads the output. **WHERE:** the APIs Explorer on the Directory API reference
   pages, signed in as person A's admin account, or `curl` with an admin token.
-- **DO:** Run `users.get` with `userKey=steward-robot@$ORG_DOMAIN`, `projection=full`,
-  `viewType=admin_view`. Then run `roleAssignments.list` with `userKey=steward-robot@$ORG_DOMAIN` and
-  `customer=my_customer`.
-- **PROVES:** `isAdmin` is not `true`; `isDelegatedAdmin` is not `true`; no `recoveryEmail` and no
-  `recoveryPhone` field; `suspended` is `false`. `roleAssignments.list` returns **no `items`**.
-  Paste both JSON bodies into the run log. This is the "before" half of T2-7's read-back.
-- **UNDO:** Read only.
-
-### T2-6 The delegation-absence proof, first half
-
-- **WHO:** A reads; **B repeats the read independently from their own session**. **WHERE:** Admin
-  console, Menu > Security > Access and data control > API controls > **Manage Domain Wide
-  Delegation** (super administrator only; read 2026-09-17).
-- **DO:** Read the whole API clients list on screen and write every client id in it into
-  `$HOME/agp-3day/dwd-before.txt`, one per line. Then list every service account in the doer's project:
+- **DO:** Run `users.get` with `userKey=$DOER_ROBOT`, `projection=full`, `viewType=admin_view`,
+  and `roleAssignments.list` with `userKey=$DOER_ROBOT` and `customer=my_customer`, with the
+  T2-1a credential:
 
 ```bash
-gcloud iam service-accounts list --project="$DOER_PROJECT" \
-  --format="value(email,uniqueId)" | tee "$HOME/agp-3day/doer-sa-ids.tsv"
+curl -s -H "Authorization: Bearer $(DTOK)" "https://admin.googleapis.com/admin/directory/v1/users/${DOER_ROBOT}?projection=full&viewType=admin_view" | tee -a "$RUN_LOG"
+curl -s -H "Authorization: Bearer $(DTOK)" "https://admin.googleapis.com/admin/directory/v1/customer/${CUSTOMER_ID}/roleassignments?userKey=${DOER_ROBOT}" | tee -a "$RUN_LOG"
 ```
 
-- **PROVES:** Both people have read the same list and agree on its contents; no unique id from
-  `doer-sa-ids.tsv` appears in it. Google documents no API that lists delegation clients, so this is
-  read by two pairs of eyes and by nothing else. **An entry neither person recognises is reported to
-  the sponsor the same hour, never used, and never deleted by one person alone.**
-- **UNDO:** Read only. No step of this build ever creates a delegation entry. There is no step
-  anywhere in these three days that opens this page to add something.
+- **PROVES:** `isAdmin` is not `true`; `isDelegatedAdmin` is not `true`; no `recoveryEmail` and no
+  `recoveryPhone` field; `suspended` is `false`. `roleAssignments.list` returns **no `items`**.
+  Both JSON bodies are in the run log. This is the "before" half of T2-7's read-back, and it must
+  precede T2-7, which is why it stays in this block while T2-6 and T2-8 do not.
+- **UNDO:** Read only.
+
+T2-6 and T2-8 keep their numbers and run in **D2-B1**, person B's parallel block at 10:15: both
+are read-only, neither is a prerequisite of T2-7, and moving them is the only 25 minutes
+recoverable from a block that otherwise has two people at one keyboard.
 
 ### T2-7 Assign **Pilot Steward (3-day)**, scoped to `PILOT_OU`
 
@@ -216,11 +261,23 @@ This is the step day 1's T1-16 points at as tomorrow's assignment.
   select `PILOT_OU` only, and click Done** (Assign specific admin roles, read 2026-09-17). Save.
   Person B writes and signs one line in the run log: *"I read the privilege list and approved the
   assignment of Pilot Steward (3-day), scoped to /pilot, to steward-robot@, at HH:MM."*
-- **PROVES:** From **person B's own session**, `roleAssignments.list` with
-  `userKey=steward-robot@$ORG_DOMAIN` returns **exactly one item**, with `scopeType: ORG_UNIT` and
-  `orgUnitId` equal to `PILOT_OU`'s id. `users.get` now shows `isDelegatedAdmin: true` and `isAdmin`
-  still not `true`. Any item with `scopeType: CUSTOMER` fails the step and is unassigned in the same
-  minute.
+- **PROVES:** From **person B's own session** (the APIs Explorer on the `roleAssignments.list`
+  reference page, signed in as person B), `roleAssignments.list` with `userKey=$DOER_ROBOT` returns
+  **exactly one item**, with `scopeType: ORG_UNIT` and `orgUnitId` equal to `PILOT_OU`'s id.
+  `users.get` now shows `isDelegatedAdmin: true` and `isAdmin` still not `true`. Any item with
+  `scopeType: CUSTOMER` fails the step and is unassigned in the same minute. **Then record the
+  role's numeric id**, which the same item carries as `roleId` (RoleAssignment resource, read
+  2026-09-17) and which day 3 needs to unassign and delete a role by API; a role whose id nothing
+  recorded cannot be deleted by T3-19b:
+
+```bash
+penv PILOT_ROLE_ID "<the roleId from person B's roleAssignments.list item>"
+curl -s -H "Authorization: Bearer $(DTOK)" \
+  "https://admin.googleapis.com/admin/directory/v1/customer/${CUSTOMER_ID}/roleassignments?roleId=${PILOT_ROLE_ID}" \
+  | python3 -c 'import json,sys; d=json.load(sys.stdin); print("assignments for PILOT_ROLE_ID:", len(d.get("items",[])))'
+```
+
+  It must print `assignments for PILOT_ROLE_ID: 1`. `PILOT_ROLE_ID` is now in `names.env`.
 - **UNDO:** Admin roles and privileges > Pilot Steward (3-day) > Unassign. This is the lever that
   ends the day if anything goes wrong, and it is the first line of day 3's unwind.
 
@@ -233,129 +290,109 @@ units. One ticked Groups box removes the Edit link.
 
 Note the time of the Save. Nothing executes for at least four hours; the first execution is at 15:00.
 
-### T2-8 The synthetic-population guard
-
-- **WHO:** A runs; B reads. **WHERE:** terminal.
-- **DO:** Run the guard. Run it again immediately before every execution today, and on day 3.
-
-```bash
-# Every account in PILOT_OU must match the synthetic pattern. One that does not stops the day.
-Q=$(python3 -c "import urllib.parse,os;print(urllib.parse.quote('orgUnitPath='+os.environ['PILOT_OU']))")
-curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-  "https://admin.googleapis.com/admin/directory/v1/users?customer=my_customer&viewType=admin_view&projection=full&maxResults=200&query=$Q" \
-  | python3 -c '
-import json,sys,re,os
-us=json.load(sys.stdin).get("users",[])
-pat=re.compile(r"^pilot-user-\d{2}@"+re.escape(os.environ["ORG_DOMAIN"])+r"$")
-bad=[u["primaryEmail"] for u in us if not pat.match(u["primaryEmail"]) or u.get("isAdmin") or u.get("isDelegatedAdmin")]
-print("count=%d"%len(us)); print("BAD:",bad) if bad else print("PILOT_OU SYNTHETIC ONLY")
-sys.exit(1 if bad or len(us)!=4 else 0)'
-```
-
-- **PROVES:** `count=4` and `PILOT_OU SYNTHETIC ONLY`. Any other output stops the day at this line.
-  A count larger than four usually means the query was not encoded and the read fell back to the
-  whole tenant; fix the encoding, never widen the check.
-- **UNDO:** Read only.
-
 ---
 
 ## D2-A1, 10:15 to 11:45. Person A: the audit, the halt and the selftest
 
-### T2-9 Read back the audit tables, and know their columns
+### T2-9 Read back the audit tables, and know their columns and their vocabulary
 
 - **WHO:** A. **WHERE:** terminal.
-- **DO:** `tools/bootstrap.sh` created `steward_audit` and its two tables on day 1. Read them back
-  and learn the column names, because every verification today is a query against them.
+- **DO:** Day-1 T1-12a created `steward_audit` and its two tables. Read them back and learn the
+  column names, because every verification today is a query against them. Nothing is created
+  here.
 
 ```bash
-bq show --format=prettyjson "${DOER_PROJECT}:steward_audit"          | grep -E '"location"|datasetId'
-bq show --format=prettyjson "${DOER_PROJECT}:steward_audit.actions"  | grep -E '"name"|"type"' | head -40
-bq show --format=prettyjson "${DOER_PROJECT}:steward_audit.approvals"| grep -E '"name"' | head -10
+bq show --format=prettyjson "${DOER_PROJECT}:steward_audit" | grep -E '"location"|datasetId'
+bq show --format=prettyjson "${DOER_PROJECT}:steward_audit.actions" | jq -r '[.schema.fields[].name] | join(","), .timePartitioning.field, (.clustering.fields | join(","))'
+bq show --format=prettyjson "${DOER_PROJECT}:steward_audit.approvals" | jq -r '[.schema.fields[].name] | join(",")'
 ```
 
-- **PROVES:** Location `EU`. `actions` carries, in this order: `row_id`, `ts`, `agent_id`,
-  `request_id`, `phase`, `operation`, `target`, `level`, `requester`, `approver`, `approval_nonce`,
-  `verdict`, `denial_reason`, `request_hash`, `dry_run`, `halt_state`, `google_status`, `detail`,
-  partitioned by day on `ts` and clustered on `operation, verdict`. `approvals` carries `nonce`,
-  `request_hash`, `approver`, `created_at`, `operation`, `target`, `level`.
+- **PROVES:** Location `EU`. `actions` carries, in this order, the **eighteen columns
+  [code.md](code.md) §3's `audit_row()` writes**:
+  `row_id,ts,agent_id,request_id,phase,operation,target,level,requester,approver,approval_nonce,verdict,denial_reason,request_hash,dry_run,halt_state,google_status,detail`,
+  partitioned by day on `ts` and clustered on `operation,verdict`. `approvals` carries
+  `nonce,request_hash,approver,created_at,operation,target,level`. This is the one audit schema of
+  the three days; day-3 T3-1 checks its views against exactly this line.
 
-  Two values matter all day. **`phase` is `intent` or `outcome`**: the `intent` row is written
-  before the Google call and the `outcome` row after, and they share a `request_id`. **`verdict` is
-  `dry_run`, `executed` or `denied`.** Denial reasons carry no prefix: `halted`, `out_of_scope_ou`,
-  `protected_principal`, `not_catalogued`, `self_approval`, `approver_not_authorised`,
-  `approver_not_human`, `approval_mismatch`, `audit_unavailable`.
+  The vocabulary, taken from the code and nowhere else. **`phase` is `intent` or `outcome`.** The
+  `intent` row (verdict `attempting`) is written **before** the Google call and the `outcome` row
+  after, sharing a `request_id`; **the refusals that happen before that point produce an
+  `outcome` row only** (halt, catalogue, tenant, synthetic prefix, protected principal, level cap),
+  because nothing was called and there is nothing to write ahead of. **`verdict` is `attempting`
+  (intent rows only), `dry_run`, `executed`, `denied` or `error`.** A `dry_run` outcome row carries
+  `l1_dry_run_forced` (or `dry_run_requested`) in `denial_reason` to say why it did not execute.
+  Denial reasons carry no prefix, and this is the **full set** the code raises, so that person B
+  can confirm at T2-27 that there are no others:
+
+  | Where it is raised | `denial_reason` |
+  |---|---|
+  | before the intent row, `/act` | `halt_unreadable` (503), `halted`, `not_catalogued`, `target_not_in_tenant`, `not_synthetic`, `protected_principal`, `level_above_cap` |
+  | the intent row itself | `audit_unavailable` (503) |
+  | after the intent row, `/act` | `target_unreadable_<status>`, `out_of_scope_ou`, `protected_principal` (an admin flag read live), `approval_missing`, `approval_unknown`, `approval_mismatch`, `self_approval`, `approver_not_human`, `approver_not_authorised`, `approval_expired`, `approval_replayed`, `audit_unavailable` (503) |
+  | after the Google call | verdict `error` with `denial_reason` = `google_error_<status>`; or `outcome_audit_unavailable` (500) when the call happened and the outcome row could not be written, which is a stop |
+  | any route, before the body is read | `caller_unidentified` (401), `caller_token_invalid` (401) |
+  | `/approve` only | `approver_not_human`, `approver_not_authorised`, `not_catalogued`, `approval_not_recorded` (503) |
+  | `/control/halt` only | `halt_caller_not_human` |
+
 - **UNDO:** Read only. **The dataset name and location are IRREVERSIBLE**, and were fixed yesterday.
   Nothing today writes a `bq rm` against `steward_audit`: it is the only evidence the doer produces.
 
-### T2-10 Narrow the writer to one identity on one dataset
+### T2-10 Read back the writer: one identity on one dataset, and the two levers
 
 - **WHO:** A. **WHERE:** terminal.
-- **DO:** The bootstrap gave `steward-actions@` `roles/bigquery.dataEditor` **on the whole project**,
-  which is wider than it needs and cannot be withdrawn quickly enough for T2-24 N4. Replace it with
-  a custom role granted in the dataset's own access array. A dataset ACL takes effect at once; a
-  project IAM change does not.
+- **DO:** Day-1 T1-12a granted `steward-actions@` the custom role `stewardAuditWriter`
+  (`bigquery.tables.updateData`, `bigquery.tables.getData`, `bigquery.tables.get`,
+  `bigquery.datasets.get`) **in the dataset's own access array**, and nothing project-wide beyond
+  `bigquery.jobUser`. Read it back, and check the two lever files T2-24 N4 flips exist.
 
 ```bash
-gcloud iam roles create stewardAuditWriter --project="$DOER_PROJECT" \
-  --title="Steward audit writer" --stage=GA \
-  --permissions=bigquery.tables.updateData,bigquery.tables.get,bigquery.datasets.get
-
-bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:steward_audit" \
-  > "$HOME/agp-3day/ds-writer.json"
-python3 - <<'PY'
-import json, os
-h, p = os.environ["HOME"], os.environ["DOER_PROJECT"]
-d = json.load(open(h + "/agp-3day/ds-writer.json"))
-d["access"] = [a for a in d["access"] if a.get("specialGroup") != "projectOwners"]
-for sa in (f"eve-verifier@{os.environ['EVE_PROJECT']}.iam.gserviceaccount.com",
-           f"mo-metrics@{os.environ['MO_PROJECT']}.iam.gserviceaccount.com"):
-    if not any(a.get("userByEmail") == sa for a in d["access"]):
-        d["access"].append({"role": "READER", "userByEmail": sa})
-json.dump(d, open(h + "/agp-3day/ds-nowriter.json", "w"), indent=1)   # readers only: N4's lever
-d["access"].append({"role": f"projects/{p}/roles/stewardAuditWriter",
-                    "userByEmail": f"steward-actions@{p}.iam.gserviceaccount.com"})
-json.dump(d, open(h + "/agp-3day/ds-writer.json", "w"), indent=1)     # readers plus one writer
-PY
-bq --project_id="$DOER_PROJECT" update --source "$HOME/agp-3day/ds-writer.json" "${DOER_PROJECT}:steward_audit"
-
-gcloud projects remove-iam-policy-binding "$DOER_PROJECT" --condition=None \
-  --member="serviceAccount:steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --role=roles/bigquery.dataEditor
+bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:steward_audit" | jq -c '.access[]'
+gcloud projects get-iam-policy "$DOER_PROJECT" --flatten='bindings[].members' \
+  --filter='bindings.members:steward-actions@' --format='value(bindings.role)'
+gcloud iam roles describe stewardAuditWriter --project="$DOER_PROJECT" --format='value(includedPermissions)'
+ls -l "$HOME/agp-3day/ds-nowriter.json" "$HOME/agp-3day/ds-writer.json"
+grep -c stewardAuditWriter "$HOME/agp-3day/ds-nowriter.json" "$HOME/agp-3day/ds-writer.json"
 ```
 
-- **PROVES:** The access array lists **exactly one** writer entry, the two readers, and no
-  `projectOwners` OWNER entry. `steward-plan@` holds nothing on the dataset. `roles/bigquery.jobUser`
-  stays at project level, because the service must still run a query job. Keep both JSON files:
-  they are T2-24 N4's two levers.
-- **UNDO:** `bq update --source "$HOME/agp-3day/ds-nowriter.json"` removes the writer;
-  `gcloud projects add-iam-policy-binding ... --role=roles/bigquery.dataEditor` puts the wide grant
-  back. Do not delete the custom role today; a deleted custom role id is not immediately reusable.
+- **PROVES:** The access array lists **exactly one** entry for `steward-actions@`, with role
+  `projects/<DOER_PROJECT>/roles/stewardAuditWriter` (or `WRITER`, if T1-12a recorded that
+  fallback), one `READER` for `eve-verifier@`, and no `projectOwners` OWNER entry. The project
+  policy prints `roles/bigquery.jobUser` and nothing else: **no project-wide `dataEditor`**. The
+  role's permissions include `bigquery.tables.getData`; without it the service cannot read its own
+  approvals and every approved execution fails with `audit_unavailable`. `ds-nowriter.json` counts
+  `0` and `ds-writer.json` counts `1`. A dataset ACL takes effect at once, which is why N4 flips
+  the dataset access and not a project binding.
+- **UNDO:** Read only. Do not delete the custom role today; a deleted custom role id is not
+  immediately reusable.
 
-`Assumption:` `mo-metrics@` may not exist until day 3, and BigQuery may refuse a project-level custom
-role in a dataset access entry. If either is refused, drop that line, fall back to
-`roles/bigquery.dataEditor` scoped to the dataset only, and record the widening in the run log.
+`Assumption:` Mo's views (day-3 T3-2) read this dataset from `MO_PROJECT` with the credentials of
+the person running the query, who is a project owner on both; no `mo-metrics@` service account
+exists in these three days.
 
-### T2-11 The halt secret, and the credential secret
+### T2-11 Read back the three secrets
 
 - **WHO:** A. **WHERE:** terminal.
-- **DO:** Both secrets exist from day 1, empty except for the halt. Verify them, and verify that the
-  service can both read the halt and write a new version of it, because `POST /control/halt` is how
-  person B pulls K0.
+- **DO:** All three exist from day 1 (T1-12a, T1-14a). Verify their state and their bindings, and
+  that the service can both read the halt and write a new version of it, because
+  `POST /control/halt` is how person B pulls K0.
 
 ```bash
-gcloud secrets versions access latest --secret=steward-halt --project="$DOER_PROJECT"   # expect: off
-for S in steward-halt steward-refresh-token; do
-  echo "== $S"; gcloud secrets get-iam-policy "$S" --project="$DOER_PROJECT" \
-    --format='table(bindings.role, bindings.members)'
+gcloud secrets versions access latest --secret=steward-halt --project="$DOER_PROJECT"; echo   # expect: off
+for S in steward-halt steward-refresh-token steward-oauth-client; do
+  echo "== $S"; gcloud secrets versions list "$S" --project="$DOER_PROJECT" --format='value(name,state)'
+  gcloud secrets get-iam-policy "$S" --project="$DOER_PROJECT" --format='table(bindings.role, bindings.members)'
 done
-gcloud secrets create steward-oauth-client --replication-policy=user-managed \
-  --locations="$REGION" --project="$DOER_PROJECT"     # created empty; T2-16 adds version 1
 ```
 
-- **PROVES:** The halt reads `off`. On `steward-refresh-token`, exactly one accessor, and it is
-  `steward-actions@`: not `steward-plan@`, not a human. On `steward-halt`, `steward-actions@` holds
-  both `secretAccessor` and `secretVersionAdder`. Nothing else holds anything.
-- **UNDO:** `gcloud secrets delete steward-oauth-client --project="$DOER_PROJECT"` while empty.
+- **PROVES:** The halt reads `off`. `steward-refresh-token` has **no version yet** (T2-17 adds it)
+  and exactly one accessor, `steward-actions@`: not `steward-plan@`, not a human. `steward-halt`
+  has one enabled version and `steward-actions@` holds both `secretAccessor` and
+  `secretVersionAdder` (bound at day-1 T1-12a, so that `POST /control/halt` can write `on`; the
+  same binding means the service identity could write `off`, which is why the clear at T2-25 is a
+  procedure, not a control). `steward-oauth-client` has one enabled version (the client JSON from
+  T1-14a) and **no service-account accessor at all**: only the two project owners can read it, and
+  only at the consent sitting. Nothing else holds anything.
+- **UNDO:** Read only.
 
 **The halt is read per request, never through `--set-secrets`.** Cloud Run's page says environment
 variables built from secrets are *"resolved at instance startup time"* (read 2026-09-17), so a warm
@@ -368,25 +405,30 @@ does not kill is worse than none.
 
 ### T2-12 Build the container and run every result offline
 
-- **WHO:** A. **WHERE:** VS Code and a terminal, in `$HOME/agp-3day/doer/`.
-- **DO:** Paste `actions.py`, `plan.py` and the two `requirements.txt` files from
-  [code.md](code.md) §3, §4 and §8. Then, before anything is deployed:
+- **WHO:** A. **WHERE:** VS Code and a terminal, in `$HOME/agp-3day/`.
+- **DO:** Two directories, because one Cloud Run source build reads one `Procfile` per directory
+  and the service and the job cannot share one: `doer/` holds `actions.py`, its
+  `requirements.txt`, `Procfile` and `.python-version` ([code.md](code.md) §3, §8); `plan/` holds
+  `plan.py`, its own `requirements.txt`, `Procfile` and `.python-version` (§4, §8). Paste each file
+  whole. Then, before anything is deployed:
 
 ```bash
-cd "$HOME/agp-3day/doer" && python3.12 -m venv .venv && . .venv/bin/activate
-pip install -q -r requirements.txt
-ORG_DOMAIN="$ORG_DOMAIN" PILOT_OU="$PILOT_OU" SYNTHETIC_PREFIX=pilot-user- \
-  python3.12 actions.py --selftest
+set -a; . "$HOME/agp-3day/names.env"; set +a
+ls "$HOME/agp-3day/doer" "$HOME/agp-3day/plan"      # each: Procfile .python-version requirements.txt and one .py
+cd "$HOME/agp-3day/doer" && python3.12 -m venv .venv && .venv/bin/pip install -q -r requirements.txt
+ORG_DOMAIN="$ORG_DOMAIN" PILOT_OU="$PILOT_OU" SYNTHETIC_PREFIX="$SYNTHETIC_PREFIX" \
+  .venv/bin/python actions.py --selftest
 ```
 
-- **PROVES:** Eleven lines, every one starting `PASS`, then `0 failure(s)`, exit code 0:
+- **PROVES:** Twelve lines, every one starting `PASS`, then `0 failure(s)`, exit code 0:
 
   | | Refusal | Reason it must print |
   |---|---|---|
   | N1 | halt refuses | `halted` |
   | N2 | out of scope refused | `out_of_scope_ou` |
-  | N3 | protected principal refused | `protected_principal` |
+  | N3 | protected principal refused | `protected_principal` (an admin flag read live, after the intent row) |
   | N4 | audit unavailable refuses | `audit_unavailable`, HTTP 503 |
+  | N4b | a transport or permission failure on the audit insert is the same denial | `audit_unavailable`, HTTP 503, from the shared helper the live N4 exercises |
   | N5 | level 1 forces a dry run | verdict `dry_run`, executed false, **with a valid approval in hand** |
   | N6 | self-approval refused | `self_approval` |
   | N7 | a service identity cannot approve | `approver_not_human` |
@@ -396,17 +438,82 @@ ORG_DOMAIN="$ORG_DOMAIN" PILOT_OU="$PILOT_OU" SYNTHETIC_PREFIX=pilot-user- \
   | P3 | the inverse restores | `suspended` back to false |
 
   Every one runs against a fake Directory client and a fake audit sink: no Google API, no
-  credential, no network. **A failure here is fixed now, in this block, not at 14:45.**
+  credential, no network. **A failure here is fixed now, in this block, not at 14:30.** A
+  `KeyError: 'PILOT_OU'` means the variable was not passed: the code has no default for it or for
+  `SYNTHETIC_PREFIX`, on purpose.
 - **UNDO:** Nothing was deployed.
 
 Use Code Assist to explain a traceback and adapt a variable name. Do not let it rewrite the policy
-order in `/act`, which is: halt, catalogue, scope, synthetic prefix, protected principal,
-**write the intent row**, level, approval, call, outcome row. Changing that order is a defect, not a
-refactor, and the eleven lines above are how you notice.
+order in `/act`, which is: halt, catalogue, tenant, synthetic prefix, protected principal, level
+cap, **write the intent row**, read the target, scope, admin flags, level, approval, call, outcome
+row. Changing that order is a defect, not a refactor, and the twelve lines above are how you
+notice.
 
 ---
 
-## D2-B1, 10:15 to 11:45. Person B: Eve saw the doer being born
+## D2-B1, 10:15 to 11:45. Person B: two read-only checks, then Eve saw the doer being born
+
+T2-6 and T2-8 run here, numbered from the block they were moved out of on 2026-09-18. Both are
+read-only, both are person B's alone, and neither depends on person A's block.
+
+### T2-6 The delegation-absence proof, first half
+
+- **WHO:** B reads, from their own session; A does not take part. **WHERE:** Admin console, Menu >
+  Security > Access and data control > API controls > **Manage Domain Wide Delegation** (super
+  administrator only; read 2026-09-17), and B's own terminal.
+- **DO:** Read the whole API clients list on screen and write every client id in it into
+  `$HOME/agp-3day/dwd-before.txt`, one per line. Compare it with day-1 T1-8's baseline
+  screenshot. Then list every service account in the doer's project:
+
+```bash
+gcloud iam service-accounts list --project="$DOER_PROJECT" \
+  --format="value(email,uniqueId)" | tee "$HOME/agp-3day/doer-sa-ids.tsv"
+```
+
+- **PROVES:** The list is unchanged from T1-8; no unique id from `doer-sa-ids.tsv` (the two service
+  accounts T1-12a created) appears in it, and neither `STEWARD_OAUTH_CLIENT_ID` nor Eve's client
+  id does. Google documents no API that lists delegation clients, so this is read by eyes and by
+  nothing else. **An entry neither person recognises is reported to the sponsor the same hour,
+  never used, and never deleted by one person alone.**
+- **UNDO:** Read only. No step of this build ever creates a delegation entry. There is no step
+  anywhere in these three days that opens this page to add something.
+
+### T2-8 The synthetic-population guard
+
+- **WHO:** B runs, on their own terminal, with a T2-1a-style credential of their own (run T2-1a's
+  `gcloud auth application-default login` line on B's account too; it is revoked at T3-19 the
+  same way). **WHERE:** terminal.
+- **DO:** Run the guard. Run it again immediately before every execution today, and as the first
+  line of day-3 T3-15. **It reports an HTTP status before it counts anything**: a 403 is a 403,
+  never `count=0`.
+
+```bash
+# Every account in PILOT_OU must match the synthetic pattern. One that does not stops the day.
+set -a; . "$HOME/agp-3day/names.env"; set +a
+DTOK() { gcloud auth application-default print-access-token; }
+Q=$(python3 -c "import urllib.parse,os;print(urllib.parse.quote('orgUnitPath='+os.environ['PILOT_OU']))")
+curl -s -w '\n%{http_code}' -H "Authorization: Bearer $(DTOK)" \
+  "https://admin.googleapis.com/admin/directory/v1/users?customer=${CUSTOMER_ID}&viewType=admin_view&projection=full&maxResults=200&query=$Q" \
+  | python3 -c '
+import json,sys,re,os
+raw=sys.stdin.read().rsplit("\n",1); body,code=raw[0],raw[1].strip()
+if code!="200":
+    print("STOP: Directory API returned HTTP %s, not a user list. Body: %s"%(code, body[:300])); sys.exit(2)
+us=json.loads(body).get("users",[])
+pat=re.compile(r"^"+re.escape(os.environ["SYNTHETIC_PREFIX"])+r"\d{2}@"+re.escape(os.environ["ORG_DOMAIN"])+r"$")
+bad=[u["primaryEmail"] for u in us if u.get("orgUnitPath")!=os.environ["PILOT_OU"] or not pat.match(u["primaryEmail"]) or u.get("isAdmin") or u.get("isDelegatedAdmin")]
+print("http=200 count=%d"%len(us)); print("BAD:",bad) if bad else print("PILOT_OU SYNTHETIC ONLY")
+sys.exit(1 if bad or len(us)!=4 else 0)'
+```
+
+- **PROVES:** `http=200 count=4` and `PILOT_OU SYNTHETIC ONLY`. Any other output stops the day at
+  this line. A `STOP: Directory API returned HTTP 403` means the credential lacks the Directory
+  scope (T2-1a), not that the unit is empty. A count larger than four usually means the query was
+  not encoded and the read fell back to the whole tenant; fix the encoding, never widen the check.
+  The pattern is built from `SYNTHETIC_PREFIX` and `PILOT_OU` in `names.env`, the same values the
+  action service is deployed with, and it also checks each account's `orgUnitPath` for **exact
+  equality** with `PILOT_OU`.
+- **UNDO:** Read only.
 
 ### T2-13 Confirm Eve paged the role assignment
 
@@ -490,44 +597,25 @@ test ever needs a real account to stand outside the boundary.
 
 ---
 
-## D2-C2, 13:15 to 14:30. The consent sitting and the deployment
+## D2-C2, 13:15 to 14:15. The consent sitting and the deployment
 
-### T2-16 The doer's OAuth client, and mark it Trusted
+### T2-16 Confirm the doer's client, built yesterday, still reads Trusted
 
-- **WHO:** A creates; B watches the dialog. **WHERE:** Cloud console, Menu > **Google Auth
-  Platform** > Audience, then Clients, in `DOER_PROJECT`; then the Admin console.
-- **DO:** Set the Audience to **Internal** (available because the project sits in the organisation;
-  Internal limits authorisation requests to members of the organisation). Then Clients > Create
-  client > Application type **Desktop app**, name `steward-2026-09-23`, Create. Copy the client JSON
-  from the dialog and paste it straight into Secret Manager, on stdin, with nothing echoed:
-
-```bash
-gcloud secrets versions add steward-oauth-client --data-file=- --project="$DOER_PROJECT"
-# paste the JSON, then Ctrl-D. Nothing is written to disk. Then:
-pbcopy </dev/null
-find "$HOME" -name 'client_secret*' -maxdepth 4 2>/dev/null   # must print nothing
-```
-
-  Then mark the client Trusted: Admin console > Menu > Security > Access and data control > API
-  controls > App access control > **Manage Third-Party App Access** > Configure new app > **OAuth
-  App Name Or Client ID** > paste the client id > Search > Select > tick the client id > Select >
-  **Trusted** > Configure (read 2026-09-17).
-
-```bash
-penv() { grep -q "^$1=" "$HOME/agp-3day/names.env" && sed -i '' "s|^$1=.*|$1=$2|" "$HOME/agp-3day/names.env" || printf '%s=%s\n' "$1" "$2" >> "$HOME/agp-3day/names.env"; }
-penv STEWARD_OAUTH_CLIENT_ID "<the client id from the dialog>"
-```
-
-- **PROVES:** The Clients page lists exactly one client for this project. `find` prints nothing.
-  `gcloud secrets versions list steward-oauth-client --project="$DOER_PROJECT"` shows one `ENABLED`
-  version. The Admin console's configured-apps list shows the client id as Trusted.
-- **UNDO:** **IRREVERSIBLE as a secret: the client secret is shown once.** If it is lost, delete
-  this client and create a new one with a new name. Deleting the client is reversible in the sense
-  that nothing depends on it until T2-17.
-
-`Assumption:` the exact Google Auth Platform page layout moves. If Audience offers no Internal
-option, the project is not under the organisation and the consent will be refused by the Admin
-console's app controls; stop and check the project's parent rather than switching to External.
+- **WHO:** B reads; A watches. **WHERE:** Admin console, Menu > Security > Access and data control
+  > API controls > App access control > **Manage Third-Party App Access** (read 2026-09-17); the
+  Cloud console Clients page of `DOER_PROJECT`.
+- **DO:** The client was created, its JSON written to `steward-oauth-client`, and its id marked
+  Trusted at day-1 T1-14a, a day ago, so that the marking had an overnight propagation window
+  (Google: a marking change "can take up to 24 hours but typically happen[s] more quickly"). This
+  step creates nothing. Find `STEWARD_OAUTH_CLIENT_ID` in the configured-apps list and read its
+  access state; open the Clients page and confirm the id is listed and the Audience reads
+  Internal.
+- **PROVES:** The configured-apps list shows `STEWARD_OAUTH_CLIENT_ID` as **Trusted** at
+  organisation scope. The Clients page lists one Desktop client with that id. **If the id is not
+  in the list, or reads anything but Trusted, stop before T2-17**: a consent against an
+  unpropagated or missing marking fails with an unhelpful blocked-app error ([README.md](README.md)
+  R-02), and the fix is the marking, not a new client.
+- **UNDO:** Read only. Five minutes, not twenty-eight.
 
 ### T2-17 The second consent sitting
 
@@ -536,30 +624,39 @@ console's app controls; stop and check the project's parent rather than switchin
 - **The rule of the room, read aloud:** exactly two people; no screen share, no recording, no `tee`,
   no shell history file for this shell; no service identity is the second person; key A and key B
   leave their envelopes on one signed line and neither person holds both.
-- **DO:** Sign in as `steward-robot@` in the clean profile with the vault password and key A. Then:
+- **DO:** Sign in as `$DOER_ROBOT` in the clean profile with the vault password and key A. The
+  client JSON is written to **one path, chosen once**, the consent is made, and the file is
+  shredded and proved gone. (Before 2026-09-18 the write and the removal used different paths on
+  any host where `TMPDIR` was set, leaving the client secret behind.)
 
 ```bash
 unset HISTFILE
-gcloud secrets versions access latest --secret=steward-oauth-client --project="$DOER_PROJECT" \
-  > /dev/shm/c.json 2>/dev/null || gcloud secrets versions access latest \
-  --secret=steward-oauth-client --project="$DOER_PROJECT" > "$TMPDIR/c.json"
-python3.12 tools/consent.py \
-  --client-json="${TMPDIR:-/dev/shm}/c.json" \
+set -a; . "$HOME/agp-3day/names.env"; set +a
+C="${TMPDIR:-/tmp}/steward-client-$$.json"; umask 077
+gcloud secrets versions access latest --secret=steward-oauth-client --project="$DOER_PROJECT" > "$C"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("client id in file:", (d.get("installed") or {}).get("client_id","MISSING"))' "$C"
+"$HOME/agp-3day/tools/.venv/bin/python" "$HOME/agp-3day/tools/consent.py" \
+  --client-json="$C" \
   --scope="https://www.googleapis.com/auth/admin.directory.user" \
   --secret=steward-refresh-token --project="$DOER_PROJECT"
-rm -f "${TMPDIR:-/dev/shm}/c.json"
+{ shred -u "$C" 2>/dev/null || rm -P "$C"; } && { ls "$C" 2>/dev/null && echo "STOP: client JSON still on disk" || echo "client JSON gone: $C"; }
 ```
 
-  Copy the printed URL **by hand** into the clean robot profile. Never let the tool open a browser:
-  it would open the profile that is signed in as an administrator. Sign the robot out for good
-  afterwards. Both keys go back into their envelopes on one line, both signatures.
-- **PROVES:** The tool prints the granted scope list and a secret version number, and **nothing
-  else** - no token, no code, no client secret. The scope list has exactly one entry and it is
-  `https://www.googleapis.com/auth/admin.directory.user`.
-  `gcloud secrets versions list steward-refresh-token --project="$DOER_PROJECT"` shows exactly one
-  `ENABLED` version, and the service reads it per request rather than through `--set-secrets`.
-- **UNDO:** Revoke from the Admin console: Directory > Users > `steward-robot@` > Security >
-  Connected applications > remove; then disable the secret version; then delete the client.
+  The tool **prints the authorisation URL and waits**; it never opens a browser, because the
+  browser it would open is the one signed in as an administrator. Copy the printed URL **by hand**
+  into the clean robot profile. Sign the robot out for good afterwards. Both keys go back into
+  their envelopes on one line, both signatures.
+- **PROVES:** `client id in file:` equals `STEWARD_OAUTH_CLIENT_ID`. The tool prints the granted
+  scope list and a secret version name, and **nothing else**: no token, no code, no client secret.
+  The scope list has exactly one entry and it is
+  `https://www.googleapis.com/auth/admin.directory.user`, and it is the list **Google granted**
+  (the token endpoint's `scope` field), not the list that was asked for. The last line reads
+  `client JSON gone:` and its path. `gcloud secrets versions list steward-refresh-token
+  --project="$DOER_PROJECT"` shows exactly one `ENABLED` version, and the service reads it per
+  request rather than through `--set-secrets`.
+- **UNDO:** Revoke from the Admin console: Directory > Users > `$DOER_ROBOT` > Security >
+  Connected applications > remove; then disable the secret version. The client itself stays: it
+  is deleted at T3-19, not here.
 
 **Write this into the record, in these words:** *"The consented scope, admin.directory.user, is
 broader than the privilege. The privilege is the boundary: the account holds one custom role, Users
@@ -579,7 +676,7 @@ a keyboard, with two people present; T2-21 proves its client id is absent from t
 gcloud run deploy steward-actions --source=. --region="$REGION" --project="$DOER_PROJECT" \
   --no-allow-unauthenticated --ingress=all \
   --service-account="steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --set-env-vars="DOER_PROJECT=${DOER_PROJECT},ORG_DOMAIN=${ORG_DOMAIN},AGENT_ID=steward,PILOT_OU=${PILOT_OU},SYNTHETIC_PREFIX=pilot-user-,APPROVERS=${PERSON_B_EMAIL},LEVEL_CAP=2" \
+  --set-env-vars="DOER_PROJECT=${DOER_PROJECT},ORG_DOMAIN=${ORG_DOMAIN},AGENT_ID=${AGENT_ID},PILOT_OU=${PILOT_OU},SYNTHETIC_PREFIX=${SYNTHETIC_PREFIX},APPROVERS=${PERSON_B_EMAIL},LEVEL_CAP=2" \
   --timeout=60s --min-instances=0 --max-instances=2
 
 penv STEWARD_ACTIONS_URL "$(gcloud run services describe steward-actions --region="$REGION" \
@@ -643,17 +740,21 @@ no surface today (C-18), so the two humans are named directly. That is the devia
 
 ### T2-20 Deploy `steward-plan`, which holds nothing
 
-- **WHO:** A. **WHERE:** terminal, in `$HOME/agp-3day/plan/`.
-- **DO:**
+- **WHO:** A. **WHERE:** terminal, in `$HOME/agp-3day/plan/`, the job's **own directory** with its
+  own `Procfile`, `requirements.txt` and `.python-version` (T2-12).
+- **DO:** The deploy sets `VERTEX_LOCATION`, which is the variable `plan.py` reads, and the same
+  `PILOT_OU` and `SYNTHETIC_PREFIX` as the action service, so the model is shown the same catalogue
+  scope the service enforces.
 
 ```bash
 gcloud projects add-iam-policy-binding "$DOER_PROJECT" \
   --member="serviceAccount:steward-plan@${DOER_PROJECT}.iam.gserviceaccount.com" \
   --role=roles/aiplatform.user --condition=None
 
+cd "$HOME/agp-3day/plan"
 gcloud run jobs deploy steward-plan --source=. --region="$REGION" --project="$DOER_PROJECT" \
   --service-account="steward-plan@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --set-env-vars="DOER_PROJECT=${DOER_PROJECT},MODEL_ID=gemini-2.5-flash,REGION=${REGION}" \
+  --set-env-vars="DOER_PROJECT=${DOER_PROJECT},MODEL_ID=gemini-2.5-flash,VERTEX_LOCATION=${REGION},PILOT_OU=${PILOT_OU},SYNTHETIC_PREFIX=${SYNTHETIC_PREFIX}" \
   --max-retries=0 --task-timeout=5m
 ```
 
@@ -686,11 +787,13 @@ gcloud run services get-iam-policy steward-actions --region="$REGION" --project=
 
 ---
 
-## D2-C3, 14:45 to 16:00. The witnessed results
+## D2-C3, 14:30 to 15:45. The witnessed results
 
 Both people, at one keyboard, for the whole block. Person A requests; person B approves and reads
-every audit row. Six refusals and three executions, and they carry the same names as the eleven
-lines `--selftest` printed this morning, so you can tell live behaviour from fake at a glance.
+every audit row. Seven refusals and three executions, and they carry the same names as the twelve
+lines `--selftest` printed this morning, so you can tell live behaviour from fake at a glance. One
+live refusal has no offline twin and is named as such: N3' below, person B's own address refused
+as `not_synthetic` before any row is written.
 
 Run the T2-8 guard first. Then set up once, in each person's own shell:
 
@@ -709,7 +812,7 @@ OUT="pilot-user-99@${ORG_DOMAIN}"       # the account person B put in NONPROD_OU
 Tokens are never echoed, never stored, never pasted into the run log. Person B reads the target
 aloud before every single call, and no call is made while the room disagrees about what it is.
 
-### T2-22 N5, N6, N3: the dry run is forced, and cannot be bought
+### T2-22 N5, N6, N3 and N3': the dry run is forced, and cannot be bought
 
 - **WHO:** A runs every call; B issues the one real approval and reads every row.
 - **DO:**
@@ -722,10 +825,17 @@ POST /approve '{"operation":"suspend","target":"'"$GOOD"'","level":1}'
 POST /act '{"operation":"suspend","target":"'"$GOOD"'","level":1,"approval":{"nonce":"<nonce>"}}'
 
 # N6  self-approval. Person A asks for the approval from their own shell.
+#     The live service refuses person A at /approve (approver_not_authorised) before a nonce
+#     exists, so the live result is NOT the offline N6: say which one you saw.
 POST /approve '{"operation":"suspend","target":"'"$GOOD"'","level":2}'
+#     only if a nonce came back (it should not):
 POST /act '{"operation":"suspend","target":"'"$GOOD"'","level":2,"approval":{"nonce":"<that nonce>"}}'
 
-# N3  a protected principal: person B's own account, which carries no synthetic prefix.
+# N3  a protected principal, before any Google call: a synthetic-prefixed local part that
+#     names a robot. The account need not exist; the shape alone is refused.
+POST /act '{"operation":"suspend","target":"'"${SYNTHETIC_PREFIX}robot@${ORG_DOMAIN}"'","level":1}'
+
+# N3' person B's own account. Refused one check EARLIER than N3, for the synthetic prefix.
 POST /act '{"operation":"suspend","target":"'"$PERSON_B_EMAIL"'","level":1}'
 ```
 
@@ -734,12 +844,24 @@ POST /act '{"operation":"suspend","target":"'"$PERSON_B_EMAIL"'","level":1}'
     `suspended: true`. **A valid, unexpired, correctly bound approval did not buy an execution.**
     Confirm with `users.get` that `suspended` is still `false`; do not assume it. If the account was
     suspended, today stops and the build is unwound.
-  - **N6** returns `"denial_reason": "self_approval"`. The approver's identity comes from the
-    verified identity token, not from anything in the request body, so person A cannot assert it.
-  - **N3** returns `"denial_reason": "protected_principal"`. Person B's account is refused because
-    its local part does not start with `pilot-user-`. Nothing reached Google.
-  - `ROWS` shows, for every one of the three, a `phase: intent` row with a **strictly earlier** `ts`
-    than its `phase: outcome` row, sharing a `request_id`.
+  - **N6**, live: `/approve` returns `"denial_reason": "approver_not_authorised"` (403) to person
+    A, because `APPROVERS` names person B only, and no nonce is issued. The approver's identity
+    comes from the verified identity token, not from anything in the request body, so person A
+    cannot assert it. **Self-approval as such (`self_approval`) is proved offline by `--selftest`
+    N6, not live**; the run log says so in those words ([README.md](README.md) R-04).
+  - **N3** returns `"denial_reason": "protected_principal"`: the local part contains `robot`, so
+    the service refuses it as a service identity before any Google call. (The offline N3 proves
+    the other branch of the same reason, an `isAdmin` flag read live after the intent row.)
+  - **N3'** returns `"denial_reason": "not_synthetic"`. Person B's account is refused because its
+    local part does not start with `SYNTHETIC_PREFIX`, one check **before** the protected-principal
+    check ever runs. Nothing reached Google.
+  - `ROWS`, honestly: **N5 and N6-live differ in what they write.** N5 has a `phase: intent` row
+    (verdict `attempting`) with a **strictly earlier** `ts` than its `phase: outcome` row (verdict
+    `dry_run`, reason `l1_dry_run_forced`), sharing a `request_id`. N6-live writes **no `actions`
+    row at all** (it was refused at `/approve`). N3 and N3' write an **`outcome` row only**
+    (`denied`, with their reason): they were refused before the write-ahead point, nothing was
+    called, and there was nothing to write ahead of. Person B counts requests by distinct
+    `request_id`, never by intent rows.
 - **UNDO:** Nothing changed, by construction.
 
 ### T2-23 P1, P2, P3: the approved execution, and its inverse
@@ -784,37 +906,50 @@ POST /act '{"operation":"suspend","target":"'"$OUT"'","level":1}'
 
 # N2b  the service's own check stood down for one witnessed minute, so Google has to answer.
 #      Person B approves this aloud and times it. The target is still a synthetic account.
+#      The override is the EXACT path holding the one synthetic target, NONPROD_OU, never the
+#      parent of PILOT_OU (which is "/", the whole tenant). The service compares orgUnitPath for
+#      exact equality, not as a prefix, and this test is exact-match: nobody converts it.
+curl -s -H "Authorization: Bearer $(TOK)" "${STEWARD_ACTIONS_URL}/control/status" | python3 -c 'import json,sys; print("pilot_ou before:", json.load(sys.stdin)["pilot_ou"])'
 gcloud run services update steward-actions --region="$REGION" --project="$DOER_PROJECT" \
-  --update-env-vars="PILOT_OU=$(dirname "$PILOT_OU")"     # the parent OU: NONPROD_OU now in range
+  --update-env-vars="PILOT_OU=${NONPROD_OU}"
+curl -s -H "Authorization: Bearer $(TOK)" "${STEWARD_ACTIONS_URL}/control/status" | python3 -c 'import json,sys; print("pilot_ou during:", json.load(sys.stdin)["pilot_ou"])'
 POST /approve '{"operation":"suspend","target":"'"$OUT"'","level":2}'      # person B
 POST /act '{"operation":"suspend","target":"'"$OUT"'","level":2,"approval":{"nonce":"<nonce>"}}'
 gcloud run services update steward-actions --region="$REGION" --project="$DOER_PROJECT" \
   --update-env-vars="PILOT_OU=${PILOT_OU}"                # put it back, before anything else runs
+curl -s -H "Authorization: Bearer $(TOK)" "${STEWARD_ACTIONS_URL}/control/status" | python3 -c 'import json,sys; print("pilot_ou after:", json.load(sys.stdin)["pilot_ou"])'
 
 # N4  the audit write fails. Take the writer out of the dataset ACL, send one request, put it back.
 bq --project_id="$DOER_PROJECT" update --source "$HOME/agp-3day/ds-nowriter.json" "${DOER_PROJECT}:steward_audit"
 POST /act '{"operation":"suspend","target":"'"$GOOD"'","level":1}'
 bq --project_id="$DOER_PROJECT" update --source "$HOME/agp-3day/ds-writer.json" "${DOER_PROJECT}:steward_audit"
 
-# the model. It plans; it holds nothing.
+# the model. It plans; it holds nothing. gcloud run jobs execute takes --update-env-vars as
+# overrides for this one execution (reference read 2026-09-18). gcloud run jobs executions has
+# no logs subcommand (reference read 2026-09-17): read the job's log with gcloud logging read.
 gcloud run jobs execute steward-plan --region="$REGION" --project="$DOER_PROJECT" --wait \
   --update-env-vars="SENTENCE=the pilot account that left the company last week needs suspending"
-gcloud run jobs executions logs read "$(gcloud run jobs executions list --job=steward-plan \
-  --region="$REGION" --project="$DOER_PROJECT" --limit=1 --format='value(name)')" \
-  --region="$REGION" --project="$DOER_PROJECT"
+gcloud logging read 'resource.type="cloud_run_job" AND resource.labels.job_name="steward-plan"' \
+  --limit=20 --freshness=10m --format='value(textPayload)' --project="$DOER_PROJECT"
 ```
 
 - **PROVES:**
   - **N2a:** `"denial_reason": "out_of_scope_ou"`. The service read the target's organisational unit
     and refused before the catalogue's write was ever attempted.
-  - **N2b:** `"verdict": "denied"` with a `google_status` of 403. **Google refuses it, not only the
-    service.** The OU-scoped role is a real boundary, not a convention, and it holds with the
-    service's own check stood down and a valid two-person approval in hand. If this call
-    **succeeds**, stop the day, unassign the role (T2-7's undo), reactivate `pilot-user-99@` and
-    write it up: the scope is not what it appears to be and nothing else today is safe.
-  - **N4:** HTTP 503 and `"denial_reason": "audit_unavailable"`. There is **no audit row**, which is
-    the point, and no Google call was made. After the ACL is restored, the next request writes a row
-    again. **No action runs when the audit write fails.**
+  - **N2b:** `pilot_ou before` and `pilot_ou after` both equal `PILOT_OU`; `pilot_ou during`
+    equals `NONPROD_OU` and nothing wider. The call returns `"verdict": "error"` with
+    `"denial_reason": "google_error_403"` and `google_status` `google_error_403` in its outcome
+    row. **Google refuses it, not only the service.** The OU-scoped role is a real boundary, not a
+    convention, and it holds with the service's own check stood down and a valid two-person
+    approval in hand. If this call **succeeds**, stop the day, unassign the role (T2-7's undo),
+    reactivate `pilot-user-99@` and write it up: the scope is not what it appears to be and nothing
+    else today is safe. Record in the run log that the test was run against the exact path
+    `NONPROD_OU` and is exact-match by design.
+  - **N4:** HTTP 503 and `"denial_reason": "audit_unavailable"`, as a JSON body and **not a
+    traceback**: the insert helper catches the 403 BigQuery returns once the writer is out of the
+    ACL and re-raises it as the designed denial (offline twin: N4b). There is **no audit row**,
+    which is the point, and no Google call was made. After the ACL is restored, the next request
+    writes a row again. **No action runs when the audit write fails.**
   - **The model:** the job prints a JSON plan with `"level": 1` and `"carries_credential": false`.
     The plan is text. The log shows no Admin SDK call and no token. A human reads it and retypes the
     request; the job cannot call `/act` at all (T2-20 proved it holds no `run.invoker`).
@@ -840,7 +975,7 @@ dropped: N5, N6, N3 and P1 with P2.** Those are the demonstration.
 
 ---
 
-## D2-C4, 16:15 to 17:15. The kill drills
+## D2-C4, 16:00 to 17:00. The kill drills
 
 Both people. **Person B pulls both levers.** Person A times and writes.
 
@@ -869,9 +1004,13 @@ echo "halt accepted at +$(( $(date -u +%s) - T0 ))s"
 
   A service identity cannot pull it either: the endpoint refuses a caller it recognises as a machine
   with `halt_caller_not_human`. The kill switch is for people.
-- **UNDO:** **Clearing a halt is out of band and takes two people.** There is no clear endpoint, on
-  purpose: clearing raises autonomy, and no single person and no machine does that. Person A asks
-  aloud, person B writes the value, both initial the line. Do it now, so T2-26 can run.
+- **UNDO:** **Clearing a halt is out of band and is done by one person with the other initialling
+  the line, because nothing in this build enforces the second person on a clear.** There is no clear
+  endpoint, on purpose: clearing raises autonomy, and that is a human's act. But the second person
+  is a rule of the room, not a control: either project owner can write `off` alone, and so could
+  `steward-actions@`, which holds `secretVersionAdder` on the halt (T2-11), if its code ever did.
+  [README.md](README.md) §10 row 9 records this. Person A asks aloud, person B writes the value,
+  both initial the line. Do it now, so T2-26 can run.
 
 ```bash
 printf 'off' | gcloud secrets versions add steward-halt --data-file=- --project="$DOER_PROJECT"
@@ -883,10 +1022,10 @@ gcloud secrets versions access latest --secret=steward-halt --project="$DOER_PRO
 - **WHO:** **B revokes** as a super admin; A times and reads. **WHERE:** the Admin console, then two
   terminals.
 - **DO:** Person B revokes the robot's grant: Admin console > Menu > Directory > Users >
-  `steward-robot@` > Security > **Connected applications** > the `steward-2026-09-23` client >
-  Remove. (The robot can equally revoke it for itself at myaccount.google.com under its own
-  connected applications; the admin path is used here because it needs no security key.) Note the
-  second of the removal. Then, from the same warm instance:
+  `$DOER_ROBOT` > Security > **Connected applications** > the `agp-3day steward` app (client
+  `STEWARD_OAUTH_CLIENT_ID`) > Remove. (The robot can equally revoke it for itself at
+  myaccount.google.com under its own connected applications; the admin path is used here because
+  it needs no security key.) Note the second of the removal. Then, from the same warm instance:
 
 ```bash
 T0=$(date -u +%s)
@@ -905,9 +1044,12 @@ done
   seconds. K0 is what stops work now; K4 stops the credential."* Do not claim 60 minutes as a fact,
   and do not claim the revoke was instant. Record what you measured, even if it was one second.
 - **UNDO:** **IRREVERSIBLE: the credential is consumed.** Confirm before revoking: both people are
-  present, both keys are in the room, and there are at least 30 minutes left. Then re-run **T2-16
-  and T2-17 in this same sitting**: a new client, a new consent, one scope, a new secret version.
-  Disable the old version afterwards:
+  present, both keys are in the room, and there are at least 30 minutes left. Then re-run **T2-17
+  in this same sitting, against the same client**: revoking a grant consumes the refresh token,
+  not the OAuth client, so the re-consent is a new consent to `STEWARD_OAUTH_CLIENT_ID` (still
+  Trusted, still in `steward-oauth-client`), one scope, a new secret version. **No second client
+  is created at 16:45.** If the clock beats you, the re-consent moves to 08:30 on day 3, before
+  anything else, and day 3's preconditions say so. Disable the old version afterwards:
 
 ```bash
 gcloud secrets versions list steward-refresh-token --project="$DOER_PROJECT" \
@@ -958,9 +1100,15 @@ Every line must be true, and person B ticks it, not person A.
 - [ ] `PILOT_OU` holds exactly four accounts, all `pilot-user-NN@`, none an administrator, and
       `pilot-user-01@` is **not suspended** (P3 restored it).
 - [ ] `steward_audit.actions` holds, for today, at least one `phase: intent` row whose `ts` is
-      strictly earlier than its matching `phase: outcome` row.
-- [ ] N5, N6, N3, P1, P2 and P3 all happened and all produced the verdicts above. Anything dropped is
-      named in the run log as dropped, not described as passed.
+      strictly earlier than its matching `phase: outcome` row, and the early refusals (N3, N3',
+      N2a) show as `outcome` rows only, which is correct.
+- [ ] N5, N6 (live: `approver_not_authorised`; offline: `self_approval`), N3, N3', P1, P2 and P3 all
+      happened and all produced the verdicts above. Anything dropped is named in the run log as
+      dropped, not described as passed.
+- [ ] Person B has read T2-27's query against T2-9's full table of reasons and written "no denial
+      reason outside the table" or named the one that is.
+- [ ] `PILOT_ROLE_ID` and `STEWARD_ACTIONS_URL` are in `names.env`, appended with `penv`
+      (T2-7, T2-18).
 - [ ] `steward-plan@` holds `roles/aiplatform.user` and nothing else: no `secretAccessor`, no
       `run.invoker`.
 - [ ] The deployed `PILOT_OU` equals the value in `names.env` (N2b put it back), the dataset ACL
@@ -983,12 +1131,12 @@ two-person approval; the write-ahead audit; the kill drills; the same-day unwind
 
 | What failed | What to do |
 |---|---|
-| The role assignment has not propagated by 14:45 (P1 fails with a Google permission error) | Do not widen the role and do not assign a second one. Run N5, N6, N3, N2 and N4, none of which needs a successful write. Move P1, P2 and P3 to day 3, 09:00. If it fails again on day 3, **strike the executed pair from the claim**, do not soften it: the hand-over says the privileged tier was not exercised. |
-| The consent fails (the Desktop client is blocked, or the security-key sign-in will not complete in the browser) | The client was marked Trusted at T2-16; check that first. Then try `gcloud auth application-default login --client-id-file --scopes=https://www.googleapis.com/auth/admin.directory.user` from the robot's own browser profile and pipe the refresh token into Secret Manager by hand. Last resort: the day ends at T2-12's `--selftest`, every result is demonstrated offline against a fake Directory client, and day 3's demonstration shows the policy chain without a live Google call. Say so to the sponsor in the first minute. |
+| The role assignment has not propagated by 14:30 (P1 fails with a Google permission error) | Do not widen the role and do not assign a second one. Run N5, N6, N3, N2 and N4, none of which needs a successful write. Move P1, P2 and P3 to day 3, 09:00. If it fails again on day 3, **strike the executed pair from the claim**, do not soften it: the hand-over says the privileged tier was not exercised. |
+| The consent fails (the Desktop client is blocked, or the security-key sign-in will not complete in the browser) | The client was marked Trusted at day-1 T1-14a and confirmed at T2-16; check the marking first. Then try `gcloud auth application-default login --client-id-file --scopes=https://www.googleapis.com/auth/admin.directory.user` from the robot's own browser profile and pipe the refresh token into Secret Manager by hand. Last resort: the day ends at T2-12's `--selftest`, every result is demonstrated offline against a fake Directory client, and day 3's demonstration shows the policy chain without a live Google call. Say so to the sponsor in the first minute. |
 | `gcloud run deploy --source` fails on Cloud Build or Artifact Registry | Day 1 already deployed the poller this way, so the path is known good; read the build log for the missing permission. Fallback: `gcloud builds submit --tag` then deploy with `--image`. |
 | D2-C3 overruns | Drop the model, then N4, then N2b. Never N5, N6, N3 or P1 with P2. |
 | The halt does not stop the next request | This is a stop-the-build defect, not a timing problem. Check that the service reads the halt with `access_secret_version` per request and that it is **not** in `--set-secrets`. Do not proceed to day 3 with a kill switch that does not kill. |
-| One or both people are pulled into other work | The 90 minutes of daily slack is the buffer and it is reserved. If more than 90 minutes is lost, move D2-C4 to day 3 morning and tell the sponsor the demonstration is 45 minutes later. |
+| One or both people are pulled into other work | The 75 minutes of daily reserve is the buffer and it is reserved. If more than 75 minutes is lost, move D2-C4 (the kill drills and the re-consent, about 80 minutes of both-person work) to day 3 morning, opening at 08:30, and tell the sponsor the demonstration slot stays at 14:30 ([README.md](README.md) §11). |
 
 ---
 
@@ -1000,9 +1148,14 @@ two-person approval; the write-ahead audit; the kill drills; the same-day unwind
   justifies the one improvement day 3 proposes as a pull request.
 - A working credential, `LEVEL_CAP=2`, the halt `off`, and four unsuspended synthetic accounts
   ready for one more suspend-and-restore in front of a sponsor.
+- `names.env` carrying `PILOT_ROLE_ID` (T2-7) and `STEWARD_ACTIONS_URL` (T2-18); day 3 reads
+  `ORG_DOMAIN`, `PERSON_A_EMAIL`, `PERSON_B_EMAIL`, `DOER_ROBOT` and `STEWARD_OAUTH_CLIENT_ID` under
+  exactly those names.
 - The unwind list day 3 executes the same day: the standing IAM grants, the **Pilot Steward (3-day)**
-  assignment and then the role, the robot's OAuth grant and its secret version, the synthetic
-  accounts.
+  assignment and then the role, the robot's OAuth grant and its secret version, both OAuth clients
+  and their allowlist entries, the `staging` organisational unit, the `stewardAuditWriter` role and
+  the two `run.invoker` bindings, the two application-default credentials of T2-1a and T2-8, the
+  synthetic accounts.
 
 ## How this grows
 
@@ -1035,6 +1188,7 @@ two-person approval; the write-ahead audit; the kill drills; the same-day unwind
 - [Manage OAuth Clients](https://support.google.com/cloud/answer/15549257): Menu > Google Auth Platform > Clients; Application type > Desktop app; "The console does not require any additional information to create OAuth 2.0 credentials for desktop applications". Audience Internal limits authorisation to members of the organisation.
 - [Using OAuth 2.0 for web server applications](https://developers.google.com/identity/protocols/oauth2/web-server): revocation is `POST https://oauth2.googleapis.com/revoke` with the `token` parameter and content type `application/x-www-form-urlencoded`.
 - [Use secrets with Cloud Run](https://docs.cloud.google.com/run/docs/configuring/services/secrets): "Environment variables are resolved at instance startup time, so ... pin the secret to a particular version instead of using latest"; a mounted volume "always fetches the secret value from the Secret Manager to use the value with the latest version".
+- Read on 2026-09-18, for the corrections of that date: [gcloud auth application-default login](https://docs.cloud.google.com/sdk/gcloud/reference/auth/application-default/login) (`--scopes`: "The names of the scopes to authorize for. By default openid, https://www.googleapis.com/auth/userinfo.email, https://www.googleapis.com/auth/cloud-platform, https://www.googleapis.com/auth/sqlservice.login scopes are used"; T2-1a); [gcloud auth application-default print-access-token](https://docs.cloud.google.com/sdk/gcloud/reference/auth/application-default/print-access-token) ("generates and prints an access token for the current Application Default Credential"; `DTOK`); [gcloud auth application-default revoke](https://docs.cloud.google.com/sdk/gcloud/reference/auth/application-default/revoke) ("revokes Application Default Credentials that have been previously generated by `gcloud auth application-default login` and deletes the local credential file"; T3-19); [Directory API users.list](https://developers.google.com/workspace/admin/directory/reference/rest/v1/users/list) (scopes `admin.directory.user`, `admin.directory.user.readonly`, `cloud-platform`; T2-8); [Directory API roleAssignments.list](https://developers.google.com/workspace/admin/directory/reference/rest/v1/roleAssignments/list) (scopes `admin.directory.rolemanagement` and `.readonly`; `roleId` filter; T2-7); [gcloud run jobs execute](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/execute) (`--wait`, `--args`, `--update-env-vars` "environment variables overrides for an execution of a job"; T2-24); [gcloud logging read](https://docs.cloud.google.com/sdk/gcloud/reference/logging/read) (GA; filter, `--limit`, `--freshness`; T2-24); [gcloud run jobs executions](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/executions) (no `logs` subcommand; read 2026-09-17, T2-24); [google-auth-oauthlib flow](https://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauthlib.flow.html) (`run_local_server(open_browser=...)`; T2-17).
 - gcloud reference pages, all read 2026-09-17: [run deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/deploy) (`--source`, `--image`, `--region`, `--project`, `--service-account`, `--no-allow-unauthenticated`, `--ingress`, `--set-env-vars`, `--set-secrets` with values "in the form SECRET_NAME:SECRET_VERSION", `--timeout`, `--max-instances`); [run jobs deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/deploy) (same plus `--max-retries`, `--task-timeout`; **no `--schedule` flag**, scheduling is a separate Cloud Scheduler job); [run services add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/run/services/add-iam-policy-binding) (`SERVICE --member --role --region [--project]`); [secrets versions add](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/versions/add) ("Set this to \"-\" to read the secret data from stdin"); [secrets versions disable](https://docs.cloud.google.com/sdk/gcloud/reference/secrets/versions/disable) (`VERSION --secret [--location] [--project]`); [iam roles create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/roles/create) (`ROLE_ID --project --title --permissions --stage`).
 
 ## Unsettled on 2026-09-17, and the step that fails loudly
@@ -1042,8 +1196,9 @@ two-person approval; the write-ahead audit; the kill drills; the same-day unwind
 | Item | Why it matters | The step that settles it |
 |---|---|---|
 | Whether an `ORG_UNIT`-scoped role really stops a write on an account outside `PILOT_OU` | The whole boundary rests on it: the consented scope is tenant-wide, the role is not | T2-24 N2b must be refused by Google with 403. A success stops the day and the assignment is removed. |
-| The exact Google Auth Platform page layout for a Desktop client with an Internal audience | T2-16 is on the critical path for the consent | T2-16 fails loudly if Internal is not offered; do not fall back to External. |
-| Whether the tenant's app access control blocks a newly created internal Desktop client by default | A blocked client makes the consent fail with an unhelpful error | T2-16 marks the client Trusted before it is used; T2-17 fails at the consent screen if it did not take. |
+| The exact Google Auth Platform page layout for a Desktop client with an Internal audience | Day-1 T1-14a is on the critical path for the consent | T1-14a fails loudly if Internal is not offered; do not fall back to External. |
+| Whether the tenant's app access control blocks a newly created internal Desktop client by default | A blocked client makes the consent fail with an unhelpful error | T1-14a marks the client Trusted a day early; T2-16 reads the marking back; T2-17 fails at the consent screen if it did not take. |
+| Whether the tenant's app access control lets the Google Cloud SDK client carry a Directory read-only scope | T2-1a's credential, which T2-5, T2-8 and T3-19 use | T2-1a's `curl` prints the HTTP status; a 403 sends every read-back to the APIs Explorer instead, and the guard reports a 403 as a 403 rather than as an empty unit. |
 | The maximum lifetime of an already-issued Google access token | K4's claim | T2-26 measures the residue and records the measured number, never the design's figure. |
 | The URL encoding of an OU path in a `users.list` query | T2-8's guard could silently read the whole tenant | T2-8 asserts `count=4`; any other count stops the day at that line. |
 | Whether `bq update` accepts a reader entry naming a service account that does not exist yet | T2-10's `mo-metrics@` line | The first run: if it is refused, drop the line and add it on day 3. |

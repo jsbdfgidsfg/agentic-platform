@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- 2026-09-18: reviewed on 2026-09-18 — Documents row 7 and the "Building it" reading order now
+  point at the setup procedures (07 has been a pointer since 2026-09-16); the Maturity digest
+  gains a first row for Eve's first half over the human super admins, before Wall-E exists.
 - Maturity: **design — nothing built, nothing enabled.** Not one Eve resource exists today,
   in either Workspace or GCP.
 - Codename: `eve`. Resource prefix `eve-`. It is the second of the three agents designed in
@@ -65,7 +68,7 @@ file by file with its reason and its gate. Read that before building either side
 | 4 | [Flows](04-flows.md) | The seven things Eve does end to end — pre-approval, post-hoc verification, reconciliation, drift, halt and demote, attestation, the blind sample — each with its trigger, reason codes and failure branch |
 | 5 | [**Stages and gates**](05-stages.md) | What exists at S0 to S5, what Eve is trusted with at each, what is deliberately absent, and the S3 exit gate of twelve seeded faults and two negative controls |
 | 6 | [Failure modes and the limits of independence](06-failure-modes.md) | What happens when each part of this is wrong, missing or hostile; the compromised-Eve bound and its residual; the five named limits on Eve's independence; the page budget |
-| 7 | [Eve onboarding](07-build-runbook.md) | The ordered, runnable steps to bring each stage into existence, with verification per step and what to do when one half-fails |
+| 7 | [Eve onboarding](07-build-runbook.md) | Pointer since 2026-09-16; the build is setup/ [23](../agentic-platform/setup/23-eve-project-and-evidence-stores.md)–[29](../agentic-platform/setup/29-mo-eve-quality-pack.md) (Eve's first half over the human super admins, ending at `EVE_H_LIVE_RECORD`), [36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md) (what needs Wall-E) and [41](../agentic-platform/setup/41-eve-s3-and-s4.md) (S3, S4) |
 | 8 | [**What this design changes in Wall-E's set**](08-contract-changes.md) | Every edit Eve forces back on Wall-E: file, edit, reason, gate |
 | 9 | [Open decisions](09-open-decisions.md) | The twenty decisions this design does not settle, each with its gate, plus the Wall-E decisions it depends on and the challenge items it re-opens |
 
@@ -82,7 +85,10 @@ whole argument, and the staging is where the disagreements will be.
   them before the flows.
 - **Building it:** 05, [08-contract-changes.md](08-contract-changes.md) — because Wall-E's
   side must be scheduled with Wall-E, not with Eve — then 03,
-  [04-flows.md](04-flows.md) and [07-build-runbook.md](07-build-runbook.md).
+  [04-flows.md](04-flows.md), and the setup procedures
+  [23](../agentic-platform/setup/23-eve-project-and-evidence-stores.md)–[29](../agentic-platform/setup/29-mo-eve-quality-pack.md),
+  [36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md) and
+  [41](../agentic-platform/setup/41-eve-s3-and-s4.md) (07 is a pointer since 2026-09-16).
 
 ## Maturity
 
@@ -91,6 +97,7 @@ Nothing is built. When each part comes into existence is
 
 | Item | Stage |
 |---|---|
+| Eve's first half (Eve-H): detections over every human super admin, reporting to the second human, witness export, independent proof | Before Wall-E exists (setup [23](../agentic-platform/setup/23-eve-project-and-evidence-stores.md)–[28](../agentic-platform/setup/28-eve-independent-proof-and-sandbox-drills.md); P153–P155 in [../agentic-platform/12-open-decisions.md](../agentic-platform/12-open-decisions.md)) |
 | Eve v0 — the scheduled query set | S0; the whole of Eve through S2 |
 | Observe-and-report layer, with `eve@<domain>` and its credential, `eve-export@` and the witness organisation | Before Wall-E's super-admin grant, whatever the ladder stage |
 | Halting and demoting (`eve-reconciler`, `eve-console`) | S3 entry |

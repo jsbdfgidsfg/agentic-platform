@@ -577,7 +577,7 @@ calling the whole challenge sound. The [06](06-security-guardrails.md) "Poisoned
 signal" row asserts a signature that does not exist. One narrowing on impact: a fully
 compromised action service already holds the robot's token and can call the Admin SDK
 directly, so for that attacker a forged trigger adds *laundering* rather than reach — the
-write looks like a legitimate leaver run, and Eve co-signs an L4 suspension she would
+write looks like a legitimate leaver run, and Eve co-signs an L4 suspension it would
 otherwise question.
 
 **Decision: change now.** Edits:

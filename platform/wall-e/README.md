@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- 2026-09-18: the Documents table no longer presents PREREQUISITES.md, SETUP.md and setup/ as the build; one row points to the platform setup procedures, files 30 to 39, and the numbered row 7 points there too.
 - Premise: Wall-E holds **Super Admin** on a dedicated, licensed user account, not a narrow custom
   role (objective of 2026-09-13, register row P33). This set is the design of one tenant under the
   platform HLD ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)); pages of this set
@@ -62,12 +63,10 @@ else.
 
 | Document | For |
 |---|---|
-| [**PREREQUISITES.md**](PREREQUISITES.md) | Everything that must be true, decided, granted, bought or installed **before** the first command of SETUP.md, with a verification check per row and the long-lead items that block later stages. Read it first. |
-| [**SETUP.md**](SETUP.md) | The procedure to stand Wall-E up from nothing, executable by a Workspace super admin who owns four GCP projects under one folder (`GEMINI_PROJECT`, `WALLE_PROJECT`, `EVE_PROJECT`, `MO_PROJECT`). SETUP.md stands up `WALLE_PROJECT` and makes the cross-project grants Wall-E owes the other three; Eve's and Mo's runbooks stand up theirs. Ends at Stage 0: it can read the tenant, and no autonomous write is possible. |
+| [**Build: ../agentic-platform/setup/README.md**](../agentic-platform/setup/README.md) | The human-executed build of Wall-E is files [30](../agentic-platform/setup/30-wall-e-workspace-side.md) to [39](../agentic-platform/setup/39-wall-e-stage-0.md) of the platform setup procedures, after the platform (01 to 21), Mo's foundations (22) and Eve's first half (23 to 28); it ends at Stage 0 (39). [PREREQUISITES.md](PREREQUISITES.md), [SETUP.md](SETUP.md) and [setup/](setup/README.md) are pointer pages since 2026-09-16; `walle_setup.py` is a helper under decision SD-37, never the procedure. |
 | [**../project-topology.md**](../project-topology.md) | Which project holds each identity, key, secret, dataset, bucket, topic, service and job, and the exact resource-level form of every grant that crosses a project boundary. The single authority for placement; decisions 42–52 live there. |
 | [**../agentic-platform/01-hld.md**](../agentic-platform/01-hld.md) | The platform HLD this set sits under: the secure Gemini Enterprise environment, the landing zone and tiers, identity, registry, gateways and Model Armor, monitoring, compliance (EU AI Act, TISAX), and §13.1–§13.3 for Wall-E, Eve and Mo on the platform. Read it before this set's numbered pages. |
 | [**ARCHITECTURE.md**](ARCHITECTURE.md) | The service architecture with diagrams. Written for a security reviewer deciding on a pilot, and for whoever builds Eve or Mo. |
-| [**setup/**](setup/README.md) | The automation for the procedure. One script, `walle`, with a subcommand per group of phases. It stops where the procedure does, and refuses to attest a console step you have not done. |
 
 **Then:** [05-autonomy-ladder.md](05-autonomy-ladder.md) is the step-by-step enablement
 plan. Everything else exists to make it enforceable.
@@ -80,7 +79,7 @@ plan. Everything else exists to make it enforceable.
 | 4 | [Flows](04-flows.md) | Numbered end-to-end sequences, including the failure branches |
 | 5 | [**Autonomy ladder**](05-autonomy-ladder.md) | Levels, trigger classes, six stages, entry/exit criteria, promotion and demotion |
 | 6 | [Security & guardrails](06-security-guardrails.md) | Blast-radius ceiling, threat model, kill switches, what is logged |
-| 7 | [Build runbook](07-build-runbook.md) | Superseded by [SETUP.md](SETUP.md) as the build procedure; kept as a pointer |
+| 7 | [Build runbook](07-build-runbook.md) | Pointer; the build is [../agentic-platform/setup/](../agentic-platform/setup/README.md) files 30 to 39 |
 | 8 | [The team: Eve & Mo](08-team-eve-mo.md) | Shared responsibilities and the interfaces Wall-E must expose |
 | 9 | [Decisions to make](09-open-decisions.md) | What you must choose before build starts |
 | 10 | [**Adversarial review**](10-adversarial-review.md) | What was attacked, what changed, what is knowingly accepted |

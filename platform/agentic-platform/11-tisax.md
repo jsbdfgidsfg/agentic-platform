@@ -2,7 +2,12 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- 2026-09-18: §10 R-01 owner set to the security reviewer, matching the decision record and
+  §6.3 row 12, with the platform owner deciding and accepting the residual; the DPIA precondition
+  (§6.3) and the §12 documentation row split so the assessment of Eve's monitoring, the identity
+  log store and the Stage 0 reads is complete before Eve's first stream (GDPR Art. 35(1)), and
+  the write families' DPIA closes before Stage 1.
 - Maturity: detailed design of the TISAX frame of [01-hld.md](01-hld.md) §14.2 and §14.3
   (parent sections; also §0.3 RACI, §0.4 tier gate, §5.3 supplier rule, §9 penetration test,
   §13.1 item 12 and P33 the deviation, §17 P20 and P32). Answers the TISAX brief items and gaps
@@ -395,7 +400,7 @@ layer and its checklist"; row 5 below points at them.
 | 12 | The signed record (item 12) | organisational | this file signed by all three signatories; R-01 accepted | the file | security reviewer |
 | 13 | EU AI Act position (item 13, P28) | documentation | the intended-purpose statement signed with legal | the [10-eu-ai-act.md](10-eu-ai-act.md) `#wall-e` entry (the page the HLD called `ai-act.md`) | legal |
 | + | Penetration test done (HLD §0.4, §9) | — | report filed; no open critical or high finding | the report | IT security |
-| + | DPIA started; works-council information given (HLD §0.4, P129) | — | dated records | the records | DPO; HR, legal |
+| + | DPIA complete and signed for Eve's monitoring of administrators, the identity log store and the Stage 0 reads (GDPR Art. 35(1): the assessment precedes the processing); DPIA for the write families started, with a dated completion before Stage 1; works-council information (or consultation) given (HLD §0.4, P129) | — | dated records | the records | DPO; HR, legal |
 | + | Tabletop of the crisis scenario run ([07](07-monitoring-detection-incident-response.md) §13) | — | dated record | `evidence/tabletops/<date>/` | incident commander |
 | + | Hardware-key custody witnessed (SK-8) | — | custody record in the witness bucket | the record | security reviewer |
 
@@ -562,7 +567,7 @@ in the site register under its own ids. **Row one is the super-admin deviation.*
 
 | Id | Risk | Source | L | I | Treatment and controls | Owner | Acceptance |
 |---|---|---|---|---|---|---|---|
-| **R-01** | **Super-admin robot: a leaked token or an interactive login is a tenant compromise with a path into the GCP organisation (`EVE_PROJECT`, `MO_PROJECT`, core)** | HLD "What this reverses", §13.1; §6 here | 1 | 3 | **accept with compensation**: the thirteen preconditions (§6.3); K6; detection as the primary control; the witness outside the tenant; three-year re-signature | platform owner | **security reviewer signs the deviation; ISMS enters it** — `decisions/2026-09-13-wall-e-holds-super-admin.md` |
+| **R-01** | **Super-admin robot: a leaked token or an interactive login is a tenant compromise with a path into the GCP organisation (`EVE_PROJECT`, `MO_PROJECT`, core)** | HLD "What this reverses", §13.1; §6 here | 1 | 3 | **accept with compensation**: the thirteen preconditions (§6.3); K6; detection as the primary control; the witness outside the tenant; three-year re-signature | security reviewer (owner and signatory, as the decision record states) | **platform owner decides and accepts the residual; security reviewer signs; ISMS enters it** — `decisions/2026-09-13-wall-e-holds-super-admin.md` |
 | R-02 | One person holds every load-bearing role; separation of duties is notional | HLD §0.3; §7 | 3 (today) | 3 | **mitigate by gate**: no tier above R opens without the humans of §7.2; recorded self-review at Tier R | ISMS | ISMS accepts the Tier R self-review mode in writing |
 | R-03 | No pre-production environment; a change to the gate first executes in production | HLD §9 decision 29; [09](09-supply-chain-secrets-recovery.md) | 2 | 2 | mitigate: nonprod folder and sandbox tenant before Stage 1 | platform owner | — (closes when built) |
 | R-04 | Retention ceiling undecided; 400 days is an assumption; conversation-history retention *tbd* | HLD §7.5, P13 | 2 | 2 | mitigate: DPO decision before Stage 1 of any Tier W agent | DPO | DPO |
@@ -641,7 +646,8 @@ finishes the left column; only building, hiring or buying finishes the right one
 | Nonprod folder, sandbox tenant, image scanning gate, pinned lockfile, git admin-bypass off | build ([09](09-supply-chain-secrets-recovery.md), [02](02-landing-zone-and-tiers.md)); P22 | platform owner | Tier W |
 | Firestore PITR and backups by the factory; one recorded restore | build; drill | platform owner | Stage 1 |
 | A staffed recipient of Eve's reports with an acknowledgement SLA | the detection desk (bought at P); the second human | IT security | the grant |
-| DPIA, records of processing, DSR path, employee notice, works-council consultation | the DPO's programme | DPO | Stage 1 |
+| DPIA for Eve's monitoring of administrators, the identity log store and the Stage 0 reads (complete and signed before the processing starts, GDPR Art. 35(1)) | the DPO's programme | DPO | before Eve's first stream |
+| DPIA for the write families, records of processing, DSR path, employee notice, works-council consultation | the DPO's programme | DPO | Stage 1 |
 | The penetration test | bought engagement | IT security | Stage 1 (scoped); the grant (full) |
 | The internal audit and the management review, first occurrences | ISMS calendar | ISMS | assessment order |
 | The supplier onboarding and exit procedures, first executed and rehearsed | first external dependency; annual rehearsal | platform owner | first external dependency |

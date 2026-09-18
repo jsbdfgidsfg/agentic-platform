@@ -13,9 +13,9 @@ existing. The setup review of 2026-09-15 found blocking defects (`eve@` created 
 that already enforced hardware-key 2SV, so it could never register its key, S038; a ladder
 publisher that was empty on the default path, S130; a key-destruction guard that referred to
 code no longer in the helper script, S134) and, above all, the wrong order: the owner's
-instruction of 2026-09-15 is that **Eve monitors the human super admins from the day she runs,
+instruction of 2026-09-15 is that **Eve monitors the human super admins from the day it runs,
 before Wall-E exists**. Eve's first half (Eve-H) therefore now comes after the platform and
-before Wall-E: her project and evidence stores (23), her Workspace identity and the six audit
+before Wall-E: its project and evidence stores (23), its Workspace identity and the six audit
 streams (24), the detections over every human super admin (25), the reporting contract to a
 human outside the administration line and the export to the witness organisation (26 and 27),
 and the second human's independent proof on a seeded super-admin action, which produces

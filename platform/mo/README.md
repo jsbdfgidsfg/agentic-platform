@@ -2,7 +2,11 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- Reviewed on 2026-09-18: the Documents row for 07, the "Building it" reading order and the
+  Maturity rows no longer present Mo's runbook as the maker; 07 has been a pointer since
+  2026-09-16 and the build is setup/ 02, 22, 29, 36 and 40, with Eve's grants made in 29 and
+  36 and Wall-E's in 36.
 - Objective restated 2026-09-13: Mo improves **both Wall-E and Eve**, one Mo per platform keyed
   on `agent_id` ([platform HLD](../agentic-platform/01-hld.md) §13.3; owners and gates in
   [§18](../agentic-platform/01-hld.md#18-what-this-hld-requires-of-the-wall-e-eve-and-mo-sets), P143).
@@ -83,7 +87,7 @@ audience are in [04-artefacts-and-proposals.md §1](04-artefacts-and-proposals.m
 | 4 | [The artefacts, and how a proposal becomes a merge](04-artefacts-and-proposals.md) | Each artefact in full (Wall-E's five, the Eve coverage map and scorecard, the Art. 72 plan), the grading chapter and its weekly human cost, the proposal bundle contract, the closed proposal type sets for Wall-E and for Eve, the path allowlists, CI ingestion and the validator |
 | 5 | [What exists at each stage](05-staging.md) | S0 to S5 and the pre-Phase-1 baseline, what Mo is trusted with at each, the six-criterion acceptance test, and the cost and effort tables |
 | 6 | [Failure modes](06-failure-modes.md) | Mo down, Mo wrong, Mo compromised, the narrator hallucinating, the blocked upstream tables, and the residuals stated unsoftened |
-| 7 | [Building Mo](07-build-runbook.md) | Mo's phases against `MO_PROJECT` — the project itself first — in the runbook's own shape, with verify blocks, rollback and the denial tests authored from Mo's side; and the short cross-project steps Wall-E's runbook makes on Mo's behalf |
+| 7 | [Building Mo](07-build-runbook.md) | Pointer since 2026-09-16; the build is [setup/](../agentic-platform/setup/README.md) [02](../agentic-platform/setup/02-toil-baseline.md) (the toil baseline, day one), [22](../agentic-platform/setup/22-mo-foundations.md) (foundations), [29](../agentic-platform/setup/29-mo-eve-quality-pack.md) (the Eve quality pack), [36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md) (the Wall-E pack) and [40](../agentic-platform/setup/40-mo-after-stage-0.md) (after Stage 0); the page keeps the map from each retired phase to its new steps |
 | 8 | [Open decisions, and what Mo forces on Wall-E](08-open-decisions.md) | The eleven open decisions with their gates, the twenty changes this design forces on the other sets (change 20 is Eve-side), and the reopen-when table |
 
 ## Reading order
@@ -103,8 +107,14 @@ disagreements will be.
   [04-artefacts-and-proposals.md](04-artefacts-and-proposals.md). The deterministic boundary
   in 01 and the residual list in 06 are the honest parts; read them before the runbook.
 - **Building it:** [08-open-decisions.md](08-open-decisions.md) first — three of its changes
-  block Mo entirely and belong to Wall-E's schedule, not Mo's — then 05, 03 and
-  [07-build-runbook.md](07-build-runbook.md).
+  block Mo entirely and belong to Wall-E's schedule, not Mo's — then 05, 03 and the setup
+  files that replaced [07-build-runbook.md](07-build-runbook.md) on 2026-09-16:
+  [setup/02](../agentic-platform/setup/02-toil-baseline.md) (the toil baseline, day one),
+  [22](../agentic-platform/setup/22-mo-foundations.md) (foundations),
+  [29](../agentic-platform/setup/29-mo-eve-quality-pack.md) (the Eve quality pack, with Eve's
+  side of its grants), [36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md) (the
+  Wall-E pack, with the Wall-E and remaining Eve grants) and
+  [40](../agentic-platform/setup/40-mo-after-stage-0.md) (after Stage 0).
 
 ## Maturity
 
@@ -114,8 +124,8 @@ A digest; what exists at each stage, and when each component arrives, is
 | Item | State |
 |---|---|
 | `config/metrics/toil_baseline.csv` | Not started — and the only part of Mo that must exist **before Wall-E does**, because decision 38's denominator cannot be reconstructed afterwards |
-| Datasets, scheduled queries, `gates.yaml`, fixtures, the three service accounts | Designed, not built; created in `MO_PROJECT` by Mo's own runbook ([07-build-runbook.md](07-build-runbook.md)) |
-| Cross-project grants | Not made: the reads on Wall-E's and Eve's datasets and the invoker on `walle-actions` are made from Wall-E's and Eve's runbooks ([02-identity-and-access.md §2](02-identity-and-access.md#2-the-grant-list-account-by-account)); `MO_PRINCIPAL` resolves to `mo-analyst@${MO_PROJECT}` and its registry grant is dropped ([02-identity-and-access.md](02-identity-and-access.md) §6) |
+| Datasets, scheduled queries, `gates.yaml`, fixtures, the three service accounts | Designed, not built; created in `MO_PROJECT` by [setup/22](../agentic-platform/setup/22-mo-foundations.md) (project, datasets, `mo-metrics@`), [29](../agentic-platform/setup/29-mo-eve-quality-pack.md) (the Eve pack), [36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md) (the Wall-E pack, `mo-analyst@`) and [40](../agentic-platform/setup/40-mo-after-stage-0.md) (reporter, narrator, ingest, validator); Mo's own runbook was retired to a pointer on 2026-09-16 |
+| Cross-project grants | Not made: Eve's grants are made in [setup/29](../agentic-platform/setup/29-mo-eve-quality-pack.md) and [36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md), Wall-E's in [36](../agentic-platform/setup/36-wall-e-joins-to-eve-and-mo.md) ([02-identity-and-access.md §2](02-identity-and-access.md#2-the-grant-list-account-by-account)); `mo-analyst@` holds no invoker on `walle-actions` (SD-24); `MO_PRINCIPAL` resolves to `mo-analyst@${MO_PROJECT}` and its registry grant is dropped ([02-identity-and-access.md](02-identity-and-access.md) §6) |
 | `walle_audit.grades`, `proposal_verdicts`, `drills`, `ladder_events` | **Blocking upstream dependencies**: without them no cell can be reported ready ([08-open-decisions.md](08-open-decisions.md#what-this-design-forces-on-wall-es-set) changes 1–2) |
 | Drop box, CI ingestion, bot author, validator recompute check | S2 exit, and a **precondition** for the first promotion that cites Mo |
 

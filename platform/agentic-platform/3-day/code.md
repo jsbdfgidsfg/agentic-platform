@@ -3,11 +3,26 @@
 ## Status
 
 - Owner: person A writes and deploys; person B reads every deploy command before it is run.
-- Last reviewed: 2026-09-17.
+- Last reviewed: 2026-09-18. Corrected on 2026-09-18 against [README.md](README.md) §6.1: §0
+  sources `names.env` instead of restating names; §1 steps its watermark by one millisecond and
+  the deploy carries no `--set-secrets` and no `APPS` flag; §3 reads `PILOT_OU` and
+  `SYNTHETIC_PREFIX` as required variables, turns any audit transport failure into a
+  `503 audit_unavailable` and self-tests it; §4 has its own directory; §5 builds Mo's views in
+  `MO_PROJECT` and closes with one string; §6 prints the URL instead of opening a browser and
+  compares the scopes Google granted; §7 is no longer a script.
+- Reviewed on 2026-09-18, two corrections: §1 defaults `APPS` to `admin` and reads the `login`
+  stream one robot account at a time from the `service_identity` watchlist, so no real employee's
+  activity lands without a data-protection record; §3 no longer has `set_halt` or
+  `POST /control/halt`, the halt is written by a human identity only and the service needs
+  `secretAccessor` on `steward-halt` and nothing more (the two-facts preamble and §7 say so).
 - Part of the three-day build: [README.md](README.md), [day 1](day-1-platform-and-eve.md),
   [day 2](day-2-the-doer.md), [day 3](day-3-mo-demonstration-and-handover.md).
-- Every file below is complete. Paste it, set the variables at the top of §0, deploy. Google Code
+- Every file below is complete. Paste it, source `names.env` as §0 says, deploy. Google Code
   Assist is for adapting these files, not for inventing them.
+- **One audit schema and one set of names.** The eighteen columns `actions.py` writes (§3) are the
+  schema of `steward_audit.actions`, created at day-1 `T1-12a`, read back at day-2 `T2-9` and
+  checked at day-3 `T3-1`. Every name is the one `names.env` (day-1 `T1-1`) gives it; this file
+  restates none.
 - Runtime everywhere: **Python 3.12**, deployed from source by Cloud Run buildpacks
   (`.python-version` pins it; the buildpack installs `requirements.txt` and reads `Procfile` for the
   entrypoint; Google's Python buildpack page, read 2026-09-17).
@@ -18,7 +33,14 @@
    A secret mounted with `--set-secrets ...:latest` is resolved when the container instance starts,
    so a warm instance would never see a halt written after it started. A kill switch that does not
    kill is worse than none. `actions.py` reads `steward-halt` per request, and drill K0 is run
-   against an instance that was already warm.
+   against an instance that was already warm. **The halt is written by a human identity only and
+   read by the service.** Person B pulls K0 from their own account
+   (`printf 'on' | gcloud secrets versions add steward-halt --data-file=- --project="$DOER_PROJECT"`)
+   and two people clear it the same way; `steward-actions@` holds `secretAccessor` on
+   `steward-halt` and nothing that can add a version, so the process being halted can neither set
+   nor clear its own K0. Machines lower autonomy and humans raise it, and a service that could write
+   `off` would invert that for the one lever this build exists to demonstrate (reviewed on
+   2026-09-18).
 2. **The audit row is written before the Directory call, and a failed audit write is a denial
    reason.** `actions.py` writes the `intent` row first; if that insert returns any error the
    request is refused with `denial_reason=audit_unavailable` and no Google call is made.
@@ -26,41 +48,39 @@
 ## The tree
 
 ```
-build/
-  .python-version            # 3.12, copied into each deployable
+$HOME/agp-3day/               # created at day-1 T1-1; names.env and the run log live here
   eve/      poller.py  eve_detections.sql  requirements.txt  Procfile  .python-version
-  doer/     actions.py plan.py             requirements.txt  Procfile  .python-version
+  doer/     actions.py                     requirements.txt  Procfile  .python-version
+  plan/     plan.py                        requirements.txt  Procfile  .python-version
   mo/       mo.sql
-  tools/    consent.py bootstrap.sh
+  tools/    consent.py  requirements.txt
 ```
 
-`plan.py` ships in the same directory as `actions.py` but is deployed as a separate Cloud Run job
-with a different service account and its own `Procfile` line; see §4.
+Six files of code, each pasted whole: `poller.py`, `eve_detections.sql`, `actions.py`, `plan.py`,
+`mo.sql`, `consent.py`. `plan.py` has its own directory because one Cloud Run source build reads
+one `Procfile` per directory, so the service and the job cannot share one (§4). There is no
+bootstrap script: day 1 is the bootstrap (§7).
 
 ## §0 Variables
 
-Set these once per shell. No default project is ever set: every command below passes `--project`.
+**`names.env`, written once at day-1 `T1-1`, is the only source of every name.** This file never
+restates a project id, a path or a prefix. Source it at the top of every shell, and refuse to
+continue if a name is missing. No default project is ever set: every command below passes
+`--project`.
 
 ```bash
-export ORG_DOMAIN="example.test"                  # the tenant's primary domain
-export REGION="europe-west1"
-export BQ_LOCATION="EU"
-export CORE_PROJECT="agp-3d-core"
-export EVE_PROJECT="agp-3d-eve"
-export DOER_PROJECT="agp-3d-doer"
-export MO_PROJECT="agp-3d-mo"
-export BILLING_ACCOUNT="000000-000000-000000"
-export AGENT_ID="steward"
-export PILOT_OU="/Automation/Pilot"
-export SYNTHETIC_PREFIX="steward-pilot-"
-export EVE_READER="eve-reader@${ORG_DOMAIN}"
-export STEWARD_ROBOT="steward-robot@${ORG_DOMAIN}"
-export PERSON_B="<person B's own account>"        # the approver, a human
-gcloud config configurations describe "$(gcloud config configurations list --filter=is_active=true --format='value(name)')" --format='value(properties.core.project)' | grep -q . && echo "STOP: a default project is set" || echo "no default project"
+set -a; . "$HOME/agp-3day/names.env"; set +a
+: "${ORG_DOMAIN:?}" "${REGION:?}" "${BQ_LOCATION:?}" "${CORE_PROJECT:?}" "${EVE_PROJECT:?}" \
+  "${DOER_PROJECT:?}" "${MO_PROJECT:?}" "${AGENT_ID:?}" "${PILOT_OU:?}" "${SYNTHETIC_PREFIX:?}" \
+  "${EVE_READER:?}" "${DOER_ROBOT:?}" "${PERSON_A_EMAIL:?}" "${PERSON_B_EMAIL:?}" && echo "names present"
+gcloud config get-value project 2>/dev/null | grep -q . && echo "STOP: a default project is set" || echo "no default project"
 ```
 
-`Assumption:` the project ids above are free. Project ids are permanent and never reusable, so read
-them back from `gcloud projects describe` before anything else is built on them.
+The two values absolute 7 rests on are `PILOT_OU` and `SYNTHETIC_PREFIX`, and they have exactly
+one spelling each, the one `names.env` gives them (`/pilot` and `pilot-user-`, which is what day-1
+`T1-16` creates). `actions.py` (§3) and `plan.py` (§4) read both as **required** environment
+variables and refuse to start without them: a lost variable is a hard failure, never a silent
+fall-back to a plausible path.
 
 ---
 
@@ -73,13 +93,16 @@ reference, read 2026-09-17), and it is not domain-wide delegation: the credentia
 `eve-reader@`'s own consented refresh token and no account is impersonated.
 
 ```python
-# build/eve/poller.py
+# $HOME/agp-3day/eve/poller.py
 #!/usr/bin/env python3.12
 """Eve. Poll the Admin SDK Reports API, land rows in BigQuery, emit findings.
 
 One account, one scope, one consent. No domain-wide delegation: userKey is 'all'
-because the consenting account is a delegated admin with Reports read, not because
-any account is impersonated.
+for the admin application because the consenting account is a delegated admin with
+Reports read, not because any account is impersonated. The login application is read
+one robot account at a time (userKey = each service_identity watchlist row), so no
+real employee's sign-in lands here. Reading token, user_accounts or groups_enterprise
+is employee monitoring and is a decision under a data-protection record, never a default.
 """
 from __future__ import annotations
 
@@ -96,8 +119,7 @@ from googleapiclient.errors import HttpError
 
 PROJECT = os.environ["EVE_PROJECT"]
 DATASET = os.environ.get("EVE_DATASET", "eve")
-APPS = [a.strip() for a in os.environ.get(
-    "APPS", "admin,login,token,user_accounts,groups_enterprise").split(",") if a.strip()]
+APPS = [a.strip() for a in os.environ.get("APPS", "admin").split(",") if a.strip()]
 CRED_SECRET = os.environ.get("EVE_CREDENTIAL_SECRET", "eve-refresh-token")
 LOOKBACK_HOURS = int(os.environ.get("LOOKBACK_HOURS", "24"))
 PAGE_SIZE = int(os.environ.get("PAGE_SIZE", "1000"))
@@ -107,6 +129,7 @@ SCOPES = ["https://www.googleapis.com/auth/admin.reports.audit.readonly"]
 ACTIVITIES = f"{PROJECT}.{DATASET}.ws_activities"
 RUNS = f"{PROJECT}.{DATASET}.poll_runs"
 FINDINGS = f"{PROJECT}.{DATASET}.findings"
+WATCHLISTS = f"{PROJECT}.{DATASET}.watchlists"
 
 bq = bigquery.Client(project=PROJECT)
 
@@ -136,16 +159,29 @@ def credentials() -> Credentials:
     )
 
 
-def watermark(application: str) -> dt.datetime:
-    """Latest event already landed for this application, or the lookback floor."""
+def robot_accounts() -> list[str]:
+    """The service_identity watchlist rows (day-1 T1-9a): the only accounts whose
+    login stream is read. R5 needs nothing wider."""
+    sql = f"SELECT LOWER(value) AS v FROM `{WATCHLISTS}` WHERE kind = 'service_identity'"
+    return sorted({row.v for row in bq.query(sql).result() if row.v})
+
+
+def watermark(application: str, actor: str | None = None) -> dt.datetime:
+    """Latest event already landed for this application (and actor, when the stream is
+    read per account), or the lookback floor."""
     floor = dt.datetime.now(dt.timezone.utc) - dt.timedelta(hours=LOOKBACK_HOURS)
     sql = f"SELECT MAX(event_time) AS m FROM `{ACTIVITIES}` WHERE application = @a"
-    job = bq.query(sql, job_config=bigquery.QueryJobConfig(query_parameters=[
-        bigquery.ScalarQueryParameter("a", "STRING", application)]))
+    params = [bigquery.ScalarQueryParameter("a", "STRING", application)]
+    if actor:
+        sql += " AND actor_email = @u"
+        params.append(bigquery.ScalarQueryParameter("u", "STRING", actor))
+    job = bq.query(sql, job_config=bigquery.QueryJobConfig(query_parameters=params))
     rows = list(job.result())
     if rows and rows[0].m is not None and rows[0].m > floor:
-        # startTime is inclusive, so step one microsecond past the last event.
-        return rows[0].m + dt.timedelta(microseconds=1)
+        # startTime is inclusive and rfc3339() formats to the millisecond, so step one
+        # millisecond past the last event. A microsecond step would be rounded away and
+        # the same millisecond re-requested on every poll, inflating Mo's counts.
+        return rows[0].m + dt.timedelta(milliseconds=1)
     return floor
 
 
@@ -212,13 +248,13 @@ def land(rows: list[dict]) -> int:
     return len(rows)
 
 
-def poll(service, application: str) -> int:
-    start = rfc3339(watermark(application))
+def poll(service, application: str, user_key: str = "all") -> int:
+    start = rfc3339(watermark(application, None if user_key == "all" else user_key))
     token = None
     landed = 0
     while True:
         request = service.activities().list(
-            userKey="all", applicationName=application, startTime=start,
+            userKey=user_key, applicationName=application, startTime=start,
             maxResults=PAGE_SIZE, pageToken=token)
         try:
             page = request.execute()
@@ -286,6 +322,13 @@ def main() -> int:
             gaps.append(application)
         else:
             landed += result
+    # R5: the login stream, one robot account at a time, never userKey=all.
+    for robot in robot_accounts():
+        result = poll(service, "login", user_key=robot)
+        if result < 0:
+            gaps.append(f"login:{robot}")
+        else:
+            landed += result
     findings = emit_findings(since)
     record_run(landed, gaps, findings)
     log(f"EVE-POLL-OK apps={len(APPS)} rows={landed} findings={findings} "
@@ -303,12 +346,12 @@ if __name__ == "__main__":
 ```
 
 ```
-# build/eve/Procfile
+# $HOME/agp-3day/eve/Procfile
 web: python poller.py
 ```
 
 ```
-# build/eve/.python-version
+# $HOME/agp-3day/eve/.python-version
 3.12
 ```
 
@@ -316,19 +359,30 @@ web: python poller.py
 
 ```bash
 gcloud run jobs deploy eve-reports-poller \
-  --source=build/eve \
+  --source="$HOME/agp-3day/eve" \
   --region="$REGION" \
   --service-account="eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" \
-  --set-secrets=UNUSED_MOUNT_CHECK=eve-refresh-token:latest \
-  --set-env-vars=EVE_PROJECT="$EVE_PROJECT",APPS=admin,login,token,user_accounts,groups_enterprise \
+  --set-env-vars="EVE_PROJECT=${EVE_PROJECT}" \
   --max-retries=1 --task-timeout=10m --project="$EVE_PROJECT"
 ```
 
-Drop `--set-secrets` entirely if you prefer: the poller reads the credential with
-`access_secret_version` and needs only `roles/secretmanager.secretAccessor` on
-`eve-refresh-token`. Keeping the flag off is one less copy of the token in the environment;
-`gcloud run jobs deploy` has no `--schedule` flag (Google's `run jobs deploy` reference, read
-2026-09-17), so the schedule is a separate Cloud Scheduler job:
+**No `--set-secrets`, on purpose.** The poller reads its credential with `access_secret_version`
+under `roles/secretmanager.secretAccessor` on `eve-refresh-token`; the flag would only copy the
+token into the job's environment, readable by anyone holding `run.viewer` (absolute 9). **No `APPS`
+flag either:** the code's default is `admin` alone, which carries all six detections
+([README](README.md#11-the-eight-risks-and-what-to-do) R-07), and the `login` stream is read one robot account at a time from the
+`service_identity` watchlist, which is all R5 needs. **Widening `APPS` to `token`, `user_accounts`
+or `groups_enterprise` is a decision, not a default:** with `userKey=all` those streams land every
+real employee's sign-in, token and account activity in BigQuery, which is employee monitoring and
+needs the data-protection record and works-council information that do not exist
+([README](README.md#8-the-cut-list-c-01-to-c-27) C-12; [Eve's design](../../eve/01-hld.md#scope-from-the-first-run-the-human-super-admins-2026-09-15)). If a
+future record covers it, a comma-bearing value needs gcloud's alternate delimiter
+(`--set-env-vars=^:^EVE_PROJECT=...:APPS=admin,token,...`; "In order to include commas in your
+arguments, specify an alternate delimiter", `gcloud topic escaping`, read 2026-09-17), and the
+widening is recorded as a decision. `gcloud run jobs deploy` has no `--schedule`
+flag (Google's `run jobs deploy` reference, read 2026-09-17), so the schedule is a separate Cloud
+Scheduler job, created **last**, after the tables, the detections view and one execution by hand
+(day-1 `T1-19` to `T1-21`):
 
 ```bash
 gcloud scheduler jobs create http eve-poll-15m \
@@ -358,7 +412,19 @@ bq query --use_legacy_sql=false --project_id="$EVE_PROJECT" \
 
 Look for: one `EVE-POLL-OK` line with `rows=` greater than zero; at least the `admin` application
 in the table; `gaps=` naming any application this edition does not share (record it as a coverage
-gap, do not treat it as a stop).
+gap, do not treat it as a stop). Then the environment scan that day-1 `T1-19` and day-2 `T2-18`
+both run: `gcloud run jobs describe eve-reports-poller --region="$REGION" --project="$EVE_PROJECT"
+--format='value(spec.template.spec.template.spec.containers[0].env)' | grep -Eio '[A-Za-z0-9_-]{24,}'
+| grep -v "$EVE_PROJECT" || echo "no secret-looking value in env"` must print the last phrase.
+
+The three tables the poller reads and writes are created at day-1 `T1-9`, with exactly these
+schemas, and `eve.watchlists` is seeded at `T1-9a`:
+
+| Table | Schema | Who writes it |
+|---|---|---|
+| `eve.ws_activities` | `insert_id:STRING,event_time:TIMESTAMP,application:STRING,actor_email:STRING,actor_profile_id:STRING,ip_address:STRING,event_type:STRING,event_name:STRING,parameters:STRING,subject:STRING,ingested_at:TIMESTAMP`, partitioned by day on `event_time` | `land()` above |
+| `eve.poll_runs` | `run_time:TIMESTAMP,rows_landed:INT64,findings:INT64,gaps:STRING` | `record_run()` above |
+| `eve.watchlists` | `kind:STRING,value:STRING`; `kind` is `admin_allowlist`, `service_identity` or `control_group` | person A at `T1-9a`; person B afterwards |
 
 **Undo:** `gcloud scheduler jobs delete eve-poll-15m --location="$REGION" --project="$EVE_PROJECT"`
 then `gcloud run jobs delete eve-reports-poller --region="$REGION" --project="$EVE_PROJECT"`. The
@@ -372,8 +438,8 @@ Six detections and one freshness rule, as one view. The watchlists are rows, not
 person B can change who is watched without touching SQL.
 
 ```sql
--- build/eve/eve_detections.sql
--- Run: bq query --use_legacy_sql=false --project_id=$EVE_PROJECT < build/eve/eve_detections.sql
+-- $HOME/agp-3day/eve/eve_detections.sql
+-- Run: bq query --use_legacy_sql=false --project_id=$EVE_PROJECT < "$HOME/agp-3day/eve/eve_detections.sql"
 
 CREATE OR REPLACE VIEW `eve.findings` AS
 WITH allowlist AS (
@@ -479,7 +545,7 @@ not again at every tick.
 **Run and verify:**
 
 ```bash
-bq query --use_legacy_sql=false --project_id="$EVE_PROJECT" < build/eve/eve_detections.sql
+bq query --use_legacy_sql=false --project_id="$EVE_PROJECT" < "$HOME/agp-3day/eve/eve_detections.sql"
 bq query --use_legacy_sql=false --project_id="$EVE_PROJECT" \
   "SELECT rule_id, COUNT(*) n FROM \`${EVE_PROJECT}.eve.findings\` GROUP BY rule_id ORDER BY n DESC"
 bq query --use_legacy_sql=false --project_id="$EVE_PROJECT" \
@@ -498,13 +564,14 @@ name you can see and record the change. Do not widen it by removing a rule.
 ## §3 `doer/actions.py`
 
 The action service, and **the only credential holder**. One mutating route, one approval route and
-two control routes. It holds the scope `https://www.googleapis.com/auth/admin.directory.user`
+one read-only control route; the halt is pulled out of band by a human identity, never through
+this service. It holds the scope `https://www.googleapis.com/auth/admin.directory.user`
 (Google's `users.update` reference, read 2026-09-17), which is broader than the privilege the robot
 actually has: the boundary is the custom admin role scoped to the pilot organisational unit, not
 the scope.
 
 ```python
-# build/doer/actions.py
+# $HOME/agp-3day/doer/actions.py
 #!/usr/bin/env python3.12
 """steward-actions. The only credential holder in the build.
 
@@ -530,8 +597,10 @@ from flask import Flask, jsonify, request
 
 PROJECT = os.environ.get("DOER_PROJECT", "")
 AGENT_ID = os.environ.get("AGENT_ID", "steward")
-PILOT_OU = os.environ.get("PILOT_OU", "/Automation/Pilot")
-SYNTHETIC_PREFIX = os.environ.get("SYNTHETIC_PREFIX", "steward-pilot-")
+# Absolute 7 rests on these two. They have no default on purpose: a lost variable is a
+# KeyError at start-up, never a silent fall-back to a plausible path. names.env is the source.
+PILOT_OU = os.environ["PILOT_OU"]
+SYNTHETIC_PREFIX = os.environ["SYNTHETIC_PREFIX"]
 DATASET = os.environ.get("AUDIT_DATASET", "steward_audit")
 ACTIONS_TABLE = f"{PROJECT}.{DATASET}.actions"
 APPROVALS_TABLE = f"{PROJECT}.{DATASET}.approvals"
@@ -577,6 +646,18 @@ class Denied(Exception):
         self.status = status
 
 
+def insert_or_deny(client, table: str, rows: list[dict], ids: list[str], reason: str) -> None:
+    """Insert rows, or raise Denied(reason, 503). Absolute 8 needs every failure caught:
+    the row-level error list AND any transport, permission or quota exception, because a
+    traceback is not a denial. Self-tested by N4 and N4b."""
+    try:
+        errors = client.insert_rows_json(table, rows, row_ids=ids)
+    except Exception as exc:  # noqa: BLE001 - a 403, a timeout, a missing table: all denials
+        raise Denied(reason, status=503) from exc
+    if errors:
+        raise Denied(reason, status=503)
+
+
 class GoogleBackend:
     """Everything that talks to Google. Replaced wholesale by FakeBackend in --selftest."""
 
@@ -605,30 +686,27 @@ class GoogleBackend:
         data = self.sm.access_secret_version(request={"name": name}).payload.data
         return data.decode("utf-8").strip().lower()
 
-    def set_halt(self) -> str:
-        parent = f"projects/{PROJECT}/secrets/{HALT_SECRET}"
-        version = self.sm.add_secret_version(
-            request={"parent": parent, "payload": {"data": b"on"}})
-        return version.name
+    # There is no set_halt. The service reads the halt and never writes it: steward-actions@
+    # holds secretAccessor on steward-halt and no secretVersionAdder, so a compromised or
+    # redeployed service cannot set or clear its own K0. A human writes it, out of band.
 
     # ---- absolute 8: write-ahead audit -----------------------------------------
     def audit(self, row: dict) -> None:
-        errors = self.bq.insert_rows_json(ACTIONS_TABLE, [row], row_ids=[row["row_id"]])
-        if errors:
-            raise Denied("audit_unavailable", status=503)
+        insert_or_deny(self.bq, ACTIONS_TABLE, [row], [row["row_id"]], "audit_unavailable")
 
     def record_approval(self, row: dict) -> None:
-        errors = self.bq.insert_rows_json(APPROVALS_TABLE, [row], row_ids=[row["nonce"]])
-        if errors:
-            raise Denied("approval_not_recorded", status=503)
+        insert_or_deny(self.bq, APPROVALS_TABLE, [row], [row["nonce"]], "approval_not_recorded")
 
     def approval(self, nonce: str) -> dict | None:
         from google.cloud import bigquery
         sql = (f"SELECT nonce, request_hash, approver, created_at FROM `{APPROVALS_TABLE}` "
                "WHERE nonce = @n LIMIT 1")
-        job = self.bq.query(sql, job_config=bigquery.QueryJobConfig(query_parameters=[
-            bigquery.ScalarQueryParameter("n", "STRING", nonce)]))
-        rows = list(job.result())
+        try:
+            job = self.bq.query(sql, job_config=bigquery.QueryJobConfig(query_parameters=[
+                bigquery.ScalarQueryParameter("n", "STRING", nonce)]))
+            rows = list(job.result())
+        except Exception as exc:  # noqa: BLE001 - the approvals table needs tables.getData
+            raise Denied("audit_unavailable", status=503) from exc
         if not rows:
             return None
         row = rows[0]
@@ -639,9 +717,12 @@ class GoogleBackend:
         from google.cloud import bigquery
         sql = (f"SELECT COUNT(*) AS n FROM `{ACTIONS_TABLE}` "
                "WHERE approval_nonce = @n AND phase = 'outcome' AND verdict = 'executed'")
-        job = self.bq.query(sql, job_config=bigquery.QueryJobConfig(query_parameters=[
-            bigquery.ScalarQueryParameter("n", "STRING", nonce)]))
-        return list(job.result())[0].n > 0
+        try:
+            job = self.bq.query(sql, job_config=bigquery.QueryJobConfig(query_parameters=[
+                bigquery.ScalarQueryParameter("n", "STRING", nonce)]))
+            return list(job.result())[0].n > 0
+        except Exception as exc:  # noqa: BLE001 - cannot prove single use: refuse
+            raise Denied("audit_unavailable", status=503) from exc
 
     # ---- the one credential -----------------------------------------------------
     @property
@@ -819,9 +900,9 @@ def handle(payload: dict, requester: str, backend) -> tuple[dict, int]:
     # 6. the approval
     try:
         check_approval(approval, requester, ctx["request_hash"], backend)
+        ctx["approver"] = (backend.approval(approval["nonce"]) or {}).get("approver")
     except Denied as exc:
         return refuse(exc.reason, exc.status)
-    ctx["approver"] = (backend.approval(approval["nonce"]) or {}).get("approver")
 
     # 7. mutate, then the outcome row
     spec = CATALOGUE[operation]
@@ -900,21 +981,15 @@ def control_status():
     }), 200
 
 
-# ---- control endpoint 2: K0, the halt. It only ever tightens -------------------
-@app.post("/control/halt")
-def control_halt():
-    try:
-        caller = caller_email(BACKEND)
-    except Denied as exc:
-        return jsonify({"denial_reason": exc.reason}), exc.status
-    if is_service_identity(caller):
-        return jsonify({"denial_reason": "halt_caller_not_human"}), 403
-    version = BACKEND.set_halt()
-    return jsonify({"halt": "on", "version": version, "pulled_by": caller,
-                    "note": "clearing a halt is done out of band by two people"}), 200
+# ---- there is no /control/halt ------------------------------------------------
+# K0 is written by a human identity, never by this service: person B runs
+#   printf 'on' | gcloud secrets versions add steward-halt --data-file=- --project="$DOER_PROJECT"
+# from their own account, and the next request reads it. "Only ever tightens" was a property
+# of code the service's own IAM did not enforce; a service that can add a version can add
+# "off". Reads stay per request (halt_state above), so a warm instance sees the pull.
 
 
-# ---- the offline self-test: eight negatives and one reversible pair ------------
+# ---- the offline self-test: nine negatives and one reversible pair -------------
 class FakeBackend:
     def __init__(self, halt="off", audit_fails=False, ou=PILOT_OU, is_admin=False) -> None:
         self.halt = halt
@@ -929,10 +1004,6 @@ class FakeBackend:
 
     def halt_state(self) -> str:
         return self.halt
-
-    def set_halt(self) -> str:
-        self.halt = "on"
-        return "fake/versions/1"
 
     def audit(self, row: dict) -> None:
         if self.audit_fails:
@@ -1013,6 +1084,19 @@ def selftest() -> int:
     case("N4 audit_unavailable refuses",
          body["denial_reason"] == "audit_unavailable" and status == 503 and not b.writes)
 
+    # N4b a transport or permission failure on the insert, not a row-level error list,
+    #     is the same denial. This is the case the live N4 exercises (a 403 from BigQuery
+    #     once the writer is out of the dataset ACL), so the helper is tested directly.
+    class _RaisingClient:
+        def insert_rows_json(self, *_a, **_k):
+            raise RuntimeError("403 Access Denied: simulated transport failure")
+    try:
+        insert_or_deny(_RaisingClient(), "t", [{"row_id": "x"}], ["x"], "audit_unavailable")
+        n4b = False
+    except Denied as exc:
+        n4b = exc.reason == "audit_unavailable" and exc.status == 503
+    case("N4b transport failure is audit_unavailable 503", n4b)
+
     # N5 level 1 forces a dry run and refuses even a valid approval
     b = FakeBackend()
     body, _ = handle({"operation": "suspend", "target": good, "level": 1,
@@ -1067,46 +1151,49 @@ if __name__ == "__main__":
 ```
 
 ```
-# build/doer/Procfile
+# $HOME/agp-3day/doer/Procfile
 web: gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 actions:app
 ```
 
 ```
-# build/doer/.python-version
+# $HOME/agp-3day/doer/.python-version
 3.12
 ```
 
 **Self-test first, before any deploy** (person A, in D2-A1):
 
 ```bash
-python3.12 -m venv /tmp/steward-venv && /tmp/steward-venv/bin/pip install -r build/doer/requirements.txt
+cd "$HOME/agp-3day/doer" && python3.12 -m venv .venv && .venv/bin/pip install -q -r requirements.txt
 ORG_DOMAIN="$ORG_DOMAIN" PILOT_OU="$PILOT_OU" SYNTHETIC_PREFIX="$SYNTHETIC_PREFIX" \
-  /tmp/steward-venv/bin/python build/doer/actions.py --selftest
+  .venv/bin/python actions.py --selftest
 ```
 
-Look for: eleven `PASS` lines and `0 failure(s)`. A single `FAIL` stops the day; fix the code, not
-the test.
+Look for: **twelve** `PASS` lines (N1 to N8, N4b, P1 to P3) and `0 failure(s)`. A single `FAIL`
+stops the day; fix the code, not the test.
 
-**Deploy** (person A, `DOER_PROJECT`):
+**Deploy** (person A, `DOER_PROJECT`; the same command as day-2 `T2-18`):
 
 ```bash
 gcloud run deploy steward-actions \
-  --source=build/doer \
-  --region="$REGION" --no-allow-unauthenticated \
+  --source="$HOME/agp-3day/doer" \
+  --region="$REGION" --no-allow-unauthenticated --ingress=all \
   --service-account="steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --set-env-vars=DOER_PROJECT="$DOER_PROJECT",ORG_DOMAIN="$ORG_DOMAIN",AGENT_ID="$AGENT_ID",PILOT_OU="$PILOT_OU",SYNTHETIC_PREFIX="$SYNTHETIC_PREFIX",APPROVERS="$PERSON_B",LEVEL_CAP=2 \
-  --project="$DOER_PROJECT"
+  --set-env-vars="DOER_PROJECT=${DOER_PROJECT},ORG_DOMAIN=${ORG_DOMAIN},AGENT_ID=${AGENT_ID},PILOT_OU=${PILOT_OU},SYNTHETIC_PREFIX=${SYNTHETIC_PREFIX},APPROVERS=${PERSON_B_EMAIL},LEVEL_CAP=2" \
+  --timeout=60s --min-instances=0 --max-instances=2 --project="$DOER_PROJECT"
 DOER_URL=$(gcloud run services describe steward-actions --region="$REGION" \
   --format='value(status.url)' --project="$DOER_PROJECT")
 gcloud run services update steward-actions --region="$REGION" \
   --update-env-vars=SERVICE_URL="$DOER_URL" --project="$DOER_PROJECT"
-gcloud run services add-iam-policy-binding steward-actions --region="$REGION" \
-  --member="user:${PERSON_B}" --role=roles/run.invoker --project="$DOER_PROJECT"
+for M in "user:${PERSON_A_EMAIL}" "user:${PERSON_B_EMAIL}"; do
+  gcloud run services add-iam-policy-binding steward-actions --region="$REGION" \
+    --member="$M" --role=roles/run.invoker --project="$DOER_PROJECT"
+done
 ```
 
 The credential secret is deliberately **not** passed with `--set-secrets`: the service reads it
 with `access_secret_version` under `roles/secretmanager.secretAccessor` on
-`steward-refresh-token`, and reads `steward-halt` the same way, **per request**.
+`steward-refresh-token`, and reads `steward-halt` the same way, **per request**, under
+`secretAccessor` only: the service never writes the halt.
 
 **Verify:**
 
@@ -1136,7 +1223,7 @@ action service and no `secretAccessor`, and it cannot approve.** A human reads t
 it into the request.
 
 ```python
-# build/doer/plan.py
+# $HOME/agp-3day/doer/plan.py
 #!/usr/bin/env python3.12
 """steward-plan. Turn one operator sentence into a JSON plan. Holds nothing."""
 from __future__ import annotations
@@ -1149,10 +1236,10 @@ from google import genai
 from google.genai import types
 
 PROJECT = os.environ["DOER_PROJECT"]
-LOCATION = os.environ.get("VERTEX_LOCATION", "europe-west1")
+LOCATION = os.environ["VERTEX_LOCATION"]          # the deploy sets it; no silent default region
 MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.5-flash")
-PILOT_OU = os.environ.get("PILOT_OU", "/Automation/Pilot")
-SYNTHETIC_PREFIX = os.environ.get("SYNTHETIC_PREFIX", "steward-pilot-")
+PILOT_OU = os.environ["PILOT_OU"]                 # required, like actions.py: one spelling, from names.env
+SYNTHETIC_PREFIX = os.environ["SYNTHETIC_PREFIX"]
 
 CATALOGUE = [
     {"operation": "suspend", "inverse": "restore",
@@ -1203,25 +1290,41 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-**Deploy** as a separate job. Copy `plan.py`, `requirements.txt` and `.python-version` into
-`build/plan/` with its own one-line `Procfile` (`web: python plan.py`), so the buildpack does not
-pick up the Flask entrypoint:
-
-```bash
-mkdir -p build/plan && cp build/doer/plan.py build/doer/.python-version build/plan/
-printf 'web: python plan.py\n' > build/plan/Procfile
-printf 'google-genai==1.46.0\n' > build/plan/requirements.txt   # Assumption: re-pin, see §8
-gcloud run jobs deploy steward-plan --source=build/plan --region="$REGION" \
-  --service-account="steward-plan@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --set-env-vars=DOER_PROJECT="$DOER_PROJECT",MODEL_ID=gemini-2.5-flash,VERTEX_LOCATION="$REGION",PILOT_OU="$PILOT_OU",SYNTHETIC_PREFIX="$SYNTHETIC_PREFIX" \
-  --max-retries=0 --project="$DOER_PROJECT"
+```
+# $HOME/agp-3day/plan/Procfile
+web: python plan.py
 ```
 
-**Verify** that it plans, and that it holds nothing:
+```
+# $HOME/agp-3day/plan/.python-version
+3.12
+```
+
+**Deploy** as a separate job from its **own directory**, `$HOME/agp-3day/plan/`, holding
+`plan.py`, its own `requirements.txt` (§8), its own `Procfile` and its own `.python-version`. One
+Cloud Run source build reads one `Procfile` per directory, so the service and the job cannot share
+one (the buildpack would pick up the Flask entrypoint). The deploy sets `VERTEX_LOCATION`, which is
+the variable the code reads, and the same `PILOT_OU` and `SYNTHETIC_PREFIX` as the action service
+(the same command as day-2 `T2-20`):
+
+```bash
+gcloud run jobs deploy steward-plan --source="$HOME/agp-3day/plan" --region="$REGION" \
+  --service-account="steward-plan@${DOER_PROJECT}.iam.gserviceaccount.com" \
+  --set-env-vars="DOER_PROJECT=${DOER_PROJECT},MODEL_ID=gemini-2.5-flash,VERTEX_LOCATION=${REGION},PILOT_OU=${PILOT_OU},SYNTHETIC_PREFIX=${SYNTHETIC_PREFIX}" \
+  --max-retries=0 --task-timeout=5m --project="$DOER_PROJECT"
+```
+
+**Verify** that it plans, and that it holds nothing. `gcloud run jobs executions` has no `logs`
+subcommand (its reference lists `cancel`, `delete`, `describe`, `describe-latest`, `list` and
+`tasks`, read 2026-09-17), so the plan is read back with `gcloud logging read`, which is
+generally available and takes a filter, `--limit` and `--freshness` (`gcloud logging read`
+reference, read 2026-09-18):
 
 ```bash
 gcloud run jobs execute steward-plan --region="$REGION" --wait \
   --args="dry run a suspend on ${SYNTHETIC_PREFIX}01@${ORG_DOMAIN}" --project="$DOER_PROJECT"
+gcloud logging read 'resource.type="cloud_run_job" AND resource.labels.job_name="steward-plan"' \
+  --limit=20 --freshness=10m --format='value(textPayload)' --project="$DOER_PROJECT"
 gcloud projects get-iam-policy "$DOER_PROJECT" --flatten='bindings[].members' \
   --filter="bindings.members:steward-plan@${DOER_PROJECT}.iam.gserviceaccount.com" \
   --format='value(bindings.role)' --project="$DOER_PROJECT"
@@ -1239,91 +1342,109 @@ and `0 - plan cannot invoke`.
 
 ## §5 `mo/mo.sql`
 
-Five views over the audit table, every one keyed on `agent_id`, then the scorecard.
+Five views and one scorecard query, **in `MO_PROJECT`'s `mo` dataset, reading
+`DOER_PROJECT.steward_audit.actions` and `.approvals` across projects** ([README.md](README.md)
+§5). Every view is keyed on `agent_id`, so a second agent added later is counted separately with no
+new view. Day-3 `T3-2` pastes this file unchanged and substitutes the two project ids with `sed`,
+exactly as day-1 `T1-19a` pastes §2. The vocabulary is §3's and nothing else: `phase` is `intent`
+or `outcome`; `verdict` is `attempting` (intent rows only), `dry_run`, `executed`, `denied` or
+`error`; `operation` is `suspend` or `restore`; denial reasons carry no prefix.
+
+Two counting rules, both consequences of §3. **Results are counted on `phase = 'outcome'`**, never
+on both phases, or every number doubles. **Requests are counted by `COUNT(DISTINCT request_id)`**,
+not by intent rows: the refusals that happen before the write-ahead point (halt, catalogue, tenant,
+synthetic prefix, protected principal, level cap) produce an `outcome` row only, because nothing was
+called and there is nothing to write ahead of, so a count of intent rows undercounts every early
+refusal ([README.md](README.md) §2, absolute 8).
 
 ```sql
--- build/mo/mo.sql
--- Run: bq query --use_legacy_sql=false --project_id=$DOER_PROJECT < build/mo/mo.sql
--- The views live beside the audit table so no cross-project read is needed on day 3.
+-- $HOME/agp-3day/mo/mo.sql
+-- Run, from day-3 T3-2:
+--   sed -e "s/MO_PROJECT/$MO_PROJECT/g" -e "s/DOER_PROJECT/$DOER_PROJECT/g" mo.sql \
+--     | bq query --use_legacy_sql=false --project_id="$MO_PROJECT"
+-- Every view reads outcome rows only. Every view is grouped on agent_id.
 
--- Person B loads this table in D3-B1. It is created empty here so the scorecard runs
--- on day 3 morning whether or not the baseline has landed yet.
-CREATE TABLE IF NOT EXISTS `steward_audit.retrospective_volume` (
-  event_date DATE, event_name STRING, events INT64, window_start DATE, window_end DATE
+-- Person B loads this table at day-3 T3-6. It is created empty here so the scorecard
+-- runs on day 3 morning whether or not the baseline has landed yet.
+CREATE TABLE IF NOT EXISTS `MO_PROJECT.mo.toil_retrospective` (
+  event_date DATE, event_name STRING, n INT64
 );
 
-CREATE OR REPLACE VIEW `steward_audit.mo_volume_by_verdict` AS
-SELECT agent_id, DATE(ts) AS day, verdict, COUNT(*) AS n
-FROM `steward_audit.actions`
+CREATE OR REPLACE VIEW `MO_PROJECT.mo.mo_volume_by_verdict` AS
+SELECT agent_id, level, operation, verdict, COUNT(*) AS n,
+       MIN(ts) AS first_ts, MAX(ts) AS last_ts
+FROM `DOER_PROJECT.steward_audit.actions`
 WHERE phase = 'outcome'
-GROUP BY agent_id, day, verdict;
+GROUP BY agent_id, level, operation, verdict;
 
-CREATE OR REPLACE VIEW `steward_audit.mo_denial_reasons` AS
+CREATE OR REPLACE VIEW `MO_PROJECT.mo.mo_denial_reasons` AS
 SELECT agent_id, denial_reason, COUNT(*) AS n, MIN(ts) AS first_seen, MAX(ts) AS last_seen
-FROM `steward_audit.actions`
+FROM `DOER_PROJECT.steward_audit.actions`
 WHERE phase = 'outcome' AND verdict = 'denied'
 GROUP BY agent_id, denial_reason;
 
-CREATE OR REPLACE VIEW `steward_audit.mo_dry_run_ratio` AS
+CREATE OR REPLACE VIEW `MO_PROJECT.mo.mo_dry_run_ratio` AS
 SELECT agent_id,
        COUNTIF(verdict = 'dry_run') AS dry_runs,
        COUNTIF(verdict = 'executed') AS executions,
-       SAFE_DIVIDE(COUNTIF(verdict = 'dry_run'),
-                   COUNTIF(verdict IN ('dry_run', 'executed'))) AS dry_run_ratio
-FROM `steward_audit.actions`
+       COUNTIF(verdict = 'denied') AS denials,
+       COUNT(DISTINCT request_id) AS requests,
+       SAFE_DIVIDE(COUNTIF(verdict = 'dry_run'), COUNT(DISTINCT request_id)) AS dry_run_share
+FROM `DOER_PROJECT.steward_audit.actions`
 WHERE phase = 'outcome'
 GROUP BY agent_id;
 
-CREATE OR REPLACE VIEW `steward_audit.mo_approval_latency` AS
-SELECT a.agent_id,
-       a.request_id,
-       a.approver,
-       TIMESTAMP_DIFF(a.ts, p.created_at, SECOND) AS approval_to_execution_seconds
-FROM `steward_audit.actions` a
-JOIN `steward_audit.approvals` p ON p.nonce = a.approval_nonce
+-- Latency runs from the approval's created_at to the executed outcome row that carries
+-- its nonce. It is a difference between two timestamps, never a measure of effort.
+CREATE OR REPLACE VIEW `MO_PROJECT.mo.mo_approval_latency` AS
+SELECT a.agent_id, a.request_id, a.request_hash, a.approver,
+       p.created_at AS approved_at, a.ts AS executed_at,
+       TIMESTAMP_DIFF(a.ts, p.created_at, SECOND) AS latency_seconds
+FROM `DOER_PROJECT.steward_audit.actions` AS a
+JOIN `DOER_PROJECT.steward_audit.approvals` AS p ON p.nonce = a.approval_nonce
 WHERE a.phase = 'outcome' AND a.verdict = 'executed';
 
-CREATE OR REPLACE VIEW `steward_audit.mo_pair_completion` AS
-WITH pairs AS (
-  SELECT agent_id, target,
-         COUNTIF(operation = 'suspend' AND verdict = 'executed') AS suspends,
-         COUNTIF(operation = 'restore' AND verdict = 'executed') AS restores
-  FROM `steward_audit.actions`
-  WHERE phase = 'outcome'
-  GROUP BY agent_id, target
-)
-SELECT agent_id, target, suspends, restores,
-       suspends = restores AS pair_complete
-FROM pairs;
+-- A pair completes when a target that was suspended is restored. Any target with
+-- suspends > restores is still suspended: that is a finding, not a metric.
+CREATE OR REPLACE VIEW `MO_PROJECT.mo.mo_pair_completion` AS
+SELECT agent_id, target,
+       COUNTIF(operation = 'suspend' AND verdict = 'executed') AS suspends,
+       COUNTIF(operation = 'restore' AND verdict = 'executed') AS restores,
+       COUNTIF(operation = 'suspend' AND verdict = 'executed')
+       - COUNTIF(operation = 'restore' AND verdict = 'executed') AS left_suspended
+FROM `DOER_PROJECT.steward_audit.actions`
+WHERE phase = 'outcome'
+GROUP BY agent_id, target;
 
--- The scorecard. One page. The minutes line is literal and is never softened.
+-- The scorecard. One row per agent. The closing statement is ONE string literal: two
+-- adjacent literals do not concatenate in GoogleSQL and would fail the whole script.
 SELECT
-  'steward' AS agent_id,
-  (SELECT SUM(n) FROM `steward_audit.mo_volume_by_verdict` WHERE verdict = 'executed') AS executed,
-  (SELECT SUM(n) FROM `steward_audit.mo_volume_by_verdict` WHERE verdict = 'dry_run') AS dry_runs,
-  (SELECT SUM(n) FROM `steward_audit.mo_volume_by_verdict` WHERE verdict = 'denied') AS denied,
+  v.agent_id,
+  SUM(IF(v.verdict = 'executed', v.n, 0)) AS executed,
+  SUM(IF(v.verdict = 'dry_run', v.n, 0)) AS dry_runs,
+  SUM(IF(v.verdict = 'denied', v.n, 0)) AS denied,
+  SUM(IF(v.verdict = 'error', v.n, 0)) AS errors,
   (SELECT STRING_AGG(CONCAT(denial_reason, '=', CAST(n AS STRING)), '; ' ORDER BY n DESC)
-     FROM `steward_audit.mo_denial_reasons`) AS denial_reasons,
-  (SELECT ROUND(dry_run_ratio, 3) FROM `steward_audit.mo_dry_run_ratio` LIMIT 1) AS dry_run_ratio,
-  (SELECT ROUND(AVG(approval_to_execution_seconds), 1)
-     FROM `steward_audit.mo_approval_latency`) AS mean_approval_latency_seconds,
-  (SELECT COUNTIF(pair_complete) FROM `steward_audit.mo_pair_completion`) AS complete_pairs,
-  (SELECT SUM(events) FROM `steward_audit.retrospective_volume`) AS retrospective_event_volume,
-  'No human minute was saved. The doer acted only on synthetic accounts, and the retrospective '
-  'figure is a volume of past events, never a time.' AS minutes_saved_statement;
+     FROM `MO_PROJECT.mo.mo_denial_reasons` d WHERE d.agent_id = v.agent_id) AS denial_reasons,
+  (SELECT ROUND(dry_run_share, 3) FROM `MO_PROJECT.mo.mo_dry_run_ratio` r
+     WHERE r.agent_id = v.agent_id) AS dry_run_share,
+  (SELECT MAX(latency_seconds) FROM `MO_PROJECT.mo.mo_approval_latency` l
+     WHERE l.agent_id = v.agent_id) AS worst_approval_latency_seconds,
+  (SELECT COUNTIF(left_suspended <> 0) FROM `MO_PROJECT.mo.mo_pair_completion` p
+     WHERE p.agent_id = v.agent_id) AS targets_left_suspended,
+  (SELECT SUM(n) FROM `MO_PROJECT.mo.toil_retrospective`) AS retrospective_event_volume,
+  'No human minute was saved. The doer acted only on synthetic accounts, and the retrospective figure is a volume of past events, never a time.' AS minutes_saved_statement
+FROM `MO_PROJECT.mo.mo_volume_by_verdict` v
+GROUP BY v.agent_id;
 ```
 
-The retrospective table is loaded by person B in D3-B1 from the Admin console export, reduced to
-counts with the actor column dropped:
+The retrospective table is loaded by person B at day-3 `T3-6` from the Admin console export,
+reduced to counts with the actor column dropped; the load command is there, not here.
 
-```bash
-bq load --source_format=CSV --skip_leading_rows=1 --project_id="$DOER_PROJECT" \
-  "${DOER_PROJECT}:steward_audit.retrospective_volume" /tmp/retro-counts.csv
-```
-
-**Verify:** `bq query --use_legacy_sql=false --project_id="$DOER_PROJECT" < build/mo/mo.sql` prints
-one scorecard row whose `executed` and `complete_pairs` match what day 2 actually did, counted by
-hand. **Undo:** `bq rm -f -t` each view; the tables stay.
+**Verify:** the `sed | bq query` line above prints one scorecard row per agent whose `executed`
+and `targets_left_suspended` match what day 2 actually did, counted by hand against the run log;
+`bq ls --project_id="$MO_PROJECT" mo` lists five entries of type `VIEW` and one `TABLE`. **Undo:**
+`bq rm -f -t` each view; the tables stay.
 
 ---
 
@@ -1333,7 +1454,7 @@ Run once per robot, at one keyboard, with both people present. The refresh token
 disk and is never printed.
 
 ```python
-# build/tools/consent.py
+# $HOME/agp-3day/tools/consent.py
 #!/usr/bin/env python3.12
 """One robot, one client, one scope, one consent. Not domain-wide delegation.
 
@@ -1369,9 +1490,18 @@ def main() -> int:
         return 2
 
     flow = InstalledAppFlow.from_client_config(client_config, scopes=args.scope)
-    creds = flow.run_local_server(port=0, access_type="offline", prompt="consent")
+    # open_browser=False: the tool prints the URL and waits. Both sittings copy that URL by
+    # hand into the clean profile signed in as the robot; the tool must never open the
+    # profile that is signed in as an administrator.
+    creds = flow.run_local_server(
+        port=0, open_browser=False, access_type="offline", prompt="consent",
+        authorization_prompt_message="Open this URL in the ROBOT's clean profile: {url}")
 
-    granted = sorted(creds.scopes or [])
+    # Compare what Google GRANTED, returned by the token endpoint, with what was asked.
+    # creds.scopes is what was requested, so comparing it would be a tautology.
+    # granted_scopes is empty when granted and requested were the same (google-auth's
+    # Credentials reference, read 2026-09-18), so an empty value means "as requested".
+    granted = sorted(creds.granted_scopes or creds.scopes or [])
     if granted != sorted(args.scope):
         print(f"STOP: granted scopes are {granted}, asked for {sorted(args.scope)}",
               file=sys.stderr)
@@ -1386,15 +1516,18 @@ def main() -> int:
         "refresh_token": creds.refresh_token,
     })
     # Straight into Secret Manager on stdin. Nothing is written to disk and nothing is echoed.
+    # --format=value(name) puts the new version's resource name alone on stdout, so nothing
+    # is parsed out of stderr (gcloud secrets versions add reference, read 2026-09-18).
     result = subprocess.run(
         ["gcloud", "secrets", "versions", "add", args.secret,
-         "--data-file=-", "--project", args.project],
+         "--data-file=-", "--project", args.project, "--format=value(name)"],
         input=blob.encode("utf-8"), capture_output=True, check=False)
     if result.returncode != 0:
         print("STOP: secret write failed: " + result.stderr.decode("utf-8")[:400], file=sys.stderr)
         return 5
+    version = result.stdout.decode("utf-8").strip() or "(no name returned; read it back with gcloud)"
     print("granted scopes: " + ", ".join(granted))
-    print("secret version: " + result.stderr.decode("utf-8").strip().splitlines()[-1][:200])
+    print("secret version: " + version[:200])
     return 0
 
 
@@ -1402,20 +1535,28 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-**Run** (both people present, no screen share, the browser signed in as the robot only):
+**Run** (both people present, no screen share, the browser signed in as the robot only). The exact
+invocation is in day-1 `T1-17` for Eve and day-2 `T2-17` for the doer; the shape is:
 
 ```bash
-python3.12 build/tools/consent.py --client-json="$HOME/eve-client.json" \
+python3.12 "$HOME/agp-3day/tools/consent.py" --client-json="<one path chosen once>" \
   --scope=https://www.googleapis.com/auth/admin.reports.audit.readonly \
   --secret=eve-refresh-token --project="$EVE_PROJECT"
-shred -u "$HOME/eve-client.json" 2>/dev/null || rm -P "$HOME/eve-client.json"
 ```
+
+The tool prints a URL and waits. Copy it by hand into the robot's clean profile, complete the
+consent there, and the tool's local listener receives the code. Afterwards the client JSON is
+removed from the one path it was written to and its absence is proved with `ls` (day-2 `T2-17`
+shows the exact lines; Eve's client JSON is kept until the day-3 unwind because Eve is left
+polling).
 
 **Verify:** exactly one scope printed; a secret version line printed; then, in the Admin console,
 **Security > Access and data control > API controls > Manage Domain Wide Delegation**, this
 client id is **absent** (Google's domain-wide delegation page, read 2026-09-17). For the doer's
 sitting the scope is `https://www.googleapis.com/auth/admin.directory.user` and the secret is
-`steward-refresh-token`.
+`steward-refresh-token`. `run_local_server` takes `open_browser` ("Whether or not to open the
+authorization URL in the user's browser"), `port` and `authorization_prompt_message`
+(google-auth-oauthlib `flow` reference, read 2026-09-18).
 
 **Undo, and this is K4:** the robot revokes the grant at myaccount.google.com under
 **Data and privacy > Third-party apps and services**, then
@@ -1425,181 +1566,39 @@ what stops work now.
 
 ---
 
-## §7 `tools/bootstrap.sh`
+## §7 There is no bootstrap script. Day 1 is the bootstrap
 
-Everything a project needs before any code is deployed. It prints each command before running it
-and stops on the first failure. No `--yes` on anything destructive, no default project, no secret
-echoed.
+Until 2026-09-18 this section held `tools/bootstrap.sh`, a script no day file ran. Run as a
+recovery it would have set a weaker Model Armor floor than day-1 `T1-10` agreed, granted
+`steward-actions@` project-wide `roles/bigquery.dataEditor`, written a third `ws_activities` schema
+and aborted on the first already-exists. It was deleted rather than cut down, because every
+one of its effects is a numbered day-1 step with its own verify and undo, and two sources of the
+same truth is how the day files and the code drifted apart in the first place. This table is the
+whole of what it did, mapped to the step that does it now:
 
-```bash
-#!/usr/bin/env bash
-# build/tools/bootstrap.sh
-# Run: bash build/tools/bootstrap.sh
-set -euo pipefail
+| What the script did | The step that does it | Notes |
+|---|---|---|
+| projects, billing link, labels | day-1 `T1-2`, `T1-3` | |
+| APIs per project | day-1 `T1-3` | `billingbudgets.googleapis.com` on `CORE_PROJECT`; `aiplatform` never on `EVE_PROJECT` |
+| a deletion lien and a budget per project | day-1 `T1-4` | |
+| `eve` dataset and its three tables | day-1 `T1-9`, seeded at `T1-9a` | the schemas in §1's table, and no other |
+| `mo` dataset | day-1 `T1-9` | the views arrive at day-3 `T3-2` |
+| `steward_audit` dataset, `actions` (eighteen columns, §3) and `approvals` | day-1 `T1-12a` | the only audit schema |
+| `eve-verifier@`, `eve-scheduler@` and their bindings | day-1 `T1-12` | |
+| `steward-actions@`, `steward-plan@`, `stewardAuditWriter` and the dataset ACL | day-1 `T1-12a` | the writer is one identity on one dataset, never project-wide; `stewardAuditWriter` carries `bigquery.tables.getData` so the service can read its own approvals |
+| the three doer secrets, the halt seeded `off`, and their bindings | day-1 `T1-12a` | `steward-oauth-client` receives its version at `T1-14a`; the code needs `secretAccessor` on `steward-halt` for `steward-actions@` and nothing more: a `secretVersionAdder` binding for the service lets the halted process un-halt itself and must not exist (reviewed on 2026-09-18) |
+| `eve-refresh-token` and its one reader | day-1 `T1-15` | |
+| the Model Armor floor | day-1 `T1-10` | the flags and values in `T1-10`, not any other |
+| Artifact Registry | day-1 `T1-11` | |
 
-run() { printf '+ %s\n' "$*"; "$@"; }
-
-: "${ORG_DOMAIN:?}" "${REGION:?}" "${BQ_LOCATION:?}" "${BILLING_ACCOUNT:?}"
-: "${CORE_PROJECT:?}" "${EVE_PROJECT:?}" "${DOER_PROJECT:?}" "${MO_PROJECT:?}"
-
-CORE_APIS="secretmanager.googleapis.com logging.googleapis.com monitoring.googleapis.com"
-EVE_APIS="$CORE_APIS bigquery.googleapis.com run.googleapis.com cloudbuild.googleapis.com \
-artifactregistry.googleapis.com cloudscheduler.googleapis.com admin.googleapis.com"
-DOER_APIS="$EVE_APIS aiplatform.googleapis.com modelarmor.googleapis.com"
-
-echo "== 1. projects, billing, APIs, labels =="
-for P in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do
-  gcloud projects describe "$P" >/dev/null 2>&1 || run gcloud projects create "$P" --name="$P"
-  run gcloud billing projects link "$P" --billing-account="$BILLING_ACCOUNT"
-  run gcloud projects update "$P" \
-    --update-labels=agp-build=3-day,agp-owner=platform,agp-data-class=evidence
-done
-# shellcheck disable=SC2086
-run gcloud services enable $CORE_APIS --project="$CORE_PROJECT"
-# shellcheck disable=SC2086
-run gcloud services enable $EVE_APIS --project="$EVE_PROJECT"
-# shellcheck disable=SC2086
-run gcloud services enable $DOER_APIS --project="$DOER_PROJECT"
-# shellcheck disable=SC2086
-run gcloud services enable $EVE_APIS --project="$MO_PROJECT"
-
-echo "== 2. a deletion lien on each project =="
-for P in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do
-  if ! gcloud resource-manager liens create --project="$P" \
-        --restrictions=resourcemanager.projects.delete \
-        --reason="three-day build, evidence in flight" --origin="3-day-build" 2>/dev/null; then
-    echo "  GA lien command refused; trying alpha"
-    run gcloud alpha resource-manager liens create --project="$P" \
-      --restrictions=resourcemanager.projects.delete \
-      --reason="three-day build, evidence in flight" --origin="3-day-build"
-  fi
-  run gcloud resource-manager liens list --project="$P" --format='value(name,restrictions)'
-done
-
-echo "== 3. a budget on each project =="
-for P in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do
-  NUM=$(gcloud projects describe "$P" --format='value(projectNumber)')
-  run gcloud billing budgets create --billing-account="$BILLING_ACCOUNT" \
-    --display-name="3day-$P" --budget-amount=100EUR \
-    --filter-projects="projects/${NUM}" \
-    --threshold-rule=percent=0.5 --threshold-rule=percent=0.9 --threshold-rule=percent=1.0
-done
-
-echo "== 4. datasets and tables =="
-run bq --project_id="$EVE_PROJECT" mk --dataset --location="$BQ_LOCATION" \
-  --description="Eve evidence, insert-only" "${EVE_PROJECT}:eve"
-run bq --project_id="$DOER_PROJECT" mk --dataset --location="$BQ_LOCATION" \
-  --description="Doer audit, insert-only, keyed on agent_id" "${DOER_PROJECT}:steward_audit"
-run bq --project_id="$MO_PROJECT" mk --dataset --location="$BQ_LOCATION" \
-  --description="Mo metrics" "${MO_PROJECT}:mo"
-
-run bq mk --table --project_id="$EVE_PROJECT" --time_partitioning_field=event_time \
-  "${EVE_PROJECT}:eve.ws_activities" \
-  insert_id:STRING,event_time:TIMESTAMP,application:STRING,actor_email:STRING,actor_profile_id:STRING,ip_address:STRING,event_type:STRING,event_name:STRING,parameters:STRING,subject:STRING,ingested_at:TIMESTAMP
-run bq mk --table --project_id="$EVE_PROJECT" "${EVE_PROJECT}:eve.poll_runs" \
-  run_time:TIMESTAMP,rows_landed:INT64,findings:INT64,gaps:STRING
-run bq mk --table --project_id="$EVE_PROJECT" "${EVE_PROJECT}:eve.watchlists" \
-  kind:STRING,value:STRING
-
-run bq mk --table --project_id="$DOER_PROJECT" --time_partitioning_field=ts \
-  --clustering_fields=operation,verdict \
-  "${DOER_PROJECT}:steward_audit.actions" \
-  row_id:STRING,ts:TIMESTAMP,agent_id:STRING,request_id:STRING,phase:STRING,operation:STRING,target:STRING,level:INT64,requester:STRING,approver:STRING,approval_nonce:STRING,verdict:STRING,denial_reason:STRING,request_hash:STRING,dry_run:BOOL,halt_state:STRING,google_status:STRING,detail:STRING
-run bq mk --table --project_id="$DOER_PROJECT" --time_partitioning_field=created_at \
-  "${DOER_PROJECT}:steward_audit.approvals" \
-  nonce:STRING,request_hash:STRING,approver:STRING,created_at:TIMESTAMP,operation:STRING,target:STRING,level:INT64
-
-echo "== 5. service accounts, keyless =="
-run gcloud iam service-accounts create eve-verifier --project="$EVE_PROJECT"
-run gcloud iam service-accounts create eve-scheduler --project="$EVE_PROJECT"
-run gcloud iam service-accounts create steward-actions --project="$DOER_PROJECT"
-run gcloud iam service-accounts create steward-plan --project="$DOER_PROJECT"
-run gcloud projects add-iam-policy-binding "$EVE_PROJECT" \
-  --member="serviceAccount:eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" \
-  --role=roles/bigquery.dataEditor
-run gcloud projects add-iam-policy-binding "$EVE_PROJECT" \
-  --member="serviceAccount:eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" \
-  --role=roles/bigquery.jobUser
-run gcloud projects add-iam-policy-binding "$DOER_PROJECT" \
-  --member="serviceAccount:steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --role=roles/bigquery.dataEditor
-run gcloud projects add-iam-policy-binding "$DOER_PROJECT" \
-  --member="serviceAccount:steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --role=roles/bigquery.jobUser
-run gcloud projects add-iam-policy-binding "$DOER_PROJECT" \
-  --member="serviceAccount:steward-plan@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --role=roles/aiplatform.user
-
-echo "== 6. secrets. Values are never passed on a command line =="
-run gcloud secrets create eve-refresh-token --replication-policy=user-managed \
-  --locations="$REGION" --project="$EVE_PROJECT"
-run gcloud secrets create steward-refresh-token --replication-policy=user-managed \
-  --locations="$REGION" --project="$DOER_PROJECT"
-run gcloud secrets create steward-halt --replication-policy=user-managed \
-  --locations="$REGION" --project="$DOER_PROJECT"
-printf 'off' | gcloud secrets versions add steward-halt --data-file=- --project="$DOER_PROJECT"
-run gcloud secrets add-iam-policy-binding eve-refresh-token \
-  --member="serviceAccount:eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" \
-  --role=roles/secretmanager.secretAccessor --project="$EVE_PROJECT"
-for S in steward-refresh-token steward-halt; do
-  run gcloud secrets add-iam-policy-binding "$S" \
-    --member="serviceAccount:steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" \
-    --role=roles/secretmanager.secretAccessor --project="$DOER_PROJECT"
-done
-run gcloud secrets add-iam-policy-binding steward-halt \
-  --member="serviceAccount:steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" \
-  --role=roles/secretmanager.secretVersionAdder --project="$DOER_PROJECT"
-
-echo "== 7. the Model Armor floor on every project that can call a model =="
-for P in "$CORE_PROJECT" "$DOER_PROJECT"; do
-  run gcloud beta model-armor floorsettings update \
-    --full-uri="projects/${P}/locations/global/floorSetting" \
-    --enable-floor-setting-enforcement=TRUE \
-    --pi-and-jailbreak-filter-settings-enforcement=enable \
-    --pi-and-jailbreak-filter-settings-confidence-level=low-and-above \
-    --malicious-uri-filter-settings-enforcement=enable \
-    --rai-settings-filters='[{"filterType":"HATE_SPEECH","confidenceLevel":"medium-and-above"},{"filterType":"DANGEROUS","confidenceLevel":"medium-and-above"}]' \
-    --project="$P"
-  run gcloud beta model-armor floorsettings describe \
-    --full-uri="projects/${P}/locations/global/floorSetting" --project="$P"
-done
-
-echo "== 8. artifact registry, for the source deploys =="
-run gcloud artifacts repositories create cloud-run-source-deploy \
-  --repository-format=docker --location="$REGION" --project="$EVE_PROJECT"
-run gcloud artifacts repositories create cloud-run-source-deploy \
-  --repository-format=docker --location="$REGION" --project="$DOER_PROJECT"
-
-echo "BOOTSTRAP OK"
-```
-
-**Verify** after it prints `BOOTSTRAP OK`:
-
-```bash
-for P in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do
-  echo "== $P"; gcloud resource-manager liens list --project="$P" --format='value(restrictions)'
-  gcloud projects describe "$P" --format='value(labels)'
-done
-bq ls --project_id="$EVE_PROJECT"; bq ls --project_id="$DOER_PROJECT"
-gcloud beta model-armor floorsettings describe \
-  --full-uri="projects/${DOER_PROJECT}/locations/global/floorSetting" --project="$DOER_PROJECT"
-gcloud secrets versions access latest --secret=steward-halt --project="$DOER_PROJECT"
-```
-
-Look for: one lien per project; `eve` and `steward_audit` listed; the floor setting with
-enforcement `TRUE`; the halt reading `off`. **If `gcloud` rejects any Model Armor flag, stop**: set
-the floor in the Cloud console instead, screenshot the settings page and record the console path,
-rather than guessing a flag name (flags read on 2026-09-17, and they are beta).
-
-**Undo:** `gcloud resource-manager liens delete <lien>` then
-`gcloud projects delete <project>` per project, one at a time, never with `--quiet`.
+There is nothing to run here and nothing to undo here.
 
 ---
 
-## §8 `requirements.txt`, three of them
+## §8 `requirements.txt`, four of them, one per directory
 
 ```
-# build/eve/requirements.txt
+# $HOME/agp-3day/eve/requirements.txt
 google-api-python-client==2.184.0
 google-auth==2.41.1
 google-cloud-bigquery==3.38.0
@@ -1607,18 +1606,22 @@ google-cloud-secret-manager==2.25.0
 ```
 
 ```
-# build/doer/requirements.txt
+# $HOME/agp-3day/doer/requirements.txt
 flask==3.1.2
 gunicorn==23.0.0
 google-api-python-client==2.184.0
 google-auth==2.41.1
 google-cloud-bigquery==3.38.0
 google-cloud-secret-manager==2.25.0
+```
+
+```
+# $HOME/agp-3day/plan/requirements.txt
 google-genai==1.46.0
 ```
 
 ```
-# build/tools/requirements.txt
+# $HOME/agp-3day/tools/requirements.txt
 google-auth==2.41.1
 google-auth-oauthlib==1.2.2
 ```
@@ -1656,13 +1659,27 @@ deploying anything.
 | BigQuery Python client, `Client.insert_rows_json` | `row_ids` for duplicate suppression; an empty return means every row landed |
 | Vertex AI generative AI SDKs overview | `genai.Client(vertexai=True, project=..., location=...)` and `client.models.generate_content` |
 
+Read on 2026-09-18, for the corrections of that date:
+
+| Page | Used for |
+|---|---|
+| `gcloud logging read` reference (`docs.cloud.google.com/sdk/gcloud/reference/logging/read`) | generally available; a filter positional, `--limit`, `--freshness` ("Return entries that are not older than this value"), `--project`; replaces the non-existent `gcloud run jobs executions logs` in §4 and day-2 `T2-24` |
+| `gcloud secrets versions add` reference | `--data-file=-` reads stdin; the gcloud-wide `--format='value(name)'` prints the new version's name on stdout, which §6 reads instead of stderr |
+| google-auth `google.oauth2.credentials.Credentials` reference (`googleapis.dev/python/google-auth`) | `granted_scopes`: "The scopes that were consented/granted by the user. This could be different from the requested scopes and it could be empty if granted and requested scopes were same" (§6) |
+| google-auth-oauthlib `flow` reference (`google-auth-oauthlib.readthedocs.io`) | `run_local_server(port, open_browser, authorization_prompt_message, ...)`; `open_browser`: "Whether or not to open the authorization URL in the user's browser" (§6) |
+| BigQuery access control (`docs.cloud.google.com/bigquery/docs/access-control`) | the permissions `bigquery.tables.getData`, `bigquery.tables.updateData`, `bigquery.tables.get`, `bigquery.datasets.get` in `stewardAuditWriter` (day-1 `T1-12a`) |
+| BigQuery, control access to resources with IAM (`.../bigquery/docs/control-access-to-resources-iam`) | dataset access entries via `bq update --source`; the examples show `READER`, `WRITER`, `OWNER` only, so a custom role in the entry is `Assumption:` (§10) |
+| `bq` command-line tool reference | `bq mk --table` with `--time_partitioning_field`, `--time_partitioning_type`, `--clustering_fields` and an inline `field:type,...` schema (day-1 `T1-9`, `T1-12a`) |
+| `gcloud run jobs execute` reference | `--wait`, `--args`, `--update-env-vars` ("environment variables overrides for an execution of a job") (§4, day-2 `T2-24`) |
+
 ## §10 What is not settled, and how each fails loudly
 
 | Unsettled | Where it bites | The check that catches it |
 |---|---|---|
 | The exact Admin log event names for role changes, security settings and delegation clients | §2's regular expressions | The third verify query prints the distinct `event_name` values this tenant actually emits; the seeded test must land in a rule, and if it does not you widen the expression to a name you can see and record it |
 | Whether the tenant's edition shares `token`, `saml` or `access_transparency` | §1's application list | The poller logs `EVE-POLL-GAP application=... status=403` and records it as a coverage gap, not a stop. The `admin` application alone carries all six detections |
-| Whether `gcloud resource-manager liens create` is generally available on the team's gcloud version | §7 step 2 | It tries GA, then `alpha`, and `set -e` stops the script if neither works |
+| Whether `gcloud resource-manager liens create` is generally available on the team's gcloud version | day-1 `T1-4` (§7 is no longer a script) | The step tries `alpha`, then the general-availability spelling, and stops loudly if neither works |
+| Whether BigQuery accepts a project-level custom role (`projects/<p>/roles/stewardAuditWriter`) in a dataset access entry | day-1 `T1-12a`, the writer grant | Google's access-control page shows only `READER`, `WRITER` and `OWNER` in its `bq update --source` examples (read 2026-09-18). `T1-12a` reads the access array back; if the entry is refused, the fallback is `roles/bigquery.dataEditor` in the **dataset** access entry, never at project level, and the widening is recorded |
 | Single use of an approval nonce, inside BigQuery's streaming window | §3's `nonce_used` | A replay within the streaming buffer is possible in principle. The run is attended and the approver is in the room; the nonce is also bound to the request hash and expires in 900 seconds. Record it as a known residual, do not claim it as prevented |
 | The Google Auth Platform console path for a Desktop client with an Internal audience | §6 | `consent.py` refuses anything that is not a Desktop client JSON, and refuses a scope set that is not exactly what was asked for |
-| Whether `--set-secrets` is wanted at all on the poller | §1 | It is not needed. The service reads its credential with `access_secret_version`; leaving the flag off is one fewer copy of the token |
+| Whether `granted_scopes` is populated by the installed-app flow on the pinned google-auth-oauthlib | §6 | google-auth's `Credentials` documents it as "The scopes that were consented/granted by the user", empty when granted and requested were the same (read 2026-09-18); the tool treats empty as "as requested" and both sittings read the printed list aloud in any case |

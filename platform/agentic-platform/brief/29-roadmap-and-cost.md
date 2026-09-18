@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-09-18
+- 2026-09-18: the start of the build, the builder's order and the opening-sequence diagram now follow the setup set's block order and dated milestones (Tier R before Tier C, SD-13); the proof-of-value and three-day alternatives are named with their durations; the effort figures come from setup/README §3.2 and pov/README §4 instead of the superseded SETUP.md §0.4; the setup script is a helper only (SD-37); the lead-time list points at setup/04.
 
 ## What you will understand by the end
 
@@ -57,11 +58,27 @@ A decision that blocks two gates sits in the earliest, its later effect noted wh
 
 ## What can start with the people who exist
 
-Tiers C and R are the only tiers the existing organisation can staff. The first delivery is the tenant app baseline: fifteen runbook steps, GE-0 to GE-14, from importing the app's project to staging the tenant egress gateway ([runbook](../03-gemini-enterprise-environment.md#16-runbook-bringing-the-environment-to-baseline)). The set's README says this baseline needs no factory ([builder's order](../README.md#reading-order-for-a-builder)); the runbook imports the project through the factory's `tenant-app` module after the folder and core project exist, so it needs the folder, though no agent project. Tier R follows once the factory has run.
+Tiers C and R are the only tiers the existing organisation can staff, and the build of record opens them in that order: Tier R first, Tier C after it (SD-13) ([blocks](../setup/README.md#31-blocks)). The first act of the programme is not a platform step but the toil baseline, `TB-1.1`, which cannot be taken later; day one is files 01 to 05 (conventions, the toil baseline, decisions and people, purchases by lead time, the read-only Gemini Enterprise inventory). Then the organisation (06 to 08, the witness organisation in parallel under IT security), Tier R (09 to 18: folders and SCC, core projects, keys, PAM, policies, logging, paging, the register, the module equivalents and the Tier R record, then the floor, spikes and K7), and Tier C (19 and 20): the tenant app baseline, GE-0 to GE-14, from importing the app's project to staging the tenant egress gateway ([runbook](../03-gemini-enterprise-environment.md#16-runbook-bringing-the-environment-to-baseline)), which needs the folder, the core projects and the module equivalents of 17, though no agent project. The set's README and the app's runbook still state the baseline's dependence on the factory differently (Chapter 25).
+
+The earliest dates, assuming one platform owner and people available when named, are the setup set's ([critical path](../setup/README.md#34-parallel-sittings-and-the-critical-path)); every date is an earliest date, not a commitment:
+
+| Milestone | Record | Earliest |
+|---|---|---|
+| Decisions and people signed | 03 | 2026-09-29 to 2026-10-27 |
+| Toil baseline complete | `TOIL_BASELINE_FILE` (02) | four ISO weeks after the first Monday after the HR works-council answer, whose date is *tbd* |
+| Tier R open | `TIER_R_RECORD` (17) | 2026-11-10 to 2026-12-08 |
+| Tier C open | `TIER_C_RECORD` (20) | 2026-12-08 to 2027-01-19 |
+| Eve-H live | `EVE_H_LIVE_RECORD` (28) | 2026-12-22 to 2027-01-19, *tbd* on Eve code |
+| Pre-grant Wall-E built | `PENTEST_RECORD` (37) | 2027-02-02 to 2027-03-16, *tbd* on Wall-E code |
+| The grant | `GRANT_RECORD` (38) | *tbd*; not before 2027-03 |
+| Stage 0 | `STAGE0_RECORD` (39) | one to two weeks after the grant |
+| Mo's first merge | `FIRST_MERGE_RECORD` (40) | 13 to 18 weeks after Stage 0 |
+
+That is six to seven months to Stage 0. Two shorter sets exist beside the full build and hand over to it with nothing torn down. The proof of value ([pov](../pov/README.md)) runs Tiers C, R and W on the production tenant with a doer that holds no Workspace admin role and no super admin to any agent, Eve over the human super admins: 20 to 26 person-days of procedure and 40 to 64 engineer-days of code, 16 to 20 weeks elapsed with a dedicated engineer, 26 to 34 weeks if one person does both. The three-day build ([3-day](../3-day/README.md)) is two people and six person-days on three consecutive days, four projects, Eve polling the admin audit log through the Reports API before any doer exists, a doer holding one organisational-unit-scoped privilege over four synthetic accounts, and Mo's scorecard: a demonstration, not compliance evidence, which hands over to the proof of value.
 
 ## Day-one lead-time items
 
-Some items gate only later tiers but take longest to obtain, so they start now ([lead-time items](../../wall-e/PREREQUISITES.md#9-security-artefacts-and-lead-time-items)):
+Some items gate only later tiers but take longest to obtain, so they start now, in the setup set's purchase order, longest lead time first ([purchases and lead times](../setup/04-purchases-and-lead-times.md#1-the-purchase-table-longest-lead-time-first)):
 
 - **The data-protection question and works-council information**, the longest item in the plan. The DPO's retention ceiling (P13, open) blocks the first Tier W write and the evidence lock. The prerequisites page still dates the question to Stage 3; Wall-E's decision 8 carries the platform's change (worker information before Stage 1, DPO engagement before the grant, P129), and no register row names the stale line.
 - **The witness organisation**, run by IT security (P14, open; `Assumption:` Cloud Identity Free; Chapter 16, Eve, the independent controller).
@@ -75,18 +92,18 @@ Mo adds one that cannot be recovered later: four weeks of measured toil for the 
 
 ## The builder's order
 
-The builder's reading order is a build order, driven by what cannot be changed after creation ([builder's order](../README.md#reading-order-for-a-builder)):
+The build order is the setup set's block order, platform, then Mo and Eve, then Wall-E, driven by what cannot be changed after creation ([blocks](../setup/README.md#31-blocks)):
 
-1. **The key project and the HSM constraints first.** Every key is HSM by folder policy (Chapter 13, Supply chain, keys and recovery).
-2. **The logging project and its buckets, built right at Stage 0.** Per-bucket CMEK is set only at creation and a retention lock cannot be shortened, so a mistake means new buckets and a broken evidence chain. The lock waits for the DPO's ceiling (Chapter 12, Data, logging, retention and sovereignty).
-3. **The deny policy, the Principal Access Boundary and the PAM catalogue, with the folder**, before the first project inherits (Chapter 8, Identity, privileged access and the fleet kill switch).
-4. **The first factory run.** Core projects, names, labels, budgets and the policy baseline.
-5. **The tenant app to baseline**, closing Tier C.
-6. **The first nonprod project, to run the spikes.** P3's two spikes on a throwaway Tier W nonprod project made by the factory, P42's CC-6 and CC-11 sub-spikes and P57's throwaway-app spike, all before any Tier W project.
+1. **Day one (01 to 05).** The toil baseline first, `TB-1.1` before any other step, because its recording weeks cannot be recovered; then conventions, decisions, people and the platform repository, purchases by lead time, the read-only Gemini Enterprise inventory.
+2. **The organisation (06 to 08).** Roster, break-glass and the removal of the organisation-creation defaults, then billing; the witness organisation in parallel, performed by IT security.
+3. **Tier R (09 to 18).** Folders and SCC, the core projects, the keys (every key is HSM by folder policy, Chapter 13, Supply chain, keys and recovery), PAM, which withdraws the bootstrap exception, the deny policy and the Principal Access Boundary before the first project inherits (Chapter 8, Identity, privileged access and the fleet kill switch), central logging and its buckets, whose per-bucket CMEK is set only at creation and whose retention lock cannot be shortened and waits for the DPO's ceiling (Chapter 12, Data, logging, retention and sovereignty), paging, the register, the module equivalents and the Tier R record, then the floor, the spikes and K7.
+4. **Tier C (19 and 20)**, after Tier R (SD-13): the tenant app to baseline and its gateway, in parallel with 21 to 29, closed before 35.
+5. **The sandbox tenant (21)**, before Eve, because nonprod Eve and the Wall-E twin need a tenant.
+6. **Mo and Eve (22 to 29)**, one block run in parallel; Eve's first half never waits on Mo and ends with `EVE_H_LIVE_RECORD`.
+7. **Wall-E (30 to 39)**, starting only on `EVE_H_LIVE_RECORD`: Workspace side, project and data plane, consents, action services and approval surfaces, the identity spike and Model Armor, engine and gateways, the joins to Eve and Mo, the sandbox rehearsal and penetration test, the two-person gate and grant, Stage 0.
+8. **After Stage 0 (40 and 41)**: Mo's first merged proposal, Eve S3 and S4; and the standing gate, drill and evidence file (42), whose evidence half runs as soon as central logging exists.
 
-The agents' runbooks come after, because the platform now does part of their work.
-
-Two spikes do not fit this order. P4's engine half (custom constraint CC-8) and P8's principal-set spelling (via P61) sit in the first gate group, and P8's spelling must be proven on a throwaway engine before the folder deny policy is applied, so they cannot wait for step 6. The pages define a spike as a test on a throwaway resource in nonprod but not where that engine lives before the folder and factory exist ([P8 and P61](../12-open-decisions.md#2-before-the-folder-exists); [custom constraints](../02-landing-zone-and-tiers.md#43-custom-constraints-what-is-verifiable-today-and-the-spike-list-p42-p4-partly-closed)): a throwaway project outside the platform folder, or the folder created at step 3 with the deny policy held back and CC-8 in dry run until both pass. Until the platform owner records one, this is an open sequencing question (Chapter 25), and the diagram shows the two spikes on their own path.
+Two spikes do not fit this order. P4's engine half (custom constraint CC-8) and P8's principal-set spelling (via P61) sit in the first gate group, and P8's spelling must be proven on a throwaway engine before the folder deny policy is applied, so they cannot wait for the spikes of 18. The pages define a spike as a test on a throwaway resource in nonprod but not where that engine lives before the folder and factory exist ([P8 and P61](../12-open-decisions.md#2-before-the-folder-exists); [custom constraints](../02-landing-zone-and-tiers.md#43-custom-constraints-what-is-verifiable-today-and-the-spike-list-p42-p4-partly-closed)): a throwaway project outside the platform folder, or the folder created at step 3 with the deny policy held back and CC-8 in dry run until both pass. Until the platform owner records one, this is an open sequencing question (Chapter 25), and the diagram shows the two spikes on their own path.
 
 ## The first spikes: what the design holds until each passes
 
@@ -107,47 +124,51 @@ The pattern is deliberate: apart from P3's first spike, which the grant needs, a
 
 ```mermaid
 flowchart TD
-  L["Day one - DPO question, works-council information, witness organisation, SIEM and MDR procurement, quotes, hardware keys, licences, organisation grants, approval surface, Mo toil baseline"]
+  L["Day one, 01 to 05 - toil baseline TB-1.1 first, HR works-council question, conventions, decisions and people, purchases by lead time, GE inventory"]
+  O["Organisation, 06 to 08 - roster, break-glass, billing; witness organisation in parallel by IT security"]
   SP["Pre-folder spikes P4 engine half and P8 via P61 - throwaway engine, venue open"]
   G2["Gate before the folder - P5 P11 P21 P31 decided, P4 and P61 spikes passed"]
-  B["Key project and HSM, logging project and buckets, deny policy PAB PAM, first factory run"]
-  C["Tier C opens at GE-14 - SCC Premium bought, nobody new"]
-  R["Tier R opens - nobody new"]
-  N["First nonprod project - spikes P3, P42 sub-spikes CC-6 and CC-11, P57"]
+  R["Tier R, 09 to 18 - folders and SCC, core projects, keys, PAM, deny and PAB, logging, paging, register, module equivalents, floor, spikes, K7 - TIER_R_RECORD earliest 2026-11-10 to 2026-12-08"]
+  C["Tier C, 19 and 20 - tenant app to GE-14 and its gateway - TIER_C_RECORD earliest 2026-12-08 to 2027-01-19"]
+  SB["Sandbox tenant, 21"]
+  ME["Mo and Eve, 22 to 29 - Mo foundations; Eve-H over the human super admins, witness grants, second-human proof"]
+  E["EVE_H_LIVE_RECORD, 28 - earliest 2026-12-22 to 2027-01-19"]
+  WE["Wall-E, 30 to 37 - Workspace side, project, consents, action services, identity spike, engine and gateways, joins, sandbox rehearsal and penetration test - PENTEST_RECORD earliest 2027-02-02 to 2027-03-16"]
   G3["Gate before Tier W writes - P13 P22 P24 P25, spikes P3 and P57, second operator, security reviewer, blind grader"]
-  W["Tier W opens"]
-  E["Eve observe-and-report layer live and drilled - witness, six-stream sink, paging"]
   G4["Grant checklist green - P7 P10 P14 P29, deviation signed, P3 spike 1, second human super admin, SecOps and MDR, DPO, penetration test"]
-  GR["Super-admin grant on walle@ - Tier P opens"]
-  S0["Wall-E S0 on the narrow client - floor 3 to 4 weeks"]
+  GR["Super-admin grant on walle@, 38 - Tier P opens - not before 2027-03"]
+  S0["Wall-E S0 on the narrow client, 39 - floor 3 to 4 weeks"]
   G5["Gate before Stage 1 - P17 P18 P19, P28 signed, remaining propagation items"]
   S1["S1 - floor 4 to 6 weeks"]
   S2["S2 - floor 6 to 8 weeks"]
-  S3["S3 - floor 6 to 8 weeks, Eve halts from S3 entry"]
-  S4["S4 - floor 8 to 12 weeks, Eve signs from S4 entry"]
-  L --> G2
+  S3["S3 - floor 6 to 8 weeks, Eve halts from S3 entry, 41"]
+  S4["S4 - floor 8 to 12 weeks, Eve signs from S4 entry, 41"]
+  M["Mo's first merged proposal, 40 - 13 to 18 weeks after Stage 0"]
+  L --> O
+  O --> G2
   SP --> G2
-  G2 --> B
-  B --> C
-  B --> R
-  B --> N
-  N --> G3
+  G2 --> R
+  R --> C
+  R --> SB
+  R --> ME
+  SB --> ME
+  ME --> E
   R --> G3
-  G3 --> W
-  L --> E
-  W --> G4
-  E --> G4
-  N -->|"P3 spike 1"| G4
+  G3 --> WE
+  E --> WE
+  C --> WE
+  WE --> G4
   G4 --> GR
   GR --> S0
   S0 --> G5
   G5 --> S1
   S1 --> S2
+  S2 --> M
   S2 --> S3
   S3 --> S4
 ```
 
-Eve's observe-and-report layer runs in parallel with the Tier W work, so the grant waits for whichever finishes later.
+Tier C and the Mo and Eve block run in parallel after Tier R; Wall-E starts only on `EVE_H_LIVE_RECORD`, and Tier C closes before Wall-E's engine registration (35) and before the grant (38), so the grant waits for whichever finishes later.
 
 ## The super-admin grant sequence
 
@@ -178,9 +199,9 @@ An item closes with a dated pointer line citing the platform row; the reconcilia
 
 ## Which runbook creates what, and the effort shape
 
-A grant on a resource is made by that resource's project runbook ([which runbook](../../project-topology.md#7-which-runbook-creates-what)). Since 2026-09-13 creating a project is a factory call, credential-path bindings go through the factory's privileged phase under PAM (P142), and Wall-E's setup script keeps only Workspace-side phases. Eve's runbook gains a pre-grant phase for the observe-and-report layer; IT security builds the witness.
+A grant on a resource is made by that resource's project runbook ([which runbook](../../project-topology.md#7-which-runbook-creates-what)). Since 2026-09-13 creating a project is a factory call, credential-path bindings go through the factory's privileged phase under PAM (P142), and Wall-E's setup script is a helper only, under decision SD-37: the manual steps in setup files 30 to 39 are canonical, a subcommand may replace a manual step only after its listed defects are fixed and its self-test has a live read-only mode, and until then every step that cites the script is BLOCKED for the script and gives the manual commands ([what the set replaces](../setup/README.md#1-what-the-set-builds-and-what-it-replaces)). Eve's build gains a pre-grant block for the observe-and-report layer (setup 23 to 28); IT security builds the witness (08).
 
-The effort is lopsided ([phase durations](../../wall-e/SETUP.md#04-how-long-each-phase-takes)). Wall-E's infrastructure is about three working days hands-on, nearer a week with the denial suite and the kill-switch drill; the three code artefacts it deploys are weeks of engineering. None of this is the critical path: the blocking decisions take days to weeks of other people's time and the grant gate weeks to months, so programme effort goes first into decisions, purchases and people.
+The effort is lopsided ([file table](../setup/README.md#32-the-file-table)). The setup set takes its hands-on and elapsed figures from each file's own estimate where the file carries one, because the plan's figures had under-booked six of them, all in the direction of other people's diaries; the superseded SETUP.md §0.4 figures are kept only where a file quotes them, each recording what that phase did not include (the Workspace side was costed at 2 h and included neither the repository, nor the roster entry, nor the witnessed custody; it is about 3 h hands-on and a day elapsed). `Assumption:` summing §3.2's rows, Wall-E's files 30 to 39 are about sixteen hands-on days, of which the sandbox rehearsal and penetration test (37) are about 31 hours over nine sittings and Stage 0 (39) about 25 hours over eight, with about four weeks elapsed on the rehearsal and weeks to months on the gate; the code Wall-E deploys is weeks of engineering on top. The whole build is 85 to 90 person-days hands-on, thirteen appointments and thirteen purchase rows, six to seven months to Stage 0 and nine to twelve months to Mo's first merged proposal ([against the full build](../pov/README.md#4-pov_stage_dates-the-two-stages)). None of this is the critical path: the blocking decisions take days to weeks of other people's time and the grant gate weeks to months, so programme effort goes first into decisions, purchases and people.
 
 ## Cost
 
@@ -235,7 +256,7 @@ Nor is any cost-class line priced, and each needs a named person to obtain a fig
 | Hardware keys, ten in total | procurement | Wall-E's Phase 3, before the grant |
 | The sandbox tenant's licences | platform owner; the seat count is *tbd* | Tier W on the TISAX page; before the grant on Wall-E's prerequisites page |
 
-Sources: [Eve's unpriced lines](../../eve/01-hld.md#cost), [budgets per tier](../02-landing-zone-and-tiers.md#37-budgets-per-tier-p39-the-amounts-stay-p31), [before the folder exists](../12-open-decisions.md#2-before-the-folder-exists), [what does not yet exist](../11-tisax.md#12-documentation-task-versus-control-that-does-not-exist), [on-call tool](../07-monitoring-detection-incident-response.md#92-the-on-call-tool-escalation-and-acknowledgement-targets), [lead-time items](../../wall-e/PREREQUISITES.md#9-security-artefacts-and-lead-time-items). P31 is the sharpest: the factory writes a budget per project and quota alerts fire on numbers that remain guesses.
+Sources: [Eve's unpriced lines](../../eve/01-hld.md#cost), [budgets per tier](../02-landing-zone-and-tiers.md#37-budgets-per-tier-p39-the-amounts-stay-p31), [before the folder exists](../12-open-decisions.md#2-before-the-folder-exists), [what does not yet exist](../11-tisax.md#12-documentation-task-versus-control-that-does-not-exist), [on-call tool](../07-monitoring-detection-incident-response.md#92-the-on-call-tool-escalation-and-acknowledgement-targets), [purchases and lead times](../setup/04-purchases-and-lead-times.md#1-the-purchase-table-longest-lead-time-first). P31 is the sharpest: the factory writes a budget per project and quota alerts fire on numbers that remain guesses.
 
 ### The recurring cost of project-per-agent
 
@@ -251,4 +272,4 @@ States on 2026-09-14:
 - **Spike:** P3, P4, P6 via P57 and P8 via P61; P42 carries three sub-spikes.
 - **Page disagreements and open sequencing:** register rows 10–14 are open until the propagation stage runs. The Tier C baseline's dependence on the factory is stated differently in the set's README and the app's runbook; Mo's calendar position for its Eve reads differs from the grant order; where the P4 and P61 spikes run before the folder exists is unsettled. All three are in Chapter 25's list of unresolved points.
 
-Read next: [the tier gate](../01-hld.md#04-the-tier-gate-what-must-exist-before-a-tier-opens), [the register's gate groups](../12-open-decisions.md#0-the-register-in-one-screen), [the grant checklist](../11-tisax.md#63-compensations-as-preconditions--the-checklist-the-gate-reads), [Wall-E's stages](../../wall-e/05-autonomy-ladder.md#7-the-six-stages), [the propagation stage](../01-hld.md#18-what-this-hld-requires-of-the-wall-e-eve-and-mo-sets) and [lead-time items](../../wall-e/PREREQUISITES.md#9-security-artefacts-and-lead-time-items). Chapter 25, Decisions awaiting the owner, names who must answer each open row.
+Read next: [the tier gate](../01-hld.md#04-the-tier-gate-what-must-exist-before-a-tier-opens), [the register's gate groups](../12-open-decisions.md#0-the-register-in-one-screen), [the grant checklist](../11-tisax.md#63-compensations-as-preconditions--the-checklist-the-gate-reads), [Wall-E's stages](../../wall-e/05-autonomy-ladder.md#7-the-six-stages), [the propagation stage](../01-hld.md#18-what-this-hld-requires-of-the-wall-e-eve-and-mo-sets), [the setup set's order](../setup/README.md#3-the-order) and [purchases and lead times](../setup/04-purchases-and-lead-times.md#1-the-purchase-table-longest-lead-time-first). Chapter 25, Decisions awaiting the owner, names who must answer each open row.

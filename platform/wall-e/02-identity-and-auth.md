@@ -586,7 +586,7 @@ to any delegated admin role on the platform.
 | Fact | Status | What it means now |
 |---|---|---|
 | Suspension has no standalone privilege; it is a sub-action of *Users → Update*, beside rename, move, password reset and aliases | **Stale.** Google's page now lists *Suspend users* among the Update sub-permissions that can be individually delegated | For Wall-E the separation was and remains `SAFE_USER_FIELDS` and the ladder levels, now as hard invariants in the policy chain |
-| *License Management* is one indivisible privilege with no read-only half | Holds | Super Admin holds it; the narrow client's `apps.licensing` scope and the catalogue bound its use. For Eve's read-only role it decides her scope list (PREREQUISITES D2b) |
+| *License Management* is one indivisible privilege with no read-only half | Holds | Super Admin holds it; the narrow client's `apps.licensing` scope and the catalogue bound its use. For Eve's read-only role it decides its scope list (PREREQUISITES D2b) |
 | Groups, Reports, Security settings, Domain settings, Billing, Data Transfer and Support privileges cannot be OU-scoped | Holds | Super Admin is tenant-wide by construction; group-management privileges not honouring OU scope is why group classification is its own control |
 | An OU-scoped read of `directory.admins.list` returns only the admins inside that unit, often none, and an empty result reads as success | Holds | The reason the floor-list assertion exists and the reason Eve's role is customer-scoped |
 
