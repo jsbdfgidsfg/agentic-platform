@@ -3,7 +3,7 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-18. The corrections this page listed as owed on 2026-09-17 were made in
+- Last reviewed: 2026-09-20 (§14 corrected: the six rows at the end of §6.1 are still owed; the one-human variant linked). The corrections this page listed as owed on 2026-09-17 were made in
   the day files and the code on 2026-09-18; §6.1 records them.
 - Reviewed on 2026-09-18 against the proof-of-value set and the design, later the same day: the
   doer now takes the proof of value's Tier P identity rather than spending `steward` at Tier P
@@ -657,8 +657,12 @@ machinery there is (C-15).
 
 Read this page once, both of you, the day before. **Work through §6 the week before**, not the day
 before: four of its rows (the budget role, the identity token on both accounts, the security
-keys, the DPO record and HR's answer) take days to put right. §6.1 is a record, not a task list: the day files already carry it.
-Then open [day 1](day-1-platform-and-eve.md) at `T1-1` and work down. Keep [code.md](code.md) open
+keys, the DPO record and HR's answer) take days to put right. §6.1 is a record of what the day
+files carry, **except its last six rows, "owed after the review of 2026-09-18", which are made
+before the run** (§6 row 11 checks it). Then open [day 1](day-1-platform-and-eve.md) at `T1-1`
+and work down. If one human runs the three days with an assistant driving person A's terminal,
+read [one-human-and-an-assistant.md](one-human-and-an-assistant.md) first: it says what that
+human decides and provides, and why the run is a rehearsal that produces no claim sentence. Keep [code.md](code.md) open
 in VS Code beside it; every file you need to paste is there, with its deploy command and its verify
 command underneath.
 
