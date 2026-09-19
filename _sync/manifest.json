@@ -127,8 +127,8 @@
     },
     "platform/agentic-platform/3-day/README.md": {
       "file_id": "1YVkHlrtWtPKvr4VAM6knEPCHMUv06n0OysxzInSd9H8",
-      "local_hash": "f168483ab6825b056d206ee2e0d192593fb67e6d49013c84f96095349a5233c7",
-      "remote_modified": "2026-09-18T16:43:57.932Z"
+      "local_hash": "b1fa663604cec9fbc3d1bbf57d4a4548a7d1ab4dcc4e1b3441c39b601524fd25",
+      "remote_modified": "2026-09-19T22:01:46.039Z"
     },
     "platform/agentic-platform/3-day/code.md": {
       "file_id": "1Rog7_LI35_-4NoPHepoSkXnn-lZ2cm80ua4ZMinhJoQ",
@@ -149,6 +149,11 @@
       "file_id": "1xG8XvCJ1Ch9c3mLdfJdbfn6Gvy_Ctq3uRhvDnWax88Q",
       "local_hash": "389bbb434eae7727907224982db46ab2183ded0aa8d80df9493300ef060bf7a5",
       "remote_modified": "2026-09-18T16:44:10.919Z"
+    },
+    "platform/agentic-platform/3-day/one-human-and-an-assistant.md": {
+      "file_id": "1vFz1JKmh_n0FfTL_c8Y27V1hvNpuaJ2e53gmoJtqegQ",
+      "local_hash": "09e47c4d4d37f18248671d5bc90d6dc86ce4031b7e6e9d95db4da239a8c37828",
+      "remote_modified": "2026-09-19T22:01:49.108Z"
     },
     "platform/agentic-platform/README.md": {
       "file_id": "1vrxnoz3WpLNjz5b3i0ulNk-ivIZ9GeESJxvz9VPwVm4",
