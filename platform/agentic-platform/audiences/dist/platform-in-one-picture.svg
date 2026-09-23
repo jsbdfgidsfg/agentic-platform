@@ -1,139 +1,173 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
-  <defs>
-    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3b7fb6"/></marker>
-    <marker id="arrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a8f98"/></marker>
-    <marker id="arrr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b8302e"/></marker>
-  </defs>
-  <rect width="1600" height="900" fill="#ffffff"/>
-
-  <!-- title -->
-  <text x="48" y="62" font-size="34" font-weight="700" fill="#14213d">The agentic platform in one picture</text>
-  <text x="48" y="94" font-size="18" fill="#4a5060">One front door, one identity per agent, one gateway, one register. How agents are admitted, contained and watched.</text>
-
-  <!-- governance band (top right) -->
-  <rect x="1010" y="36" width="542" height="70" rx="10" fill="#eef0f4" stroke="#c9ced8"/>
-  <text x="1030" y="62" font-size="15" font-weight="700" fill="#14213d">Governance: the tier gate</text>
-  <text x="1030" y="84" font-size="14" fill="#333">A tier of agents opens only when the people it needs exist.</text>
-  <text x="1030" y="100" font-size="14" fill="#333">Humans raise an agent's autonomy; machines can only lower it.</text>
-
-  <!-- users -->
-  <g>
-    <circle cx="90" cy="300" r="20" fill="none" stroke="#3b7fb6" stroke-width="2"/>
-    <circle cx="90" cy="292" r="7" fill="#3b7fb6"/>
-    <path d="M76,312 q14,-14 28,0" fill="#3b7fb6"/>
-    <text x="90" y="345" font-size="15" font-weight="700" fill="#14213d" text-anchor="middle">People</text>
-    <rect x="150" y="180" width="110" height="60" rx="8" fill="#f6f8fb" stroke="#3b7fb6"/><text x="205" y="215" font-size="14" text-anchor="middle" fill="#14213d">Intranet</text>
-    <rect x="150" y="270" width="110" height="60" rx="8" fill="#f6f8fb" stroke="#3b7fb6"/><text x="205" y="299" font-size="14" text-anchor="middle" fill="#14213d">Google</text><text x="205" y="316" font-size="14" text-anchor="middle" fill="#14213d">Workspace</text>
-    <rect x="150" y="360" width="110" height="60" rx="8" fill="#f6f8fb" stroke="#3b7fb6"/><text x="205" y="389" font-size="14" text-anchor="middle" fill="#14213d">Business</text><text x="205" y="406" font-size="14" text-anchor="middle" fill="#14213d">apps</text>
-    <path d="M112,300 L150,210" stroke="#3b7fb6" stroke-width="1.5" fill="none"/>
-    <path d="M112,300 L150,300" stroke="#3b7fb6" stroke-width="1.5" fill="none"/>
-    <path d="M112,300 L150,390" stroke="#3b7fb6" stroke-width="1.5" fill="none"/>
-    <path d="M260,210 L300,285" stroke="#3b7fb6" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
-    <path d="M260,300 L300,300" stroke="#3b7fb6" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
-    <path d="M260,390 L300,315" stroke="#3b7fb6" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
-  </g>
-
-  <!-- Gemini Enterprise: the front door -->
-  <rect x="300" y="160" width="280" height="290" rx="12" fill="#ffffff" stroke="#14213d" stroke-width="2.5"/>
-  <rect x="300" y="160" width="280" height="54" rx="12" fill="#14213d"/>
-  <rect x="300" y="200" width="280" height="14" fill="#14213d"/>
-  <text x="440" y="185" font-size="19" font-weight="700" fill="#ffffff" text-anchor="middle">Gemini Enterprise</text>
-  <text x="440" y="205" font-size="13" fill="#d8dbe4" text-anchor="middle">the one front door</text>
-  <g font-size="14" fill="#222">
-    <text x="318" y="240">• People sign in once; an agent sees</text><text x="330" y="258">only what that person may see</text>
-    <text x="318" y="284">• No-code assistants (Tier C) are built</text><text x="330" y="302">and used here, with their data stores</text>
-    <text x="318" y="328">• An agent is reachable only once it is</text><text x="330" y="346">admitted from the register</text>
-    <text x="318" y="372">• Every conversation is logged; the app</text><text x="330" y="390">and its data stay in the EU</text>
-    <text x="318" y="416">• Model Armor screens the console too</text>
-  </g>
-
-  <!-- three controls every request crosses -->
-  <text x="737" y="150" font-size="14" font-weight="700" fill="#14213d" text-anchor="middle">Three controls every request crosses</text>
-  <g>
-    <rect x="600" y="160" width="275" height="84" rx="10" fill="#e8f1f8" stroke="#3b7fb6" stroke-width="2"/>
-    <text x="737" y="185" font-size="16" font-weight="700" fill="#14213d" text-anchor="middle">Agent Identity (IAM)</text>
-    <text x="737" y="206" font-size="12.5" fill="#333" text-anchor="middle">one identity per agent, no shared credential,</text>
-    <text x="737" y="223" font-size="12.5" fill="#333" text-anchor="middle">no domain-wide delegation, ever</text>
-
-    <rect x="600" y="263" width="275" height="84" rx="10" fill="#e8f1f8" stroke="#3b7fb6" stroke-width="2"/>
-    <text x="737" y="288" font-size="16" font-weight="700" fill="#14213d" text-anchor="middle">Model Armor</text>
-    <text x="737" y="309" font-size="12.5" fill="#333" text-anchor="middle">screens every prompt and every response;</text>
-    <text x="737" y="326" font-size="12.5" fill="#333" text-anchor="middle">produces evidence, is never the boundary</text>
-
-    <rect x="600" y="366" width="275" height="84" rx="10" fill="#e8f1f8" stroke="#3b7fb6" stroke-width="2"/>
-    <text x="737" y="391" font-size="16" font-weight="700" fill="#14213d" text-anchor="middle">Agent Gateway</text>
-    <text x="737" y="412" font-size="12.5" fill="#333" text-anchor="middle">the one path for tool calls and agent-to-agent</text>
-    <text x="737" y="429" font-size="12.5" fill="#333" text-anchor="middle">traffic (MCP, A2A); policy and telemetry here</text>
-  </g>
-  <path d="M580,305 L600,305" stroke="#3b7fb6" stroke-width="2" fill="none" marker-end="url(#arr)"/>
-  <path d="M875,305 L905,305" stroke="#3b7fb6" stroke-width="2" fill="none" marker-end="url(#arr)"/>
-
-  <!-- agents and the register -->
-  <rect x="905" y="160" width="245" height="150" rx="12" fill="#ffffff" stroke="#3b7fb6" stroke-width="2"/>
-  <text x="1025" y="188" font-size="17" font-weight="700" fill="#14213d" text-anchor="middle">Agents</text>
-  <text x="1027" y="212" font-size="12.5" fill="#333" text-anchor="middle">one Google Cloud project per agent,</text>
-  <text x="1027" y="229" font-size="12.5" fill="#333" text-anchor="middle">made by a factory with its controls in place</text>
-  <text x="1027" y="256" font-size="12.5" fill="#333" text-anchor="middle">Tiers: C read-only assistants · R read tools</text>
-  <text x="1027" y="273" font-size="12.5" fill="#333" text-anchor="middle">W writes · P privileged (Wall-E) · X closed</text>
-  <text x="1025" y="296" font-size="12" fill="#666" text-anchor="middle">runtime: Vertex AI Agent Engine</text>
-
-  <rect x="905" y="330" width="245" height="120" rx="12" fill="#f6f8fb" stroke="#3b7fb6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="1025" y="356" font-size="16" font-weight="700" fill="#14213d" text-anchor="middle">Register &amp; Agent Registry</text>
-  <text x="1025" y="378" font-size="13" fill="#333" text-anchor="middle">agents · tools (MCP servers) · skills</text>
-  <text x="1025" y="400" font-size="13" font-weight="700" fill="#b8302e" text-anchor="middle">no row in the register, no agent</text>
-  <text x="1025" y="420" font-size="13" fill="#333" text-anchor="middle">a row names owner, tier, purpose,</text>
-  <text x="1025" y="437" font-size="13" fill="#333" text-anchor="middle">autonomy level and legal class</text>
-  <path d="M1025,330 L1025,310" stroke="#3b7fb6" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
-  <text x="1040" y="324" font-size="11" fill="#666">admits</text>
-
-  <!-- right: what agents reach -->
-  <rect x="1190" y="160" width="360" height="84" rx="10" fill="#ffffff" stroke="#3b7fb6" stroke-width="2"/>
-  <text x="1370" y="186" font-size="16" font-weight="700" fill="#14213d" text-anchor="middle">Knowledge</text>
-  <text x="1370" y="207" font-size="13" fill="#333" text-anchor="middle">data stores and vector search (RAG),</text>
-  <text x="1370" y="224" font-size="13" fill="#333" text-anchor="middle">long-term memory, per agent, in the EU</text>
-
-  <rect x="1190" y="263" width="360" height="120" rx="10" fill="#fff7f0" stroke="#d9822b" stroke-width="2"/>
-  <text x="1370" y="288" font-size="16" font-weight="700" fill="#14213d" text-anchor="middle">Action services: the only credential holders</text>
-  <text x="1370" y="309" font-size="13" fill="#333" text-anchor="middle">the model never holds a credential and never approves</text>
-  <text x="1370" y="326" font-size="13" fill="#333" text-anchor="middle">typed operations only · dry run first · write-ahead audit</text>
-  <text x="1370" y="347" font-size="13" font-weight="700" fill="#b8302e" text-anchor="middle">a human approves every sensitive action</text>
-  <text x="1370" y="367" font-size="13" fill="#333" text-anchor="middle">kill switches: halt in seconds, revoke, fleet-wide stop</text>
-
-  <rect x="1190" y="402" width="360" height="48" rx="10" fill="#f6f8fb" stroke="#8a8f98" stroke-width="1.5"/>
-  <text x="1370" y="422" font-size="15" font-weight="700" fill="#14213d" text-anchor="middle">Systems of record</text>
-  <text x="1370" y="441" font-size="13" fill="#333" text-anchor="middle">Workspace administration · SaaS · internal systems</text>
-
-  <path d="M1150,202 L1190,202" stroke="#3b7fb6" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
-  <path d="M1150,270 L1190,300" stroke="#3b7fb6" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
-  <path d="M1370,383 L1370,402" stroke="#d9822b" stroke-width="2" fill="none" marker-end="url(#arr)"/>
-  <text x="1380" y="397" font-size="11" fill="#666">only through here</text>
-
-  <!-- gateway arrow annotation -->
-  <text x="1170" y="150" font-size="12" fill="#666" text-anchor="middle">every call to knowledge or to a system passes the gateway first</text>
-
-  <!-- bottom: watching -->
-  <path d="M440,450 L440,520" stroke="#8a8f98" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#arrg)"/>
-  <path d="M740,450 L740,520" stroke="#8a8f98" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#arrg)"/>
-  <path d="M1025,450 L1025,520" stroke="#8a8f98" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#arrg)"/>
-  <path d="M1370,450 L1370,520" stroke="#8a8f98" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#arrg)"/>
-  <text x="600" y="505" font-size="12" fill="#666">everything registered feeds it; an agent that stops feeding it is halted</text>
-
-  <rect x="300" y="520" width="1250" height="118" rx="12" fill="#f3f4f7" stroke="#8a8f98" stroke-width="1.5"/>
-  <text x="320" y="548" font-size="17" font-weight="700" fill="#14213d">Watching</text>
-  <g font-size="13" fill="#333">
-    <text x="320" y="574"><tspan font-weight="700">Audit logs &amp; telemetry</tspan>: every action, every model call, every admin change, kept locked in the EU for the retention period</text>
-    <text x="320" y="596"><tspan font-weight="700">Detections</tspan>: a security monitoring desk (SIEM) with a person on call; every finding names an owner and a deadline</text>
-    <text x="320" y="618"><tspan font-weight="700">The independent controller (Eve)</tspan>: watches the agents and the human administrators, reports to a second human, can halt; its evidence is copied daily to a witness outside the tenant</text>
-  </g>
-  <path d="M1500,520 L1500,478 L1568,478 L1568,323 L1553,323" stroke="#b8302e" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#arrr)"/>
-  <text x="1508" y="500" font-size="12" font-weight="700" fill="#b8302e">halt</text>
-
-  <!-- footer line -->
-  <text x="48" y="690" font-size="15" font-weight="700" fill="#14213d">What this buys</text>
-  <g font-size="14" fill="#333">
-    <text x="48" y="714">A hundredth agent costs a register row and a factory run, and inherits controls reviewed once.</text>
-    <text x="48" y="736">Two grades of control, named as such: what Google or code <tspan font-weight="700">refuses</tspan>, and what is only <tspan font-weight="700">detected</tspan>. A content screen is never a boundary.</text>
-    <text x="48" y="758">A privileged agent costs more than a read-only one: a second human, a bought detection desk, a witness outside the tenant and a signed deviation.</text>
-  </g>
-  <text x="48" y="800" font-size="12" fill="#888">Nothing here is built on 2026-09-23. The design is at github.com/jsbdfgidsfg/agentic-platform, platform/agentic-platform/01-hld.md.</text>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3b7fb6"/></marker><marker id="arrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a8f98"/></marker><marker id="arrr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b8302e"/></marker><marker id="arro" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d9822b"/></marker></defs>
+<rect width="1600" height="900" fill="#fff"/>
+<text x="48" y="60" font-size="32" font-weight="700" fill="#14213d">The agentic platform in one picture</text>
+<text x="48" y="90" font-size="15.5" fill="#4a5060">One front door, one identity per agent, one gateway out, one register: how agents are admitted, contained and watched.</text>
+<rect x="1060" y="30" width="492" height="96" rx="10" fill="#eef0f4" stroke="#c9ced8" stroke-width="1"/>
+<text x="1306.0" y="51.2" font-size="14" font-weight="700" fill="#14213d" text-anchor="middle">Governance: the tier gate</text>
+<text x="1306.0" y="68.5" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">A tier opens only once the roles it needs are staffed. Humans raise an</text>
+<text x="1306.0" y="83.5" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">agent's autonomy; machines can only lower it.</text>
+<text x="1306.0" y="103.6" font-size="11.5" fill="#333" font-weight="400" text-anchor="middle">Tiers: C no-code, read-only · R read tools · W writes · P privileged (the</text>
+<text x="1306.0" y="118.6" font-size="11.5" fill="#333" font-weight="400" text-anchor="middle">Workspace super-admin agent, Wall-E) · X general capability, not opened</text>
+<circle cx="90" cy="300" r="20" fill="none" stroke="#3b7fb6" stroke-width="2"/><circle cx="90" cy="292" r="7" fill="#3b7fb6"/><path d="M76,312 q14,-14 28,0" fill="#3b7fb6"/>
+<text x="90" y="345" font-size="15" fill="#14213d" text-anchor="middle" font-weight="700">People</text>
+<rect x="150" y="180" width="110" height="60" rx="8" fill="#f6f8fb" stroke="#3b7fb6"/>
+<text x="205" y="215" font-size="13" text-anchor="middle" fill="#14213d">Intranet</text>
+<path d="M112,300 L150,210" stroke="#3b7fb6" stroke-width="1.5" fill="none"/>
+<path d="M260,210 L300,319.7" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<rect x="150" y="270" width="110" height="60" rx="8" fill="#f6f8fb" stroke="#3b7fb6"/>
+<text x="205" y="297" font-size="13" text-anchor="middle" fill="#14213d">Google Workspace</text>
+<text x="205" y="314" font-size="11" text-anchor="middle" fill="#14213d">(Gmail, Chat, Docs)</text>
+<path d="M112,300 L150,300" stroke="#3b7fb6" stroke-width="1.5" fill="none"/>
+<path d="M260,300 L300,335.0" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<rect x="150" y="360" width="110" height="60" rx="8" fill="#f6f8fb" stroke="#3b7fb6"/>
+<text x="205" y="395" font-size="13" text-anchor="middle" fill="#14213d">Business apps</text>
+<path d="M112,300 L150,390" stroke="#3b7fb6" stroke-width="1.5" fill="none"/>
+<path d="M260,390 L300,350.3" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<rect x="300" y="160" width="240" height="350" rx="10" fill="#fff" stroke="#14213d" stroke-width="2.5"/>
+<rect x="300" y="160" width="240" height="52" rx="10" fill="#14213d"/><rect x="300" y="200" width="240" height="12" fill="#14213d"/>
+<text x="420.0" y="184" font-size="19" font-weight="700" fill="#fff" text-anchor="middle">Gemini Enterprise</text>
+<text x="420.0" y="203" font-size="12" fill="#d8dbe4" text-anchor="middle">the one front door for people</text>
+<rect x="480" y="486" width="52" height="16" rx="8" fill="#14213d"/>
+<text x="506.0" y="497.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">refuses</text>
+<text x="312" y="233.6" font-size="12" fill="#222" font-weight="400">• People sign in once; an</text>
+<text x="324" y="249.2" font-size="12" fill="#222" font-weight="400">agent is given only what that</text>
+<text x="324" y="264.8" font-size="12" fill="#222" font-weight="400">person may see</text>
+<text x="312" y="285.8" font-size="12" fill="#222" font-weight="400">• No-code agents (tier C) are</text>
+<text x="324" y="301.4" font-size="12" fill="#222" font-weight="400">built and used here, with</text>
+<text x="324" y="317.0" font-size="12" fill="#222" font-weight="400">their own data stores</text>
+<text x="312" y="338.0" font-size="12" fill="#222" font-weight="400">• An agent is registered and</text>
+<text x="324" y="353.6" font-size="12" fill="#222" font-weight="400">shared here only once it has a</text>
+<text x="324" y="369.2" font-size="12" fill="#222" font-weight="400">row in the register</text>
+<text x="312" y="390.2" font-size="12" fill="#222" font-weight="400">• Configured so every</text>
+<text x="324" y="405.8" font-size="12" fill="#222" font-weight="400">conversation is logged and the</text>
+<text x="324" y="421.4" font-size="12" fill="#222" font-weight="400">app runs in the EU with</text>
+<text x="324" y="437.0" font-size="12" fill="#222" font-weight="400">customer-managed keys</text>
+<text x="312" y="458.0" font-size="12" fill="#222" font-weight="400">• Model Armor screens the</text>
+<text x="324" y="473.6" font-size="12" fill="#222" font-weight="400">assistant and no-code agents</text>
+<text x="324" y="489.2" font-size="12" fill="#222" font-weight="400">here; built agents at the</text>
+<text x="324" y="504.8" font-size="12" fill="#222" font-weight="400">gateway</text>
+<text x="675" y="150" font-size="13.5" fill="#14213d" text-anchor="middle" font-weight="700">Two controls on the way in</text>
+<rect x="570" y="160" width="210" height="178" rx="10" fill="#e8f1f8" stroke="#3b7fb6" stroke-width="2"/>
+<text x="675.0" y="184.0" font-size="15" font-weight="700" fill="#14213d" text-anchor="middle">Agent Identity</text>
+<rect x="720" y="152" width="52" height="16" rx="8" fill="#14213d"/>
+<text x="746.0" y="163.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">refuses</text>
+<text x="675.0" y="202.3" font-size="12" fill="#222" font-weight="400" text-anchor="middle">one attested identity per</text>
+<text x="675.0" y="217.9" font-size="12" fill="#222" font-weight="400" text-anchor="middle">agent (Google Agent</text>
+<text x="675.0" y="233.5" font-size="12" fill="#222" font-weight="400" text-anchor="middle">Identity): no keys, no</text>
+<text x="675.0" y="249.1" font-size="12" fill="#222" font-weight="400" text-anchor="middle">shared credential</text>
+<text x="675.0" y="270.1" font-size="12" fill="#222" font-weight="400" text-anchor="middle">acts for the signed-in</text>
+<text x="675.0" y="285.7" font-size="12" fill="#222" font-weight="400" text-anchor="middle">person on short-lived</text>
+<text x="675.0" y="301.3" font-size="12" fill="#222" font-weight="400" text-anchor="middle">tokens</text>
+<text x="675.0" y="322.3" font-size="12" fill="#b8302e" font-weight="700" text-anchor="middle">no domain-wide delegation,</text>
+<text x="675.0" y="337.9" font-size="12" fill="#b8302e" font-weight="700" text-anchor="middle">ever</text>
+<rect x="570" y="355" width="210" height="155" rx="10" fill="#e8f1f8" stroke="#3b7fb6" stroke-width="2"/>
+<text x="675.0" y="379.0" font-size="15" font-weight="700" fill="#14213d" text-anchor="middle">Model Armor</text>
+<rect x="720" y="347" width="52" height="16" rx="8" fill="#d9822b"/>
+<text x="746.0" y="358.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">detects</text>
+<text x="675.0" y="396.9" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">screens prompts, responses</text>
+<text x="675.0" y="411.8" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">and tool results, one turn</text>
+<text x="675.0" y="426.8" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">at a time; set to block and</text>
+<text x="675.0" y="441.7" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">fail closed, with</text>
+<text x="675.0" y="456.6" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">organisation-level floor</text>
+<text x="675.0" y="471.6" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">settings</text>
+<text x="675.0" y="491.7" font-size="11.5" fill="#333" font-weight="700" text-anchor="middle">counted as detection, not as</text>
+<text x="675.0" y="506.7" font-size="11.5" fill="#333" font-weight="700" text-anchor="middle">the security boundary</text>
+<path d="M540,345 L570,345" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<path d="M780,345 L810,345" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<rect x="810" y="160" width="230" height="190" rx="10" fill="#fff" stroke="#3b7fb6" stroke-width="2"/>
+<text x="925.0" y="184.8" font-size="16" font-weight="700" fill="#14213d" text-anchor="middle">Agents</text>
+<text x="925.0" y="203.2" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">one Google Cloud project per</text>
+<text x="925.0" y="218.1" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">built agent (tier R and above),</text>
+<text x="925.0" y="233.0" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">made by a factory that</text>
+<text x="925.0" y="248.0" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">registers and evaluates it and</text>
+<text x="925.0" y="262.9" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">sets its controls</text>
+<text x="925.0" y="283.1" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">models: Gemini, served from EU</text>
+<text x="925.0" y="298.0" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">regions; code and browsing run</text>
+<text x="925.0" y="313.0" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">in an isolated sandbox</text>
+<text x="925.0" y="333.1" font-size="11.5" fill="#666" font-weight="400" text-anchor="middle">runtime: Agent Runtime (Gemini</text>
+<text x="925.0" y="348.0" font-size="11.5" fill="#666" font-weight="400" text-anchor="middle">Enterprise Agent Platform)</text>
+<rect x="810" y="370" width="230" height="140" rx="10" fill="#f6f8fb" stroke="#3b7fb6" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="925.0" y="392.8" font-size="13.5" font-weight="700" fill="#14213d" text-anchor="middle">Register + Agent Registry</text>
+<rect x="980" y="362" width="52" height="16" rx="8" fill="#14213d"/>
+<text x="1006.0" y="373.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">refuses</text>
+<text x="925.0" y="409.9" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">agents · MCP servers · skills ·</text>
+<text x="925.0" y="424.9" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">endpoints</text>
+<text x="925.0" y="445.0" font-size="11.5" fill="#b8302e" font-weight="700" text-anchor="middle">no row in the register: no</text>
+<text x="925.0" y="459.9" font-size="11.5" fill="#b8302e" font-weight="700" text-anchor="middle">agent, no tool</text>
+<text x="925.0" y="480.1" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">a row: owner, tier, purpose,</text>
+<text x="925.0" y="495.0" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">autonomy level, legal class,</text>
+<text x="925.0" y="509.9" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">budget</text>
+<path d="M925,370 L925,352" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<text x="917" y="366" font-size="10" fill="#666" text-anchor="end" font-weight="400">gates registration</text>
+<text x="1121" y="150" font-size="13.5" fill="#14213d" text-anchor="middle" font-weight="700">On the way out</text>
+<rect x="1065" y="160" width="112" height="350" rx="10" fill="#e8f1f8" stroke="#3b7fb6" stroke-width="2"/>
+<text x="1121.0" y="178.4" font-size="13" font-weight="700" fill="#14213d" text-anchor="middle">Agent Gateway</text>
+<rect x="1117" y="486" width="52" height="16" rx="8" fill="#14213d"/>
+<text x="1143.0" y="497.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">refuses</text>
+<text x="1121.0" y="195.2" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">the one path</text>
+<text x="1121.0" y="210.2" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">out</text>
+<text x="1121.0" y="230.3" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">tool calls and</text>
+<text x="1121.0" y="245.3" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">agent-to-agent</text>
+<text x="1121.0" y="260.2" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">traffic (MCP,</text>
+<text x="1121.0" y="275.2" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">A2A)</text>
+<text x="1121.0" y="295.3" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">authenticated</text>
+<text x="1121.0" y="310.2" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">both ways</text>
+<text x="1121.0" y="330.4" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">policies as</text>
+<text x="1121.0" y="345.3" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">code, rate</text>
+<text x="1121.0" y="360.3" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">limits,</text>
+<text x="1121.0" y="375.2" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">telemetry</text>
+<text x="1121.0" y="395.3" font-size="11.5" fill="#333" font-weight="700" text-anchor="middle">everything</text>
+<text x="1121.0" y="410.3" font-size="11.5" fill="#333" font-weight="700" text-anchor="middle">else is denied</text>
+<text x="1121.0" y="425.2" font-size="11.5" fill="#333" font-weight="700" text-anchor="middle">at the project</text>
+<text x="1121.0" y="440.2" font-size="11.5" fill="#333" font-weight="700" text-anchor="middle">boundary</text>
+<path d="M1040,256 L1065,256" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<rect x="1205" y="160" width="347" height="104" rx="10" fill="#fff" stroke="#3b7fb6" stroke-width="2"/>
+<text x="1378.5" y="182.0" font-size="15" font-weight="700" fill="#14213d" text-anchor="middle">Knowledge</text>
+<text x="1378.5" y="200.3" font-size="12" fill="#222" font-weight="400" text-anchor="middle">data stores and vector search (RAG: document</text>
+<text x="1378.5" y="215.9" font-size="12" fill="#222" font-weight="400" text-anchor="middle">search feeding the model), in the EU</text>
+<text x="1378.5" y="236.9" font-size="12" fill="#222" font-weight="400" text-anchor="middle">memory per agent, never shared between agents;</text>
+<text x="1378.5" y="252.5" font-size="12" fill="#222" font-weight="400" text-anchor="middle">every write attributed</text>
+<rect x="1205" y="275" width="347" height="180" rx="10" fill="#fff7f0" stroke="#d9822b" stroke-width="2"/>
+<text x="1378.5" y="297.0" font-size="15" font-weight="700" fill="#14213d" text-anchor="middle">Action services</text>
+<text x="1378.5" y="316.5" font-size="11.5" fill="#555" text-anchor="middle">the only holders of credentials to systems of record</text>
+<rect x="1492" y="267" width="52" height="16" rx="8" fill="#14213d"/>
+<text x="1518.0" y="278.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">refuses</text>
+<text x="1378.5" y="331.3" font-size="12" fill="#222" font-weight="400" text-anchor="middle">the AI model never holds a credential and never</text>
+<text x="1378.5" y="346.9" font-size="12" fill="#222" font-weight="400" text-anchor="middle">approves; typed operations only, dry run first,</text>
+<text x="1378.5" y="362.5" font-size="12" fill="#222" font-weight="400" text-anchor="middle">write-ahead audit</text>
+<text x="1378.5" y="383.5" font-size="12" fill="#b8302e" font-weight="700" text-anchor="middle">a human approves each sensitive action from its</text>
+<text x="1378.5" y="399.1" font-size="12" fill="#b8302e" font-weight="700" text-anchor="middle">dry-run preview, never from the agent's summary</text>
+<text x="1378.5" y="420.1" font-size="12" fill="#222" font-weight="400" text-anchor="middle">kill switches: halt in seconds; fleet-wide by</text>
+<text x="1378.5" y="435.7" font-size="12" fill="#222" font-weight="400" text-anchor="middle">IAM deny policy</text>
+<rect x="1205" y="465" width="347" height="45" rx="10" fill="#f6f8fb" stroke="#8a8f98" stroke-width="1.5"/>
+<text x="1378.5" y="481.4" font-size="13" font-weight="700" fill="#14213d" text-anchor="middle">Systems of record</text>
+<text x="1378.5" y="498.2" font-size="11.5" fill="#222" font-weight="400" text-anchor="middle">Workspace admin (API) · SaaS · internal systems</text>
+<path d="M1177,212 L1205,212" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<path d="M1177,365 L1205,365" stroke="#3b7fb6" stroke-width="1.6" fill="none" marker-end="url(#arr)"/>
+<path d="M1378,455 L1378,465" stroke="#d9822b" stroke-width="2" fill="none" marker-end="url(#arro)"/>
+<path d="M420,510 L420,550" stroke="#8a8f98" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#arrg)"/>
+<path d="M675,510 L675,550" stroke="#8a8f98" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#arrg)"/>
+<path d="M925,510 L925,550" stroke="#8a8f98" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#arrg)"/>
+<path d="M1121,510 L1121,550" stroke="#8a8f98" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#arrg)"/>
+<path d="M1378,510 L1378,550" stroke="#8a8f98" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#arrg)"/>
+<text x="700" y="540" font-size="11.5" fill="#666" text-anchor="middle" font-weight="400">everything registered feeds it; an agent that stops feeding it has its actions halted</text>
+<rect x="300" y="550" width="1252" height="168" rx="10" fill="#f3f4f7" stroke="#8a8f98" stroke-width="1.5"/>
+<text x="926.0" y="562.8" font-size="1" font-weight="700" fill="#14213d" text-anchor="middle"></text>
+<rect x="1492" y="694" width="52" height="16" rx="8" fill="#d9822b"/>
+<text x="1518.0" y="705.5" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">detects</text>
+<text x="320" y="574" font-size="16" font-weight="700" fill="#14213d">Watching</text>
+<text x="320" y="598" font-size="12.5" fill="#333"><tspan font-weight="700">Audit logs and telemetry</tspan>: every action, model call and admin change, stored immutably in the EU (400 days to 10 years by data class); sensitive-data scanning on the</text>
+<text x="320" y="617" font-size="12.5" fill="#333">stores</text>
+<text x="320" y="639" font-size="12.5" fill="#333"><tspan font-weight="700">Detections</tspan>: an outsourced security monitoring desk (people on call, using a SIEM, a security monitoring tool); every finding names an owner and a deadline</text>
+<text x="320" y="661" font-size="12.5" fill="#333"><tspan font-weight="700">The independent controller agent (Eve)</tspan>: watches the agents and the human administrators, reports to a person independent of the agent's owner, can halt an agent's</text>
+<text x="320" y="680" font-size="12.5" fill="#333">actions; its evidence is copied daily to a witness outside the tenant</text>
+<text x="320" y="702" font-size="12.5" fill="#333"><tspan font-weight="700">Evaluation</tspan>: a blind grader scores a sample of each agent's work before and after admission; a falling score lowers its autonomy</text>
+<path d="M1500,550 L1500,530 L1572,530 L1572,365 L1555,365" stroke="#b8302e" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#arrr)"/>
+<text x="1565" y="522" font-size="10.5" fill="#b8302e" text-anchor="end" font-weight="700">halt (Eve or the desk)</text>
+<text x="48" y="752" font-size="15" fill="#14213d" text-anchor="start" font-weight="700">What this buys</text>
+<text x="48" y="776" font-size="13.5" fill="#333">A hundredth agent costs a register row, a factory run and a budget line, and inherits controls reviewed once.</text>
+<text x="48" y="798" font-size="13.5" fill="#333">Two grades of control, tagged on every box: what Google or code refuses, and what is only detected. A content screen is detection, even when set to block.</text>
+<text x="48" y="820" font-size="13.5" fill="#333">A privileged agent costs more than a read-only one: a second person, an outsourced monitoring desk, a witness outside the tenant and a signed deviation.</text>
+<text x="48" y="860" font-size="11.5" fill="#888" text-anchor="start" font-weight="400">Status on 2026-09-23: designed, not built. Agent Gateway and Agent Identity for Gemini Enterprise are Preview on that date. Full design: the agentic-platform wiki, 01-hld.md.</text>
 </svg>
