@@ -4,6 +4,7 @@
 
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
+- 2026-10-01: PR-4.4 action 6 registers the Super Admin roster with `evidence_add`; PR-5.2 checks for that row, and no step registered it before.
 - Changed on 2026-10-01: gcloud floor raised to 586.0.0 (newest 587.0.0); §3.3 probe computed from Google's role definitions and its two checks placed before OB-3.3 and at OB-3.7; `penv_set` refuses an empty or `<placeholder>` value (PR-2.5 checks both); the three registers are created only when absent; PR-5.1 registers its record; PR-5.2 stops without writing, appends, and closes P-14; PAM folder-role note re-read; P-26 and §14 name Folder IAM Admin by the id Google's Resource Manager role reference gives it (`roles/resourcemanager.folderIamAdmin`, page updated 2026-09-29, read 2026-10-01); they/them for roles.
 - Changed on 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close — the two helpers join the PR-2.2 template and its helper table, PR-2.5 checks them, PR-4.1 names them; both were run under bash 3.2 and zsh 5.9 on 2026-10-01 against a throwaway copy of PR-4.1's register.
 - Part of: the setup procedure set whose only entry point is [README.md](README.md). This page
@@ -1427,6 +1428,15 @@ checkpoint PR-4.4 DONE "$SECOND_HUMAN_EMAIL" - "interim evidence location create
 
 If `SECOND_HUMAN_EMAIL` is not set yet (03), write the witness field as the second human's
 name.
+
+6. The platform owner uploads PR-2.6's two records (the tenant identifiers and the Super Admin
+   roster PDF) into the drive and registers the roster, the record that closes P-02 and that PR-5.2
+   checks for:
+
+```bash
+roster="$(ls "$BUILD_LOG_DIR"/records/*-PR-2.6-super-admin-roster-v*.pdf | tail -n 1)"
+evidence_add PR-2.6 super-admin-roster E-06 4.1.3 "interim:$(basename "$roster")" "$roster"
+```
 
 **VERIFY:** The platform owner uploads a one-line test PDF into the drive, then right-clicks
 it: "Move to trash" is absent or refused. The second human opens Manage members and confirms
