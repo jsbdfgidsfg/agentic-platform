@@ -1334,7 +1334,7 @@ gh api -X PUT "repos/$blrepo/branches/main/protection" --input "$p"
 rm "$p"
 ```
 
-  Then grant write to the DC-9.3 team on `$blrepo` in the git host's organisation settings, and repeat DC-9.3's collaborator listing against `$blrepo`. From this step on, every sitting ends with `git -C "$BUILD_LOG_DIR" push origin main` before `sitting_end`, and the interim bundle control of 01 §7.1 stops; the bundles already uploaded stay in `EVIDENCE_INTERIM_LOCATION`. The deviation row 02 opened for the missing remote is closed by a line in the register's Closures table naming this step, written with 01's `bd_close <that row's id> "build-log remote created and protected: 03 DC-9.11" "03 DC-9.11 VERIFY"` once VERIFY passes.
+  Then grant write to the DC-9.3 team on `$blrepo` in the git host's organisation settings, and repeat DC-9.3's collaborator listing against `$blrepo`. From this step on, every sitting ends with `git -C "$BUILD_LOG_DIR" push origin main` before `sitting_end`, and the interim bundle control of 01 §7.1 stops; the bundles already uploaded stay in `EVIDENCE_INTERIM_LOCATION`. The deviation row `BD-02-1`, which 02 TB-1.1 opened for the missing remote, is closed by a line in the register's Closures table naming this step, written with 01's `bd_close BD-02-1 "build-log remote created and protected: 03 DC-9.11" "03 DC-9.11 VERIFY"` once VERIFY passes.
 - VERIFY:
 
 ```bash

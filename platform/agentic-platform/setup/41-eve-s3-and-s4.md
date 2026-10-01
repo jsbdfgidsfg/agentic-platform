@@ -6,6 +6,7 @@
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (E3-10.2).
+- Revised 2026-10-01: E3-8.5 writes the two teardown facts as a build-log record, committed with its `EVIDENCE_REGISTER` row, and E3-10.1 carries them into the S4-entry record; they are facts, not deviations, so `DEVIATION_REGISTER` gets nothing from E3-8.5.
 - Last executed: never
 - Review corrections applied on 2026-09-16, with the pages re-read that day: `E3-4.2` polls version 1 out of `PENDING_GENERATION` before anything reads it, and `E3-4.3` refuses unless that poll recorded `ENABLED`; every KMS command addresses the ring through `EVE_KEYRING` (as `EVE_KEYRING_NAME`, checked against `EVE_PROJECT` and `REGION` in the preamble) and both Policy Troubleshooter resource names are built from it; the three PEM digests are all taken from files, never from a pipe; the bucket-lock reads use the JSON field names `gcloud storage` actually renders; `E3-2.3` reads the Cloud Run v2 path `template.template.containers[0].image` and fails on an empty projection; §7.1 to §7.4 run **before** §6 because `E3-6.2` needs `EVE_RECEIPTS_DS`; `E3-7.6` maps SQL files to transfer configs by `displayName` and stops on a file that resolves to none; `E3-9.3` proves EVE-12 and EVE-22 by Policy Troubleshooter with no grant and no impersonation; values one step creates and a later step consumes (working directories, the grant name) are carried in `E3_VARS`; `pam_wait` waits for `ACTIVE`, the state PAM actually reports; the `keys/` condition derives the bucket name from `EVE_EVIDENCE_BUCKET`; `E3-1.5` derives the repository slug instead of relying on `gh`'s placeholders.
 - Stage: review §2 stage 40. Two entries, not one sitting: **S3 entry** (verify the Eve-H and Eve-W halves, then make the invariant-class halt and demote live) and, after the S3 exit gate has passed at 100 %, **S4 entry** (the `eve-approval` key, the PEM archive, `eve-gate`, the receipt view, the denial suite). Between them sit at least thirty days of S3 running against real L3 batch executions. **Execution order of the S4 sitting: §4, §5, §7, §6, §8, §9, §10** — the receipts dataset of `E3-7.1` is an input to the `eve-gate` deploy of `E3-6.2`, so §7 runs first; the section numbers keep their ids.
@@ -1267,15 +1268,31 @@ gcloud kms keys describe eve-approval --keyring="$EVE_KEYRING_NAME" --location="
 ### E3-8.5 The two teardown facts, written down before they are discovered
 
 - **WHO:** Platform owner records; Eve owner reads.
-- **WHERE:** The record, and `DEVIATION_REGISTER`'s notes column.
+- **WHERE:** Shell; the record `${R}-8.5-teardown-facts-v1.md` in `BUILD_LOG_DIR/records/`, and later the S4-entry record of `E3-10.1`.
 - **ACTION:** Neither is a bug to route around:
 
 - **An organisation-level sink outlives the project.** `eve-workspace-audit` must be deleted **before** anything else in a teardown, or it keeps exporting to a destination that no longer exists.
-- **The locked evidence bucket applies a lien preventing project deletion.** `gcloud projects delete` fails until the retention period expires, and removing the lien is a project-owner or organisation-administrator act that is itself an event Eve detects.
+- **The locked evidence bucket applies a lien preventing project deletion.** `gcloud projects delete` fails while the lien is in place (it blocks `resourcemanager.projects.delete`); removing the lien is a project-owner or organisation-administrator act that is itself an event Eve detects, and the bucket itself cannot be deleted until every object has met its retention period ([Bucket Lock](https://docs.cloud.google.com/storage/docs/bucket-lock), updated 2026-09-30, read 2026-10-01).
 
-- **VERIFY:** Both sentences are in the S4-entry record and in the teardown section of the Eve owner's own notes, with the step ids that created each object ([24](24-eve-workspace-identity-and-audit-feeds.md) for the sink, [23](23-eve-project-and-evidence-stores.md) `EP-7.8` for the lock).
+  Both are facts about the design, not departures from it, and this step closes no deviation row, so they go into a build-log record and not into `DEVIATION_REGISTER`, whose 01 PR-4.1 form holds only deviation rows and their Closures lines. The record is written once, committed with its `EVIDENCE_REGISTER` row, and `E3-10.1` carries both sentences into the S4-entry record:
+
+```bash
+f="${R}-8.5-teardown-facts-v1.md"
+if [ -e "$f" ]; then echo "exists: $f not rewritten"; else
+cat > "$f" <<'FACTS'
+# E3-8.5 Eve teardown facts
+
+1. The organisation sink eve-workspace-audit (created by 24 EW-1.5) outlives EVE_PROJECT. In a teardown it is deleted before anything else, or it keeps exporting to a destination that no longer exists.
+2. The locked retention policy on the Eve evidence bucket (locked by 23 EP-7.8) places a lien on EVE_PROJECT that prevents its deletion. gcloud projects delete fails while the lien is in place (it blocks resourcemanager.projects.delete); removing the lien is a project-owner or organisation-administrator act, and it is itself an event Eve detects; the bucket cannot be deleted until every object has met its retention period (Bucket Lock page, updated 2026-09-30, read 2026-10-01).
+FACTS
+git -C "$BUILD_LOG_DIR" add "$f"
+evidence_add E3-8.5 teardown-facts E-13 4.3.1 "build-log:records/$(basename "$f")" "$f"
+fi
+```
+
+- **VERIFY:** `evidence_add` prints `recorded <date>-E3-8.5-teardown-facts-v1`, and `git -C "$BUILD_LOG_DIR" log -1 --name-only --format=%s` lists the record and `EVIDENCE_REGISTER` in that one commit. The record names the step ids that created each object ([24](24-eve-workspace-identity-and-audit-feeds.md) `EW-1.5` for the sink, [23](23-eve-project-and-evidence-stores.md) `EP-7.8` for the lock). At `E3-10.1`, both sentences are in the S4-entry record, and the teardown section of the Eve owner's own notes points at this record.
 - **ROLLBACK:** Not applicable.
-- **EVIDENCE:** `${R}-8.5-teardown-facts-v1.md`. E-13. TISAX 4.3.1.
+- **EVIDENCE:** `${R}-8.5-teardown-facts-v1.md`, registered by the ACTION's `evidence_add E3-8.5 teardown-facts E-13 4.3.1 build-log:records/<file> <file>`. E-13. TISAX 4.3.1.
 
 ### E3-8.6 Rotation: a dated manual procedure, because there is no automatic one
 
@@ -1394,7 +1411,7 @@ grep -c 'OK$' "${R}-9.3-reads-v1.txt"
 
 - **WHO:** Eve owner signs; security reviewer countersigns; platform owner records; a copy goes to the witness.
 - **WHERE:** `BUILD_LOG_DIR/records/`, `WITNESS_BUCKET`.
-- **ACTION:** One page: the key with its four properties and `EVE_KEY_VERSION`; the three digests; the two merge commits (the PEM and the first binding cell); the audit-configuration change with its etag and its empty binding diff; the Policy Troubleshooter table; the `analyze-iam-policy` result; `EVE_GATE_URL` or its BLOCKED line; the receipts dataset and the three-column schema; the denial-suite results with every runner; decision E-21; and the sentence that **from today Eve can make more happen, for exactly the cells a merged pull request named**.
+- **ACTION:** One page: the key with its four properties and `EVE_KEY_VERSION`; the three digests; the two merge commits (the PEM and the first binding cell); the audit-configuration change with its etag and its empty binding diff; the Policy Troubleshooter table; the `analyze-iam-policy` result; `EVE_GATE_URL` or its BLOCKED line; the receipts dataset and the three-column schema; the denial-suite results with every runner; decision E-21; the two teardown facts of `E3-8.5`, citing its record; and the sentence that **from today Eve can make more happen, for exactly the cells a merged pull request named**.
 - **VERIFY:** Two signatures, the witness copy confirmed by a witness administrator, and no secret value anywhere in it — the only key material named is a public key, by digest.
 - **ROLLBACK:** Superseded, never rewritten.
 - **EVIDENCE:** `${R}-10.1-s4-entry-v1.md`; `evidence_add E3-10.1 s4-entry-record E-13 5.2.4 witness:records/<file> <file>`. E-01, E-13. TISAX 1.4.1, 5.2.4.

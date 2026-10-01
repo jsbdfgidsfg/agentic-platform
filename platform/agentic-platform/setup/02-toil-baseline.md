@@ -4,6 +4,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Changed on 2026-10-01: they/them for the platform owner in TB WHO lines.
+- Changed on 2026-10-01: TB-1.1 opens `BD-02-1`, the deviation row file 01 §7.1 assigns to this file's first build-log write (the build log has no remote until file 03 DC-9.11, which closes the row), with file 01's `bd_insert` in PR-4.1's thirteen columns; on day one it runs at the top of TB-1.2's second block.
 - Last executed: never
 - Stage: review §2 stage 2. It starts on day one, before any other step of the set. It cannot be taken later: once Wall-E does the tasks, the "before" is gone.
 - Step prefix: TB. Steps: 14. BLOCKED steps: none, because no code is needed.
@@ -35,13 +36,13 @@ flowchart LR
 
 ## Preconditions
 
-- [ ] The platform owner has read [the review §2 row 2](../13-setup-procedure-review.md) and this page. **TB-1.1 and TB-1.2 need nothing from file 01 and nothing from file 03: do not wait for either.** Paper and a text editor are enough ([README](README.md) §3.1: "Paper is acceptable"), and the commit, the variables and the evidence rows are caught up at TB-1.2's second block, TB-2.3 and TB-4.1.
+- [ ] The platform owner has read [the review §2 row 2](../13-setup-procedure-review.md) and this page. **TB-1.1 and TB-1.2 need nothing from file 01 and nothing from file 03: do not wait for either.** Paper and a text editor are enough ([README](README.md) §3.1: "Paper is acceptable"), and the commit, the variables, the evidence rows and the deviation row `BD-02-1` are caught up at TB-1.2's second block, TB-2.3 and TB-4.1.
 - [ ] Exactly what each part of this file needs, and from where. Nothing in this table has a lead time longer than a day except the last row, and the last row gates no recording week.
 
   | Step | Needs | From | If it is not there yet |
   |---|---|---|---|
-  | TB-1.1, TB-1.2 (first half) | nothing | — | run them on day one, on paper |
-  | TB-1.2 (second block), TB-2.1, TB-2.2, TB-3.2 to TB-5.2 | `~/.platform-env` with `PLATFORM_REPO_DIR` (a local git repository on `main` with at least one commit), `WIKI_DIR`, `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, and the helpers `penv_set`, `need`, `checkpoint`, `evidence_add` | file 01 **PR-2.2 to PR-2.5** and **PR-4.2** (the evidence register) | file 01 runs the same day, between TB-1.2 and TB-2.1 (README §3.1). The first weekly checkpoint falls seven days after `TOIL_START_DATE`, so there is a week of slack |
+  | TB-1.1 (all but its `BD-02-1` block), TB-1.2 (first half) | nothing | — | run them on day one, on paper |
+  | TB-1.1's `BD-02-1` block, TB-1.2 (second block), TB-2.1, TB-2.2, TB-3.2 to TB-5.2 | `~/.platform-env` with `PLATFORM_REPO_DIR` (a local git repository on `main` with at least one commit), `WIKI_DIR`, `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER`, and the helpers `penv_set`, `need`, `checkpoint`, `evidence_add`, `bd_insert` | file 01 **PR-2.2 to PR-2.5**, **PR-4.1** (the deviation register) and **PR-4.2** (the evidence register) | file 01 runs the same day, between TB-1.2 and TB-2.1 (README §3.1). The first weekly checkpoint falls seven days after `TOIL_START_DATE`, so there is a week of slack |
   | TB-2.3 only | `EVIDENCE_INTERIM_LOCATION` | file 01 **PR-4.4**, performed by the second human, who is appointed in file 03 **DC-2.1** (decision `PPL-SH`); file 01 §3.1 row P-05 gives that appointment a lead time of "weeks", row P-14 gives the location itself 1 day once the person exists | **no step of this file waits for it.** TB-1.1's table and exports go to `$BUILD_LOG_DIR/records/`, exactly as file 01 PR-2.6 does; TB-2.1's sheet and TB-2.2's code key go to the interim restricted Drive folder named in TB-2.1. TB-2.3 moves them and re-registers them the day PR-4.4 is `DONE` |
   | TB-4.3, TB-5.1 | `SECOND_OPERATOR_EMAIL`, `PLATFORM_REPO_REMOTE`, `GIT_HOST`, branch protection | file 03 **DC-2.4** (decision `PPL-SO`) and **DC-9.2 to DC-9.6** | the recording is complete and committed locally (TB-4.1) regardless. Only TB-4.3 and TB-5 wait, and no week is lost |
 
@@ -49,13 +50,14 @@ flowchart LR
 
 ```bash
 source "$HOME/.platform-env"
-need PLATFORM_REPO_DIR BUILD_LOG_DIR WIKI_DIR EVIDENCE_REGISTER && echo "01 values OK"
+need PLATFORM_REPO_DIR BUILD_LOG_DIR WIKI_DIR EVIDENCE_REGISTER DEVIATION_REGISTER && echo "01 values OK"
 git -C "$PLATFORM_REPO_DIR" rev-parse --abbrev-ref HEAD
 git -C "$PLATFORM_REPO_DIR" status --porcelain
 test -f "$BUILD_LOG_DIR/checkpoints.tsv" && echo "checkpoint file OK"
+grep -q '^| BD-02-1 |' "$DEVIATION_REGISTER" && echo "BD-02-1 recorded"
 ```
 
-  Expected: `01 values OK`, the branch name `main` (or `toil-baseline` only inside TB-3.2's own block), an empty `status --porcelain`, and `checkpoint file OK`. A branch that is neither, or a dirty tree, means another file's sitting was left open: finish or stash it before running anything here, because TB-3.2 commits into the same repository.
+  Expected: `01 values OK`, the branch name `main` (or `toil-baseline` only inside TB-3.2's own block), an empty `status --porcelain`, `checkpoint file OK` and `BD-02-1 recorded` (TB-1.1's block; a missing line means it has not run, so run it before anything else). A branch that is neither, or a dirty tree, means another file's sitting was left open: finish or stash it before running anything here, because TB-3.2 commits into the same repository.
 - [ ] Workstation: `python3` (3.12, file 01) and `git`. No gcloud, no bq, no cloud access and no admin role are used in this file, so `penv_guard`'s gcloud checks are not a gate here.
 - [ ] Day one, HR check: the platform owner asks HR whether the works council must be consulted before staff record their own task time. *Assumption:* pseudonymous, aggregated self-recording that is used only for a programme cost figure, never to assess an individual, needs no consultation. If HR says it does, TB-3.1 waits for that consultation. The question and its answer are recorded in TB-1.2's decision record, and `TOIL_START_DATE` is **the first Monday after the answer** ([README](README.md) §3.4), not a fixed date. File 03's D7 letter to the DPO names this measurement.
 - [ ] Day zero, the ticket queue: the platform owner writes down which ticket system the team uses and which field carries the task category, because TB-1.1's count for two of the three tasks reads it. There is no prerequisite row for this in file 01 §3.1; it is closed here, by the values `TICKET_SYSTEM` and `TICKET_CATEGORY_FIELD` written into the TB-1.2 decision record and set in TB-1.2's block. A team with no ticket queue writes `none` and TB-1.1 counts from Admin log events alone. *Assumption:* one row belongs in file 01 §3.1 as `P-31 ticket system and its category field recorded`, holder platform owner, lead time none, verified by those two values; until file 01 carries it, this precondition is the row.
@@ -99,14 +101,25 @@ Definitions given to recorders:
 ### TB-1.1 Rank candidate tasks by volume
 
 - **WHO:** Platform owner, working alone. No witness, no approver. The Audit & Investigation privilege is needed to read Admin log events; the platform owner holds it as super admin.
-- **WHERE:** Admin console → Reporting → Audit and investigation → Admin log events, in the Chrome profile `daily` (file 01 §4 PR-1.3) once that profile exists; on day one the browser in hand is acceptable and is noted in the build log. Also the ticket queue named in the preconditions' day-zero row: the system `TICKET_SYSTEM` and the field `TICKET_CATEGORY_FIELD`, both written down before this step starts and carried into TB-1.2's record. If the team has no ticket queue, both are `none` and the counts come from Admin log events alone.
+- **WHERE:** Admin console → Reporting → Audit and investigation → Admin log events, in the Chrome profile `daily` (file 01 §4 PR-1.3) once that profile exists; on day one the browser in hand is acceptable and is noted in the build log. Also the ticket queue named in the preconditions' day-zero row: the system `TICKET_SYSTEM` and the field `TICKET_CATEGORY_FIELD`, both written down before this step starts and carried into TB-1.2's record. If the team has no ticket queue, both are `none` and the counts come from Admin log events alone. The `BD-02-1` block below runs in the shell with `~/.platform-env` sourced.
 - **ACTION:** First `checkpoint TB-1.1 START - - "toil candidate ranking"` if file 01 already exists; otherwise open a paper page headed `TB-1.1 START <UTC timestamp>` and copy both lines into the build log at TB-1.2's second block.
+
+  **The build-log deviation row, `BD-02-1`.** The build log has no remote until file 03 DC-9.11 creates one, and file 01 §7.1 makes that gap a `DEV` row opened by the first step of this file that writes to the build log. That is this step: its START line, or, when TB-1.1 runs on paper, the copy of its lines at TB-1.2's second block. Run the block below at that moment — right after the START line when file 01 already exists, otherwise first thing in TB-1.2's second block. It inserts the row into `DEVIATION_REGISTER`'s first table with file 01's `bd_insert`, in file 01 PR-4.1's thirteen columns; run a second time, it prints `exists: BD-02-1` and writes nothing. File 03 DC-9.11 closes the row with `bd_close BD-02-1` once its VERIFY passes.
+
+```bash
+need BUILD_LOG_DIR DEVIATION_REGISTER
+row="$(printf '| BD-02-1 | %s | 02 TB-1.1 | DEV | build log kept with no remote (01 §7.1 residual risk): checkpoint lines, registers, re-run index and records live on one workstation, with no off-machine copy and no protection against a rewrite of history | the build-log repository BUILD_LOG_DIR on the workstation of the platform owner; no organisation, folder or project | 01 §7.1; build-log commit %s at opening | nothing in Google Cloud; interim control from the day 01 PR-4.4 exists: one git bundle of main per sitting in EVIDENCE_INTERIM_LOCATION, named YYYY-MM-DD-build-log-bundle-vN (a copy, not protection) | n/a (no module) | n/a (no project) | none: SD-01 one-person bootstrap; the second human reads 01 §7.1 at 01 PR-6.1 | closed by 03 DC-9.11 (build-log repository created, force-push and deletion refused on main) | open |' "$(date -u +%F)" "$(git -C "$BUILD_LOG_DIR" rev-parse --short HEAD)")"
+bd_insert "$row"
+```
+
+  It prints `opened BD-02-1 at line <n> (Closures heading at line <m>)`, the row's line number being the smaller. Then the ranking itself:
+
   1. List the admin tasks the team does by hand. Start from decision 12's guesses: licence reclaim from suspended accounts, leaver group hygiene and stale-account reporting.
   2. For each task, count its instances over the last 90 days. Use the ticket-queue category count where the task has a ticket. Where the task leaves an admin event, filter Admin log events by Event and by Date (After, 90 days ago). Admin log events are kept 6 months. Export the results to Sheets or CSV and note the event name used.
   3. Remove any task that no catalogue family in the [autonomy ladder](../../wall-e/05-autonomy-ladder.md) could perform, and note why it was removed. A task Wall-E will never do saves no toil.
   4. Keep the three with the highest monthly volume. Give each a `task_id` that matches `^[a-z0-9-]{3,40}$`.
-- **VERIFY:** A table of candidates with columns task, source (ticket category or admin event name), 90-day count, catalogue family, kept yes/no. Exactly three rows are kept, each with a non-zero 90-day count and a named catalogue family; every removed row carries its reason. Write the table as markdown with the last column holding exactly `yes` or `no`, and count the kept rows: `grep -c '| yes |$' "$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-TB-1.1-toil-candidates-v1.md"` prints `3` once the table is in the build log.
-- **ROLLBACK:** None needed. The step only reads. A ranking redone before TB-1.2 is signed replaces the table as `-v2`; after TB-1.2 is signed, a changed ranking is a superseding decision record (TB-1.2 ROLLBACK).
+- **VERIFY:** A table of candidates with columns task, source (ticket category or admin event name), 90-day count, catalogue family, kept yes/no. Exactly three rows are kept, each with a non-zero 90-day count and a named catalogue family; every removed row carries its reason. Write the table as markdown with the last column holding exactly `yes` or `no`, and count the kept rows: `grep -c '| yes |$' "$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-TB-1.1-toil-candidates-v1.md"` prints `3` once the table is in the build log. Once the `BD-02-1` block has run, `grep -n -e '^| BD-02-1 |' -e '^## Closures$' "$DEVIATION_REGISTER"` prints the row's line first and the Closures heading's line second (the row sits in the first table), and `git -C "$BUILD_LOG_DIR" log --format=%s -- "$DEVIATION_REGISTER" | grep -c '^BD-02-1 opened$'` prints `1`.
+- **ROLLBACK:** None needed for the ranking, which only reads. `BD-02-1` is never removed: the register is append-only, and the row is closed only by file 03 DC-9.11's `bd_close`. A ranking redone before TB-1.2 is signed replaces the table as `-v2`; after TB-1.2 is signed, a changed ranking is a superseding decision record (TB-1.2 ROLLBACK).
 - **EVIDENCE:** The ranking table and the exports as `<date>-TB-1.1-toil-candidates-v1`. **Day-one home:** `$BUILD_LOG_DIR/records/`, the same fallback file 01 PR-2.6 uses, because `EVIDENCE_INTERIM_LOCATION` does not exist on day one (preconditions). TB-2.3 moves it and re-registers it. Register it as soon as file 01 PR-4.2 exists:
 
 ```bash
@@ -114,7 +127,9 @@ checkpoint TB-1.1 DONE - "build-log:records/$(date -u +%Y-%m-%d)-TB-1.1-toil-can
 evidence_add TB-1.1 toil-candidates E-03 1.4.1 "build-log:records/$(date -u +%Y-%m-%d)-TB-1.1-toil-candidates-v1.md" "$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-TB-1.1-toil-candidates-v1.md"
 ```
 
-  E-xx: E-03 (the options-considered half of the D12 decision record; file 01 §7.2 row "Decision records"). TISAX: 1.4.1, 5.2.1.
+  `BD-02-1` is its own record: the row in `DEVIATION_REGISTER` and its commit `BD-02-1 opened` in the build log.
+
+  E-xx: E-03 (the options-considered half of the D12 decision record; file 01 §7.2 row "Decision records"); E-05 for `BD-02-1` (file 01 §7.2 row "the bootstrap deviation register"). TISAX: 1.4.1, 5.2.1.
 
 ### TB-1.2 Record Wall-E decision 12 as a dated decision record
 
@@ -129,10 +144,11 @@ evidence_add TB-1.1 toil-candidates E-03 1.4.1 "build-log:records/$(date -u +%Y-
 
   **Choosing the Monday.** `TOIL_START_DATE` is the first Monday after the HR answer ([README](README.md) §3.4). Among the Mondays that qualify, **prefer one whose fourth week ends in the last week of a calendar month**, because TB-4.2 refuses to pass until every month the four weeks touch has an `operating_hours` row, and TB-3.3 collects those on the last business day of the month. A start Monday in the last week of a month is the worst case: week four then ends early in a new month and the baseline cannot be verified for up to about four more weeks. If that Monday is the only one available, say so in the record and use TB-3.3's partial-month option so TB-4.1 is not held.
 
-  Then, once file 01's helpers exist:
+  Then, once file 01's helpers and registers exist: if TB-1.1 ran on paper, first run TB-1.1's `BD-02-1` block and copy TB-1.1's paper lines into the build log; then:
 
 ```bash
-need PLATFORM_REPO_DIR BUILD_LOG_DIR
+need PLATFORM_REPO_DIR BUILD_LOG_DIR DEVIATION_REGISTER
+grep -q '^| BD-02-1 |' "$DEVIATION_REGISTER" || echo "STOP: BD-02-1 is not in the register; run TB-1.1's BD-02-1 block first"
 checkpoint TB-1.2 START - - "wall-e D12 toil tasks"
 penv_set TOIL_TASKS "<task-id-1>,<task-id-2>,<task-id-3>"
 penv_set TOIL_START_DATE "<YYYY-MM-DD, a Monday>"
@@ -637,6 +653,7 @@ awk -F'\t' '$2=="TB-2.3" && $3=="DONE"' "$BUILD_LOG_DIR/checkpoints.tsv" | wc -l
 - [ ] The D12 decision record is signed and dated, names three task ids, is committed on `main`, and is listed in file 03's tracker as `D12`.
 - [ ] `TOIL_TASKS`, `TOIL_START_DATE` (a Monday), `TOIL_BASELINE_FILE=metrics/toil_baseline.csv`, `TICKET_SYSTEM` and `TICKET_CATEGORY_FIELD` are set in `~/.platform-env`.
 - [ ] Every step from TB-1.1 to TB-5.2 has a `START` and a `DONE` line in `$BUILD_LOG_DIR/checkpoints.tsv`, including one `TB-3.2-<YYYY-Www>` pair per week: `awk -F'\t' '$2 ~ /^TB-/ && $3=="DONE"' "$BUILD_LOG_DIR/checkpoints.tsv" | wc -l` prints `17` or more (thirteen steps with a plain id, plus the four `TB-3.2-<week>` ids).
+- [ ] `BD-02-1` (the build log has no remote, file 01 §7.1) is in `DEVIATION_REGISTER`'s first table, above `## Closures`, opened by TB-1.1's block; file 03 DC-9.11 closes it.
 - [ ] Every EVIDENCE line of this file has been executed: `grep -c '| [0-9-]*-TB-' "$EVIDENCE_REGISTER"` prints `12` or more (`16` once TB-2.3 has re-registered its four artefacts).
 - [ ] TB-2.3 is `DONE`, or named as an open row in TB-5.2's build-log entry with the artefacts' current home.
 - [ ] `PLATFORM_REPO_DIR` is on `main` with a clean working tree at the end of every sitting of this file.
@@ -651,14 +668,14 @@ awk -F'\t' '$2=="TB-2.3" && $3=="DONE"' "$BUILD_LOG_DIR/checkpoints.tsv" | wc -l
 
 | Consumer | Needs | Form |
 |---|---|---|
-| File 03 | The D12 record, for its tracker; the push of the local `toil-baseline` branch when it creates `PLATFORM_REPO_REMOTE` | `decisions/<date>-wall-e-d12-toil-tasks.md` |
+| File 03 | The D12 record, for its tracker; the push of the local `toil-baseline` branch when it creates `PLATFORM_REPO_REMOTE`; `BD-02-1`, which DC-9.11 closes with `bd_close BD-02-1` | `decisions/<date>-wall-e-d12-toil-tasks.md`; the `BD-02-1` row in `DEVIATION_REGISTER` |
 | File 22 | `TOIL_BASELINE_FILE` at a merged commit, the CSV contract above, and the re-run point "TB-5.1 merged" | CSV, nine columns, header row |
 | File 30 | Proof that D12's gate is met | TB-5.1 build-log entry |
 | File 39 (Stage 0) | The three tasks the shadow playbooks cover | `TOIL_TASKS` |
 | File 40 and the S1 stop-or-continue review | The denominator and the operating-hours series | The merged CSV |
 | File 42 | Evidence rows TB-1.1, TB-1.2, TB-2.1, TB-2.2, TB-2.3, TB-3.2 (one per week), TB-4.1, TB-4.2, TB-4.3, TB-5.1 | `EVIDENCE_REGISTER` |
 
-Consumes: `PLATFORM_REPO_DIR`, `BUILD_LOG_DIR`, `WIKI_DIR`, `EVIDENCE_REGISTER` and the helpers `need`, `penv_set`, `checkpoint` and `evidence_add` (file 01 PR-2.2 to PR-2.5, PR-4.2); `EVIDENCE_INTERIM_LOCATION` (file 01 PR-4.4) by TB-2.3 only. `SECOND_OPERATOR_EMAIL` (file 03 DC-2.4) and `PLATFORM_REPO_REMOTE`, `GIT_HOST` with branch protection (file 03 DC-9.2 to DC-9.6) are needed only by TB-4.3 and TB-5.1, which wait for them without losing a week. TB-1.1 and TB-1.2 consume nothing.
+Consumes: `PLATFORM_REPO_DIR`, `BUILD_LOG_DIR`, `WIKI_DIR`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER` and the helpers `need`, `penv_set`, `checkpoint`, `evidence_add` and `bd_insert` (file 01 PR-2.2 to PR-2.5, PR-4.1, PR-4.2); `EVIDENCE_INTERIM_LOCATION` (file 01 PR-4.4) by TB-2.3 only. `SECOND_OPERATOR_EMAIL` (file 03 DC-2.4) and `PLATFORM_REPO_REMOTE`, `GIT_HOST` with branch protection (file 03 DC-9.2 to DC-9.6) are needed only by TB-4.3 and TB-5.1, which wait for them without losing a week. TB-1.1 and TB-1.2 consume nothing.
 
 Produces: `TOIL_TASKS`, `TOIL_START_DATE`, `TOIL_BASELINE_FILE`, `TICKET_SYSTEM`, `TICKET_CATEGORY_FIELD`, `TOIL_EVIDENCE_FOLDER`.
 

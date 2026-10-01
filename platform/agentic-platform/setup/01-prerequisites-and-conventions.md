@@ -1235,8 +1235,8 @@ Until it is closed:
   `<date>-build-log-bundle-v<n>`. This is a copy, not protection: a rewritten local history still
   produces a valid bundle, and only the second human comparing two bundles would see it. State
   that limit when the control is cited.
-- The gap is a `DEV` row in `DEVIATION_REGISTER`, opened by the first step of
-  `02-toil-baseline.md` that writes to the build log, with 03 named as the closing file.
+- The gap is a `DEV` row in `DEVIATION_REGISTER`, `BD-02-1`, opened with `bd_insert` by the first step of
+  `02-toil-baseline.md` that writes to the build log (TB-1.1), and closed with `bd_close` by 03 DC-9.11.
 
 **Record naming.** `<date>-<step-id>-<record>-v<n>`: UTC date `YYYY-MM-DD`, the step id, a
 lower-case hyphenated slug, and a version starting at 1. A record is never overwritten; a

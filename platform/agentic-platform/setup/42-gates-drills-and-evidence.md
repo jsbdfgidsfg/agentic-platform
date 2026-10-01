@@ -5,6 +5,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: GD-3.1 requests its `ENT_PROJECT_REPAIR_CORE` grant and encrypts the bucket with its own Autokey key handle instead of binding the Cloud Storage service agent on `KEY_PLATFORM_LOGS` (whose sole Encrypter/Decrypter stays the Logging service account, 11 KV-2.3); the `LOGGING_PROJECT` placement is recorded as a `BD-42` departure from 08 §5.4 and 02 §5; GD-1.1 and GD-1.2 branch, push and open a pull request; GD-1.4 files pointer records and `gate-index.sh` prints `MALFORMED` for a missing or bad `date:`; GD-3.4 resolves each file from the register's location column and skips record ids already copied; gendered pronouns for roles replaced with they/them/their and verb agreement fixed; GD-3.1 writes the departure as row `BD-42-1`, inserted into the register's first table with 03 DC-9.1's block; GD-1.4's TIER-R row names `records/gates/`, where 17 FM-10.2 keeps the signed record, as the pointer's evidence location.
+- Revised 2026-10-01: GD-7.1 lists as open only first-table rows with no Closures line, in POSIX awk with today's date from `date -u`, and prints `MALFORMED` for a `BD-` line in neither table's form; a re-dating closes the old row with `bd_close`. The listing was run on 2026-10-01 under `/bin/bash` 3.2 with macOS's awk 20200816 against a throwaway register made by 01 PR-4.1's block and filled with `bd_insert` and `bd_close`: it listed the five unclosed rows of seven, one `OVERDUE` and one `MALFORMED` line. A check of the shell, not evidence (S177).
 - Part 42 of the setup set. Entry point: [README.md](README.md). Conventions, helpers and the
   step format: [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md).
 - What this part is: the **standing** half of the set. Files 01 to 41 each produce gate lines,
@@ -1596,22 +1597,52 @@ grep -A6 "model_id: \"${MODEL_ID}\"" "$PLATFORM_REPO_DIR/register/models.yaml"
 
 | Verdict | What it means | What is written |
 |---|---|---|
-| **Superseded** | The factory now owns the resource: a `terraform import` and an **empty plan** prove it | A Closures row with the import commit and the plan output path, and the step id that verified it |
-| **Withdrawn** | The exception was removed (the Owner, the standing role, the interim route) | A Closures row naming the withdrawing step |
-| **Re-dated** | Still needed; a new expiry, a named owner and the reason | The row is **not edited**; a new row supersedes it and cites it |
+| **Superseded** | The factory now owns the resource: a `terraform import` and an **empty plan** prove it | A Closures row, written with 01's `bd_close`, with the import commit and the plan output path, and the step id that verified it |
+| **Withdrawn** | The exception was removed (the Owner, the standing role, the interim route) | A Closures row, written with `bd_close`, naming the withdrawing step |
+| **Re-dated** | Still needed; a new expiry, a named owner and the reason | The row is **not edited**: a new row with the new expiry, citing the old id, is inserted with `bd_insert`, and the old row is closed with `bd_close` (How: `superseded by` the new id; Verified by: `42 GD-7.1`), as 01 §5 sets for a changed expiry. Without that closure the old row stays in the open list |
 | **Escalated** | Overdue with no plan | A risk register row and an action with an owner and a date |
+
+  A row is open when it sits in the register's first table and has no line in the Closures
+  table; the Status cell is never edited (01 PR-4.1), so it still reads `open` after a closure
+  and is not the test. The block below is POSIX awk, with today's date taken from `date -u` in
+  the shell, so it runs unchanged with macOS's awk. It splits cells as 01's `bd_insert` and
+  `bd_close` do: a first-table row has thirteen cells, a closure four.
 
 ```bash
 need DEVIATION_REGISTER
-awk -F' *\\| *' '/^\| BD-/ && $14 ~ /open/ {print $2"\t"$13}' "$DEVIATION_REGISTER"   # id and expiry, open rows
-awk -F' *\\| *' '/^\| BD-/ && $14 ~ /open/ && $13 < strftime("%Y-%m-%d") {print "OVERDUE "$2}' "$DEVIATION_REGISTER"
+today="$(date -u +%Y-%m-%d)"
+awk -F' *[|] *' -v today="$today" '
+  /^## Closures$/ { inc = 1; next }
+  /^[|] BD-/ && !inc && NF == 15 { n++; id[n] = $2; st[n] = $14; ex[n] = $13; next }
+  /^[|] BD-/ && inc && NF == 6 { closed[$2] = 1; next }
+  /^[|] BD-/ { bad[++b] = "MALFORMED line " NR ": " $2 }
+  END {
+    for (i = 1; i <= n; i++) {
+      if (id[i] in closed) continue
+      d = "no date"
+      if (match(ex[i], /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/)) d = substr(ex[i], RSTART, RLENGTH)
+      print id[i] "\t" d "\t" st[i] "\t" ex[i]
+      if (d != "no date" && d < today) late[++m] = "OVERDUE " id[i] " " d
+    }
+    for (i = 1; i <= m; i++) print late[i]
+    for (i = 1; i <= b; i++) print bad[i]
+  }' "$DEVIATION_REGISTER"
 ```
 
+  It prints one line per open row (id, expiry date, Status cell, the whole Expiry cell), then
+  the `OVERDUE` lines, then any `MALFORMED` lines. The expiry date is the first `YYYY-MM-DD` in
+  the Expiry cell; a row whose expiry is an event rather than a date (`superseded by terraform
+  import …`, `closed by 03 DC-9.11 …`) prints `no date` and is never `OVERDUE`, so its verdict
+  rests on whether that event has happened. A `MALFORMED` line is a `BD-` line in neither form,
+  for example a row appended below `## Closures` with `>>`: it is counted neither open nor
+  closed, and it is taken at the sitting like an open row.
+
 - **VERIFY:** Every open row appears in the sitting's record with one of the four verdicts. The
-  `OVERDUE` list is empty, or every entry has an escalation row. The register itself is unedited:
-  `git diff` on it shows only appended lines.
+  `OVERDUE` list is empty, or every entry has an escalation row. Every `MALFORMED` line has a
+  verdict in the record. The register itself is unedited: `git diff` on it shows only added
+  lines (rows inserted into the first table, closures at the end), none changed or removed.
 - **ROLLBACK:** None; the register is append-only by construction.
-- **EVIDENCE:** The two outputs and the verdict list as `<date>-GD-7.1-deviation-review-v1`,
+- **EVIDENCE:** The listing's output and the verdict list as `<date>-GD-7.1-deviation-review-v1`,
   signed by the security reviewer. E-xx: E-03, E-05. TISAX: 1.4.1, 5.2.1.
 
 ### GD-7.2 The supersession proof — **BLOCKED on `B-01`**
@@ -1806,8 +1837,9 @@ Sitting C and every quarter:
 - [ ] No calendar row is past due with no record and no signed acceptance (GD-5.13).
 - [ ] `models.yaml` rows are all read within 90 days, and `MODEL_ID`'s retirement is more than 90
       days ahead (GD-6.1).
-- [ ] Every open `DEVIATION_REGISTER` row has one of the four verdicts; no `OVERDUE` row without
-      an escalation; the register shows only appended lines (GD-7.1).
+- [ ] Every open `DEVIATION_REGISTER` row (a first-table row with no Closures line) and every
+      `MALFORMED` line has one of the four verdicts; no `OVERDUE` row without an escalation; the
+      register shows only added lines (GD-7.1).
 - [ ] At the Tier W sitting, no `MOD` row is open without a signed re-dating (GD-7.3).
 - [ ] The quarterly record exists, signed by the chair, with a decision on all eight agenda items
       and dates on anything carried (GD-8.1, GD-8.2); the witness's own four readings are in it,
