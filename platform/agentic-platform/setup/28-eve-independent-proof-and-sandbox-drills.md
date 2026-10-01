@@ -5,6 +5,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed; Eve is "it" (EV-5.3 heading now "Eve reports its own pause").
+- Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (EV-9.1).
 - Last executed: never
 - Stage: review §2 stage 30 (the Eve 10b drill, re-cut to Eve-H) and the Eve part of stage 32 (the sandbox tenant). It is the last file of the Eve-H block and the one that produces `EVE_H_LIVE_RECORD`, on which [30](30-wall-e-workspace-side.md) and every later Wall-E file depend.
 - Step prefix: `EV`. Steps: 50. BLOCKED: EV-5.3 (Eve's self-integrity rules and the configuration fingerprint, README B-08), EV-6.2, EV-6.3 and EV-6.4 (the twin reconciler and the detection catalogue, README B-08 and B-09; they run as written the day [25](25-eve-human-super-admin-detections.md)'s twin deploy is `DONE`). **IRREVERSIBLE:** EV-2.10, EV-4.5, EV-5.6 and EV-6.6 — each writes a record into the witness bucket, whose retention policy is locked, so the object cannot be removed before its retention period ends.
@@ -1250,25 +1251,21 @@ git -C "$PLATFORM_REPO_DIR" push -u origin eve-h-live
 
 - **WHO:** Second human; the platform owner reads the rows.
 - **WHERE:** `DEVIATION_REGISTER`.
-- **ACTION:**
+- **ACTION:** Each row that applies is inserted into the register's first table with 01's `bd_insert`, which commits it as `BD-28-<n> opened` (never appended to the file end, which would land inside the Closures table). Replace each `<…>` choice before running; `bd_insert` refuses a row that still holds one.
 
 ```bash
-need DEVIATION_REGISTER
+need DEVIATION_REGISTER BUILD_LOG_DIR
 d=$(date -u +%F)
-{
-printf '| BD-28-1 | %s | 28 EV-5.3 | DEV | the anti-silencing drill ran without its self-integrity half: Eve'"'"'s self-integrity rules and configuration fingerprint are not committed (B-08) | EVE_PROJECT | eve repository | witness fingerprint half only | EV-5.4 output | n/a | second human signed the partial record | re-run EV-5.3 when B-08 lands, before the super-admin grant | open |\n' "$d"
-printf '| BD-28-2 | %s | 28 EV-6.2 to EV-6.4 | DEV | the sandbox half of G-5 and G-7 ran <in full | not at all>: the twin reconciler and detection catalogue depend on B-08 and B-09 | EVE_TWIN_PROJECT, sandbox organisation | 25 twin deploy | nonprod findings and pages | EV-6.x outputs | n/a | second human and sandbox super admin 2 | re-run the three steps when 25'"'"'s twin deploy is DONE | open |\n' "$d"
-printf '| BD-28-3 | %s | 28 EV-2.4 | DEV | the shape inside protopayload_auditlog.metadataJson for a Workspace admin event (the event[] array and its eventName/eventType/parameter[] members) was <confirmed | corrected> from a raw row; Google documents the column, not the inner shape | EVE_PROJECT eve_workspace_logs | n/a | the JSON_VALUE paths of the assertion query | EV-2.4 raw row | n/a | second human | close when the row confirmed the committed paths, or when Google publishes the inner schema | open |\n' "$d"
-printf '| BD-28-4 | %s | 28 EV-6.2 | DEV | a sandbox seeded action <S2 | S3 | S4> emitted an event name the committed catalogue does not carry: <emitted name> against <catalogue name> | EVE_TWIN_PROJECT, eve/config detections/catalogue.yaml | 25 EH-2.3 | the catalogue predicate | EV-6.2 per-action table | n/a | Eve owner | a reviewed one-line catalogue merge and an EV-6.2 re-run before the super-admin gate of 38 | open |\n' "$d"
-} >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" commit -m "registers: BD-28-1 to BD-28-3 (setup 28)"
+bd_insert "$(printf '| BD-28-1 | %s | 28 EV-5.3 | DEV | the anti-silencing drill ran without its self-integrity half: Eve'"'"'s self-integrity rules and configuration fingerprint are not committed (B-08) | EVE_PROJECT | eve repository | witness fingerprint half only | EV-5.4 output | n/a | second human signed the partial record | re-run EV-5.3 when B-08 lands, before the super-admin grant | open |\n' "$d")"
+bd_insert "$(printf '| BD-28-2 | %s | 28 EV-6.2 to EV-6.4 | DEV | the sandbox half of G-5 and G-7 ran <in full | not at all>: the twin reconciler and detection catalogue depend on B-08 and B-09 | EVE_TWIN_PROJECT, sandbox organisation | 25 twin deploy | nonprod findings and pages | EV-6.x outputs | n/a | second human and sandbox super admin 2 | re-run the three steps when 25'"'"'s twin deploy is DONE | open |\n' "$d")"
+bd_insert "$(printf '| BD-28-3 | %s | 28 EV-2.4 | DEV | the shape inside protopayload_auditlog.metadataJson for a Workspace admin event (the event[] array and its eventName/eventType/parameter[] members) was <confirmed | corrected> from a raw row; Google documents the column, not the inner shape | EVE_PROJECT eve_workspace_logs | n/a | the JSON_VALUE paths of the assertion query | EV-2.4 raw row | n/a | second human | close when the row confirmed the committed paths, or when Google publishes the inner schema | open |\n' "$d")"
+bd_insert "$(printf '| BD-28-4 | %s | 28 EV-6.2 | DEV | a sandbox seeded action <S2 | S3 | S4> emitted an event name the committed catalogue does not carry: <emitted name> against <catalogue name> | EVE_TWIN_PROJECT, eve/config detections/catalogue.yaml | 25 EH-2.3 | the catalogue predicate | EV-6.2 per-action table | n/a | Eve owner | a reviewed one-line catalogue merge and an EV-6.2 re-run before the super-admin gate of 38 | open |\n' "$d")"
 ```
 
-  Rows whose condition did not occur are deleted before the commit rather than left open.
-- **VERIFY:** `grep -c '^| BD-28-' "$DEVIATION_REGISTER"` matches the number of rows that actually apply; each open row names an owner and a closing condition.
-- **ROLLBACK:** `git revert`.
-- **EVIDENCE:** The commit. E-05. TISAX 5.2.1, 1.4.1.
+  Lines whose condition did not occur are removed from the block before it runs, so those rows are never written rather than left open.
+- **VERIFY:** `grep -c '^| BD-28-' "$DEVIATION_REGISTER"` matches the number of rows that actually apply, and `awk -F' *[|] *' '$2 ~ /^BD-28-/ && NF==15 {print NR, $2}' "$DEVIATION_REGISTER"` prints each at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); each open row names an owner and a closing condition.
+- **ROLLBACK:** `git revert` of the `BD-28-<n> opened` commits before the platform owner has read the rows; after that, a `bd_close` line.
+- **EVIDENCE:** The `BD-28-<n> opened` commits. E-05. TISAX 5.2.1, 1.4.1.
 
 ### EV-9.2 Re-run index and BLOCKED index
 

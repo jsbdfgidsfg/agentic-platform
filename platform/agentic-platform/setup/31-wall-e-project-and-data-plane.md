@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-16
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (WD-1.2, WD-11.1).
 - Last executed: never
 - Stage: review §2 stage 22 (Wall-E's register row and the FM-AGENT run) and stage 23 (Phases 7 and 8 of the superseded Wall-E runbook). Runs after [30](README.md) (the Workspace side), which itself runs only on `EVE_H_LIVE_RECORD`. It is ordered **after the security reviewer and the second human are appointed**, because the production P-SA singleton entitlement needs two named approvers and neither may be the requester (SD-42, S011).
 - Step prefix: `WD`. Steps: 40. BLOCKED steps: WD-4.5 (the nine `walle_audit` table schemas, README B-22, opened by this file). Steps that record `PENDING` rather than `BLOCKED`: WD-5.2 and WD-5.4 (`run.invoker` for `walle-tasks@`, re-run in 33), WD-6.3 (the five secret versions, added in 32), WD-8.2 and WD-8.3 (foreign readers that do not exist yet), WD-9.2 (the pinned PEM files, which arrive at S4).
@@ -110,7 +111,7 @@ Neither approver may be the platform owner, and PAM refuses self-approval in any
 
 Hands-on: about 2 days. Elapsed: about 1 week (two pull-request cycles, two approval cycles, the Access Approval enrolment). WD-4.5 waits on Wall-E's schema files with no fixed date.
 
-Conventions of [01](01-prerequisites-and-conventions.md) apply. Deviation rows are `BD-31-<n>`. Records go to `BUILD_LOG_DIR/records/` as `<date>-WD-<step>-<slug>-v<n>`. Every shell block starts with:
+Conventions of [01](01-prerequisites-and-conventions.md) apply. Deviation rows are `BD-31-<n>`, in 01 PR-4.1's thirteen columns, inserted into the register's first table with 01's `bd_insert` and closed with `bd_close`; nothing is appended to `DEVIATION_REGISTER` by hand. Records go to `BUILD_LOG_DIR/records/` as `<date>-WD-<step>-<slug>-v<n>`. Every shell block starts with:
 
 ```bash
 source ~/.platform-env
@@ -245,6 +246,7 @@ git -C "$PLATFORM_REPO_DIR" push -u origin wd-1-schema
   3. Labels: tick **Security**.
   4. Access settings as 06 OB-6.2 step 4 (invitation only, no external members).
   5. Members: the platform owner's `sa-1-admin@` only, until 03 names a separate Wall-E owner. **Never `walle@`**: the robot is not an owner of itself, and `walle-protected@` (30) already protects it.
+  6. Record `BD-31-1` in the register's first table with 01's `bd_insert` (never appended to the file end, which would land inside the Closures table): `need DOMAIN; bd_insert "| BD-31-1 | $(date -u +%F) | 31 WD-1.2 | DEV | group made by hand instead of the group factory (factory-groups@ job is BLOCKED code) | group walle-owners@$DOMAIN | 04 section 2.4 | one security group, member sa-1-admin@ only | n/a | n/a | none: SD-01; owner platform owner | superseded when factory-groups@'s job exists | open |"`.
 - **VERIFY:**
 
 ```bash
@@ -253,9 +255,9 @@ gcloud identity groups memberships list --group-email="walle-owners@${DOMAIN}" -
 gcloud identity groups memberships list --group-email="walle-owners@${DOMAIN}" --format="value(preferredMemberKey.id)" | grep -x "$ROBOT" && echo "STOP: the robot is in its own owner group" || echo "robot absent"
 ```
 
-  The labels include `cloudidentity.googleapis.com/groups.security`; the membership list prints exactly `sa-1-admin@`; `robot absent`.
+  The labels include `cloudidentity.googleapis.com/groups.security`; the membership list prints exactly `sa-1-admin@`; `robot absent`; `bd_insert` printed `opened BD-31-1 at line <a> (Closures heading at line <b>)` with `<a>` smaller than `<b>` (06 OB-3.2's check), or `exists: BD-31-1`.
 - **ROLLBACK:** **IRREVERSIBLE**: a security group cannot be changed back to a Google Group (06 OB-6.2's source). Confirm before saving: the address is free (step 1), the spelling equals `owner_group` in WD-1.3's draft, and 04 §2.4 names the `<agent>-owners@` pattern. Gate: 04 §2.4 and WD-1.1's `DONE` line. A wrongly added member is removed at once and recorded.
-- **EVIDENCE:** Screenshot of the settings page and the three outputs as `${R}-1.2-walle-owners-v1`; a `DEV` row `BD-31-1` in `DEVIATION_REGISTER` ("group made by hand instead of the group factory; superseded when `factory-groups@`'s job exists; owner platform owner"). E-08. TISAX 4.1.1, 4.2.1.
+- **EVIDENCE:** Screenshot of the settings page and the three outputs as `${R}-1.2-walle-owners-v1`; the `DEV` row `BD-31-1` in `DEVIATION_REGISTER` ("group made by hand instead of the group factory; superseded when `factory-groups@`'s job exists; owner platform owner"), committed as `BD-31-1 opened`. E-08. TISAX 4.1.1, 4.2.1.
 
 ### WD-1.3 Write and merge the P-SA production row and the manifest
 
@@ -1324,17 +1326,17 @@ git -C "$PLATFORM_REPO_DIR" push -u origin wd-10-audit-guard
 
 - **WHO:** Platform owner; the second human initials the build-log line as approver of the repair grant.
 - **WHERE:** Shell; `DEVIATION_REGISTER`.
-- **ACTION:** Everything §4 to §9 made was in the run spec's `made_elsewhere`. Add it to the spec as a revision (the keys the checker reads, or the `made_elsewhere` lines marked done with this file's record ids) and re-run FM-2.21, as 17 FM-2.22 requires. Then write `BD-31-3` for the data plane made by hand instead of by the module, and revoke every grant.
+- **ACTION:** Everything §4 to §9 made was in the run spec's `made_elsewhere`. Add it to the spec as a revision (the keys the checker reads, or the `made_elsewhere` lines marked done with this file's record ids) and re-run FM-2.21, as 17 FM-2.22 requires. Then write `BD-31-3` for the data plane made by hand instead of by the module, built into a variable and inserted into the register's first table with 01's `bd_insert`, and revoke every grant.
 
 ```bash
-need PLATFORM_REPO_DIR WALLE_PROJECT ENT_PROJECT_REPAIR_WALLE CICD_PROJECT DEVIATION_REGISTER
+need PLATFORM_REPO_DIR WALLE_PROJECT ENT_PROJECT_REPAIR_WALLE CICD_PROJECT DEVIATION_REGISTER BUILD_LOG_DIR
 python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" live "$PLATFORM_REPO_DIR/factory/runs/walle-prod.json" --report "${R}-11.1-live-v1.json" --accept-pending; echo "exit=$?"
 jq -r '.results[] | select(.status != "PASS") | "\(.status) \(.check) \(.pending.owner // "") \(.pending.rerun_in // "")"' "${R}-11.1-live-v1.json"
-printf '| BD-31-3 | %s | 31 WD-4 to WD-9 | DEV | agent-project data plane (hand, SD-01) | project %s | register/walle.yaml | Firestore (default) europe-west1 delete-protected; dataset %s EU with %s tables; topics walle-events, walle-inbox, walle-dead-letter; queue walle-plan-items 1/1/3; walle-tasks@ token path; five empty regional secrets; walleAuditWriter with two writer entries; readers %s | build-log:records/%s | %s (FM-2.19) | PAM %s | terraform import of the data plane + empty plan (17 FM-11), expiry Tier W gate | open |\n' \
+row=$(printf '| BD-31-3 | %s | 31 WD-4 to WD-9 | DEV | agent-project data plane (hand, SD-01) | project %s | register/walle.yaml | Firestore (default) europe-west1 delete-protected; dataset %s EU with %s tables; topics walle-events, walle-inbox, walle-dead-letter; queue walle-plan-items 1/1/3; walle-tasks@ token path; five empty regional secrets; walleAuditWriter with two writer entries; readers %s | build-log:records/%s | %s (FM-2.19) | PAM %s | terraform import of the data plane + empty plan (17 FM-11), expiry Tier W gate | open |\n' \
   "$(date -u +%F)" "$WALLE_PROJECT" "$WALLE_AUDIT_DS" "$(bq --project_id="$WALLE_PROJECT" ls --format=json "${WALLE_PROJECT}:${WALLE_AUDIT_DS}" | jq '[.[] | select(.type=="TABLE")] | length')" \
   "$(jq -r '[.[] | select(.role == "READER") | .userByEmail] | join("+")' "${R}-8.4-final-access-v1.json")" \
-  "$(basename "${R}-11.1-live-v1.json")" "$(date -u +%F)" "ENT_PROJECT_REPAIR_WALLE" >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-31-3 Wall-E data plane (setup 31 WD-11.1)"
+  "$(basename "${R}-11.1-live-v1.json")" "$(date -u +%F)" "ENT_PROJECT_REPAIR_WALLE")
+bd_insert "$row"
 need ORG_ID ENT_PLATFORM_POLICY ENT_FOLDER_ADMIN FLD_AGENTS_P_SA_PROD
 # One list and one revoke per scope: a project-scoped list cannot see an organisation- or folder-scoped entitlement.
 gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_WALLE" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | while read -r G; do gcloud pam grants revoke "$G" --reason="31 sitting complete" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT"; done
@@ -1347,7 +1349,7 @@ gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten="bindings[].members" -
 ```
 
   `gcloud pam grants list` resolves the entitlement through exactly one of `--project`, `--folder` or `--organization` (§16), so each entitlement is listed and revoked at its own scope: `ENT_PROJECT_REPAIR_WALLE` on the project, `ENT_PLATFORM_POLICY` on the organisation, `ENT_FOLDER_ADMIN` on the folder 12 attached it to (`FLD_AGENTS_P_SA_PROD` as recorded there; if 12 attached it higher, use that folder and record the difference). The first draft listed all three through `--project`, which returns nothing for the other two scopes, and then asserted "no grant is `ACTIVE`" from a query that never looked — an organisation-scoped policy-administration grant left live overnight is the standing privilege 12 exists to remove.
-- **VERIFY:** `exit=0` with no non-`PASS` line other than pending entries this file recorded with an owner and a re-run file; `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-31-3` with a table count of `9` (or `0` while WD-4.5 is BLOCKED, and then the row is superseded when the tables land); the three count lines print `repair 0`, `policy 0` and `folder 0`, each read at its own scope; the final IAM table shows only the two `roles/accessapproval.approver` bindings of WD-3.1 and nothing else.
+- **VERIFY:** `exit=0` with no non-`PASS` line other than pending entries this file recorded with an owner and a re-run file; `grep -n '^| BD-31-3 |' "$DEVIATION_REGISTER"` shows the row with a table count of `9` (or `0` while WD-4.5 is BLOCKED, and then the row is closed with `bd_close` as superseded, and its successor inserted with `bd_insert`, when the tables land), at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); the three count lines print `repair 0`, `policy 0` and `folder 0`, each read at its own scope; the final IAM table shows only the two `roles/accessapproval.approver` bindings of WD-3.1 and nothing else.
 - **ROLLBACK:** Append-only register; a revoked grant is not restored.
 - **EVIDENCE:** The report and the commit, `evidence_add WD-11.1 zero-diff E-05 5.2.4 ...`. TISAX 5.2.4, 1.4.1.
 

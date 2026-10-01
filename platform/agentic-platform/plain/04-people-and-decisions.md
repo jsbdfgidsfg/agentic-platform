@@ -2,12 +2,13 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: the register counted at 207 decisions, P1–P207, with P205–P207 added that day and new ids from P208.
 - What this page is: a plain-words account of who has to exist before each part of the platform may open, what each of them must never also do, what the sponsor is asked for in order, and how the platform's decisions are written down, counted and signed. Nothing described here is built.
 
 ## In one sentence
 
-On 2026-09-13 one person holds every role the platform needs; the platform opens in steps, each step waits until the right people exist and the right decisions are signed, and 204 numbered decisions record exactly what is decided, what is proposed and what is still open.
+On 2026-09-13 one person holds every role the platform needs; the platform opens in steps, each step waits until the right people exist and the right decisions are signed, and 207 numbered decisions record exactly what is decided, what is proposed and what is still open.
 
 ## Why people come before machines
 
@@ -141,13 +142,14 @@ Rows are grouped by the gate they block, in gate order: before the folder exists
 
 ## How many, and where they stand
 
-| Set | Ids | Count | State on 2026-09-18 |
+| Set | Ids | Count | State on 2026-10-01 |
 |---|---|---|---|
 | The high-level design's own | P1–P34 | 34 | 3 decided or closed (P33 decided; P2 and P9 closed); 9 proposed; 18 open; 4 spikes |
 | The ten detailed pages' | P35–P143 | 109 | 107 proposed, 2 spikes; 11 of the proposed rows carry an open dependency or an `Assumption:` value |
 | The build procedures' | P144–P191, also SD-01 to SD-48 | 48 | all proposed, pending the owner's signature; the procedures refuse the gated step until the record is signed |
 | The proof of value's | P192–P204, also PV-01 to PV-13 | 13 | all proposed, pending the owner's signature; 6 apply only to the proof of value, 6 bind the full build, P204 is mixed |
-| **Platform total** | P1–P204 | **204** | new ids append at P205; ids are never reused |
+| Added on 2026-10-01 | P205–P207 | 3 | all proposed: the reading of Wall-E's triggers, the layout of the gateways' working-set registries, and whether Wall-E's first stage waits for the EU database |
+| **Platform total** | P1–P207 | **207** | new ids append at P208; ids are never reused |
 | Wall-E's own | 1–52 | 52 | the objective of 2026-09-13 changed the answer to twenty-two of them; decision 26 is settled by P33 |
 | Eve's own | E-1 to E-21 | 21 (cited as 20 on the platform pages) | E-2 and E-16 block the grant |
 | Mo's own | M-1 to M-11 | 11 | P22 supersedes M-7; P25 depends on M-4 |

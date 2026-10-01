@@ -5,6 +5,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
+- Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (EW-2.7).
 - Last executed: never
 - Stage: review §2 stage 30, the identity part (the superseded Eve runbook's Phases 7, 8 and 9 identity half), pulled before Wall-E by SD-10. This file is **Eve-H part 2**. It opens gate line **G-3** (`eve@` holds no Super Admin role and exactly the E-16 privilege set). It runs after [23](23-eve-project-and-evidence-stores.md) and after [21](21-sandbox-tenant-and-nonprod-foundation.md); [22](22-mo-foundations.md) is not a precondition of any step here.
 - Step prefix: `EW`. Steps: 66. BLOCKED steps: EW-6.1, EW-6.2, EW-6.3, EW-6.5, EW-8.1, EW-9.5 and EW-9.6, all on one piece of code — Eve's consent command (README BLOCKED index row *Eve: the consent command*, `B-10`; if README §8 numbers it differently, the id is corrected here in the same pull request); and EW-2.2, blocked not on code but on [23](23-eve-project-and-evidence-stores.md) EP-3.8 and EP-4.5 (the twin key and the twin dataset, which this file reads back and never creates), which holds the rest of §2 with it. EW-6.4 is blocked on EW-7.1 by ordering only and runs in the same sitting. Steps that record `PENDING` rather than `BLOCKED`: EW-3.9 (`walle-protected@` does not exist until 30), EW-2.8 (the drift inventory, whose job is `B-02`), EW-4.6 (the security reviewer's signature while nobody is appointed).
@@ -779,7 +780,7 @@ gcloud organizations remove-iam-policy-binding "$SANDBOX_ORG_ID" --member="user:
 gcloud organizations get-iam-policy "$SANDBOX_ORG_ID" --format=json | jq -r '[.bindings[] | select(.role=="roles/logging.configWriter")] | length'
 ```
 
-- **VERIFY:** `condition:` prints the EW-2.3 expression; the length prints `0`. If the removal is refused, the condition differs from what was read: stop and read the policy by hand rather than guessing a string. Close `BD-24-3` in `DEVIATION_REGISTER` with the removal time.
+- **VERIFY:** `condition:` prints the EW-2.3 expression; the length prints `0`. If the removal is refused, the condition differs from what was read: stop and read the policy by hand rather than guessing a string. Close `BD-24-3` with a line in the register's Closures table, written with 01's `bd_close BD-24-3 "withdrawal: 24 EW-2.7, logging.configWriter removed at <UTC time>" "24 EW-2.7 VERIFY"`, the removal time typed in; the row itself is never edited.
 - **ROLLBACK:** Not applicable.
 - **EVIDENCE:** The read-back and the closed deviation row. TISAX 4.1.3.
 

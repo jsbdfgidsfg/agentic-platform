@@ -4,6 +4,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Changed on 2026-10-01: SD-01 carries `BOOTSTRAP_EXCEPTION_EXPIRY` and SD-16 carries `BILLING_ACCOUNT_ID` and `BOOTSTRAP_BILLING_EXPIRY` as Values; DC-9.11 creates and protects the build-log repository and sets `BUILD_LOG_REMOTE`; the `penv_set` open item is closed by 01.
+- Changed on 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (DC-9.11).
 - Stage: review §2 stage 1. Every later file gates on a row of this page.
 - Step prefix: `DC`.
 - Replaces: [../../wall-e/PREREQUISITES.md](../../wall-e/PREREQUISITES.md) §1 and §2 (the decision and people tables), the "Decisions that must be closed" tables of [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md) and [../../mo/07-build-runbook.md](../../mo/07-build-runbook.md). Salvaged with corrections: D8 reads `eu` only (X-GE-13), D12 starts on day one in [02-toil-baseline.md](02-toil-baseline.md) (S084), D13 reads G1-G21 (S092). Not copied: decision 29 "before Stage 1" (X-ORG-14), decision 6 "at Stage 1" (X-RQB-01), P22 "Tier W" (S051), P52's 30 days as a value to set (X-GE-01).
@@ -1333,7 +1334,7 @@ gh api -X PUT "repos/$blrepo/branches/main/protection" --input "$p"
 rm "$p"
 ```
 
-  Then grant write to the DC-9.3 team on `$blrepo` in the git host's organisation settings, and repeat DC-9.3's collaborator listing against `$blrepo`. From this step on, every sitting ends with `git -C "$BUILD_LOG_DIR" push origin main` before `sitting_end`, and the interim bundle control of 01 §7.1 stops; the bundles already uploaded stay in `EVIDENCE_INTERIM_LOCATION`. The deviation row 02 opened for the missing remote is closed by a line in the register's Closures table naming this step.
+  Then grant write to the DC-9.3 team on `$blrepo` in the git host's organisation settings, and repeat DC-9.3's collaborator listing against `$blrepo`. From this step on, every sitting ends with `git -C "$BUILD_LOG_DIR" push origin main` before `sitting_end`, and the interim bundle control of 01 §7.1 stops; the bundles already uploaded stay in `EVIDENCE_INTERIM_LOCATION`. The deviation row 02 opened for the missing remote is closed by a line in the register's Closures table naming this step, written with 01's `bd_close <that row's id> "build-log remote created and protected: 03 DC-9.11" "03 DC-9.11 VERIFY"` once VERIFY passes.
 - VERIFY:
 
 ```bash

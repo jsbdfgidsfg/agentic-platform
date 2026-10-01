@@ -4,7 +4,7 @@
 
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Revised 2026-10-01: GD-3.1 requests its `ENT_PROJECT_REPAIR_CORE` grant and encrypts the bucket with its own Autokey key handle instead of binding the Cloud Storage service agent on `KEY_PLATFORM_LOGS` (whose sole Encrypter/Decrypter stays the Logging service account, 11 KV-2.3); the `LOGGING_PROJECT` placement is recorded as a `BD-42` departure from 08 §5.4 and 02 §5; GD-1.1 and GD-1.2 branch, push and open a pull request; GD-1.4 files pointer records and `gate-index.sh` prints `MALFORMED` for a missing or bad `date:`; GD-3.4 resolves each file from the register's location column and skips record ids already copied; gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
+- Revised 2026-10-01: GD-3.1 requests its `ENT_PROJECT_REPAIR_CORE` grant and encrypts the bucket with its own Autokey key handle instead of binding the Cloud Storage service agent on `KEY_PLATFORM_LOGS` (whose sole Encrypter/Decrypter stays the Logging service account, 11 KV-2.3); the `LOGGING_PROJECT` placement is recorded as a `BD-42` departure from 08 §5.4 and 02 §5; GD-1.1 and GD-1.2 branch, push and open a pull request; GD-1.4 files pointer records and `gate-index.sh` prints `MALFORMED` for a missing or bad `date:`; GD-3.4 resolves each file from the register's location column and skips record ids already copied; gendered pronouns for roles replaced with they/them/their and verb agreement fixed; GD-3.1 writes the departure as row `BD-42-1`, inserted into the register's first table with 03 DC-9.1's block; GD-1.4's TIER-R row names `records/gates/`, where 17 FM-10.2 keeps the signed record, as the pointer's evidence location.
 - Part 42 of the setup set. Entry point: [README.md](README.md). Conventions, helpers and the
   step format: [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md).
 - What this part is: the **standing** half of the set. Files 01 to 41 each produce gate lines,
@@ -398,7 +398,7 @@ chmod +x "$PLATFORM_REPO_DIR/tools/gate-index.sh"
 
 | Gate | Record | Produced by | Filed as |
 |---|---|---|---|
-| TIER-R | `TIER_R_RECORD` | [17](17-factory-module-equivalents-and-tier-r-gate.md) FM-10 | `TIER-R-<date>.md` |
+| TIER-R | `TIER_R_RECORD`, kept where 17 writes it: `records/gates/<date>-tier-r-record-v1.md` in `PLATFORM_REPO_DIR`, outside `GATES_DIR` | [17](17-factory-module-equivalents-and-tier-r-gate.md) FM-10.2, FM-10.3 | `TIER-R-<date>.md`, whose `evidence` `location` is `repo:records/gates/<date>-tier-r-record-v1.md@<commit>` |
 | TIER-C | `TIER_C_RECORD` | [20](20-gemini-enterprise-gateway-and-tier-c-gate.md) GG-8.2 | `TIER-C-<date>.md` |
 | TIER-W | `TIER_W_RECORD` | **GD-2 of this file** | `TIER-W-<date>.md` |
 | G2 | The G2 record | [15](15-pager-siem-and-detections.md) PS-8.10 | `G2-<date>.md` |
@@ -650,8 +650,29 @@ checkpoint GD-3.1 DONE "$SECOND_HUMAN_EMAIL" - "$PLATFORM_EVIDENCE_BUCKET"
   **The project is a recorded departure.** [08](../08-data-logging-retention-sovereignty.md) §2.2
   S15 and §5.4 and [02](../02-landing-zone-and-tiers.md) §5 place the platform evidence lake in
   `CORE_PROJECT`; this step places it in `LOGGING_PROJECT` for the reason §3.1 gives. The
-  departure is a `BD-42-<n>` row in `DEVIATION_REGISTER`, written in this sitting, naming 08 §5.4
+  departure is row `BD-42-1` in `DEVIATION_REGISTER`, written in this sitting, naming 08 §5.4
   and 02 §5 as the pages that must cite it as an amendment; GD-7.1 reviews it with the others.
+  It is inserted into the register's first table in [01](01-prerequisites-and-conventions.md)
+  PR-4.1's thirteen columns with [03](03-decisions-and-people.md) DC-9.1's block, never appended
+  to the file end (which would land inside the Closures table GD-7.1 reads); later rows of this
+  file take the next free `BD-42-<n>`:
+
+```bash
+need DEVIATION_REGISTER BUILD_LOG_DIR LOGGING_PROJECT PLATFORM_EVIDENCE_BUCKET SECOND_HUMAN_EMAIL
+row="| BD-42-1 | $(date -u +%F) | 42 GD-3.1 | DEV | platform evidence bucket in LOGGING_PROJECT, where 08 section 2.2 S15, section 5.4 and 02 section 5 place it in CORE_PROJECT (reason: 42 section 3.1); encrypted by its own Autokey key handle kh-platform-evidence, never KEY_PLATFORM_LOGS (11 KV-2.3) | project $LOGGING_PROJECT | GD-3.1 record | bucket $PLATFORM_EVIDENCE_BUCKET; key handle kh-platform-evidence | BLOCKED: no factory | - | $SECOND_HUMAN_EMAIL | superseded when 08 section 5.4 and 02 section 5 cite this departure as an amendment (GD-7.1) | open |"
+if ! grep -q '^| BD-42-1 |' "$DEVIATION_REGISTER"; then
+  tmp=$(mktemp)
+  awk -v row="$row" '
+    /^\|---\|/ && !seen { seen=1; print; next }
+    seen && !done && $0 !~ /^\|/ { print row; done=1 }
+    { print }
+    END { if (seen && !done) print row }' "$DEVIATION_REGISTER" > "$tmp" && mv "$tmp" "$DEVIATION_REGISTER"
+  git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "BD-42-1 platform evidence bucket placement"
+fi
+```
+
+  The check: the line number of `grep -n '^| BD-42-1 |' "$DEVIATION_REGISTER"` is smaller than
+  `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"`.
 
   Flags read on 2026-09-16 from the `gcloud storage buckets create` reference: `--location`,
   `--default-storage-class`, `--uniform-bucket-level-access`, `--public-access-prevention`,

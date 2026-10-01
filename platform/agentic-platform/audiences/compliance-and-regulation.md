@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Changed 2026-10-01: EN 18286 recorded as published 2026-07-30 and not cited; the EU database recorded as not open (expected 2027-Q3) with the Stage 1 alternative; the Omnibus's changes to Art. 27 and Art. 72(3) recorded; F5 under condition (a); the 8.3 alignments recorded as made; past dates re-dated; the Agent Platform API named.
+- Changed 2026-10-01: EN 18286 recorded as published 2026-07-30 and not cited; the EU database recorded as not open (expected 2027-Q3) with the Stage 1 alternative; the Omnibus's changes to Art. 27 and Art. 72(3) recorded; F5 under condition (a); the 8.3 alignments recorded as made; past dates re-dated; the Agent Platform API named; the register cited as P1–P207.
 - Who it is for: compliance, legal, the data protection officer (DPO), the information security management system's owner (the ISMS) and the AI compliance owner — a role the design creates and that nobody yet holds.
 - What it asks of them: name the AI compliance owner; sign the DPO record on monitoring named administrators before any monitoring starts; answer the D7 letter's fourth question — information, consultation or consent, and by when — within the DPO's and HR's own turnaround, and before any Eve feed; decide by 2026-12-01 whether any assessment is ordered under the outgoing TISAX catalogue; sign Wall-E's intended purpose with legal before its first write; supply the legal entity; and accept the calendar in section 13 as the compliance calendar of the programme.
 - What is true on 2026-10-01: nothing is built, nothing is registered, no legal entity has signed anything, and no price is quoted anywhere in the design ([../README.md#status](../README.md#status)). Every date after 2026-10-01 in this document is `Assumption:` — a plan figure, not a commitment.
@@ -256,7 +256,7 @@ Sources for the dates: [../setup/README.md#34-parallel-sittings-and-the-critical
 
 ## 11. The decisions compliance owns, and what to sign first
 
-The register of record holds every platform decision as P1–P204 in five states: `decided`, `closed`, `proposed` (stands until the owner overturns it in writing), `open` (the gate stays red), `spike` ([../12-open-decisions.md#1-how-this-register-works](../12-open-decisions.md#1-how-this-register-works)). The rows below are the ones a compliance, legal, DPO or ISMS signature closes.
+The register of record holds every platform decision as P1–P207 in five states: `decided`, `closed`, `proposed` (stands until the owner overturns it in writing), `open` (the gate stays red), `spike` ([../12-open-decisions.md#1-how-this-register-works](../12-open-decisions.md#1-how-this-register-works)). The rows below are the ones a compliance, legal, DPO or ISMS signature closes.
 
 | Row | What it decides | State on 2026-09-18 | Who acts | Gate |
 |---|---|---|---|---|

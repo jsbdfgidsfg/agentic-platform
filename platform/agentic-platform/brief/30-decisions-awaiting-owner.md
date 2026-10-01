@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- 2026-10-01: the register has 204 rows (61 of them from the build sets) and new ids start at P205; two rows of unresolved points removed because the design pages resolved them on 2026-09-18 (Tier X counted as five unmet in HLD §0.4 and §11.5; R-01 owned and signed by the security reviewer in page 11 §10).
+- 2026-10-01: the register has 207 rows (61 of them from the build sets, 3 added on 2026-10-01) and new ids start at P208; two rows of unresolved points removed because the design pages resolved them on 2026-09-18 (Tier X counted as five unmet in HLD §0.4 and §11.5; R-01 owned and signed by the security reviewer in page 11 §10).
 
 ## What you will understand by the end
 
@@ -17,7 +17,7 @@ The design is almost wholly proposed; a handful of answers holds the first gate 
 
 ### What the owner does alone this month
 
-1. **Record the gate-counting rule.** Write down how an open row with a recorded fallback counts towards its gate (see "Rows that fit the gate rule awkwardly" below). Read literally, the rule keeps the first, second and grant gates red for reasons nobody can act on, so every other schedule waits on this answer. It has no register row yet; a new row would take P205.
+1. **Record the gate-counting rule.** Write down how an open row with a recorded fallback counts towards its gate (see "Rows that fit the gate rule awkwardly" below). Read literally, the rule keeps the first, second and grant gates red for reasons nobody can act on, so every other schedule waits on this answer. It has no register row yet; a new row would take P208.
 2. **Read the tenant's editions in the Admin console.** The Workspace edition decides whether the F1 feed exists, whether multi-party approval (P66) is available and which identity streams reach Google Cloud, which makes it a Stage 0 precondition. The Gemini Enterprise edition decides whether conversation retention can change from its 60-day default at step GE-6 (Chapter 8; Chapter 11; Chapter 12).
 3. **Set P31**, the quota and per-tier budget amounts, or adopt the `Assumption:` numbers in writing.
 4. **Choose P22**, the git host and the audit of admin bypasses, which Tier W needs.
@@ -43,7 +43,7 @@ The platform owner runs P4's engine half and P8's spelling (via P61) first, on a
 
 ### One sequence, five states
 
-Every platform decision has an id in one sequence, P1 to P204: P1–P34 from the high-level design (HLD), P35–P141 from the ten detailed pages in page order, then P142 and P143, then P144–P191 from the setup procedures and P192–P204 from the proof of value. Each row names its owner, the gate it blocks and where the reasoning lives. To be admitted, a row's "why it matters" must name one thing that cannot be built, verified or defended while it is open; anything else is a preference and stays out.
+Every platform decision has an id in one sequence, P1 to P207: P1–P34 from the high-level design (HLD), P35–P141 from the ten detailed pages in page order, then P142 and P143, then P144–P191 from the setup procedures, P192–P204 from the proof of value and P205–P207, added on 2026-10-01. Each row names its owner, the gate it blocks and where the reasoning lives. To be admitted, a row's "why it matters" must name one thing that cannot be built, verified or defended while it is open; anything else is a preference and stays out.
 
 A row is in one of five states ([§1](../12-open-decisions.md#1-how-this-register-works)):
 
@@ -57,7 +57,7 @@ A row is in one of five states ([§1](../12-open-decisions.md#1-how-this-registe
 
 ### Who changes a row, and how a gate closes
 
-Only a row's owner changes it, by a dated pull request on the register page; once its gate has passed, a new row supersedes it. Loosening a fleet default (P77) needs the security reviewer's signature. New ids start at P205 and are never reused. No program answers a row: raising a level, widening a scope and answering a decision are human acts, recorded by hand.
+Only a row's owner changes it, by a dated pull request on the register page; once its gate has passed, a new row supersedes it. Loosening a fleet default (P77) needs the security reviewer's signature. New ids start at P208 and are never reused. No program answers a row: raising a level, widening a scope and answering a decision are human acts, recorded by hand.
 
 Rows are grouped by the gate they block, in gate order: §2 before the folder exists, §3 before any Tier W agent writes, §4 before the super-admin grant, §5 before Wall-E's Stage 1 and later stages, §6 later. A row that blocks two gates sits in the earlier. A gate is green when every row in its group is decided, closed, proposed or a passed spike; one open row or unpassed spike keeps it red. The admission gate reads this state, so an unanswered decision shows up as a refused register row for an agent.
 
@@ -85,7 +85,7 @@ No Wall-E, Eve or Mo row has its own file yet. Anything else that looks settled 
 
 ## The register in one screen
 
-The register has 204 rows, each id once ([§0](../12-open-decisions.md#0-the-register-in-one-screen)): 143 grouped by gate, below, and 61 from the build sets, P144–P191 from the setup procedures (§6a) and P192–P204 from the proof of value (§6b), all proposed and pending the owner's signature.
+The register has 207 rows, each id once ([§0](../12-open-decisions.md#0-the-register-in-one-screen)): 143 grouped by gate, below; 61 from the build sets, P144–P191 from the setup procedures (§6a) and P192–P204 from the proof of value (§6b), all proposed and pending the owner's signature; and three added on 2026-10-01 (§6c), all proposed: P205 (the reading of Wall-E's triggers), P206 (the layout of the gateways' working-set registries) and P207 (whether Wall-E's Stage 1 waits for the EU database).
 
 Of **the HLD's 34 rows**, three are decided or closed (P33 decided; P2 closed by P35; P9 closed by P60), nine proposed, eighteen open (P5, P7, P10–P14, P17–P19, P21–P23, P25, P26, P29, P31, P32, with P28's signature and P24 for operators) and four spikes (P3, P4, P6 via P57, P8 via P61). Of **the pages' 109 rows**, 107 are proposed and two, P57 and P61, are spikes; P42 carries three sub-spikes, and P89 and P90 wait on P3's first spike. Eleven proposed page rows depend on something open or carry an `Assumption:` value to confirm: P39 (on P31); P52, P106 and P113 (on P13); P64 (on P24); P92 (on P10); P119 and P133 (on P20); P126 (on P18); and the values of P83 (the 99.5 % gateway SLO) and P117 (the vulnerability thresholds).
 

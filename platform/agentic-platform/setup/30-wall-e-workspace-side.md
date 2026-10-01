@@ -5,6 +5,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed; Eve is "it".
+- Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (WW-1.5, WW-10.3).
 - Last executed: never
 - Stage: review §2 stage 21 — the Workspace half of the superseded `wall-e/SETUP.md`, Phases 1, 3 and 4, with Phase 5 read back as a verify of [14](14-central-logging-and-billing-export.md). Nothing here grants an admin role: Super Admin is [38](38-super-admin-gate-and-grant.md) and nothing else.
 - Opens the Wall-E block. It starts only on `EVE_H_LIVE_RECORD` ([28](28-eve-independent-proof-and-sandbox-drills.md)) with [22](22-mo-foundations.md) complete or its BLOCKED steps in the README index (SD-12 (13), SD-45).
@@ -91,7 +92,7 @@ flowchart TD
 
 Hands-on: about 3 hours of console and shell work (the superseded Phases 1, 3, 4 and 5 were costed at 2 hours and did not include the repository, the roster entry or the witnessed custody). Elapsed: about 1 day, because WW-8.4's alert may take up to 24 hours and is not concluded broken before then, and because two pull requests need a second reviewer.
 
-Conventions of [01](01-prerequisites-and-conventions.md) apply. Deviation rows are `BD-30-<n>`. Records go to `BUILD_LOG_DIR/records/` as `<date>-WW-<step>-<slug>-v<n>`. Every shell block starts with:
+Conventions of [01](01-prerequisites-and-conventions.md) apply. Deviation rows are `BD-30-<n>`, in 01 PR-4.1's thirteen columns, inserted into the register's first table with 01's `bd_insert` and closed with `bd_close`; nothing is appended to `DEVIATION_REGISTER` by hand. Records go to `BUILD_LOG_DIR/records/` as `<date>-WW-<step>-<slug>-v<n>`. Every shell block starts with:
 
 ```bash
 source ~/.platform-env
@@ -274,14 +275,15 @@ git -C "$WALLE_REPO_DIR" commit -m "WW-1.4 CODEOWNERS: second human on the contr
 
 - **WHO:** Platform owner.
 - **WHERE:** Shell.
-- **ACTION:** The push is the one moment a commit reaches `main` without a pull request; both commits have review records and the push is a deviation entry.
+- **ACTION:** The push is the one moment a commit reaches `main` without a pull request; both commits have review records and the push is a deviation entry, `BD-30-2`, in 01 PR-4.1's thirteen columns, inserted into the register's first table with 01's `bd_insert` (never appended to the file end, which would land inside the Closures table).
 
 ```bash
 wremote="https://github.com/$wrepo.git"
 git -C "$WALLE_REPO_DIR" remote add origin "$wremote"
 git -C "$WALLE_REPO_DIR" push -u origin main
 penv_set WALLE_REPO_REMOTE "$wremote"
-printf '%s|BD-30-2|WW-1.5|initial push of 2 reviewed commits to %s before branch protection|%s\n' "$(date -u +%F)" "$wremote" "$(git -C "$BUILD_LOG_DIR" config user.email)" >> "$DEVIATION_REGISTER"
+row=$(printf '| BD-30-2 | %s | 30 WW-1.5 | DEV | initial push of 2 reviewed commits to %s before branch protection | repo %s | the WW-1.3 and WW-1.4 commits and their review records | main on the git host, without protection until WW-1.6 | BLOCKED: no factory | - | recorded by %s; review records of both commits | superseded by WW-1.6 | open |\n' "$(date -u +%F)" "$wremote" "$wrepo" "$(git -C "$BUILD_LOG_DIR" config user.email)")
+bd_insert "$row"
 ```
 
   Then, immediately and before WW-1.6, the CODEOWNERS entries are proved not to be inert. The API reports an email that is not a verified address on a write-holding account as an error, and an inert owner means the code-owner requirement can never be satisfied:
@@ -291,7 +293,7 @@ git -C "$WALLE_REPO_DIR" fetch origin main
 test "$(gh api "repos/$wrepo/codeowners/errors" --jq '.errors | length')" = "0" || { gh api "repos/$wrepo/codeowners/errors" --jq '.errors[] | [.line, .kind, .message] | @tsv'; echo "STOP: CODEOWNERS entries are inert; fix them in WW-1.4 (use @handles) before WW-1.6"; false; }
 ```
 
-- **VERIFY:** After the fetch, `git -C "$WALLE_REPO_DIR" rev-parse HEAD` equals `git -C "$WALLE_REPO_DIR" rev-parse origin/main` and equals `gh api "repos/$wrepo/branches/main" --jq .commit.sha` — the fetch matters, because `origin/main` in the working copy is updated only by fetch or pull and would otherwise be compared against a stale ref. `need WALLE_REPO_REMOTE`. The errors check prints nothing and exits zero.
+- **VERIFY:** After the fetch, `git -C "$WALLE_REPO_DIR" rev-parse HEAD` equals `git -C "$WALLE_REPO_DIR" rev-parse origin/main` and equals `gh api "repos/$wrepo/branches/main" --jq .commit.sha` — the fetch matters, because `origin/main` in the working copy is updated only by fetch or pull and would otherwise be compared against a stale ref. `need WALLE_REPO_REMOTE`. The errors check prints nothing and exits zero. `grep -n '^| BD-30-2 |' "$DEVIATION_REGISTER"` shows the row at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check).
 - **ROLLBACK:** None for pushed history; mistakes are reverted through pull requests after WW-1.6. An inert CODEOWNERS is corrected by a second reviewed commit and a second push under the same `BD-30-2` row, before WW-1.6 turns protection on.
 - **EVIDENCE:** Deviation row `BD-30-2`; the empty errors output as `${R}-1.5-codeowners-errors-v1.txt`; build-log line naming the owner form used for each person. E-05. TISAX 5.2.
 
@@ -1079,10 +1081,10 @@ grep -E 'WW-7\.3' "$BUILD_LOG_DIR/rerun-index.tsv" || echo "PILOT_OU set, no pen
 - **WHERE:** Shell.
 - **ACTION:**
   1. `evidence_add` one row per record of this part that is not already registered.
-  2. Confirm `DEVIATION_REGISTER` carries every `BD-30-n` opened: `BD-30-1` (activity-rule fallback, only if the edition lacks rules), `BD-30-2` (the initial push before branch protection), `BD-30-3` (staging-OU re-creation, if it happened), `BD-30-4` (multi-party approval already on, if it was), `BD-30-5` (the Context-Aware Access assignment refused, if it was).
+  2. Confirm `DEVIATION_REGISTER` carries every `BD-30-n` opened, each inserted with `bd_insert`: `BD-30-1` (activity-rule fallback, only if the edition lacks rules), `BD-30-2` (the initial push before branch protection), `BD-30-3` (staging-OU re-creation, if it happened), `BD-30-4` (multi-party approval already on, if it was), `BD-30-5` (the Context-Aware Access assignment refused, if it was).
   3. Extend [03](03-decisions-and-people.md) DC-9.8's weekly administrator-bypass query to `WALLE_REPO_REMOTE`, so that a force-push or a protection change on Wall-E's repository is read by IT security weekly until the SIEM carries it.
   4. Confirm the re-run lines exist for: WW-1.6 (status checks, on B-16/B-03), WW-6.4 (floor assertion, on B-16), WW-7.3 (`PILOT_OU`, consumer [39](39-wall-e-stage-0.md)), WW-8.3 (the target-is-an-admin join, consumer [15](15-pager-siem-and-detections.md) part B), and the `ROSTER_FILE` update for `walle@`'s Super Admin in [38](38-super-admin-gate-and-grant.md).
-- **VERIFY:** `grep -c 'BD-30-' "$DEVIATION_REGISTER"` equals the number of deviations actually opened; `grep -c 'WW-' "$BUILD_LOG_DIR/rerun-index.tsv"` equals the number of PENDING lines actually recorded; the evidence register has a row for every `${R}-*` file.
+- **VERIFY:** `awk -F' *[|] *' '$2 ~ /^BD-30-/ && NF==15' "$DEVIATION_REGISTER" | wc -l` equals the number of deviations actually opened (first-table rows only, so a Closures line is not counted), each at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"`; `grep -c 'WW-' "$BUILD_LOG_DIR/rerun-index.tsv"` equals the number of PENDING lines actually recorded; the evidence register has a row for every `${R}-*` file.
 - **ROLLBACK:** Not applicable.
 - **EVIDENCE:** The three counts as `${R}-10.3-registers-v1.txt`. E-05. TISAX 5.2.
 

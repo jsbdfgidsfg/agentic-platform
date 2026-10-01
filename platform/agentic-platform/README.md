@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- 2026-10-01: the register range is P1–P207 (P205–P207 added that day); the 3-day row says the
+- 2026-10-01: sixteen design pages (00–15); the register range is P1–P207 (P205–P207 added that day, new rows at P208); page 15's row says the six three-day rows were made on 2026-10-01; the 3-day row says the
   synthetic accounts are suspended, not unwound; the Google Cloud maturity row marks the existence of `GEMINI_PROJECT` as an `Assumption:` confirmed at GE-0.
 - 2026-09-18: the page counts corrected to fifteen pages (00–14) and the register of record to
   P1–P204 (Status, Documents row 12, Maturity, with a Maturity row for the three build sets);
@@ -17,11 +17,11 @@
   exist on 2026-09-13, written so that a security reviewer can find what is enforced and what
   is only detected, and so that whoever builds it can start from the factory and the register
   without re-deriving a decision.
-- What this set is: fifteen design pages (00–14), three build sets (setup/, pov/, 3-day/) and
+- What this set is: sixteen design pages (00–15), three build sets (setup/, pov/, 3-day/) and
   the brief. [01-hld.md](01-hld.md) is the parent; pages 02–11 each detail one part of it and
   record their decisions; [12-open-decisions.md](12-open-decisions.md) is the register of record,
   P1–P207 (P144–P191 proposed by the setup procedures on 2026-09-15, P192–P204 by the proof of
-  value on 2026-09-16, P205–P207 on 2026-10-01).
+  value on 2026-09-16, P205–P207 on 2026-10-01); new rows append at P208.
 - Objective: `.agent-work/OBJECTIVE.md` (outside the wiki), restated in
   [00-objective-review.md](00-objective-review.md) §1. No page loosens the platform's standing
   constraints — no domain-wide delegation, no credential in the model, humans raise autonomy,
@@ -36,8 +36,8 @@
 - Rechecked on 2026-10-01: [15-documentation-recheck.md](15-documentation-recheck.md) rechecked
   the whole set against the fixes of 2026-09-18, Google's pages and the regulatory state of that
   day, and measured the platform layer of setup/ for a script; it lists 308 findings (31
-  high, 123 medium, 154 low), 307 open and one on a dated review it does not edit; 20 of the high
-  ones are steps in the platform layer that fail as written.
+  high, 123 medium, 154 low); 20 of the high ones are steps in the platform layer that fail as
+  written. The fixes were made the same day, and its §7 carries each row's status.
 - Added 2026-09-18, written from the same review: [plain/](plain/README.md), the platform in
   plain words for any reader; [audiences/](audiences/README.md), one document each for HR and the
   works council, the security team, compliance and regulation, enterprise architecture, the board
@@ -96,7 +96,7 @@ AI Act or TISAX outcomes, only the mechanisms and the evidence; the full list is
 | [12-open-decisions.md](12-open-decisions.md) | The register of record: all 207 decisions in one sequence, grouped by the gate they block, with why each matters, the recommendation, owner, where it is recorded, the disagreements between pages, and the index into Wall-E's, Eve's and Mo's registers | P1–P207 |
 | [13-setup-procedure-review.md](13-setup-procedure-review.md) | The review of the manual setup procedures (platform, Wall-E, Eve, Mo) on 2026-09-15: the verdict on whether setup can start, one master setup order across every procedure with the stages that have no procedure yet, the verified findings per procedure, and the ordered fix plan | — |
 | [14-crosscheck-review.md](14-crosscheck-review.md) | The cross-check of the whole documentation on 2026-09-18: the verdict on whether the set answers the objective, every element checked against the others, objective against design against brief, the three build paths side by side with their hand-over chain, the security verdict and the standing risk per path, the dated path to the EU AI Act and to TISAX with the employee-data and works-council angle, the findings register X-01 to X-65 (4 high, 35 medium, 26 low), what is sound, and the short list that must change before the documents are handed to HR, security, compliance, architecture and the board | — |
-| [15-documentation-recheck.md](15-documentation-recheck.md) | The recheck of the whole documentation on 2026-10-01: the verdict, every element rechecked, the regressions and the state of the 2026-09-18 rows (the six three-day rows still owed), the Google product names, launch stages and command groups the platform relies on as of 2026-10-01, the platform layer's readiness for a setup script (767 steps classed AUTO, AUTO-READ, CONSOLE, HUMAN, BLOCKED and IRREVERSIBLE, what a script can do and what stays with people), the regulatory state, the derived sets, the findings register R-01 to R-308 (31 high, 123 medium, 154 low) and what is sound | — |
+| [15-documentation-recheck.md](15-documentation-recheck.md) | The recheck of the whole documentation on 2026-10-01: the verdict, every element rechecked, the regressions and the state of the 2026-09-18 rows (the six three-day rows, owed when the recheck was held and made in the day files and the code the same day), the Google product names, launch stages and command groups the platform relies on as of 2026-10-01, the platform layer's readiness for a setup script (767 steps classed AUTO, AUTO-READ, CONSOLE, HUMAN, BLOCKED and IRREVERSIBLE, what a script can do and what stays with people), the regulatory state, the derived sets, the findings register R-01 to R-308 (31 high, 123 medium, 154 low) and what is sound | — |
 | [pov/README.md](pov/README.md) | The proof-of-value build (added 2026-09-16): nine human-executed files that stand the platform and the three agents up at Tier C, R and W on the production tenant, with no Super Admin to any agent and no long-lead purchase, using the full build's names and schemas so that [setup/README.md](setup/README.md) continues from it and keeps the super-admin grant | — |
 | [3-day/README.md](3-day/README.md) | The three-day build (added 2026-09-17): four human-executed files that two IT experts run in three business days and six person-days, standing up four projects, Eve over the admin audit log through the Reports API, a doer holding one organisational-unit-scoped Workspace admin privilege over four synthetic accounts with a forced dry run and a two-person approved execution, and Mo's scorecard. A demonstration of machinery under control, not compliance evidence and not a production grant; it hands over to [pov/README.md](pov/README.md) once its grants and custom admin role are unwound and its synthetic accounts suspended | — |
 | [plain/README.md](plain/README.md) | The platform in plain words (added 2026-09-18): ten short pages for any reader — what is being built, the three agents, how it is kept safe, people and decisions, the law and the standards, three ways to start, what it costs and what you get, a glossary and the questions people ask; every term defined where it is used, every number linked to the page that defines it, nothing claimed beyond the source | — |

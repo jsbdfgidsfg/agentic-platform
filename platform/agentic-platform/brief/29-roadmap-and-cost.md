@@ -4,7 +4,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - 2026-09-18: the start of the build, the builder's order and the opening-sequence diagram now follow the setup set's block order and dated milestones (Tier R before Tier C, SD-13); the proof-of-value and three-day alternatives are named with their durations; the effort figures come from setup/README §3.2 and pov/README §4 instead of the superseded SETUP.md §0.4; the setup script is a helper only (SD-37); the lead-time list points at setup/04.
-- 2026-10-01: the register count is 204 (143 by gate, 48 from setup §6a, 13 from the proof of value §6b); the Tier X four-or-five difference, no longer in the HLD, is removed; the whole-build totals carry their `Assumption:` mark; the grant checklist's DPIA row matches page 11 §6.3.
+- 2026-10-01: the register count is 207 (143 by gate, 48 from setup §6a, 13 from the proof of value §6b, 3 added on 2026-10-01 in §6c); the Tier X four-or-five difference, no longer in the HLD, is removed; the whole-build totals carry their `Assumption:` mark; the grant checklist's DPIA row matches page 11 §6.3.
 
 ## What you will understand by the end
 
@@ -45,7 +45,7 @@ The day `walle@` receives Super Admin (P33, decided) has its own checklist: thir
 
 ## The register's gate groups are the roadmap
 
-The register holds 204 decisions: 143 grouped by the gate each blocks, in gate order, 48 from the setup procedures (§6a) and 13 from the proof of value (§6b) ([register in one screen](../12-open-decisions.md#0-the-register-in-one-screen)). A gate is green when every row in its group is decided, closed, proposed or a passed spike; one open row keeps it red ([how the register works](../12-open-decisions.md#1-how-this-register-works)).
+The register holds 207 decisions: 143 grouped by the gate each blocks, in gate order, 48 from the setup procedures (§6a), 13 from the proof of value (§6b) and 3 added on 2026-10-01 (§6c, P205–P207) ([register in one screen](../12-open-decisions.md#0-the-register-in-one-screen)). A gate is green when every row in its group is decided, closed, proposed or a passed spike; one open row keeps it red ([how the register works](../12-open-decisions.md#1-how-this-register-works)).
 
 | Gate group | What turns on when it is green | Rows keeping it red on 2026-09-14 |
 |---|---|---|

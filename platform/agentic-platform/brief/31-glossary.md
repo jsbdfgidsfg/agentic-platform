@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- 2026-10-01: decision family now P1–P204, new ids from P205; entry added for Gemini Enterprise Agent Platform, the name of Vertex AI since 2026-04-22 (https://cloud.google.com/products/gemini-enterprise-agent-platform, read 2026-10-01).
+- 2026-10-01: decision family now P1–P207, new ids from P208; entry added for Gemini Enterprise Agent Platform, the name of Vertex AI since 2026-04-22 (https://cloud.google.com/products/gemini-enterprise-agent-platform, read 2026-10-01).
 
 ## What this appendix gives you
 
@@ -45,7 +45,7 @@ By the end you can look up any identifier, term, product or abbreviation, with t
 | N1–N9 | Wall-E's must-never-happen statements | 19 |
 | R-01..R-17 | Platform risk rows; R-01 is the super-admin deviation (P140) | 19 |
 | E-01..E-15 | EU AI Act evidence register | 20 |
-| P1–P204 | Platform decisions, one sequence; new ids from P205 | 25 |
+| P1–P207 | Platform decisions, one sequence; new ids from P208 | 25 |
 | Wall-E 1–52, E-1..E-21, M-1..M-11 | Agent-set decisions; Wall-E 42–52 sit on the topology page, hence "topology decision 42" in Ch. 5 | 25 |
 
 ## Families that share letters

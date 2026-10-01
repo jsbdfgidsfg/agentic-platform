@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Changed 2026-10-01: the Model Armor entry says where a floor applies.
+- Changed 2026-10-01: the Model Armor entry says where a floor applies; the decision range is P1 to P207; the link to the three-day build's ten absolutes follows its renamed heading.
 - What this page is: every technical term, acronym, Google product, tier, kill switch, role and decision-id family used in this set, in alphabetical order, each in one or two everyday sentences, with a link to the page of the full documentation that defines it precisely. Nothing described here is built.
 
 ## In one sentence
@@ -28,7 +28,7 @@ If a word in pages 01 to 07 or the README stopped you, it is here, said plainly,
 
 **Audit record, and Google's own admin audit log.** Two different records. Wall-E's audit record is written by its action service *before* every action: who asked, who approved, what will change and on whom; no record, no action, which is why it is called write-ahead. Google's admin audit log is Google's own record of what every administrator did in the tenant, fetched through the Reports API (the interface a program uses to read those reports). Eve compares the two ([the audit schema](../01-hld.md#123-auditschema-and-ladderschema); [Eve's evidence](../01-hld.md#132-eve--independent-controller-two-paths-a-witness-outside-the-tenant-a-second-human); [Google's log facts](../3-day/README.md#9-the-two-decisions-already-made-and-what-they-mean)).
 
-**Autonomy ladder, stages and trigger classes.** Autonomy is how far an agent may go before a human must say yes. The ladder has six levels. L0 is off. L1 is a dry run: the action is planned and recorded but nothing changes, even with a valid approval in hand ([the nine absolutes](../3-day/README.md#2-the-nine-absolutes)). L2 is a proposal: the agent writes what it would do and a human who wants it done does it themselves. L3 is a human approving each action. L4 is Eve approving, with a hold window in which a human may veto. L5 is fully automatic with an independent check ([the six levels](../../wall-e/05-autonomy-ladder.md#2-the-six-levels)). Levels climb on evidence, never on the calendar; humans raise, machines lower. Wall-E's programme runs through six stages, S0 Eyes (read-only, at least 3 to 4 weeks) to S5 Steady state, each a floor and not a plan. Four trigger classes say what starts a run: T0 chat, T1 scheduled, T2 event, T3 inbox ([stage overview](../../wall-e/05-autonomy-ladder.md#stage-overview); [the ladder's rules](../01-hld.md#121-the-ladder--unchanged-rules-platform-defaults)).
+**Autonomy ladder, stages and trigger classes.** Autonomy is how far an agent may go before a human must say yes. The ladder has six levels. L0 is off. L1 is a dry run: the action is planned and recorded but nothing changes, even with a valid approval in hand ([the ten absolutes](../3-day/README.md#2-the-ten-absolutes)). L2 is a proposal: the agent writes what it would do and a human who wants it done does it themselves. L3 is a human approving each action. L4 is Eve approving, with a hold window in which a human may veto. L5 is fully automatic with an independent check ([the six levels](../../wall-e/05-autonomy-ladder.md#2-the-six-levels)). Levels climb on evidence, never on the calendar; humans raise, machines lower. Wall-E's programme runs through six stages, S0 Eyes (read-only, at least 3 to 4 weeks) to S5 Steady state, each a floor and not a plan. Four trigger classes say what starts a run: T0 chat, T1 scheduled, T2 event, T3 inbox ([stage overview](../../wall-e/05-autonomy-ladder.md#stage-overview); [the ladder's rules](../01-hld.md#121-the-ladder--unchanged-rules-platform-defaults)).
 
 ## B
 
@@ -62,7 +62,7 @@ If a word in pages 01 to 07 or the README stopped you, it is here, said plainly,
 
 | Family | What it numbers | Where it lives |
 |---|---|---|
-| P1 to P204 | Every platform decision, one sequence; new ids append at P205, never reused | [the register](../12-open-decisions.md#1-how-this-register-works) |
+| P1 to P207 | Every platform decision, one sequence; new ids append at P208, never reused | [the register](../12-open-decisions.md#1-how-this-register-works) |
 | SD-01 to SD-48 | The 48 decisions the full-build procedures made; the same rows as P144 to P191, all pending the owner's signature | [the sign-off tracker](../setup/README.md#10-decision-sign-off-tracker) |
 | PV-01 to PV-13 | The 13 decisions the proof of value made; the same rows as P192 to P204; PV-D-01 to PV-D-16 are its deviations from the full build | [the POV's rows](../12-open-decisions.md#6b-proposed-by-the-proof-of-value-set-p192p204) |
 | E-1 to E-21, M-1 to M-11, Wall-E 1 to 52 | The agents' own decisions: Eve's (the platform pages cite 20; Eve's page holds 21), Mo's, and Wall-E's (P33 closes its decision 26 by fact) | [the agent-set registers](../brief/30-decisions-awaiting-owner.md#the-agent-set-registers) |

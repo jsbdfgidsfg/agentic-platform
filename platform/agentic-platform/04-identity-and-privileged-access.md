@@ -8,7 +8,8 @@
   `…/folders.setIamPolicy`; deny policies name agents in the `principal://…/resources/aiplatform/projects/N`
   form (SD-22), the `principalSet` form kept as P8's fallback; the PAB rule names the folder only
   (Resource Manager resources) and `pab-agents-p-sa` two projects; §4.2's enforcement versions
-  corrected; §5.1 records the GA `gcloud pam grants` track.
+  corrected; §5.1 records the GA `gcloud pam grants` track; §3 says why the PAM service agent
+  needs no `exceptionPrincipals` entry (setup/13 OP-2.5).
 - 2026-09-18: K6 stated as a two-person act under multi-party approval in §9.7 and §8.4, with
   the one-person fallback if the sandbox tenant shows `users.makeAdmin` is not covered.
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md) §4 (identity), §4.4
@@ -298,6 +299,19 @@ daily drift diff against the committed JSON plus the P8 spike's evidence file; f
 or edited rule is a severity-1 finding within minutes (Cloud Asset feed) and pages
 `platform-security@`; the policy is re-applied by the pipeline after the security reviewer
 signs the incident note.
+
+**The PAM service agent needs no exception.** Google's Privileged Access Manager setup page asks
+deployers to "Add the Privileged Access Manager service agent to the `exceptionPrincipals` field of
+your policies"
+([pam-permissions-and-setup](https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup),
+updated 2026-09-24, read 2026-10-01). No rule here denies that agent,
+`service-org-ORGANIZATION_NUMBER@gcp-sa-pam.iam.gserviceaccount.com`: R6 names one account,
+`factory-apply@`, and the per-project denied sets are agent principals and
+`projects/N/type/ServiceAccount`, which hold an agent project's own service accounts, not an
+organisation-level service agent. The full build records the same reading
+([setup/13](setup/13-organisation-policies-deny-and-pab.md) OP-2.5), and its drift job asserts
+that the agent stays out of every denied principal set and every `exceptionPrincipals` list of
+the committed deny policies ([setup/16](setup/16-register-and-shared-registry.md) RG-8.1).
 
 **`deny-eve-project-foreign`** stays on `EVE_PROJECT` as topology decision 48 records (HLD §4.5);
 this page adds nothing to it.

@@ -3,7 +3,8 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Changed on 2026-10-01: account id and expiry read from SD-16 with `decision-value.sh`; BA-2.3 expects the Security Admin inheritance while `BD-06-1` is open; BA-3.1's `exists_or_pending` calls corrected; BA-5.1 lists Google's nine billing roles incl. `roles/billing.linkAdmin`; deviation rows `BD-07-1` and `BD-07-2` inserted into the first table; `checkpoint` lines; they/them for roles.
+- Changed on 2026-10-01: account id and expiry read from SD-16 with `decision-value.sh`; BA-2.3 expects the Security Admin inheritance while `BD-06-1` is open; BA-3.1's `exists_or_pending` calls corrected; BA-5.1 lists Google's nine billing roles incl. `roles/billing.linkAdmin`; deviation rows `BD-07-1` and `BD-07-2` inserted into the first table; BA-4.2 names the one logging role ever bound on the account, 14 CL-6.4's time-bound `roles/logging.configWriter` for the sink, with the pages read on 2026-10-01; `checkpoint` lines; they/them for roles.
+- Changed on 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (BA-6.2a, BA-6.2c, BA-7.1).
 - Last executed: never
 - Stage: review §2 stage 5, moved after file 06 (decision SD-45) so that the billing roles go to `sa-1-admin@`, never to a daily account.
 - Step prefix: BA. Steps: 18 (BA-6.2 is three: 6.2a grant, 6.2b submit, 6.2c remove). BLOCKED steps: none, because no code is needed. One step is PENDING by design: BA-3.1 waits for `factory-apply@` (file 10) and is a re-run point.
@@ -304,7 +305,7 @@ gcloud logging read "logName=\"billingAccounts/${BILLING_ACCOUNT_ID}/logs/clouda
 
 - **VERIFY:** The first read returns at least one `SetIamPolicy` row dated with BA-2.2 whose principal is `BILLING_ADMIN_EMAIL`; the second returns nothing. Separate the two failures, because they are different faults and only one of them is a stop:
   - **Empty result, exit status 0, no error text.** The log does not hold what it must. **Stop:** without source B, BA-4.3 and file 15's alert are blind. Re-check the account id, widen `--freshness`, and if it is still empty, re-run BA-2.2's grant read-back to confirm the grant happened on this account.
-  - **`PERMISSION_DENIED` / HTTP 403, or a message naming `logging.logEntries.list`.** The log was not read at all, and nothing about its contents is proven. Do **not** record this as "the log does not exist". The billing administrator's `roles/billing.admin` is missing or was granted somewhere other than this account: fix the grant under the precondition read above and repeat the step. If `roles/billing.admin` is confirmed present and the 403 persists, raise it with Google support under file 04's row and record the step as unproven; do not answer it by granting a logging role to `sa-1-admin@` or by moving the read to any other principal, and do not attempt to grant `roles/logging.viewer` on the billing account — Google documents no logging role as grantable on a billing-account resource.
+  - **`PERMISSION_DENIED` / HTTP 403, or a message naming `logging.logEntries.list`.** The log was not read at all, and nothing about its contents is proven. Do **not** record this as "the log does not exist". The billing administrator's `roles/billing.admin` is missing or was granted somewhere other than this account: fix the grant under the precondition read above and repeat the step. If `roles/billing.admin` is confirmed present and the 403 persists, raise it with Google support under file 04's row and record the step as unproven; do not answer it by granting a logging role to `sa-1-admin@` or by moving the read to any other principal, and do not attempt to grant `roles/logging.viewer` on the billing account. The read needs no logging role: `roles/billing.admin` carries `logging.logEntries.list` and `logging.privateLogEntries.list` and no `logging.sinks.*` (Cloud Billing access-control page, updated 2026-09-24, read 2026-10-01). The one logging role this set ever binds on the billing account is [14](14-central-logging-and-billing-export.md) CL-6.4's: `roles/logging.configWriter`, to the billing administrator, for the `billing-account-audit` sink only, removed in the same step, under CL-6.4's `Assumption:`. Google documents sinks that "belong to … a billing account" and names Logs Configuration Writer as the role that creates, changes and deletes sinks (configure-export page, updated 2026-09-30, read 2026-10-01), but documents no logging role as grantable on a billing-account resource, so if that binding is refused CL-6.4 stops, routes the sink through no other principal, opens a Google support case under 04's row, and BA-4.3's weekly read stays the control.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** The precondition output and both read outputs as `<date>-BA-4.2-filter-b-proof-v1`, with the exit status of each read recorded beside it so that empty and 403 stay distinguishable in the record. TISAX 5.2.4 (event logging), 4.2.1.
 
@@ -416,7 +417,7 @@ curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H
 
   Both `serviceusage.quotas.update` and `cloudquotas.quotas.update` are listed in the response. If either is missing, **stop** and do not go on to BA-6.2b: the console request would fail with a permission error after the form has been filled.
 - **ROLLBACK:** BA-6.2c, which is not optional. Until it runs, the platform owner holds an organisation-level role that BA-4.3's source A read will show.
-- **EVIDENCE:** Row `BD-07-2` inserted into the first table of `DEVIATION_REGISTER` as in BA-2.1 (kind `DEV`; what: `roles/servicemanagement.quotaAdmin` to `SA_1_ADMIN` at organisation level for the BA-6.2b quota request; expiry: the end of this sitting; approver: the second human, told the same day), and closed by a Closures line naming BA-6.2c and the removal date. The `testIamPermissions` response as `<date>-BA-6.2a-quota-admin-granted-v1`. TISAX 4.1.3, 4.2.1.
+- **EVIDENCE:** Row `BD-07-2` inserted into the first table of `DEVIATION_REGISTER` with 01's `bd_insert`, the insertion BA-2.1 performs (kind `DEV`; what: `roles/servicemanagement.quotaAdmin` to `SA_1_ADMIN` at organisation level for the BA-6.2b quota request; expiry: the end of this sitting; approver: the second human, told the same day), and closed by a Closures line naming BA-6.2c and the removal date, written with `bd_close` (BA-6.2c). The `testIamPermissions` response as `<date>-BA-6.2a-quota-admin-granted-v1`. TISAX 4.1.3, 4.2.1.
 
 ### BA-6.2b File the increase
 
@@ -445,7 +446,7 @@ gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --f
 
   From the next week on, BA-4.3's source A read no longer shows `roles/servicemanagement.quotaAdmin` for `SA_1_ADMIN` either.
 - **ROLLBACK:** Re-grant through BA-6.2a, only for a new quota request with its own deviation line.
-- **EVIDENCE:** The empty read as `<date>-BA-6.2c-quota-admin-removed-v1`; `BD-07-2` closed by a Closures line with the removal date. TISAX 4.1.3 (revocation).
+- **EVIDENCE:** The empty read as `<date>-BA-6.2c-quota-admin-removed-v1`; `BD-07-2` closed by a Closures line with the removal date, appended to the register's Closures table once VERIFY passes with 01's `bd_close BD-07-2 "withdrawal: 07 BA-6.2c, quotaAdmin removed from sa-1-admin@" "07 BA-6.2c VERIFY"`. TISAX 4.1.3 (revocation).
 
 ### BA-6.3 Record the answer
 
@@ -471,7 +472,7 @@ gcloud billing accounts remove-iam-policy-binding "$BILLING_ACCOUNT_ID" --member
 
 - **VERIFY:** BA-2.3's `testIamPermissions`, run as `sa-1-admin@`, returns `{}` (or only `billing.accounts.setIamPolicy`, while `BD-06-1` is still open and Security Admin carries it, BA-2.3). The `get-iam-policy` table no longer lists `sa-1-admin@`, and `factory-apply@` still holds both roles. A hand module run still pending at that date needs an extension first: SD-16 is amended, the new date is set with `penv_set --force BOOTSTRAP_BILLING_EXPIRY`, and a build-log line is written. The roles are never kept past a date nobody signed.
 - **ROLLBACK:** Re-grant as BA-2.2, only under a signed extension.
-- **EVIDENCE:** The table and response as `<date>-BA-7.1-bootstrap-billing-removed-v1`; `BD-07-1` closed by a Closures line. TISAX 4.1.3 (revocation).
+- **EVIDENCE:** The table and response as `<date>-BA-7.1-bootstrap-billing-removed-v1`; `BD-07-1` closed by a Closures line, appended once VERIFY passes with 01's `bd_close BD-07-1 "withdrawal: 07 BA-7.1, billing.user and billing.costsManager removed from sa-1-admin@" "07 BA-7.1 VERIFY"`. TISAX 4.1.3 (revocation).
 
 ## 8. The contract every budget command follows (S023)
 

@@ -4,7 +4,8 @@
 
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Changed on 2026-10-01: gcloud floor raised to 586.0.0 (newest 587.0.0); §3.3 probe computed from Google's role definitions and its two checks placed before OB-3.3 and at OB-3.7; `penv_set` refuses an empty or `<placeholder>` value (PR-2.5 checks both); the three registers are created only when absent; PR-5.1 registers its record; PR-5.2 stops without writing, appends, and closes P-14; PAM folder-role note re-read; they/them for roles.
+- Changed on 2026-10-01: gcloud floor raised to 586.0.0 (newest 587.0.0); §3.3 probe computed from Google's role definitions and its two checks placed before OB-3.3 and at OB-3.7; `penv_set` refuses an empty or `<placeholder>` value (PR-2.5 checks both); the three registers are created only when absent; PR-5.1 registers its record; PR-5.2 stops without writing, appends, and closes P-14; PAM folder-role note re-read; P-26 and §14 name Folder IAM Admin by the id Google's Resource Manager role reference gives it (`roles/resourcemanager.folderIamAdmin`, page updated 2026-09-29, read 2026-10-01); they/them for roles.
+- Changed on 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close — the two helpers join the PR-2.2 template and its helper table, PR-2.5 checks them, PR-4.1 names them; both were run under bash 3.2 and zsh 5.9 on 2026-10-01 against a throwaway copy of PR-4.1's register.
 - Part of: the setup procedure set whose only entry point is [README.md](README.md). This page
   supports every stage. It is the platform prerequisites page the review calls M2
   ([../13-setup-procedure-review.md](../13-setup-procedure-review.md) §3), and it fixes the
@@ -31,8 +32,8 @@
 - Two local git repositories: the platform repository (`PLATFORM_REPO_DIR`) and the build log
   (`BUILD_LOG_DIR`). `03-decisions-and-people.md` gives both a remote on the git host.
 - The variables file `~/.platform-env`, installed from a committed template, with its helpers
-  `penv_set`, `need`, `exists_or_pending`, `twin_shell`, `walle_shell`, and four conveniences
-  (`penv_guard`, `checkpoint`, `evidence_add`, `sitting_end`).
+  `penv_set`, `need`, `exists_or_pending`, `twin_shell`, `walle_shell`, and six conveniences
+  (`penv_guard`, `checkpoint`, `evidence_add`, `bd_insert`, `bd_close`, `sitting_end`).
 - A dedicated gcloud configuration with no default project, and the sitting rules that keep no
   admin credential on the laptop between sittings.
 - The skeletons of the bootstrap deviation register (`DEVIATION_REGISTER`), the evidence
@@ -233,7 +234,7 @@ log; the files named in "Needed by" close them.
 | P-23 | Chrome Enterprise Premium licences | P63; Context-Aware Access for operators | Admin console → Billing → Subscriptions lists the SKU | *tbd* by 03 | IT security | weeks |
 | P-24 | Gemini Enterprise licences for operators; Gmail-bearing seats for `walle@`, `eve@` and any licensed twin robot | 24, 30, 37 | Seat count in 04 | 24 | Platform owner | weeks |
 | P-25 | Hardware keys in the count of §3.2, a safe, tamper-evident envelopes | Key-only 2SV; custody | Keys in hand, serials in custody records only (never in the variables file) | 06, 08, 21, 24, 30 | Platform owner, IT security | weeks |
-| P-26 | Organisation roles for the bootstrap exception, all five to `sa-1-admin@`, dated with an expiry (SD-01): `roles/resourcemanager.organizationAdmin`, `roles/resourcemanager.folderCreator`, `roles/resourcemanager.projectCreator`, `roles/privilegedaccessmanager.admin` **and `roles/iam.securityAdmin`**. Google requires **both** the Privileged Access Manager Admin role and the Security Admin role to create, update or delete an entitlement at organisation level; Organization Administrator does not contain the Security Admin permission set. The analogues for entitlements created lower down are `roles/resourcemanager.folderAdmin` (folder) and `roles/resourcemanager.projectIamAdmin` (project); 12 says which level each entitlement is created at | First privileged acts before PAM exists (S002); every entitlement create of 12 | 06 reads the bindings back, then probes the permissions — see §3.3 | 06, 09, 12 | Platform owner under the exception | none |
+| P-26 | Organisation roles for the bootstrap exception, all five to `sa-1-admin@`, dated with an expiry (SD-01): `roles/resourcemanager.organizationAdmin`, `roles/resourcemanager.folderCreator`, `roles/resourcemanager.projectCreator`, `roles/privilegedaccessmanager.admin` **and `roles/iam.securityAdmin`**. Google requires **both** the Privileged Access Manager Admin role and the Security Admin role to create, update or delete an entitlement at organisation level; Organization Administrator does not contain the Security Admin permission set. The analogues for entitlements created lower down are Folder IAM Admin, `roles/resourcemanager.folderIamAdmin` (folder), and Project IAM Admin, `roles/resourcemanager.projectIamAdmin` (project); 12 says which level each entitlement is created at. Folder Admin (`roles/resourcemanager.folderAdmin`, a superset carrying the same `resourcemanager.folders.setIamPolicy`) also suffices, which is why 12's `ent-folder-admin` can stand in (§14) | First privileged acts before PAM exists (S002); every entitlement create of 12 | 06 reads the bindings back, then probes the permissions — see §3.3 | 06, 09, 12 | Platform owner under the exception | none |
 | P-27 | Every located service used is offered in `europe-west1` (Agent Runtime, Agent Gateway, regional Agent Registry, Model Armor templates, Firestore, regional Secret Manager, Cloud KMS HSM, Cloud Run, Scheduler, Tasks), BigQuery in `EU`, SecOps in its Europe locations | R9; X-RQB-02 | Re-read Google's agent-locations page on the day of 18 and 35; once a project exists, `gcloud network-services agent-gateways list --location=europe-west1 --project=<project>` returns without a location error. Recorded on 2026-09-15 by the review: Agent Gateway is not supported only in asia-east2, asia-northeast3 and asia-southeast2 | 18, 20, 35 | Platform owner | none |
 | P-28 | Agent Runtime quotas recorded in the quota register | X-RQB-02; HLD §3.4 | `gcloud beta quotas info list --service=aiplatform.googleapis.com --project=<agent project>`. Recorded on 2026-09-15 by the review: 90 query or streamQuery per minute, 10 create, update or delete per minute, 100 engines per project and region, 100 session writes per minute, 950 revisions per agent and 6,000 per project and region (the last two not adjustable) | 35 | Platform owner | days per increase |
 | P-29 | Model Armor quotas sized from the right consumers | X-RQB-02 | `gcloud beta quotas info list --service=modelarmor.googleapis.com --project=<project>`. Defaults read 2026-09-15: 1,200 API queries per minute per project (adjustable), 600 ExternalProcessor requests per minute per project (adjustable from 0 to 1,200), filter token limits 65,536 and 130,000 (fixed). Needed: sanitize QPM ≈ 2 × model calls per minute + direct calls; ExternalProcessor QPM = gateway requests per minute. The 120 Admin SDK reads per minute are not a Model Armor consumer | 18, 19, 34 | Platform owner | days per increase |
@@ -683,6 +684,66 @@ evidence_add() {
     && git -C "$BUILD_LOG_DIR" add "$EVIDENCE_REGISTER" && git -C "$BUILD_LOG_DIR" commit -q -m "evidence ${_xp}${_xn}" && echo "recorded ${_xp}${_xn}"
 }
 
+# Deviation register (PR-4.1): rows go INTO the first table, closures at the end of the file, which
+# is the Closures table. A row appended to the file end lands inside the Closures table (03 DC-9.1).
+_bd_id_ok() {
+  case "${1-}" in BD-[0-9][0-9]-[0-9]*) ;; *) return 1;; esac
+  case "${1#BD-[0-9][0-9]-}" in *[!0-9]*) return 1;; esac
+  return 0
+}
+
+_bd_form() {
+  [ -f "$DEVIATION_REGISTER" ] || { echo "bd: $DEVIATION_REGISTER does not exist; 01 PR-4.1 creates it" >&2; return 2; }
+  awk '/^\|---\|/ && !s {s = NR} /^## Closures$/ && !c {c = NR} END {exit !(s && c && s < c)}' "$DEVIATION_REGISTER" \
+    || { echo "bd: $DEVIATION_REGISTER is not in 01 PR-4.1's form (the first table, then '## Closures'); stop" >&2; return 2; }
+}
+
+# bd_insert ROW: one row in PR-4.1's thirteen columns, inserted at the end of the first table, once, committed.
+bd_insert() {
+  [ $# -eq 1 ] || { echo "usage: bd_insert '| BD-<file>-<n> | ...thirteen cells... |'" >&2; return 2; }
+  need BUILD_LOG_DIR DEVIATION_REGISTER || return 2
+  case "$1" in *"$_PENV_TAB"*|*"$_PENV_NL"*) echo "bd_insert: no tab or newline allowed; one row is one line" >&2; return 2;; esac
+  case "$1" in *'<'*'>'*) echo "bd_insert: an unreplaced <placeholder> would be written verbatim into the register; type the real value" >&2; return 2;; esac
+  case "$1" in '| '*' |') ;; *) echo "bd_insert: a row starts with '| ' and ends with ' |'" >&2; return 2;; esac
+  _bid="$(printf '%s\n' "$1" | awk -F' *[|] *' '{print $2}')"
+  _bd_id_ok "$_bid" || { echo "bd_insert: '$_bid' is not an id of the form BD-<file>-<n>" >&2; return 2; }
+  _bn="$(printf '%s\n' "$1" | awk -F' *[|] *' '{print NF - 2}')"
+  [ "$_bn" = 13 ] || { echo "bd_insert: $_bid has $_bn cells, not PR-4.1's thirteen (a | inside a cell counts as a separator)" >&2; return 2; }
+  _bd_form || return 2
+  if awk -F' *[|] *' -v id="$_bid" '$2 == id && NF == 15 {f = 1} END {exit !f}' "$DEVIATION_REGISTER"; then echo "exists: $_bid"; return 0; fi
+  _btmp="$(mktemp "${DEVIATION_REGISTER}.XXXXXX")" || return 1
+  if _BD_ROW="$1" awk '
+      /^\|---\|/ && !seen { seen = 1; print; next }
+      seen && !done && $0 !~ /^\|/ { print ENVIRON["_BD_ROW"]; done = 1 }
+      { print }
+      END { if (seen && !done) print ENVIRON["_BD_ROW"] }' "$DEVIATION_REGISTER" > "$_btmp" && mv "$_btmp" "$DEVIATION_REGISTER"; then :
+  else rm -f "$_btmp"; echo "bd_insert: write failed; register unchanged" >&2; return 1; fi
+  _bl="$(awk -F' *[|] *' -v id="$_bid" '$2 == id && NF == 15 {print NR; exit}' "$DEVIATION_REGISTER")"
+  _bc="$(awk '/^## Closures$/ {print NR; exit}' "$DEVIATION_REGISTER")"
+  [ -n "$_bl" ] && [ "$_bl" -lt "$_bc" ] || { echo "bd_insert: $_bid is not above the Closures heading; stop and read the register" >&2; return 1; }
+  git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -q -m "$_bid opened" -- "$DEVIATION_REGISTER" \
+    && echo "opened $_bid at line $_bl (Closures heading at line $_bc)"
+}
+
+# bd_close ID HOW VERIFIED_BY: one line appended to the Closures table (the register's last table), once, committed.
+bd_close() {
+  [ $# -eq 3 ] || { echo "usage: bd_close BD-<file>-<n> HOW VERIFIED_BY" >&2; return 2; }
+  need BUILD_LOG_DIR DEVIATION_REGISTER || return 2
+  _bd_id_ok "$1" || { echo "bd_close: '$1' is not an id of the form BD-<file>-<n>" >&2; return 2; }
+  case "$1$2$3" in *'|'*|*"$_PENV_TAB"*|*"$_PENV_NL"*) echo "bd_close: no | tab or newline allowed" >&2; return 2;; esac
+  for _bv in "$2" "$3"; do
+    case "$_bv" in ''|*'<'*'>'*) echo "bd_close: HOW and VERIFIED_BY must be real values, not empty or an unreplaced <placeholder>" >&2; return 2;; esac
+  done
+  _bd_form || return 2
+  awk -F' *[|] *' -v id="$1" '$2 == id && NF == 15 {f = 1} END {exit !f}' "$DEVIATION_REGISTER" \
+    || { echo "bd_close: no row $1 in the first table; nothing to close" >&2; return 2; }
+  if awk -F' *[|] *' -v id="$1" '$2 == id && NF == 6 {f = 1} END {exit !f}' "$DEVIATION_REGISTER"; then echo "already closed: $1"; return 0; fi
+  case "$(tail -n 1 "$DEVIATION_REGISTER")" in '|'*) ;; *) echo "bd_close: the register does not end with the Closures table; stop and read it" >&2; return 2;; esac
+  printf '| %s | %s | %s | %s |\n' "$1" "$(date -u +%Y-%m-%d)" "$2" "$3" >> "$DEVIATION_REGISTER" \
+    && git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -q -m "$1 closed" -- "$DEVIATION_REGISTER" \
+    && echo "closed $1"
+}
+
 # sitting_end: revokes every gcloud credential and proves none is left.
 sitting_end() {
   command -v gcloud >/dev/null 2>&1 || { echo "sitting_end: gcloud not on PATH" >&2; return 1; }
@@ -732,7 +793,17 @@ What the helpers do:
 | `penv_guard` | Runs at every source; silent when clean | A gcloud project in the active configuration, `CLOUDSDK_CORE_PROJECT` exported, `PROJECT` outside `walle_shell`, `project_id` in `~/.bigqueryrc`, a different active configuration |
 | `checkpoint STEP STATUS [WITNESS] [EVIDENCE] [NOTE]` | Appends a tab-separated line to `BUILD_LOG_DIR/checkpoints.tsv` and commits it. `WITNESS` and `EVIDENCE` default to `-`, so a step whose WHO names a witness must pass a real value | Unknown statuses; tabs or newlines; an unreplaced `<placeholder>` in any field |
 | `evidence_add STEP SLUG E-ID TISAX LOCATION [FILE]` | Appends a row named `<date>-<step>-<slug>-v<n>` to `EVIDENCE_REGISTER`, with the file's SHA-256, and commits it | A pipe, tab or newline; a slug outside `a-z0-9-` |
+| `bd_insert ROW` | Inserts one row at the end of the **first** table of `DEVIATION_REGISTER` (03 DC-9.1's insertion, never an append to the file end, which would land inside the Closures table that 17 and 42 read), checks that it sits above the `## Closures` heading, and commits it alone as `<id> opened`. Run twice with the same id, it prints `exists: <id>` and returns 0 | An id not of the form `BD-<file>-<n>` (two-digit file number, digits only after it); a row that is not one line of PR-4.1's thirteen cells, opened and closed by a pipe (a pipe inside a cell counts as a separator); an unreplaced `<placeholder>`; a tab or newline; a register not in PR-4.1's form |
+| `bd_close ID HOW VERIFIED_BY` | Appends one line to the Closures table, the register's last table, with today's date, and commits it alone as `<id> closed`. Run twice, it prints `already closed: <id>` and returns 0 | An id not of the form `BD-<file>-<n>`; an id with no row in the first table; a pipe, tab or newline; an empty or `<placeholder>` HOW or VERIFIED_BY; a register that does not end with the Closures table |
 | `sitting_end` | Revokes every gcloud credential and ADC, then proves none is left | Exits non-zero while an account, the platform ADC file or `~/.walle/operator-token.json` remains |
+
+After PR-4.1 creates the register, every row is inserted into its first table with `bd_insert`
+(or, in the few steps that write it out, with the same insertion block of 03 DC-9.1 that
+`bd_insert` wraps), and every closure is written with `bd_close`; no step appends a row with
+`>>`, and no step edits the register by hand. A row built over several
+lines is built into a variable first (`row=$(printf '| BD-NN-n | %s | … |' "$(date -u +%F)" …)`,
+then `bd_insert "$row"`). A changed expiry is a closure (`superseded by BD-NN-<next>`) and a new
+row, never an edit.
 
 Other names used by other files (for example `WALLE_READERS_GROUP` or `GRP_*` addresses) are
 not rewritten in a twin shell. A twin step that reads one says why in its text.
@@ -891,6 +962,7 @@ T="$(mktemp -d)"
 install -m 600 "$(sed -n 's/^export PLATFORM_REPO_DIR="\(.*\)"$/\1/p' "$HOME/.platform-env")/env/platform-env.template" "$T/env"
 mkdir "$T/log" && git -C "$T/log" init -q && git -C "$T/log" config user.email check@invalid && git -C "$T/log" config user.name check
 bash -c 'export PLATFORM_ENV_FILE="$1/env"; . "$1/env"; penv_set BUILD_LOG_DIR "$1/log"; penv_set WALLE_PROJECT prod-x; penv_set WALLE_TWIN_PROJECT twin-x; penv_set EVE_PROJECT eve-p; penv_set EVE_TWIN_PROJECT eve-n; penv_set SANDBOX_DOMAIN sb.invalid; penv_set SANDBOX_CUSTOMER_ID C0sb; penv_set SA_ACTIONS walle-actions@prod-x.iam.gserviceaccount.com; penv_set WALLE_PROJECT other; penv_set REFRESH_TOKEN_VERSION 3; penv_set EVE_REFRESH_TOKEN x; penv_set EMPTY_CHECK ""; penv_set PLACEHOLDER_CHECK "<value>"; ( PLATFORM_SHELL_MODE=twin; . "$1/env"; echo "twin: $WALLE_PROJECT $SA_ACTIONS [$REFRESH_TOKEN_VERSION]" ); ( PLATFORM_SHELL_MODE=walle; . "$1/env"; echo "walle: PROJECT=$PROJECT" ); need NOTSET; exists_or_pending --pending serviceAccount:x@eve-p.iam.gserviceaccount.com PR-2.5 check; cat "$1/log/rerun-index.tsv"; checkpoint PR-2.5 DONE "<witness or ->" - "placeholder check"; echo "checkpoint exit $?"; ( unset CLOUDSDK_CONFIG; sitting_end >/dev/null 2>"$1/se.err"; echo "sitting_end exit $?"; cat "$1/se.err" )' _ "$T"
+bash -c 'export PLATFORM_ENV_FILE="$1/env"; . "$1/env"; penv_set DEVIATION_REGISTER "$1/log/dr.md"; printf "%s\n" "| Id | a | b | c | d | e | f | g | h | i | j | k | Status |" "|---|---|---|---|---|---|---|---|---|---|---|---|---|" "" "## Closures" "" "| Id | Closed | How | Verified by |" "|---|---|---|---|" > "$DEVIATION_REGISTER"; git -C "$1/log" add dr.md && git -C "$1/log" commit -q -m skeleton; r="| BD-01-9 | d | 01 PR-2.5 | DEV | check | - | - | - | - | - | - | - | open |"; bd_insert "$r"; bd_insert "$r"; bd_close BD-01-9 check "01 PR-2.5"; bd_close BD-01-9 check "01 PR-2.5"; bd_insert "| BD-01-8 | d | 01 PR-2.5 | DEV | <placeholder> | - | - | - | - | - | - | - | open |"; bd_insert "| BD-1-7 | d | 01 PR-2.5 | DEV | check | - | - | - | - | - | - | - | open |"; bd_insert "| BD-01-6 | d | 01 PR-2.5 | DEV | check | - | - | - | - | - | - | open |"; bd_insert "| BD-01-5 | d | 01 PR-2.5 | DEV | check | - | - | - | - | - | - | - | open |"; grep -n -e "^| BD-01-" -e "^## Closures" "$DEVIATION_REGISTER"; git -C "$1/log" log --format=%s | head -n 3' _ "$T"
 rm -rf "$T"
 ```
 
@@ -902,8 +974,17 @@ rm -rf "$T"
 `checkpoint: an unreplaced <placeholder> would be written verbatim into the log` with
 `checkpoint exit 2`; then `sitting_end exit 1` with
 `SITTING-END FAIL: CLOUDSDK_CONFIG is not set` — proving that an unsourced shell cannot report a
-clean sitting close, and that nothing was revoked when it failed. Repeat the `bash -c` line with
-`zsh -c` for the same output.
+clean sitting close, and that nothing was revoked when it failed. The second `bash -c` line
+builds a register of PR-4.1's shape and prints, in order: `set DEVIATION_REGISTER`;
+`opened BD-01-9 at line 3 (Closures heading at line 5)`; `exists: BD-01-9`; `closed BD-01-9`;
+`already closed: BD-01-9`; `bd_insert: an unreplaced <placeholder> …`;
+`bd_insert: 'BD-1-7' is not an id of the form BD-<file>-<n>`;
+`bd_insert: BD-01-6 has 12 cells, not PR-4.1's thirteen …`;
+`opened BD-01-5 at line 4 (Closures heading at line 6)`; then the `grep` lines `3:| BD-01-9 |`,
+`4:| BD-01-5 |`, `6:## Closures` and `10:| BD-01-9 | <today> | check | 01 PR-2.5 |` — both rows
+above the Closures heading, the one closure below it — and the three commits `BD-01-5 opened`,
+`BD-01-9 closed`, `BD-01-9 opened`. Repeat the whole block with `zsh -c` in place of `bash -c`
+for the same output.
 
 The `sitting_end` check is safe to run because the guard is the first thing in the function,
 before `gcloud auth revoke`: no credential of any account is touched. Never run `sitting_end`
@@ -1224,7 +1305,10 @@ git -C "$BUILD_LOG_DIR" diff --cached --quiet || git -C "$BUILD_LOG_DIR" commit 
 checkpoint PR-4.1 DONE - "build-log:registers/bootstrap-deviation-register.md"
 ```
 
-Every MOD row is superseded by `terraform import` and an empty plan when the factory exists,
+From here on a row is written only with `bd_insert` (PR-2.2), which puts it at the end of the
+first table, and a closure only with `bd_close`, which appends to the Closures table; a row
+appended to the file end with `>>` would land inside the Closures table. Every MOD row is
+superseded by `terraform import` and an empty plan when the factory exists,
 and closed or re-dated at the Tier W gate at the latest. An EXC row carries its expiry date in
 "Expiry"; the file that withdraws it adds the closure. `17-factory-module-equivalents-and-tier-r-gate.md`
 reads this register at the Tier R gate; 42 reviews it.
@@ -1652,8 +1736,8 @@ appended line before 02 starts; `no placeholder in the log`; `git status` prints
 | `03-decisions-and-people.md` | The roles table and pairs (§2) to name people against; the four-human exception question (§2.3); SD-01, SD-37, SD-38 as pending with the PR-6.1 review; the platform repository, for which DC-9.2 to DC-9.6 create the remote. **Two gaps 03 must close**, both recorded here: (1) the build-log repository has no remote — 03 DC-9.11 (written 2026-10-01) creates it with `allow_force_pushes:false`, `allow_deletions:false`, `penv_set BUILD_LOG_REMOTE` and a §14 row (§7.1 residual risk); (2) once DC-2.1 sets `SECOND_HUMAN_EMAIL`, 03 backfills the witness field of the PR-4.4 and PR-6.1 checkpoint lines, which were written with the second human's name because the variable did not exist yet, by appending a correcting line |
 | `04-purchases-and-lead-times.md` | §3.1 rows P-16 to P-25 and the key count of §3.2 |
 | `05-gemini-enterprise-inventory.md` | `DOMAIN`, `ORG_ID`, `GE_LOCATION`, the sitting rules |
-| `06-organisation-bootstrap-and-roster.md` | `DOMAIN`, `ORG_ID`, `DIRECTORY_CUSTOMER_ID`, `OWNER_DAILY_ACCOUNT`, `EVIDENCE_INTERIM_LOCATION` (custody scans), `DEVIATION_REGISTER` (the EXC row), `DRILL_CALENDAR` (DR-06-1), the browser profile `sa-1-admin`, the domain-wide delegation rule; it adds `platform-security@` to the interim location |
-| `07-billing-account.md` and every later file | The step format, the helpers, the sitting blocks of PR-3.2, the patterns of §8, the naming and mapping of §7 |
+| `06-organisation-bootstrap-and-roster.md` | `DOMAIN`, `ORG_ID`, `DIRECTORY_CUSTOMER_ID`, `OWNER_DAILY_ACCOUNT`, `EVIDENCE_INTERIM_LOCATION` (custody scans), `DEVIATION_REGISTER` (the EXC row, and `bd_insert` and `bd_close` for every row it opens or closes), `DRILL_CALENDAR` (DR-06-1), the browser profile `sa-1-admin`, the domain-wide delegation rule; it adds `platform-security@` to the interim location |
+| `07-billing-account.md` and every later file | The step format, the helpers (`bd_insert` and `bd_close` for every deviation row and closure), the sitting blocks of PR-3.2, the patterns of §8, the naming and mapping of §7 |
 | `17-factory-module-equivalents-and-tier-r-gate.md` | `DEVIATION_REGISTER` format |
 | `18-…`, `28-…`, `37-…` | `DRILL_CALENDAR` rows DR-18-1, DR-28-1 to DR-28-3, DR-37-1, DR-37-2 |
 | `24-…` and `37-…` (twin work) | `twin_shell` and `twin_shell --sandbox-org`; 37 defines twin names for Wall-E's token versions if the twin needs them, since `twin_shell` blanks the production ones |
@@ -1735,10 +1819,18 @@ check that finds every hit. Owner: each file's owner, before 42's first quarterl
 - PAM Admin role and entitlement creation: https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup
   — re-read 2026-09-16. To work with entitlements at the organisation level a principal needs
   **both** `roles/privilegedaccessmanager.admin` and `roles/iam.securityAdmin`; at folder level
-  `roles/resourcemanager.folderAdmin`; at project level `roles/resourcemanager.projectIamAdmin`.
+  Folder IAM Admin; at project level `roles/resourcemanager.projectIamAdmin`.
   Re-read 2026-10-01 (page updated 2026-09-24): the folder line labels the role "Folder IAM Admin"
-  but gives the id `roles/resourcemanager.folderAdmin`; the id is what is granted, and 12 reads
-  the role with `gcloud iam roles describe` on the day. The supporting role is what supplies get and set of the IAM policy on the parent resource.
+  but prints the id `roles/resourcemanager.folderAdmin`, which is the id of a different role.
+  Google's role reference, "Resource Manager roles and permissions"
+  (https://docs.cloud.google.com/iam/docs/roles-permissions/resourcemanager, updated 2026-09-29,
+  read 2026-10-01), gives the title "Folder IAM Admin" the id
+  `roles/resourcemanager.folderIamAdmin` ("Provides permissions to administer allow policies on
+  folders", including `resourcemanager.folders.setIamPolicy`) and gives
+  `roles/resourcemanager.folderAdmin` the title "Folder Admin" ("Provides all available
+  permissions for working with folders"). P-26 therefore names the title's id,
+  `roles/resourcemanager.folderIamAdmin`, as the least role; Folder Admin, a superset, also
+  works. The supporting role is what supplies get and set of the IAM policy on the parent resource.
   Requesters and approvers of grants need no PAM-specific permission (P-26, §3.3)
 - `gcloud organizations list` — read 2026-09-16: it "lists all organizations to which the active
   account has access", in an unspecified order, and the list may be incomplete for a service

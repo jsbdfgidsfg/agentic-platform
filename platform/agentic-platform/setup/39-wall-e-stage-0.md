@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (S0-2.2).
 - Last executed: never
 - Stage: review §2 stages 35 and 36 (master order rows 33 and 34). It is the last Wall-E file before the ladder governs, and it produces **Stage 0**.
 - Step prefix: `S0`. Steps: 68. **BLOCKED:** S0-1.2, S0-1.3, S0-2.1, S0-4.1, S0-4.2, S0-6.2, S0-6.3, S0-7.2, S0-7.3, S0-7.4, S0-8.2, S0-8.3, S0-8.4, S0-9.3, S0-13.2 on `B-16` (the action services, the dispatcher, the agent code, `tests/denials.py`, `config/deploy_ladder.py`); S0-4.4 and S0-4.5 on `B-03` (the ladder-raise and publication rules, `RG-9.2`) with the signed manual provenance check of S0-4.6 standing in; S0-12.2 on `B-18` (`walle_setup.py` `verify --strict` and `stage0`) with the manual table of S0-12.1 standing in; S0-10.2 on `B-08` (Eve's reconciler). **IRREVERSIBLE:** S0-3.4 (GE-11 enforced: the live app's traffic is decided by the access policy from that moment; the rollback is back to `DRY_RUN`, never an unbind, which Google does not document — X-GE-04), S0-8.3 and S0-8.4 (K4 and K5 consume the production credential), S0-12.3 (the Stage 0 record is append-only), S0-13.3 (the schedules resume and the first real shadow evidence starts).
@@ -424,7 +425,7 @@ gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten='bindings[].members' \
 ```
 
 - **VERIFY:** The table is **empty**, or holds only the Google-managed service agents the project's own APIs created (each named in [31](31-wall-e-project-and-data-plane.md)'s recorded baseline). No `user:` member anywhere in it. No project-level `roles/aiplatform.user` or `roles/aiplatform.admin` for any principal. If an active repair grant is found, it is released and the check re-run: a check taken inside a grant window measures the grant, not the project.
-- **ROLLBACK:** If a creator Owner is found: request `ENT_PROJECT_REPAIR_WALLE`, remove the binding, record a `DEVIATION_REGISTER` line naming the date it survived and why, and re-run. The narrow repair bundle [12](12-privileged-access-catalogue.md) defines excludes `aiplatform.reasoningEngines.query` precisely so that this check is meaningful during the grant window as well.
+- **ROLLBACK:** If a creator Owner is found: request `ENT_PROJECT_REPAIR_WALLE`, remove the binding, insert a `BD-39-<n>` row into `DEVIATION_REGISTER` with 01's `bd_insert` naming the date it survived and why, and re-run. The narrow repair bundle [12](12-privileged-access-catalogue.md) defines excludes `aiplatform.reasoningEngines.query` precisely so that this check is meaningful during the grant window as well.
 - **EVIDENCE:** `${R}-2.2-project-owner-v1.txt`; `evidence_add S0-2.2 no-creator-owner E-06 4.2.1 build-log:records/<file> <file>`. E-06. TISAX 4.2.1.
 
 ### S0-2.3 Exactly two principals may query the engine

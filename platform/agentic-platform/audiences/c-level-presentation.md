@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Changed 2026-10-01: the three-day day files recorded as not yet carrying the full build's names; past start dates marked not started; the proof of value's never-claims row corrected.
+- Changed 2026-10-01: the three-day day files recorded as carrying the full build's names since the six owed rows were made that day; the register counted at 207 rows; past start dates marked not started; the proof of value's never-claims row corrected.
 - Who it is for: the board and the executive committee of the organisation, who fund, appoint and sign; expert in running the organisation, not in Google Cloud.
 - What it asks of them: to appoint the people the platform cannot open without, to fund purchases whose quotes nobody has yet obtained, to accept eight residual risks in writing, the one signature that is the board's own ([the residual risks a sponsor accepts by signing](../brief/23-threat-model-and-residual-risk.md#the-residual-risks-a-sponsor-accepts-by-signing)), to make three other signatures possible by appointing their signatories, and to choose one of three ways to start. Nothing is built on 2026-09-18; no price is quoted; no regulator's or assessor's decision is promised.
 - Format: seventeen slides and four backup slides, each with the notes the presenter says. The written version for the same audience is [the executive brief](executive-brief.md); the other documents of the set are listed in [the audiences README](README.md); the plain-language set is [../plain/README.md](../plain/README.md).
@@ -161,7 +161,7 @@ flowchart LR
 | The proof of value | three hands-on people, one engineer; 6 to 9 weeks to POV-1 (`Assumption:`) | Eve on every human super admin; a doer holding no admin role |
 | The full build | thirteen appointments; 85 to 90 person-days; Stage 0 not before 2027-03 | the platform; Eve with a witness; the gated grant; Stage 0 |
 
-> Notes: Three ways to start, and they chain: three-day, proof of value, full build, nothing torn down between them, every artefact to carry the full build's names and schemas; on 2026-10-01 the three-day day files do not yet (3-day README §6.1, owed rows). The three-day build is two people for three business days, Eve live before the doer exists; it is a demonstration of machinery under control, not compliance evidence and not a production grant, said to the sponsor before the demonstration. The proof of value runs Tiers C, R and W on the production tenant with a doer that holds no administrative role at all; Super Admin goes to no agent, ever. POV-1 ends 6 to 9 weeks after day one; POV-2 ends week 16 to 20 with a dedicated engineer, every figure an assumption; a sponsor told "three weeks" has been misled about both stages. Only the full build owns the grant, the sandbox tenant, the witness and every gate of the grant. Each path's never-claims are on slide A4 and in the appendix.
+> Notes: Three ways to start, and they chain: three-day, proof of value, full build, nothing torn down between them, every artefact bearing the full build's names and schemas, the three-day day files included since the six rows 3-day README §6.1 listed as owed were made on 2026-10-01. The three-day build is two people for three business days, Eve live before the doer exists; it is a demonstration of machinery under control, not compliance evidence and not a production grant, said to the sponsor before the demonstration. The proof of value runs Tiers C, R and W on the production tenant with a doer that holds no administrative role at all; Super Admin goes to no agent, ever. POV-1 ends 6 to 9 weeks after day one; POV-2 ends week 16 to 20 with a dedicated engineer, every figure an assumption; a sponsor told "three weeks" has been misled about both stages. Only the full build owns the grant, the sandbox tenant, the witness and every gate of the grant. Each path's never-claims are on slide A4 and in the appendix.
 
 ## Slide 14: The timeline, by gate
 
@@ -196,7 +196,7 @@ flowchart LR
 - P68, the super-admin roster of exactly three, with the second human named
 - P34, Eve's reporting path may reason: the Eve owner and the security reviewer
 
-> Notes: The register of decisions holds 204 rows, of which one is decided: P33, that Wall-E holds Super Admin. Everything else is proposed by a page, open, or awaiting a test. Six items come first. The gate-counting rule, because read literally the register keeps gates red for reasons nobody can act on. The two lists, which fix what the robot refuses in every lane and what it reaches only with two human super admins. The declared intended purpose, one paragraph identical in five places, on which the EU AI Act position rests, signed with legal. The deviation record, which cannot be signed by its beneficiary: a security reviewer who is not the platform owner signs it, and the ISMS enters it, and neither role exists today. The roster, which needs the second human's name. And Eve's reporting path. Three of the six wait on people you appoint on slide 9; the rest are the owner's, one with legal.
+> Notes: The register of decisions holds 207 rows, of which one is decided: P33, that Wall-E holds Super Admin. Everything else is proposed by a page, open, or awaiting a test. Six items come first. The gate-counting rule, because read literally the register keeps gates red for reasons nobody can act on. The two lists, which fix what the robot refuses in every lane and what it reaches only with two human super admins. The declared intended purpose, one paragraph identical in five places, on which the EU AI Act position rests, signed with legal. The deviation record, which cannot be signed by its beneficiary: a security reviewer who is not the platform owner signs it, and the ISMS enters it, and neither role exists today. The roster, which needs the second human's name. And Eve's reporting path. Three of the six wait on people you appoint on slide 9; the rest are the owner's, one with legal.
 
 ## Slide 17: The ask, restated
 
@@ -239,13 +239,14 @@ flowchart LR
 
 ## Slide A3: The register of decisions in one screen
 
-| Rows | Count | State on 2026-09-18 |
+| Rows | Count | State on 2026-10-01 |
 |---|---|---|
 | P1 to P34, the high-level design's own | 34 | 3 decided or closed (P33 decided); 9 proposed; 18 open; 4 spikes |
 | P35 to P143, the detailed pages' | 109 | 107 proposed, 2 spikes; 11 carry an open dependency or an assumption |
 | P144 to P191, the setup procedures' | 48 | all proposed, pending the owner's signature |
 | P192 to P204, the proof of value's | 13 | all proposed; 6 POV-only, 6 binding on the full build, P204 mixed |
-| Total | 204 | one row decided by the owner |
+| P205 to P207, added on 2026-10-01 | 3 | all proposed |
+| Total | 207 | one row decided by the owner |
 | Keeping the grant red | — | open P7, P10, P14, P29; P33's deviation signatures |
 
 > Notes: Every platform decision sits in one register in one sequence, and a decision has five states: decided, closed, proposed, open or spike. A proposed row stands until the owner overturns it in writing, so silence counts as consent; an open row keeps its gate red; a spike is answered by a test on a throwaway resource. The register is grouped by the gate each row blocks: before the platform folder exists, before any writing agent writes, before the super-admin grant, before Wall-E's first write, and later. The grant is kept red today by four open rows and by the deviation's missing signatures: the Admin console access level, the monitoring service and its partner, the witness organisation, and the two lists. Who must answer each is a role, not a person. No program answers a row; raising a level, widening a scope and answering a decision are human acts, recorded by hand.

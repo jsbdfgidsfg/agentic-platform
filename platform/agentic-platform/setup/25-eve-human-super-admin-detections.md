@@ -5,6 +5,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
+- Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (EH-0.4, EH-10.1).
 - Last executed: never
 - Stage: review §2 stage 30 (Eve Phase 9's grants and Phase 10), re-cut to Eve-H part 3 (SD-10). Runs after 23 and 24, before 26. Gate lines G-4 and G-5 get their production half here; both are closed by the second human's proof in 28, never by this file.
 - Step prefix: `EH`. Steps: 52. BLOCKED steps: EH-3.1, EH-3.2, EH-3.4, EH-4.1, EH-4.2, EH-4.3, EH-4.4, EH-4.5, EH-5.2, EH-5.3, EH-5.4, EH-5.5, EH-6.1, EH-6.4, EH-7.3, EH-7.4, EH-7.5, EH-8.2, EH-8.3, EH-9.1, EH-9.2, EH-9.3, EH-9.4 — every step that needs Eve's code (README B-08) or Eve's committed configuration (B-09). EH-9.0 (the twin's own `eve-verifier@` and its grants) is not blocked: it needs no code. EH-0.2 is BLOCKED while the DPO record of SD-11 does not exist (B-11), and it blocks the whole file: **no Eve job is deployed, and no poll by actor is scheduled, before that record exists.** Rules `SI-02`…`SI-07`, `SI-10` and `SI-11` are committed **BLOCKED inside EH-2.3** while the Cloud Audit Log view they read does not exist (B-12, owed by 14 CL-7.1/CL-7.2; see the precondition below). Steps that record `PENDING` rather than `BLOCKED`: EH-1.4 (the re-run of 14 CL-7.3), EH-4.6 (`halt_target_pending`, wired in 36), EH-6.2 (notification channels, made in 26), EH-4.0 (an Admin SDK quota increase, if the read shows one is needed).
@@ -260,13 +261,14 @@ fi
 
 - **WHO:** Platform owner under `ENT_PROJECT_REPAIR_EVE` (approver the second human).
 - **WHERE:** Shell; `EVE_PROJECT`.
-- **ACTION:** 23's FM-VERIFIER run is the authority on `EVE_PROJECT`'s service list. A service missing here is a defect in that run, not a decision to take now. Repair it under the entitlement and write the deviation, so the zero-diff checker sees it.
+- **ACTION:** 23's FM-VERIFIER run is the authority on `EVE_PROJECT`'s service list. A service missing here is a defect in that run, not a decision to take now. Repair it under the entitlement and write the deviation, so the zero-diff checker sees it. The row `BD-25-1` is inserted into the register's first table with 01's `bd_insert` (never appended to the file end, which would land inside the Closures table); replace its two `<…>` cells before running, as `bd_insert` refuses a row that still holds one.
 
 ```bash
-need EVE_PROJECT ENT_PROJECT_REPAIR_EVE CICD_PROJECT
+need EVE_PROJECT ENT_PROJECT_REPAIR_EVE CICD_PROJECT DEVIATION_REGISTER BUILD_LOG_DIR
 gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_EVE" --requested-duration=3600s --justification="setup 25 EH-0.4: service or Binary Authorization policy repair on EVE_PROJECT" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT"
 gcloud services enable <the missing service> --project="$EVE_PROJECT"
 gcloud container binauthz policy import "$PLATFORM_REPO_DIR/factory/expected/eve-binauthz-policy.yaml" --project="$EVE_PROJECT"
+bd_insert "| BD-25-1 | $(date -u +%F) | 25 EH-0.4 | DEV | service or policy missing from 23's FM-VERIFIER run, repaired by hand: <the missing service, or the Binary Authorization policy> | project $EVE_PROJECT | 23 FM-VERIFIER run; factory/expected/eve-binauthz-policy.yaml | <the services enabled and the policy imported> | n/a | n/a | PAM grant on ENT_PROJECT_REPAIR_EVE, second human; owner platform owner | closed by re-running the module | open |"
 ```
 
   The policy file is 17's module output for a controllers project: `defaultAdmissionRule` with
@@ -274,7 +276,7 @@ gcloud container binauthz policy import "$PLATFORM_REPO_DIR/factory/expected/eve
   `requireAttestationsBy: [BINAUTHZ_ATTESTOR]`. Do not compose it here.
 - **VERIFY:** `gcloud services list --enabled --project="$EVE_PROJECT" --format="value(config.name)" | sort` now matches 17's expected list exactly (`comm -3`); `gcloud container binauthz policy export --project="$EVE_PROJECT"` names the attestor and `ENFORCED_BLOCK_AND_AUDIT_LOG`; the grant is revoked at the end of the step.
 - **ROLLBACK:** `gcloud services disable <service> --project="$EVE_PROJECT"` and re-import the saved policy; both only before any deploy.
-- **EVIDENCE:** Both outputs and a `BD-25-1` row in `DEVIATION_REGISTER` ("service or policy missing from 23's FM-VERIFIER run, repaired by hand; owner platform owner; closed by re-running the module"). E-05. TISAX 5.2.1, 1.4.1.
+- **EVIDENCE:** Both outputs and the `BD-25-1` row in `DEVIATION_REGISTER` ("service or policy missing from 23's FM-VERIFIER run, repaired by hand; owner platform owner; closed by re-running the module"), committed as `BD-25-1 opened`. E-05. TISAX 5.2.1, 1.4.1.
 
 ## 1. The grants Eve's identities never had (closes S032)
 
@@ -2075,18 +2077,18 @@ gcloud asset search-all-iam-policies --scope="organizations/${ORG_ID}" --query="
 
 - **WHO:** Platform owner; the second human initials the line and confirms the two facts that matter to them: no human holds `actAs`, and every schedule is paused.
 - **WHERE:** Shell; `DEVIATION_REGISTER`.
-- **ACTION:**
+- **ACTION:** `BD-25-2` is built into a variable and inserted into the register's first table with 01's `bd_insert`, which commits it as `BD-25-2 opened` (never appended to the file end, which would land inside the Closures table).
 
 ```bash
 need EVE_PROJECT REGION DEVIATION_REGISTER BUILD_LOG_DIR
-printf '| BD-25-2 | %s | 25 EH-4, EH-5, EH-7 | DEV | Eve runtime deployed by hand instead of by the factory and CI (SD-01) | project %s | register/eve.yaml | four Cloud Run jobs and five schedules by digest %s; eve-console behind IAP; the twin likewise (EH-9) | build-log:records/%s | - | PAM %s | terraform import of the jobs, schedules and service, plus an empty plan, when the factory exists | open |\n' \
-  "$(date -u +%F)" "$EVE_PROJECT" "${EVE_RECONCILER_IMAGE:-tbd}" "$(basename "${R}-5.5-actas-closed-v1.txt" 2>/dev/null || echo pending)" "ENT_DEPLOY_CREDENTIAL_HOLDER_EVE" >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-25-2 Eve runtime by hand (setup 25 EH-10.1)"
+row=$(printf '| BD-25-2 | %s | 25 EH-4, EH-5, EH-7 | DEV | Eve runtime deployed by hand instead of by the factory and CI (SD-01) | project %s | register/eve.yaml | four Cloud Run jobs and five schedules by digest %s; eve-console behind IAP; the twin likewise (EH-9) | build-log:records/%s | - | PAM %s | terraform import of the jobs, schedules and service, plus an empty plan, when the factory exists | open |\n' \
+  "$(date -u +%F)" "$EVE_PROJECT" "${EVE_RECONCILER_IMAGE:-tbd}" "$(basename "${R}-5.5-actas-closed-v1.txt" 2>/dev/null || echo pending)" "ENT_DEPLOY_CREDENTIAL_HOLDER_EVE")
+bd_insert "$row"
 gcloud scheduler jobs list --location="$REGION" --project="$EVE_PROJECT" --format="value(name.basename(),state)"
 gcloud projects get-iam-policy "$EVE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:user:" --format="value(bindings.role,bindings.members)"
 ```
 
-- **VERIFY:** `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-25-2` (and `BD-25-1` earlier if EH-0.4 ran); all five production schedules are `PAUSED`; no `user:` member holds any role on `EVE_PROJECT`. The second human initials both readings.
+- **VERIFY:** `awk -F' *[|] *' '$2 ~ /^BD-25-/ && NF==15 {print NR, $2}' "$DEVIATION_REGISTER"` shows `BD-25-2` (and `BD-25-1` if EH-0.4 ran), each at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); all five production schedules are `PAUSED`; no `user:` member holds any role on `EVE_PROJECT`. The second human initials both readings.
 - **ROLLBACK:** Append-only register.
 - **EVIDENCE:** The register commit and the two readings as `${R}-10.1-close-state-v1`. E-05, E-08. TISAX 1.4.1, 4.2.1.
 

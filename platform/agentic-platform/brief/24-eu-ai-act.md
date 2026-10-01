@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- 2026-10-01: re-verified against page 10 and the Omnibus — EN 18286 published 2026-07-30 and not cited; the EU database not open before 2027-Q3; suspension (F5) claimed under condition (a); consultation, and consent where co-determination applies, as the default; the Art. 72(3) template now Commission guidance due by 2027-09-02; the Agent Platform API named in place of Vertex AI.
+- 2026-10-01: re-verified against page 10 and the Omnibus — EN 18286 published 2026-07-30 and not cited; the EU database not open before 2027-Q3; suspension (F5) claimed under condition (a); consultation, and consent where co-determination applies, as the default; the Art. 72(3) template now Commission guidance due by 2027-09-02; the Agent Platform API named in place of Vertex AI; the residual count reads eleven, as page 10 §0 now does.
 
 ## What this chapter explains
 
@@ -183,7 +183,7 @@ The register lists fifteen artefacts, E-01 to E-15, that an authority, an assess
 
 **What can be said** ([§6](../10-eu-ai-act.md#6-what-bulletproof-can-and-cannot-mean)): the design holds most of the engineering an Art. 9 to 15 programme needs, often beyond what the Act asks of a system claimed not high-risk — an audit copy outside the tenant, a model-free verifier with halt authority, a ladder of pre-determined changes, a measurement loop that is a monitoring plan by construction, and classification as a precondition of existence. Once the documentation is frozen (P130) and P23, P28, P18 and P19 are signed, it will exceed the Act's engineering expectations for the pilot and meet its legal ones as they stood on 2026-09-13.
 
-**What cannot be promised.** The page's summary counts seven items; its residual list holds eleven, some closed by the organisation itself, and this chapter follows the list.
+**What cannot be promised.** The page's summary and its residual list both count eleven items, some closed by the organisation itself, and this chapter follows the list.
 
 1. The Art. 6(3) claim rests on **draft guidelines**; closed by re-signing within 90 days of the final text.
 2. **No presumption of conformity**; narrowed by an internal assessment against the articles until a standard is cited.

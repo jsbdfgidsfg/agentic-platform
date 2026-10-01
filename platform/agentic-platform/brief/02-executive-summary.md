@@ -4,7 +4,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - 2026-09-18: reviewed against the design; "Where things stand" moved to 2026-09-17 and now names the three build sets (setup, proof of value, three-day) with their people, durations and limits; Eve's section carries the 2026-09-15 first-run scope over the human super admins; the register is cited as P1–P204; the three build READMEs are added to "Read next"; two gendered pronouns replaced with they/them under the house rule.
-- 2026-10-01: the proof of value's people and calendar now match pov/README §4 (three hands-on people, week 16 to 20 or 26 to 34); the declined and qualified readings now match the HLD's traceability (R12, R14 declined as worded; R4's and R8's literal readings declined; R6, R11, R13, R15 qualified); the staffing minimum at the grant is five (SD-04), or four with a dated ISMS exception.
+- 2026-10-01: the proof of value's people and calendar now match pov/README §4 (three hands-on people, week 16 to 20 or 26 to 34); the declined and qualified readings now match the HLD's traceability (R12, R14 declined as worded; R4's and R8's literal readings declined; R6, R11, R13, R15 qualified); the staffing minimum at the grant is five (SD-04), or four with a dated ISMS exception; the register is cited as P1–P207.
 
 ## What you will understand by the end
 
@@ -153,5 +153,5 @@ Each group opens one gate; a group left unprovided keeps that gate and every lat
 ## Read next
 
 - In this brief: Chapter 2, The objective and what it demands; Chapter 3, The problem and its risks; Chapter 17, Mo, continuous improvement, for the value review; Chapter 19, Threat model and residual risk; Chapter 24, Roadmap and cost; Chapter 25, Decisions awaiting the owner.
-- In the design: [the platform set's README](../README.md#maturity-what-exists-on-2026-09-13); [the platform HLD, what this reverses and what it costs](../01-hld.md#what-this-reverses-and-what-it-costs); [the register in one screen](../12-open-decisions.md#0-the-register-in-one-screen) (P1–P204) and [its gate before the super-admin grant](../12-open-decisions.md#4-before-the-super-admin-grant).
+- In the design: [the platform set's README](../README.md#maturity-what-exists-on-2026-09-13); [the platform HLD, what this reverses and what it costs](../01-hld.md#what-this-reverses-and-what-it-costs); [the register in one screen](../12-open-decisions.md#0-the-register-in-one-screen) (P1–P207) and [its gate before the super-admin grant](../12-open-decisions.md#4-before-the-super-admin-grant).
 - The three build sets, smallest first: [the three-day build](../3-day/README.md), [the proof of value](../pov/README.md) and [the full build](../setup/README.md).

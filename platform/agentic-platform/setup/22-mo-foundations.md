@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-17
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (MO-1.2, MO-8.3, MO-11.1).
 - Last executed: never
 - Stage: review §2 stage 22 (Mo's register row and the FM-IMPROVER run) and the Wall-E-independent half of stage 25 (Mo-1 to Mo-3 of the superseded Mo runbook). Runs after the Tier R record of [17](17-factory-module-equivalents-and-tier-r-gate.md). **This file gates no part of Eve.** It may run before, during or after files 23 to 28; a BLOCKED Mo input never holds Eve-H (plan SD-45, README §3.4). Wall-E (file 30) starts with this file complete or with its BLOCKED steps indexed.
 - Step prefix: `MO`. Steps: 38. BLOCKED steps: MO-6.5 (Mo's 19 table schemas), MO-7.5 (verdict fixtures), MO-7.6 (the `z` agreement check against `gates.yaml`). MO-5.2 is the build-inputs gate itself: it writes `MO_INPUTS_COMMIT` or a `BLOCKED` line for README B-14, and MO-6.5, MO-7.5 and MO-7.6 read that line. Steps that record `PENDING` rather than `BLOCKED`: MO-2.4 (the twin, while P40 is unsigned), MO-9.3 (the sweep over `WALLE_PROJECT`, which does not exist until 31), MO-10.2 (grants other files make).
@@ -231,6 +232,7 @@ git -C "$PLATFORM_REPO_DIR" show origin/main:register/schema/register-row.schema
   3. Labels: tick **Security**.
   4. Access settings as 06 OB-6.2 step 4 (invitation only, no external members).
   5. Members: `MO_OWNER_EMAIL` only (Member). Owner: none (04 §2.4: owners of agent groups are the agent's owner group itself).
+  6. Record `BD-22-1` in the register's first table with 01's `bd_insert` (never appended to the file end, which would land inside the Closures table): `need DOMAIN; bd_insert "| BD-22-1 | $(date -u +%F) | 22 MO-1.2 | DEV | group made by hand instead of the group factory (factory-groups@ job is BLOCKED code) | group mo-owners@$DOMAIN | 04 section 2.4 | one security group, member MO_OWNER_EMAIL | n/a | n/a | none: SD-01; owner platform owner | superseded when factory-groups@'s job exists | open |"`.
 - **VERIFY:**
 
 ```bash
@@ -238,9 +240,9 @@ gcloud identity groups describe "mo-owners@${DOMAIN}" --format="json(labels)"
 gcloud identity groups memberships list --group-email="mo-owners@${DOMAIN}" --format="value(preferredMemberKey.id)"
 ```
 
-  The labels include `cloudidentity.googleapis.com/groups.security`; the membership list prints exactly `MO_OWNER_EMAIL`.
+  The labels include `cloudidentity.googleapis.com/groups.security`; the membership list prints exactly `MO_OWNER_EMAIL`; `bd_insert` printed `opened BD-22-1 at line <a> (Closures heading at line <b>)` with `<a>` smaller than `<b>` (06 OB-3.2's check), or `exists: BD-22-1`.
 - **ROLLBACK:** **IRREVERSIBLE**: a security group cannot be changed back to a Google Group (06 OB-6.2's source). Confirm before saving: the address is free (step 1), the spelling equals `owner_group` in MO-1.3's draft, and 04 §2.4 names it. Gate: 04 §2.4's naming rule and MO-1.1's `DONE` line. A wrongly added member is removed at once and recorded.
-- **EVIDENCE:** Screenshot of the settings page and the two outputs as `${R}-1.2-mo-owners-v1`; a `DEV` row `BD-22-1` in `DEVIATION_REGISTER` ("group made by hand instead of the group factory; superseded when `factory-groups@`'s job exists; owner platform owner"). E-08. TISAX 4.1.1, 4.2.1.
+- **EVIDENCE:** Screenshot of the settings page and the two outputs as `${R}-1.2-mo-owners-v1`; the `DEV` row `BD-22-1` in `DEVIATION_REGISTER` ("group made by hand instead of the group factory; superseded when `factory-groups@`'s job exists; owner platform owner"), committed as `BD-22-1 opened`. E-08. TISAX 4.1.1, 4.2.1.
 
 ### MO-1.3 Write and merge Mo's register row and manifest
 
@@ -1084,9 +1086,16 @@ bq --project_id="$MO_PROJECT" --location=EU query --use_legacy_sql=false --forma
 
 - **WHO:** Mo owner writes; the DPO is informed through 03's retention record (M-5).
 - **WHERE:** `DEVIATION_REGISTER`; 08's store inventory is corrected in 17 FM-12.1's next pass.
-- **ACTION:** 08 R13 gives Mo's archive snapshots 400 days; the baseline copies have no expiry because the four weeks cannot be re-measured (02). Record row `BD-22-4` of kind `DEV`: "`toil_baseline_<sha>` in `MO_ARCHIVE_DS` and `toil_baseline` in `MO_METRICS_DS` carry no expiry; they hold pseudonymous recorder codes only (02 CSV contract); owner Mo owner; review at the S1 stop-or-continue review".
-- **VERIFY:** `grep -c '^| BD-22-4 ' "$DEVIATION_REGISTER"` prints `1`, committed.
-- **ROLLBACK:** Append-only; a superseding row.
+- **ACTION:** 08 R13 gives Mo's archive snapshots 400 days; the baseline copies have no expiry because the four weeks cannot be re-measured (02). Record row `BD-22-4` of kind `DEV`: "`toil_baseline_<sha>` in `MO_ARCHIVE_DS` and `toil_baseline` in `MO_METRICS_DS` carry no expiry; they hold pseudonymous recorder codes only (02 CSV contract); owner Mo owner; review at the S1 stop-or-continue review". It is inserted into the register's first table with 01's `bd_insert` (never appended to the file end, which would land inside the Closures table), in MO-8.1's shell, where `TOIL_COMMIT` is set:
+
+```bash
+need DEVIATION_REGISTER BUILD_LOG_DIR MO_PROJECT MO_ARCHIVE_DS MO_METRICS_DS TOIL_COMMIT
+SHORT="$(printf '%s' "$TOIL_COMMIT" | cut -c1-12)"
+bd_insert "| BD-22-4 | $(date -u +%F) | 22 MO-8.3 | DEV | toil_baseline_${SHORT} in MO_ARCHIVE_DS and toil_baseline in MO_METRICS_DS carry no expiry; they hold pseudonymous recorder codes only (02 CSV contract) | project $MO_PROJECT, datasets $MO_ARCHIVE_DS and $MO_METRICS_DS | 02 CSV contract; 08 R13; TOIL_COMMIT $TOIL_COMMIT | two baseline tables without expiry | n/a | n/a | none: DPO informed through 03's retention record (M-5); owner Mo owner | review at the S1 stop-or-continue review | open |"
+```
+
+- **VERIFY:** `grep -c '^| BD-22-4 ' "$DEVIATION_REGISTER"` prints `1`, committed as `BD-22-4 opened`, and its line number is smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check).
+- **ROLLBACK:** Append-only; a `bd_close` line naming the superseding row, and that row inserted with `bd_insert`.
 - **EVIDENCE:** The commit. E-09. TISAX 7.1.2, 5.2.4.
 
 ## 9. Secrets: none in `MO_PROJECT`, none readable by Mo elsewhere
@@ -1239,17 +1248,17 @@ exists_or_pending --pending "serviceAccount:${SA_MO_METRICS}" MO-10.2 "36: views
 
 - **WHO:** Mo owner; the second human initials the build-log line as approver of the repair grant.
 - **WHERE:** Shell; `DEVIATION_REGISTER`.
-- **ACTION:** The four datasets were in the spec's `made_elsewhere`; add them to the spec as a revision (keys the checker reads, or a `made_elsewhere` line marked done with MO-6.3's record) and re-run FM-2.21 (17 FM-2.22's note). Then write `BD-22-5` for the data plane made by hand instead of the module, and revoke the repair grant.
+- **ACTION:** The four datasets were in the spec's `made_elsewhere`; add them to the spec as a revision (keys the checker reads, or a `made_elsewhere` line marked done with MO-6.3's record) and re-run FM-2.21 (17 FM-2.22's note). Then write `BD-22-5` for the data plane made by hand instead of the module, built into a variable and inserted into the register's first table with 01's `bd_insert`, and revoke the repair grant.
 
 ```bash
 python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" live "$PLATFORM_REPO_DIR/factory/runs/mo-prod.json" --report "${R}-11.1-live-v1.json" --accept-pending; echo "exit=$?"
-printf '| BD-22-5 | %s | 22 MO-6, MO-7, MO-8 | DEV | improver-project data plane (hand, SD-01) | project %s | register/mo.yaml | datasets %s %s %s %s with exact access arrays; UDFs from %s; toil baseline from %s | build-log:records/%s | - | PAM %s | terraform import of datasets and routines + empty plan (17 FM-11), expiry Tier W gate | open |\n' \
-  "$(date -u +%F)" "$MO_PROJECT" "$MO_METRICS_DS" "$MO_ARCHIVE_DS" "$MO_PRIVATE_DS" "$MO_VIEWS_DS" "${UDF_COMMIT:-tbd}" "${TOIL_COMMIT:-not yet loaded}" "$(basename "${R}-11.1-live-v1.json")" "ENT_PROJECT_REPAIR_MO" >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-22-5 Mo data plane (setup 22 MO-11.1)"
+row=$(printf '| BD-22-5 | %s | 22 MO-6, MO-7, MO-8 | DEV | improver-project data plane (hand, SD-01) | project %s | register/mo.yaml | datasets %s %s %s %s with exact access arrays; UDFs from %s; toil baseline from %s | build-log:records/%s | - | PAM %s | terraform import of datasets and routines + empty plan (17 FM-11), expiry Tier W gate | open |\n' \
+  "$(date -u +%F)" "$MO_PROJECT" "$MO_METRICS_DS" "$MO_ARCHIVE_DS" "$MO_PRIVATE_DS" "$MO_VIEWS_DS" "${UDF_COMMIT:-tbd}" "${TOIL_COMMIT:-not yet loaded}" "$(basename "${R}-11.1-live-v1.json")" "ENT_PROJECT_REPAIR_MO")
+bd_insert "$row"
 gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_MO" --location=global --project="$MO_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)" | while read -r G; do gcloud pam grants revoke "$G" --reason="22 sitting complete" --location=global --project="$MO_PROJECT" --billing-project="$CICD_PROJECT"; done
 ```
 
-- **VERIFY:** `exit=0` with only the `_Trace` pending line (and none other); `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-22-5`; the grants list with `state=ACTIVE` prints nothing; and
+- **VERIFY:** `exit=0` with only the `_Trace` pending line (and none other); `grep -n '^| BD-22-5 |' "$DEVIATION_REGISTER"` shows the row at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); the grants list with `state=ACTIVE` prints nothing; and
 
 ```bash
 gcloud projects get-iam-policy "$MO_PROJECT" --format=json | jq -r '[.bindings[] | .role as $r | .members[] | select(startswith("user:") or startswith("group:") or startswith("domain:")) | "\($r) \(.)"] | if length == 0 then "no human member at project level" else .[] end'

@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- 2026-10-01: register range now P1–P204; CP5 names the Agent Platform API (`aiplatform.googleapis.com`, formerly the Vertex AI API).
+- 2026-10-01: register range now P1–P207; CP5 names the Agent Platform API (`aiplatform.googleapis.com`, formerly the Vertex AI API).
 
 ## What you will understand by the end
 
@@ -47,7 +47,7 @@ A safety case may rest on an enforcement-grade control; a detection-grade contro
 
 ## 4.3 The six containment primitives
 
-Containment for any agent reduces to six primitives, numbered CP1 to CP6 so they are never confused with register rows P1–P204, each with a named enforcer and a grade ([HLD §0.2](../01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded)).
+Containment for any agent reduces to six primitives, numbered CP1 to CP6 so they are never confused with register rows P1–P207, each with a named enforcer and a grade ([HLD §0.2](../01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded)).
 
 **CP1: a trust boundary the agent cannot redraw.** The factory creates the agent's principal, project, gateway, Model Armor floor and deny policy, governed at the folder; the agent's owner cannot loosen them. Folders, organisation policy, the factory's CI identity and Privileged Access Manager enforce it. Enforcement-grade, because a boundary its occupant can edit is only a preference.
 

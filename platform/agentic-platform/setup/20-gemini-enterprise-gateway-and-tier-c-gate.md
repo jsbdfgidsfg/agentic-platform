@@ -13,6 +13,7 @@
 - Decisions applied (pending signature in [03](03-decisions-and-people.md)): SD-13, SD-19, SD-20, SD-21; design decisions P6, P53, P57, P59 of [../12-open-decisions.md](../12-open-decisions.md).
 - Every command, flag, field, role, constraint and console path was read on Google's pages on 2026-09-15, and the ones the 2026-09-16 review pass challenged were re-read that day: the Agent Gateway set-up page's required-APIs and constraint-id lists, the `agent-registry services create` flag reference, the custom-constraints page on CREATE-time evaluation, and the organisation-policy constraints reference (§"Sources"). Nothing was run against the tenant while writing. What could not be verified is listed in §"Not verified" and marked `Assumption:` at its step.
 - Changed 2026-10-01: every PAM call passes `--billing-project="$CICD_PROJECT"`; the `ENT_PROJECT_REPAIR_GEMINI` fallback is gone (17 now writes `ENT_PROJECT_REPAIR_TENANT_APP`) and the entitlement keeps 19 GE-2.3's approver; GG-0.4 tries `iam.managed.disableAccessPolicyBinding` (the constraints reference's id, 2026-09-30) first and records Agent Gateway's launch stage; GG-0.5 uses arrays and handles the observability APIs Google lists; `service-extensions authz-extensions` on the GA track with beta as fallback; GG-2.7 drops `--freshness`; GG-5.7 uses `--update-mask=policy.dry_run_spec`; deviation rows are BD-20-1 to BD-20-4 in 01 PR-4.1's columns, with GG-6.2 closing BD-20-3; portable date arithmetic in GG-5.8 and GG-7.5; the `@file` note says Google's pages disagree.
+- Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (GG-0.3, GG-0.5, GG-2.1, GG-5.3, GG-6.2).
 - Elapsed: 1 to 2 weeks to `TIER_C_RECORD` (the spike, a change-window notice of five business days, seven days of dry-run log). The 30-day dry-run review (GG-5.8) continues after the record and is 39's input, not a Tier C condition. Hands-on: 3 days.
 
 ---
@@ -55,7 +56,7 @@ flowchart TD
 
 ## 2. Preconditions
 
-- [ ] File 01: `~/.platform-env` with `need`, `penv_set`, `exists_or_pending`, `penv_guard`, `checkpoint`, `evidence_add`, `sitting_end`; `BUILD_LOG_DIR`, `PLATFORM_REPO_DIR`, `DEVIATION_REGISTER`, `EVIDENCE_REGISTER`, `DRILL_CALENDAR`, `ORG_ID`, `DOMAIN`, `REGION` (`europe-west1`), `GE_LOCATION` (`eu`).
+- [ ] File 01: `~/.platform-env` with `need`, `penv_set`, `exists_or_pending`, `penv_guard`, `checkpoint`, `evidence_add`, `bd_insert`, `bd_close`, `sitting_end`; `BUILD_LOG_DIR`, `PLATFORM_REPO_DIR`, `DEVIATION_REGISTER`, `EVIDENCE_REGISTER`, `DRILL_CALENDAR`, `ORG_ID`, `DOMAIN`, `REGION` (`europe-west1`), `GE_LOCATION` (`eu`).
 - [ ] File 05: `GEMINI_PROJECT`, `GEMINI_PROJECT_NUMBER`, `GEMINI_APP_ID`, `GEMINI_APP_LOCATION` (`eu`), `GE_INVENTORY_DIR` with `*-GI-8.5-ge10-import-list-v*.csv` and `*-GI-8.4-*` (the app reads "not bound").
 - [ ] File 06: `SA_1_ADMIN`, `GRP_GE_ADMINS`, `GRP_GE_USERS`, `GRP_PLATFORM_OWNERS`, `GRP_PLATFORM_SECURITY`.
 - [ ] File 09: `SCC_TIER` reads `PREMIUM/eu`; `FLD_GEMINI_ENTERPRISE`.
@@ -176,7 +177,7 @@ g="$(gg_file GG-0.3 entitlement-after yaml)"
 yq '.privilegedAccess.gcpIamAccess.roleBindings += [{"role":"roles/networkservices.admin"},{"role":"roles/networksecurity.admin"},{"role":"roles/agentregistry.editor"},{"role":"roles/iam.accessPolicyAdmin"},{"role":"roles/monitoring.editor"},{"role":"roles/logging.viewer"}] | del(.name, .createTime, .updateTime, .state)' "$f" > "$g"
 diff "$f" "$g"
 gcloud pam entitlements update --billing-project="$CICD_PROJECT" "$(basename "$ENT_REPAIR")" --project="$GEMINI_PROJECT" --location=global --entitlement-file="$g"
-grep -q '^| BD-20-1 |' "$DEVIATION_REGISTER" || printf '| BD-20-1 | %s | 20 GG-0.3 | MOD | tenant-app: ent-project-repair-tenant-app gains gateway, registry, access-policy and monitoring roles | project %s | 19 GE-2.3 entitlement; %s | six role bindings added to the entitlement (networkservices.admin, networksecurity.admin, agentregistry.editor, iam.accessPolicyAdmin, monitoring.editor, logging.viewer) | BLOCKED: tenant-app module (B-01) | n/a: existing project | second human approves each grant (19 GE-2.3) | superseded by the factory tenant-app module (B-01) | open |\n' "$(date -u +%F)" "$GEMINI_PROJECT" "$g" >> "$DEVIATION_REGISTER"
+bd_insert "$(printf '| BD-20-1 | %s | 20 GG-0.3 | MOD | tenant-app: ent-project-repair-tenant-app gains gateway, registry, access-policy and monitoring roles | project %s | 19 GE-2.3 entitlement; %s | six role bindings added to the entitlement (networkservices.admin, networksecurity.admin, agentregistry.editor, iam.accessPolicyAdmin, monitoring.editor, logging.viewer) | BLOCKED: tenant-app module (B-01) | n/a: existing project | second human approves each grant (19 GE-2.3) | superseded by the factory tenant-app module (B-01) | open |\n' "$(date -u +%F)" "$GEMINI_PROJECT" "$g")"
 GRANT="$(pam_grant "$ENT_REPAIR" 1800s "setup 20 GG-0.3 one-grant test")"; pam_active "$GRANT"; gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-0.3 test"
 ```
   `Assumption:` `yq` (jq-compatible YAML wrapper) is installed, as 19 assumes; without it, edit the copy by hand and keep the `diff`. The `etag` is kept so a concurrent change fails the update; the gcloud reference does not say which fields `update` accepts, so a refusal naming a field is recorded and that field removed.
@@ -269,7 +270,9 @@ gcloud services list --enabled --project="$GEMINI_PROJECT" --format=json > "$aft
 comm -13 <(jq -r '.[].config.name' "$before" | sort) <(jq -r '.[].config.name' "$after" | sort)
 comm -23 <(jq -r '.[].config.name' "$before" | sort) <(jq -r '.[].config.name' "$after" | sort)
 gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-0.5 done"
-grep -q '^| BD-20-2 |' "$DEVIATION_REGISTER" || printf '| BD-20-2 | %s | 20 GG-0.5 | MOD | tenant-app: the run spec services list (17 FM-6.1) is short by %s; observability APIs deliberately off: %s | project %s | factory/runs/gemini-prod.json | services enabled additively, none disabled | %s | n/a: existing project | ENT_PROJECT_REPAIR_TENANT_APP grant, second human | superseded when the factory tenant-app module is written (B-01) | open |\n' "$(date -u +%F)" "$(IFS=,; echo "${GG_SVC[*]} ${GG_OBS_ON[*]:-}")" "$(for s in "${GG_OBS[@]}"; do case " ${GG_OBS_ON[*]:-} " in *" $s "*) ;; *) printf '%s ' "$s";; esac; done)" "$GEMINI_PROJECT" "$after" >> "$DEVIATION_REGISTER"
+off=""; for s in "${GG_OBS[@]}"; do case " ${GG_OBS_ON[*]:-} " in *" $s "*) ;; *) off="$off$s ";; esac; done
+row=$(printf '| BD-20-2 | %s | 20 GG-0.5 | MOD | tenant-app: the run spec services list (17 FM-6.1) is short by %s; observability APIs deliberately off: %s | project %s | factory/runs/gemini-prod.json | services enabled additively, none disabled | %s | n/a: existing project | ENT_PROJECT_REPAIR_TENANT_APP grant, second human | superseded when the factory tenant-app module is written (B-01) | open |\n' "$(date -u +%F)" "$(IFS=,; echo "${GG_SVC[*]} ${GG_OBS_ON[*]:-}")" "$off" "$GEMINI_PROJECT" "$after")
+bd_insert "$row"
 checkpoint GG-0.5 DONE
 ```
 - **VERIFY:** no `STOP` line; the first `comm` lists only services from `GG_SVC` and `GG_OBS_ON` that were not already on; each `OFF` line is named in BD-20-2; the second `comm` prints nothing (nothing went away); and
@@ -421,7 +424,7 @@ penv_set GG_SPIKE_ENGINE "$(head -1 "$(ls -t "$GG_DIR"/*-GG-2.1-canary-engines-v
 G2="$(pam_grant "$ENT_PROJECT_REPAIR_CANARY_R" 3600s "setup 20 GG-2.1 spike: discoveryengine service agent query grant on canary-r (removed GG-6.2)")"; pam_active "$G2"
 gcloud projects add-iam-policy-binding "$CANARY_R_PROJECT" --member="serviceAccount:service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com" --role=roles/discoveryengine.serviceAgent --condition=None --format=none
 gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$G2" --reason="GG-2.1 grant made"
-grep -q '^| BD-20-3 |' "$DEVIATION_REGISTER" || printf '| BD-20-3 | %s | 20 GG-2.1 | DEV | spike: roles/discoveryengine.serviceAgent on canary-r for the Gemini Enterprise service agent (cross-project ADK page), instead of the engine-scoped geEngineQuery | project %s | %s | one project binding | n/a | n/a | ENT_PROJECT_REPAIR_CANARY_R grant, second human | removed in GG-6.2 | open |\n' "$(date -u +%F)" "$CANARY_R_PROJECT" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"
+bd_insert "$(printf '| BD-20-3 | %s | 20 GG-2.1 | DEV | spike: roles/discoveryengine.serviceAgent on canary-r for the Gemini Enterprise service agent (cross-project ADK page), instead of the engine-scoped geEngineQuery | project %s | %s | one project binding | n/a | n/a | ENT_PROJECT_REPAIR_CANARY_R grant, second human | removed in GG-6.2 | open |\n' "$(date -u +%F)" "$CANARY_R_PROJECT" "$GE_SPIKE_RECORD")"
 GRANT="$(pam_grant "$ENT_GE_ADMIN" 3600s "setup 20 GG-2.1 register canary-r in the throwaway app before binding")"; pam_active "$GRANT"
 B="$(gg_file GG-2.1 agent-create json)"
 jq -n --arg e "$GG_SPIKE_ENGINE" '{displayName:"gg-spike-canary-r", description:"Setup 20 spike agent. Responses are generated by an AI system.", adkAgentDefinition:{provisionedReasoningEngine:{reasoningEngine:$e}}}' > "$B"
@@ -959,7 +962,7 @@ case "$GE_GW_NAME_FORM" in number) ALT="projects/${GEMINI_PROJECT}/locations/eur
 B2="$(gg_file GG-5.3 bind-alt json)"
 jq -n --arg gw "$ALT" '{agentGatewaySetting:{defaultEgressAgentGateway:{name:$gw}}}' > "$B2"
 curl -sS --fail-with-body -X PATCH -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" --data-binary @"$B2" "https://eu-discoveryengine.googleapis.com/v1/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}?updateMask=agentGatewaySetting.defaultEgressAgentGateway.name" | tee "$(gg_file GG-5.3 bind-alt-response json)"
-grep -q '^| BD-20-4 |' "$DEVIATION_REGISTER" || printf '| BD-20-4 | %s | 20 GG-5.3 | DEV | production binding: gateway name form %s refused, %s accepted; spike Q8 answer corrected | app %s in project %s | %s | agentGatewaySetting on the production app | n/a | n/a | ENT_GE_ADMIN grant; second human witness at the screen | closed when 03 section 11 records the accepted form | open |\n' "$(date -u +%F)" "$GE_GW_NAME_FORM" "$ALT" "$GEMINI_APP_ID" "$GEMINI_PROJECT" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"
+bd_insert "$(printf '| BD-20-4 | %s | 20 GG-5.3 | DEV | production binding: gateway name form %s refused, %s accepted; spike Q8 answer corrected | app %s in project %s | %s | agentGatewaySetting on the production app | n/a | n/a | ENT_GE_ADMIN grant; second human witness at the screen | closed when 03 section 11 records the accepted form | open |\n' "$(date -u +%F)" "$GE_GW_NAME_FORM" "$ALT" "$GEMINI_APP_ID" "$GEMINI_PROJECT" "$GE_SPIKE_RECORD")"
 gg_answer Q8 "production bind accepted the name form: $ALT (spike had recorded the other)" RECORDED
 ```
   A second refusal ends the window: revoke the grant, send the cancellation note, and re-open Q8 before rescheduling. Never fall back to the global host (X-GE-20).
@@ -1113,7 +1116,7 @@ fi
 gcloud projects remove-iam-policy-binding "$CANARY_R_PROJECT" --member="serviceAccount:service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com" --role=roles/discoveryengine.serviceAgent
 ma_eu model-armor templates delete gg-spike-response --location=eu --project="$GEMINI_PROJECT"
 ge_call DELETE "${GG_HOST}/v1alpha/$(jq -r '.name' "$(ls -t "$GG_DIR"/*-GG-2.1-agent-created-v*.json | head -1)")"
-grep -q '^| BD-20-3 | [0-9-]* | GG-2.1 grant removed' "$DEVIATION_REGISTER" || printf '| BD-20-3 | %s | GG-2.1 grant removed (%s) | GG-6.2 |\n' "$(date -u +%F)" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"   # a Closures line (01 PR-4.1): the row itself is never edited
+bd_close BD-20-3 "GG-2.1 grant removed ($GE_SPIKE_RECORD)" "GG-6.2"   # a Closures line (01 PR-4.1): the row itself is never edited
 ```
 - **VERIFY:** `gcloud projects get-iam-policy "$CANARY_R_PROJECT" --flatten=bindings[].members --filter="bindings.members:gcp-sa-discoveryengine" --format='value(bindings.role)'` prints nothing; no `gg-spike` template listed.
 - **ROLLBACK:** none needed.

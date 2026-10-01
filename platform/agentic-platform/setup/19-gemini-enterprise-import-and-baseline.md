@@ -12,6 +12,7 @@
 - Closes: S047 (GE-2 onwards), S049 (the use of the hand-made `ge-admins@`), S053, X-GE-01, X-GE-02, X-GE-03, X-GE-05 (the registration half), X-GE-06, X-GE-07, X-GE-08 (the production half), X-GE-10, X-GE-11 (the `ADMIN_READ` half), X-GE-12 (the grant-before-removal half), X-GE-14, X-GE-15, X-GE-17, X-GE-18 (the non-Plus branch), X-GE-21. Partial remainders are in §9 with owners.
 - Every command, flag, field, role, constraint and console path was read on Google's pages on 2026-09-15, and the `org-policies set-policy`, `pam grants`, `pam entitlements`, `logging read` and dry-run-audit pages were re-read on 2026-09-16 after the setup-procedure review (§10). Nothing was run against the live tenant while writing. What could not be verified is listed at the end of §10 and marked `Assumption:` at its step.
 - Changed 2026-10-01: every PAM call passes `--billing-project="$CICD_PROJECT"` (12's quota-project rule) and `pam_active` waits for `ACTIVE`; GE-2.1 writes 17 FM-6.1's run spec `factory/runs/gemini-prod.json`, the one manifest, and GE-2.7, GE-3.11 and GE-8.4 run 17's `tools/fm-zero-diff.py` on it; `ent-project-repair-tenant-app` gains the second human as approver (GE-2.3); date arithmetic is portable (BSD and GNU); GE-4.4 names `discoveryengine.managed.disableCustomMcpServerConnector`; GE-7.1 and GE-7.2 record Google's advice against template logging for Gemini Enterprise as deviation BD-19-2 with an IAM check, and GE-7.2 asserts the enforcement type.
+- Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (GE-2.2, GE-2.6, GE-7.2, GE-8.4).
 - Review findings closed in this revision: R2-19-01 to R2-19-12 in §9 (one blocking, five major, two medium, four minor), including the `--update-mask` values that would have failed every organisation-policy write, the unproven dry-run gate, the scraped allow-list, and the unwitnessed changes to the live assistant and to live data stores.
 
 ---
@@ -57,7 +58,7 @@ flowchart TD
 
 ## 2. Preconditions
 
-- [ ] File `01-prerequisites-and-conventions.md`: `~/.platform-env` with `penv_set`, `need`, `exists_or_pending`, `penv_guard`, `checkpoint`, `evidence_add`, `sitting_end`; `DEVIATION_REGISTER`, `EVIDENCE_REGISTER`, `BUILD_LOG_DIR`, `PLATFORM_REPO_DIR`, `GE_LOCATION` (`eu`), `REGION` (`europe-west1`), `DOMAIN`, `ORG_ID`.
+- [ ] File `01-prerequisites-and-conventions.md`: `~/.platform-env` with `penv_set`, `need`, `exists_or_pending`, `penv_guard`, `checkpoint`, `evidence_add`, `bd_insert`, `bd_close`, `sitting_end`; `DEVIATION_REGISTER`, `EVIDENCE_REGISTER`, `BUILD_LOG_DIR`, `PLATFORM_REPO_DIR`, `GE_LOCATION` (`eu`), `REGION` (`europe-west1`), `DOMAIN`, `ORG_ID`.
 - [ ] File [05](05-gemini-enterprise-inventory.md): `GEMINI_PROJECT`, `GEMINI_PROJECT_NUMBER`, `GEMINI_APP_ID`, `GEMINI_APP_LOCATION` (`eu`), `GE_EDITION`, `GE_CURRENT_PARENT`, `GE_RETENTION_CURRENT_DAYS`, `GE_INVENTORY_DIR`; the fact sheet's gate lines `ORG`, `LOCATION`, `SECOND-APP`, `EDITION` read `clear`; no PENDING re-run of GI-1.5, GI-5.3 or GI-6.2 left open.
 - [ ] File [06](06-organisation-bootstrap-and-roster.md): `SA_1_ADMIN` (the platform owner's admin account, member of `ge-admins@`), `GRP_GE_ADMINS`, `GRP_GE_USERS` (a security group, empty, membership source recorded in `CONTROL_GROUPS_FILE`), `GRP_PLATFORM_SECURITY`, `GRP_PLATFORM_OWNERS`.
 - [ ] File [09](09-folders-and-security-command-center.md): `FLD_GEMINI_ENTERPRISE`, with the tag `agp-tier=ge` bound.
@@ -320,16 +321,14 @@ Then fill the remaining keys exactly as 17 FM-6.1 lists them (`services` from th
 
 - **WHO:** platform owner. Solo.
 - **WHERE:** shell.
-- **ACTION:**
+- **ACTION:** Replace `<commit>` with the manifest's merge commit from GE-2.1 before running; 01's `bd_insert` inserts the row into the register's first table (never at the file end, which is the Closures table), commits it as `BD-19-1 opened`, refuses it while the placeholder is still there, and prints `exists: BD-19-1` on a re-run.
 ```bash
-need DEVIATION_REGISTER GEMINI_PROJECT
-grep -q '^| BD-19-1 |' "$DEVIATION_REGISTER" || printf '| BD-19-1 | %s | 19 GE-2 | MOD | tenant-app (import) | %s | register row tenant-app; manifest @<commit> | labels, contacts, additive services, ent-project-repair-tenant-app; move (GE-3), policies (GE-3, GE-4), audit config (GE-4.8), IAM (GE-5) | pending GE-2.7 | n/a: existing project, basic roles removed in GE-5.8 | pending | superseded by terraform import and empty plan (GE-2.6) | open |\n' "$(date -u +%F)" "$GEMINI_PROJECT" >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" commit -m "BD-19-1 tenant-app import opened"
+need DEVIATION_REGISTER BUILD_LOG_DIR GEMINI_PROJECT
+bd_insert "$(printf '| BD-19-1 | %s | 19 GE-2 | MOD | tenant-app (import) | %s | register row tenant-app; manifest @<commit> | labels, contacts, additive services, ent-project-repair-tenant-app; move (GE-3), policies (GE-3, GE-4), audit config (GE-4.8), IAM (GE-5) | pending GE-2.7 | n/a: existing project, basic roles removed in GE-5.8 | pending | superseded by terraform import and empty plan (GE-2.6) | open |\n' "$(date -u +%F)" "$GEMINI_PROJECT")"
 checkpoint GE-2.2 DONE - "build-log:registers/bootstrap-deviation-register.md"
 ```
-- **VERIFY:** `grep -c '^| BD-19-1 |' "$DEVIATION_REGISTER"` prints `1`.
-- **ROLLBACK:** none; the register is append-only. A wrong row is closed under 'Closures' with the reason.
+- **VERIFY:** `grep -c '^| BD-19-1 |' "$DEVIATION_REGISTER"` prints `1`, and its line number is smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check).
+- **ROLLBACK:** none; the register is append-only. A wrong row is closed under 'Closures' with the reason: `bd_close BD-19-1 "<reason>" "19 GE-2.2"`.
 - **EVIDENCE:** the row. E-xx: E-05. TISAX: 5.2.1, 1.4.1.
 
 #### GE-2.3 Create the per-project repair entitlement, or read back the one FM-6.2 made
@@ -451,7 +450,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 - **ACTION (when unblocked):** `terraform import` of the project and the app; a plan that shows no change; `lifecycle { prevent_destroy = true }` on the app resource, because the review could not read which engine fields force replacement (X-GE notes), and a replacement would destroy chat history.
 - **VERIFY:** `terraform plan` prints 'No changes'; the plan file is stored.
 - **ROLLBACK:** `terraform state rm` of the imported addresses; nothing in the cloud changes.
-- **EVIDENCE:** the plan output; the BD-19-1 closure line. E-xx: E-05. TISAX: 5.2.1.
+- **EVIDENCE:** the plan output; the BD-19-1 closure line, appended to the register's Closures table with 01's `bd_close BD-19-1 "terraform import and an empty plan: <plan record>" "19 GE-2.6 VERIFY"`. E-xx: E-05. TISAX: 5.2.1.
 
 #### GE-2.7 Run the zero-diff check before the move
 
@@ -1457,9 +1456,9 @@ ma_eu model-armor templates create ge-console-standard-prompt --location=eu --pr
 ma_eu model-armor templates create ge-console-standard-response --location=eu --project="$GEMINI_PROJECT" --pi-and-jailbreak-filter-settings-enforcement=enabled --pi-and-jailbreak-filter-settings-confidence-level=medium-and-above --malicious-uri-filter-settings-enforcement=enabled --rai-settings-filters="$RAI" --basic-config-filter-enforcement=enabled --template-metadata-log-sanitize-operations
 penv_set GE_ARMOR_TEMPLATE "projects/${GEMINI_PROJECT}/locations/eu/templates/ge-console-standard"
 gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE-7.2 done"
-grep -q '^| BD-19-2 |' "$DEVIATION_REGISTER" || printf '| BD-19-2 | %s | 19 GE-7.1, GE-7.2 | DEV | template sanitize logging on for the Gemini Enterprise pair, against Google advice (enable-model-armor, 2026-09-29: not recommended for Gemini Enterprise apps; exposes content to Private Logs Viewer holders) | %s | 06 section 3.3; 03 section 13 | --template-metadata-log-sanitize-operations on both templates; restricted bucket ge-content-logs, view ge-sanitize-view, viewAccessor for platform-security only | GE-7.1 IAM check: no logging.viewer, privateLogViewer, logging.admin, owner, editor or viewer binding on the project | n/a | second human; DPO informed | a dated decision adopting Google alternative (BigQuery routing or Data Access verdicts) | open |\n' "$(date -u +%F)" "$GEMINI_PROJECT" >> "$DEVIATION_REGISTER"
+bd_insert "$(printf '| BD-19-2 | %s | 19 GE-7.1, GE-7.2 | DEV | template sanitize logging on for the Gemini Enterprise pair, against Google advice (enable-model-armor, 2026-09-29: not recommended for Gemini Enterprise apps; exposes content to Private Logs Viewer holders) | %s | 06 section 3.3; 03 section 13 | --template-metadata-log-sanitize-operations on both templates; restricted bucket ge-content-logs, view ge-sanitize-view, viewAccessor for platform-security only | GE-7.1 IAM check: no logging.viewer, privateLogViewer, logging.admin, owner, editor or viewer binding on the project | n/a | second human; DPO informed | a dated decision adopting Google alternative (BigQuery routing or Data Access verdicts) | open |\n' "$(date -u +%F)" "$GEMINI_PROJECT")"
 ```
-Google advises against this logging: "Google does not recommend configuring cloud logging in the Model Armor template for Gemini Enterprise apps", because it can expose content to holders of `roles/logging.privateLogViewer`, and suggests rerouting to BigQuery instead ([enable-model-armor](https://docs.cloud.google.com/gemini/enterprise/docs/enable-model-armor), updated 2026-09-29, read 2026-10-01). The design keeps it for the sanitize verify (GE-7.5) and records the deviation as BD-19-2, with the reason and the compensating control: the restricted bucket and view of GE-7.1 and its project-IAM check. Adopting Google's alternative (BigQuery routing or Data Access verdicts) is a dated decision that closes BD-19-2. `GE_ARMOR_TEMPLATE` names the pair: the prompt template is `${GE_ARMOR_TEMPLATE}-prompt` and the response template `${GE_ARMOR_TEMPLATE}-response` (03 §9 left 'one template or a pair' *tbd*; the assistant takes two fields).
+Google advises against this logging: "Google does not recommend configuring cloud logging in the Model Armor template for Gemini Enterprise apps", because it can expose content to holders of `roles/logging.privateLogViewer`, and suggests rerouting to BigQuery instead ([enable-model-armor](https://docs.cloud.google.com/gemini/enterprise/docs/enable-model-armor), updated 2026-09-29, read 2026-10-01). The design keeps it for the sanitize verify (GE-7.5) and records the deviation as BD-19-2, inserted into the register's first table with 01's `bd_insert`, with the reason and the compensating control: the restricted bucket and view of GE-7.1 and its project-IAM check. Adopting Google's alternative (BigQuery routing or Data Access verdicts) is a dated decision that closes BD-19-2. `GE_ARMOR_TEMPLATE` names the pair: the prompt template is `${GE_ARMOR_TEMPLATE}-prompt` and the response template `${GE_ARMOR_TEMPLATE}-response` (03 §9 left 'one template or a pair' *tbd*; the assistant takes two fields).
 - **VERIFY:** `ma_eu model-armor templates describe ge-console-standard-prompt --location=eu --project="$GEMINI_PROJECT" --format=json | jq '{name, meta: .templateMetadata, et: (.templateMetadata.enforcementType // "absent"), pi: .filterConfig.piAndJailbreakFilterSettings, uri: .filterConfig.maliciousUriFilterSettings}'` shows `logSanitizeOperations: true`, `et` either `absent` (the default, `INSPECT_AND_BLOCK`, manage-templates page 2026-09-30) or `INSPECT_AND_BLOCK` — never `INSPECT_ONLY`, because "If the enforcement type is Inspect only, Gemini Enterprise does not block" (enable-model-armor, 2026-09-29) — both filters enabled and a name under `locations/eu`; same for the response template; a refusal quoting the floor is recorded and the template raised to the floor, never the floor lowered; `checkpoint GE-7.2 DONE`.
 - **ROLLBACK:** `ma_eu model-armor templates delete ge-console-standard-prompt --location=eu --project="$GEMINI_PROJECT"` (and `-response`) while no assistant names them.
 - **EVIDENCE:** both describes; `evidence_add GE-7.2 ge-console-templates E-15 5.2.6 "build-log:ge-baseline/<file>"`.
@@ -1602,7 +1601,7 @@ git -C "$BUILD_LOG_DIR" commit -m "19 GE baseline $(date -u +%F)"
 checkpoint GE-8.4 DONE
 sitting_end
 ```
-Upload every file under `ge-baseline/restricted/` to `EVIDENCE_INTERIM_LOCATION` by hand, then delete the local operator-questions corpus. Append to BD-19-1's row a note with the zero-diff path; its closure waits for GE-2.6.
+Upload every file under `ge-baseline/restricted/` to `EVIDENCE_INTERIM_LOCATION` by hand, then delete the local operator-questions corpus. Write the zero-diff path for BD-19-1 as a build-log line under GE-8.4: the row itself is never edited, and its "pending GE-2.7" cell is answered by that line. Its closure waits for GE-2.6.
 - **VERIFY:** the final zero-diff output shows no difference except those BLOCKED on GE-2.6; `git -C "$BUILD_LOG_DIR" ls-files ge-baseline | grep -c restricted` prints `0`; `sitting_end` prints `SITTING-END OK`.
 - **ROLLBACK:** `git -C "$BUILD_LOG_DIR" reset --soft HEAD~1` before any push if a restricted file was committed.
 - **EVIDENCE:** `evidence_add GE-8.4 part-closed E-05 5.2.1 "build-log:ge-baseline/<manifest>" "$m"`.

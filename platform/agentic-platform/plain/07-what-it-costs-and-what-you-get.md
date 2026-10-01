@@ -4,7 +4,7 @@
 
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Changed 2026-10-01: the three-day day files recorded as not yet carrying the full build's names.
+- Changed 2026-10-01: the three-day day files recorded as carrying the full build's names since the six owed rows were made that day.
 - What this page is: the money side of the platform in plain words — what costs, who pays, what the organisation gets back, and why no total and no saving can be quoted yet. Nothing is built.
 
 ## In one sentence
@@ -169,7 +169,7 @@ They are never used for the same reason: the proof of value builds none of the s
 
 The full build alone owns the super-admin grant, the sandbox tenant, the witness organisation and every gate around Wall-E's Super Admin; nothing the smaller paths produce is evidence for them ([status](../setup/README.md#status)). It returns the platform, Eve over the human super admins with a witness and an independent proof, the grant under its gate, Wall-E's Stage 0, Mo's first merged proposal and the standing drill and evidence records. It is the only path that yields the measured saving, because it is the only one that records the four prospective weeks of toil.
 
-Nothing is torn down between the paths. Every artefact is to use the full build's names and schemas; the three-day day files do not yet (3-day README §6.1); so a three-day build or a proof of value that has to be torn down has failed ([how it grows](../3-day/README.md#12-how-it-grows)).
+Nothing is torn down between the paths. Every artefact uses the full build's names and schemas, the three-day day files included since the six rows 3-day README §6.1 listed as owed were made on 2026-10-01; so a three-day build or a proof of value that has to be torn down has failed ([how it grows](../3-day/README.md#12-how-it-grows)).
 
 ## What this means for you
 

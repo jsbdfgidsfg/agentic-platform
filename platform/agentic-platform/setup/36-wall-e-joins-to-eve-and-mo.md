@@ -5,6 +5,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
+- Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (WJ-11.1).
 - Last executed: never
 - Stage: review §2 stage 24 (Eve S0 over `walle_audit`), stage 25 (the Wall-E half of the superseded Mo-4 and Mo-5), stage 31 (Mo-6), and **every cross-file re-run point** that was recorded PENDING while Wall-E's data plane and services did not exist. It is the seam file: nothing new of Wall-E's is built here, and nothing of Eve's or Mo's is designed here. What is done here is the joining, in the one order that works.
 - Step prefix: `WJ`. Steps: 54. BLOCKED steps: WJ-3.2 (Wall-E's nine `walle_audit` table schemas, **B-22**, the row [31](31-wall-e-project-and-data-plane.md) WD-4.5 opened and WD-11.2 asks README to carry; B-16 is the service code, a different artefact and a different commit, and it blocks §5's deploy re-run instead); WJ-4.1, WJ-4.2, WJ-4.3, WJ-4.4 (Eve's twelve v0 SQL files and `thresholds.yaml`, README B-09); WJ-5.3 and WJ-5.4 (Eve's reconciler image and catalogue, README B-08 and B-09); WJ-7.2, WJ-7.4, WJ-8.1, WJ-8.2 (Mo's Wall-E-pack SQL and assertion files, README B-14); WJ-9.2 (Mo's view definitions, B-14). Steps that record `PENDING` rather than `BLOCKED`: WJ-3.6 (row 18, `mo-metrics@` on the mirror, at S4); WJ-4.6 (metric 7, empty until Eve's S3 harness); WJ-9.4 (the deny-improvers confirmation, if the policy at `fld-agentic-platform` names principals one by one).
@@ -110,7 +111,7 @@ flowchart TD
 
 Hands-on: about 2 days (Eve's side one, Mo's side one). Elapsed: about 1 week, because §5's deploy re-run and §5.4's `eve/config` merge are each a reviewed pull request and an approval cycle. While B-08, B-09, B-14 or B-22 stand, the blocked steps wait with no fixed date and the rest of the file still runs; B-16, the service code, is a precondition of the whole file through 33 rather than a block on one step here.
 
-Conventions of [01](01-prerequisites-and-conventions.md) apply, §8.1 for every access-array edit. Deviation rows are `BD-36-<n>`. Records go to `BUILD_LOG_DIR/records/` as `<date>-WJ-<step>-<slug>-v<n>`. Every shell block starts with:
+Conventions of [01](01-prerequisites-and-conventions.md) apply, §8.1 for every access-array edit. Deviation rows are `BD-36-<n>`, in 01 PR-4.1's thirteen columns, inserted into the register's first table with 01's `bd_insert` and closed with `bd_close`; nothing is appended to `DEVIATION_REGISTER` by hand. Records go to `BUILD_LOG_DIR/records/` as `<date>-WJ-<step>-<slug>-v<n>`. Every shell block starts with:
 
 ```bash
 source ~/.platform-env
@@ -1364,16 +1365,18 @@ done | tee "${R}-10.5-dataset-access-v1.txt"
 
 - **WHO:** Platform owner and Mo owner; the second human confirms the Eve-side grants are closed.
 - **WHERE:** Shell; `DEVIATION_REGISTER`.
-- **ACTION:**
+- **ACTION:** The deviation row is `BD-36-1`, in 01 PR-4.1's thirteen columns, built into a variable and inserted into the register's first table with 01's `bd_insert`, which commits it as `BD-36-1 opened` (never appended to the file end, which would land inside the Closures table).
 
 ```bash
 for G in "$g_eve" "$g_eve_dep" "$g_walle" "$g_wdep" "$g_mo" "$g_modep"; do [ -n "${G:-}" ] && gcloud pam grants revoke "$G" --reason="setup 36 complete"; done
 gcloud pam grants search --caller-relationship=had-created --location=global --project="$EVE_PROJECT" --format='table(name,state)'
 gcloud pam grants search --caller-relationship=had-created --location=global --project="$WALLE_PROJECT" --format='table(name,state)'
-printf '%s\t36\tWJ\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "cross-project joins made by hand; the factory's control_invokers[], read_invokers[] and audit_readers[] inputs supersede sections 2 and 5" "$(basename "${R}-5.6-invokers-v1.tsv")" "$SECOND_HUMAN_EMAIL" "ENT_DEPLOY_CREDENTIAL_HOLDER_WALLE" >> "$DEVIATION_REGISTER"
+need DEVIATION_REGISTER BUILD_LOG_DIR EVE_PROJECT WALLE_PROJECT MO_PROJECT SECOND_HUMAN_EMAIL
+row=$(printf '| BD-36-1 | %s | 36 WJ, sections 2 and 5 | DEV | %s | projects %s, %s and %s | setup 36 sections 2 and 5 | audit_readers[], control_invokers[] and read_invokers[] grants made by hand | build-log:records/%s | - | %s; PAM %s | superseded by the factory manifest inputs (B-01), applied in the module privileged phase; expiry Tier W gate | open |\n' "$(date -u +%F)" "cross-project joins made by hand; the factory's control_invokers[], read_invokers[] and audit_readers[] inputs supersede sections 2 and 5" "$EVE_PROJECT" "$WALLE_PROJECT" "$MO_PROJECT" "$(basename "${R}-5.6-invokers-v1.tsv")" "$SECOND_HUMAN_EMAIL" "ENT_DEPLOY_CREDENTIAL_HOLDER_WALLE")
+bd_insert "$row"
 ```
 
-- **VERIFY:** No grant in either project reads `ACTIVE` for this sitting. The deviation row names what the factory will supersede: the grants of §2 and §5 are `audit_readers[]`, `control_invokers[]` and `read_invokers[]` manifest inputs once B-01 exists, applied in the module's privileged phase; until then they are hand-made and recorded (SD-01).
+- **VERIFY:** No grant in either project reads `ACTIVE` for this sitting. The deviation row names what the factory will supersede: the grants of §2 and §5 are `audit_readers[]`, `control_invokers[]` and `read_invokers[]` manifest inputs once B-01 exists, applied in the module's privileged phase; until then they are hand-made and recorded (SD-01). `grep -n '^| BD-36-1 |' "$DEVIATION_REGISTER"` shows the row at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check).
 - **ROLLBACK:** Not applicable; the register is append-only.
 - **EVIDENCE:** The grant listings and the register line as `${R}-11.1-close-v1.txt`; `evidence_add WJ-11.1 grants-closed E-08 4.2.1 build-log:records/<file> <file>`. E-08. TISAX 4.2.1.
 

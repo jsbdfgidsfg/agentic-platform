@@ -7,7 +7,8 @@
 - Stage: review §2 stage 15, "Tier R open", opened here **under the bootstrap deviation** (SD-01). Runs after files 09 to 16 and before 18. Its FM procedures are then called with parameters by 18 (canary-r), 19 (the Gemini Enterprise import), 22 (Mo), 23 (Eve), 31 and 37 (Wall-E and its twin), and by any later agent until the factory exists.
 - Step prefix: FM. Steps: 77 (FM-0.4 and FM-2.12a added 2026-09-16; FM-2.12a is lettered rather than renumbered so that the FM-2.x ids 18, 19, 22, 23, 31 and 37 already cite stay stable). BLOCKED steps: FM-0.2 (the factory's automation), FM-6.5 (row 38, the factory CI's standing editor grant), FM-7.3 (`halt_all` for a Tier W+ agent whose code is not committed), FM-8.6 (the factory's deferred folder roles), FM-11.1, FM-11.2 and FM-11.3 (supersession by `terraform import` and an empty plan). Steps that run once per call: FM-2.1 to FM-2.22 including FM-2.12a, plus the module section of the module being called.
 - Replaces: the Phase 6 "factory call" and "manual fallback" of `wall-e/SETUP.md`, Eve's Phase 1 project creation (`eve/07-build-runbook.md`) and Mo-1 step 0 (`mo/07-build-runbook.md`). Salvaged: the verify reads of those three (project parent, enabled API list, service-account list, the `aiplatform` absence check on Eve, the IAM read for standing roles), now inside the zero-diff checker of §1. Not copied: project creation under `FOLDER_ID` (S019, S027, S042), a standing creator Owner nobody removes (S018), `gcloud config set project` (S071), a budget filtered by project number (S158), the "Absent = stop" verify that expected a factory nobody ran (S027).
-- Changed 2026-10-01: step count 77; Fabric v59.0.0 noted at FM-0.2; `gcloud observability buckets` on the GA track (FM-1.2, FM-2.9); FM-2.12a reads `floors.json`'s accepted spelling block (18 KS-2.5, KS-2.9); FM-3.1 reads the register with PyYAML; FM-3.2 builds the agent principal from `DENY_AGENT_FORM` (18 KS-3.2); FM-5.1 computes the project number and lists R3b; the tenant-app repair entitlement is `ent-project-repair-tenant-app` / `ENT_PROJECT_REPAIR_TENANT_APP` as 19 GE-2.3 creates it; every grant followed by a privileged command waits for `ACTIVE` with 12's `pam_wait`; FM-4.4 no longer uses `grep -P`; FM-10.4's VERIFY no longer expects §12 lines.
+- Changed 2026-10-01: step count 77; Fabric v59.0.0 noted at FM-0.2; `gcloud observability buckets` on the GA track (FM-1.2, FM-2.9); FM-2.12a reads `floors.json`'s accepted spelling block (18 KS-2.5, KS-2.9); FM-3.1 reads the register with PyYAML; FM-3.2 builds the agent principal from `DENY_AGENT_FORM` (18 KS-3.2); FM-5.1 computes the project number and lists R3b; the tenant-app repair entitlement is `ent-project-repair-tenant-app` / `ENT_PROJECT_REPAIR_TENANT_APP` as 19 GE-2.3 creates it; every grant followed by a privileged command waits for `ACTIVE` with 12's `pam_wait`; FM-4.4 no longer uses `grep -P`; FM-10.4's VERIFY no longer expects §12 lines; FM-10.2 keeps `TIER_R_RECORD` in `records/gates/` and names 42 GD-1.4's pointer `gates/TIER-R-<date>.md` as the way the gate index reaches it; FM-7.3's VERIFY reads it in README §8 row B-16.
+- Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (FM-2.22, FM-7.7, FM-8.7, FM-11.3).
 - Applies decisions (pending signature in 03): SD-01 (bootstrap deviation), SD-12 (the second human approves every elevation on `EVE_PROJECT`), SD-17 (regional `_Default`, global `_Required`, explicit `_Trace`), SD-18 (platform-core rows), SD-22 (deny-policy principal form; see the conflict recorded in FM-3.2), SD-40 (no agent organisation sink), SD-41 (floors), SD-42 (singleton approvers), SD-44 (`exists_or_pending`), SD-46 (`ent-bootstrap-module`).
 - Closes: S001 (module-equivalent, negative-test and Tier R half), S018 (every module project), S019, S027, S042, S048, S085 (Tier R half), S102, S156, S158, X-RQB-03 (module-project half), X-RQB-08 (the project floor on every module project, FM-2.12a). Defers nothing without an owner; see §13.
 
@@ -1134,26 +1135,26 @@ jq -r '.results[] | select(.status != "PASS") | "\(.status) \(.check) \(.pending
 
 - **WHO:** Platform owner writes; the approver of the run reads the row (for Eve, the second human) and initials the build-log line.
 - **WHERE:** Shell; `DEVIATION_REGISTER`.
-- **ACTION:** The calling file allocates the id (`BD-<file>-<n>`). One `MOD` row per run, in 01 PR-4.1's columns.
+- **ACTION:** The calling file allocates the id (`BD-<file>-<n>`). One `MOD` row per run, in 01 PR-4.1's columns, built into a variable and inserted into the register's first table with 01's `bd_insert`, which commits it as `<id> opened` and prints `exists: <id>` on a re-run (never appended to the file end, which would land inside the Closures table).
 
 ```bash
-need DEVIATION_REGISTER RUN_ID P_ID
+need DEVIATION_REGISTER BUILD_LOG_DIR RUN_ID P_ID
 BD_ID="<BD-xx-n allocated by the calling file>"
 GRANT="<run grant name from FM-2.2>"
 gcloud pam grants revoke "$GRANT" --reason="${RUN_ID} complete" --location=global --billing-project="$CICD_PROJECT" 2>/dev/null || echo "grant already ended"
-printf '| %s | %s | %s via 17 FM-2 | MOD | %s (hand, SD-01) | folder %s, project %s | %s @ %s | parent, labels, inherited tags, %s services, _Default->default-europe-west1, _Trace %s, budget %s, contacts, %s service accounts, channels, trigger sink %s, %s, deny %s, PAB %s, entitlements %s | %s | %s | %s | terraform import + empty plan (17 FM-11), expiry Tier W gate | open |\n' \
+row=$(printf '| %s | %s | %s via 17 FM-2 | MOD | %s (hand, SD-01) | folder %s, project %s | %s @ %s | parent, labels, inherited tags, %s services, _Default->default-europe-west1, _Trace %s, budget %s, contacts, %s service accounts, channels, trigger sink %s, %s, deny %s, PAB %s, entitlements %s | %s | %s | %s | terraform import + empty plan (17 FM-11), expiry Tier W gate | open |\n' \
   "$BD_ID" "$(date -u +%F)" "$(jq -r .calling_file_step "$RUN_SPEC")" "$(jq -r .module "$RUN_SPEC")" "$P_FLD" "$P_ID" "$(jq -r .register_row "$RUN_SPEC")" "$(jq -r .register_commit "$RUN_SPEC")" \
   "$(jq '.services|length' "$RUN_SPEC")" "$(jq -r .log_routing.trace_bucket "$RUN_SPEC")" "$(jq -r .budget.amount "$RUN_SPEC")" "$(jq '.service_accounts|length' "$RUN_SPEC")" "$(jq -r '.trigger_sink.name // "none"' "$RUN_SPEC")" "$(jq -r 'if .project_floor.applies then "floor " + (.project_floor.tier // "?") + " vertex=" + (.project_floor.vertex_ai|tostring) else "floor n/a: " + (.project_floor.reason // "*tbd*") end' "$RUN_SPEC")" \
   "$(jq -r '[.deny_entries[].policy_id] | unique | join("+") | if .=="" then "none" else . end' "$RUN_SPEC")" "$(jq -r '[.pab_bindings[].binding_id] | join("+") | if .=="" then "none" else . end' "$RUN_SPEC")" "$(jq -r '.entitlements|join("+")' "$RUN_SPEC")" \
-  "build-log:records/$(basename "${R}-FM-2.21-live-v1.json")" "$(date -u +%F) (FM-2.19)" "PAM grant ${GRANT}" >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: ${BD_ID} ${RUN_ID} (setup 17 FM-2.22)"
+  "build-log:records/$(basename "${R}-FM-2.21-live-v1.json")" "$(date -u +%F) (FM-2.19)" "PAM grant ${GRANT}")
+bd_insert "$row"
 checkpoint "FM-2.22@${RUN}" DONE - "build-log:registers/bootstrap-deviation-register.md" "${RUN_ID} zero diff"
 ```
 
   Then run the FM-2.19 probe again if the grant was still active at FM-2.19. The row names what the module would have produced; items in `made_elsewhere` are listed in the calling file's own row when it makes them, and the calling file re-runs FM-2.21 after each addition to the spec.
-- **VERIFY:** `tail -n 1 "$DEVIATION_REGISTER"` shows the row with a checker path and an Owner-removed date; `gcloud pam grants list --entitlement="$ENT" --location=global --billing-project="$CICD_PROJECT" --filter="state=ACTIVE"` prints nothing; the post-grant FM-2.19 probe echoes neither permission.
-- **ROLLBACK:** Append-only: a superseding row, never an edit.
-- **EVIDENCE:** The commit. TISAX 1.4.1. EU AI Act E-05.
+- **VERIFY:** `grep -n "^| ${BD_ID} |" "$DEVIATION_REGISTER"` shows the row with a checker path and an Owner-removed date, at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check; the row is not the file's last line, which belongs to the Closures table); `gcloud pam grants list --entitlement="$ENT" --location=global --billing-project="$CICD_PROJECT" --filter="state=ACTIVE"` prints nothing; the post-grant FM-2.19 probe echoes neither permission.
+- **ROLLBACK:** Append-only: a `bd_close` line naming the superseding row, and that row inserted with `bd_insert`; never an edit.
+- **EVIDENCE:** The commit `<id> opened`. TISAX 1.4.1. EU AI Act E-05.
 
 ## 3. FM-AGENT: the `agent-project` module equivalent
 
@@ -1531,7 +1532,7 @@ gcloud beta projects move "$GEMINI_PROJECT" --folder="$FLD_GEMINI_ENTERPRISE"
 - **WHO:** Platform owner (a control invoker the manifest names), or `platform-drift@`.
 - **WHERE:** Shell.
 - **ACTION:** **BLOCKED** for any agent whose action service code does not exist (for Wall-E, B-16; `WALLE_CODE_COMMIT`): Needs: the `/v1/control/halt` endpoint of the agent's action service. Commit it in: the agent's repository. Unblocked by: the agent's code commit with green CI. Gate waiting: this revoke. For a Tier R project (canary-r) the step is `N/A`: there is no action service. Where the code exists, call the halt endpoint as the agent file documents and read the ladder state back as `halt_all`.
-- **VERIFY:** The agent's audit table shows the halt row; no action row after it.
+- **VERIFY:** Where BLOCKED: the BLOCKED line exists and README §8 row B-16 lists "17 FM-7.3". Otherwise: the agent's audit table shows the halt row; no action row after it.
 - **ROLLBACK:** The agent's own lift procedure (two humans).
 - **EVIDENCE:** The halt row reference. TISAX 1.6.2. EU AI Act E-08.
 
@@ -1581,8 +1582,8 @@ gcloud projects delete "$P_ID"
 
 - **WHO:** Platform owner.
 - **WHERE:** `DEVIATION_REGISTER`.
-- **ACTION:** Add a line under "Closures" for the project's `MOD` row: closed by revoke, the decision record path, verified by FM-7.6.
-- **VERIFY:** `grep -A500 '^## Closures' "$DEVIATION_REGISTER" | grep '<BD id>'` prints the closure.
+- **ACTION:** Add a line under "Closures" for the project's `MOD` row with 01's `bd_close`, which appends it to the Closures table and commits it as `<id> closed`: `bd_close "$BD_ID" "closed by revoke: <decision record path>" "17 FM-7.6"`, with `BD_ID` set to that row's id and the path typed in.
+- **VERIFY:** `awk -F' *[|] *' -v id="$BD_ID" '$2==id && NF==6' "$DEVIATION_REGISTER"` prints the closure, once.
 - **ROLLBACK:** Append-only.
 - **EVIDENCE:** The commit. TISAX 1.4.1.
 
@@ -1712,19 +1713,18 @@ checkpoint FM-8.6 BLOCKED - - "B-01: factory-apply@ folder roles, builds.builder
 
 - **WHO:** Platform owner writes; the second human reads and initials.
 - **WHERE:** `DEVIATION_REGISTER`.
-- **ACTION:**
+- **ACTION:** Insert the two rows into the register's first table with 01's `bd_insert` (never appended to the file end, which would land inside the Closures table). Replace the angle-bracket cells before running; `bd_insert` refuses a row that still holds one.
 
 ```bash
+need DEVIATION_REGISTER BUILD_LOG_DIR FLD_PLATFORM_CORE FLD_AGENTIC_PLATFORM ORG_ID LOGGING_PROJECT
 d=$(date -u +%F)
-printf '| BD-17-1 | %s | 17 FM-1.3, FM-1.4, FM-8.1 | MOD | platform-core (undefined module, S048): the five core projects | folder %s | factory/runs/platform-core-*.json @ %s | as BD-10-1..5, now machine-checked | build-log:records/%s-FM-1.4-cicd-live-v1.json and FM-8.1 reports | removed in 12 (BD-10-6 closure) | none: SD-01 | terraform import + empty plan (FM-11), expiry Tier W gate | open |\n' "$d" "$FLD_PLATFORM_CORE" "$(git -C "$PLATFORM_REPO_DIR" rev-parse --short origin/main)" "$d" >> "$DEVIATION_REGISTER"
-printf '| BD-17-2 | %s | 17 FM-8.2 to FM-8.5 (made in 14 and 16, SD-18) | MOD | platform-core rows 36, 40, 41, 44 | folder %s, organisation %s, project %s | topology rows 36, 40, 41, 44 | row 36 platform-drift@ roles; row 40 readers <made or PENDING>; row 41 writer identities; row 44 SDP discovery <made or PENDING> | build-log:records/%s-FM-8.2..8.5 | n/a | row 36: security reviewer signature (16) | terraform import + empty plan (FM-11), expiry Tier W gate | open |\n' "$d" "$FLD_AGENTIC_PLATFORM" "$ORG_ID" "$LOGGING_PROJECT" "$d" >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-17-1, BD-17-2 (setup 17 FM-8.7)"
+bd_insert "$(printf '| BD-17-1 | %s | 17 FM-1.3, FM-1.4, FM-8.1 | MOD | platform-core (undefined module, S048): the five core projects | folder %s | factory/runs/platform-core-*.json @ %s | as BD-10-1..5, now machine-checked | build-log:records/%s-FM-1.4-cicd-live-v1.json and FM-8.1 reports | removed in 12 (BD-10-6 closure) | none: SD-01 | terraform import + empty plan (FM-11), expiry Tier W gate | open |\n' "$d" "$FLD_PLATFORM_CORE" "$(git -C "$PLATFORM_REPO_DIR" rev-parse --short origin/main)" "$d")"
+bd_insert "$(printf '| BD-17-2 | %s | 17 FM-8.2 to FM-8.5 (made in 14 and 16, SD-18) | MOD | platform-core rows 36, 40, 41, 44 | folder %s, organisation %s, project %s | topology rows 36, 40, 41, 44 | row 36 platform-drift@ roles; row 40 readers <made or PENDING>; row 41 writer identities; row 44 SDP discovery <made or PENDING> | build-log:records/%s-FM-8.2..8.5 | n/a | row 36: security reviewer signature (16) | terraform import + empty plan (FM-11), expiry Tier W gate | open |\n' "$d" "$FLD_AGENTIC_PLATFORM" "$ORG_ID" "$LOGGING_PROJECT" "$d")"
 ```
 
-  Replace the angle-bracket cells before committing.
-- **VERIFY:** `grep -c '^| BD-17-' "$DEVIATION_REGISTER"` prints `2`.
+- **VERIFY:** `grep -c '^| BD-17-' "$DEVIATION_REGISTER"` prints `2`; `awk -F' *[|] *' '$2 ~ /^BD-17-/ && NF==15 {print NR, $2}' "$DEVIATION_REGISTER"` prints both, each with a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check).
 - **ROLLBACK:** Append-only.
-- **EVIDENCE:** The commit. TISAX 1.4.1. Closes S048 for the setup procedures.
+- **EVIDENCE:** The commits `BD-17-1 opened` and `BD-17-2 opened`. TISAX 1.4.1. Closes S048 for the setup procedures.
 
 ## 9. The negative test: `factory-apply@` refused a secret read
 
@@ -1901,7 +1901,7 @@ echo "$AGENT_REGISTRY"
 
 - **WHO:** Platform owner writes and signs; the second human reviews and co-signs; the security reviewer co-signs when appointed (otherwise a PENDING line for 42's quarterly review).
 - **WHERE:** `PLATFORM_REPO_DIR`, `records/gates/`.
-- **ACTION:**
+- **ACTION:** The record stays in `records/gates/`, which is **not** 42's `GATES_DIR` (`gates/`): `gates/` holds pointer records that `gate-index.sh` reads, and this record is in 03's signed decision format, without the `date:`, `result:` and `commit:` lines those pointers carry. [42](42-gates-drills-and-evidence.md) GD-1.4 files the pointer `gates/TIER-R-<date>.md`, whose evidence `location` is this file's path at its merge commit; nothing copies this record into `gates/`.
 
 ```bash
 mkdir -p "$PLATFORM_REPO_DIR/records/gates"
@@ -1978,7 +1978,7 @@ Each `MOD` row is closed only by the factory adopting the resource with no chang
 
 - **WHO:** Platform owner; the second human reviews.
 - **WHERE:** `DEVIATION_REGISTER`; shell.
-- **ACTION:** **BLOCKED** as FM-11.1. When unblocked: add a "Closures" line per `MOD` row (commit of the import, plan output, verified by FM-11.2); when every row a `ent-bootstrap-module` served is closed, delete that entitlement (`gcloud pam entitlements delete <id> --folder=<id> --location=global --billing-project="$CICD_PROJECT"`) and close its README re-run row (SD-46).
+- **ACTION:** **BLOCKED** as FM-11.1. When unblocked: add a "Closures" line per `MOD` row with 01's `bd_close` (`bd_close <id> "terraform import <commit> and empty plan <plan output>" "17 FM-11.2"`); when every row a `ent-bootstrap-module` served is closed, delete that entitlement (`gcloud pam entitlements delete <id> --folder=<id> --location=global --billing-project="$CICD_PROJECT"`) and close its README re-run row (SD-46).
 - **VERIFY:** No open `MOD` row remains for the closed projects; `gcloud pam entitlements list --folder=<id> --location=global --billing-project="$CICD_PROJECT"` shows no `ent-bootstrap-module`.
 - **ROLLBACK:** Append-only.
 - **EVIDENCE:** The commit. TISAX 1.4.1.

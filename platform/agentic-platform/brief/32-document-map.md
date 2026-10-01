@@ -4,7 +4,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - 2026-09-18: build procedures corrected — the one entry point is setup/README.md, with pov/ and 3-day/ beside it; SETUP.md, PREREQUISITES.md, eve/07 and mo/07 recorded as pointer pages since 2026-09-16 in the Wall-E, Eve and Mo bullets, the Builder reading path and chapter rows 15 and 24.
-- 2026-10-01: the platform folder is fifteen pages, 00 to 14, and three build sets; a bullet names the dated reviews 13 and 14; the register runs P1–P204, new rows at P205; chapter row 23 links setup/03 in place of the retired PREREQUISITES page.
+- 2026-10-01: the platform folder is sixteen pages, 00 to 15, and three build sets; a bullet names the dated reviews 13, 14 and 15; the register runs P1–P207, new rows at P208; chapter row 23 links setup/03 in place of the retired PREREQUISITES page.
 
 ## What this appendix gives you
 
@@ -16,13 +16,13 @@ The brief explains intent and defines no fact. **Where the brief and a design pa
 
 ## The platform set
 
-The platform folder holds fifteen pages, 00 to 14, and three build sets ([README](../README.md#documents)).
+The platform folder holds sixteen pages, 00 to 15, and three build sets ([README](../README.md#documents)).
 
 - **00, objective review.** Quotes the objective verbatim, derives R1–R16 and names the reversals it forces; current positions live on 01–12.
 - **01, the HLD.** The parent: thesis, primitives and grading, roles, tier gate, charter, standing constraints, trust-boundary template, non-goals and what the agent sets must change (§18). Decisions P1–P34.
 - **02–11, the detailed pages.** Each owns one part of the HLD and its decisions, P35–P141 in page order; the table below maps them to chapters.
-- **12, the register of record.** P1–P204 in one sequence (P144–P191 proposed by the setup procedures, P192–P204 by the proof of value), grouped by the gate each blocks; new rows append at P205; §6a and §6b hold the rows the build sets proposed. An id on any page means the row here.
-- **13 and 14, dated reviews.** [13](../13-setup-procedure-review.md) reviews the setup procedures (2026-09-15); [14](../14-crosscheck-review.md) cross-checks the whole set (2026-09-18). Both are history, not authority.
+- **12, the register of record.** P1–P207 in one sequence (P144–P191 proposed by the setup procedures, P192–P204 by the proof of value, P205–P207 added on 2026-10-01), grouped by the gate each blocks; new rows append at P208; §6a and §6b hold the rows the build sets proposed, §6c the rows of 2026-10-01. An id on any page means the row here.
+- **13, 14 and 15, dated reviews.** [13](../13-setup-procedure-review.md) reviews the setup procedures (2026-09-15); [14](../14-crosscheck-review.md) cross-checks the whole set (2026-09-18); [15](../15-documentation-recheck.md) rechecks it against Google's pages and the regulatory state (2026-10-01). All three are history, not authority.
 
 Two shared pages sit outside the folder. [project-topology.md](../../project-topology.md#status) is the single authority for where each project and resource lives and for every cross-project grant; its rows feed the factory, and Wall-E decisions 42–52 live there. [gemini-enterprise.md](../../gemini-enterprise.md#status) has been a pointer page since 2026-09-13, keeping only the tenant facts step GE-0 records; the tenant app's baseline is page 03.
 

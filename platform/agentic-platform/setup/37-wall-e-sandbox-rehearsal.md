@@ -5,6 +5,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
+- Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (WR-1.4, WR-13.3).
 - Last executed: never
 - Stage: review §2 stage 32, the Wall-E half. It opens gate lines **G10** (denial suite), **G11** (K6 on the robot twin), **G14**'s dry-run half, **G20** (K7 on `fld-agents-p-sa-nonprod` younger than 30 days), **G8** (penetration test) and the Tier W restore-drill row of **G19**. Nothing in [38](38-super-admin-gate-and-grant.md) may start until the records this file produces exist and are fresh.
 - Step prefix: `WR`. Steps: 79. **BLOCKED:** 22 steps — WR-3.4, WR-3.5 (the twin consents) and WR-3.7 (the password-reset proof, which needs both consents) on `B-17`; WR-4.2 to WR-4.6, WR-4.8, WR-4.9, WR-6.3 to WR-6.5, WR-7.2, WR-8.2 to WR-8.6, WR-9.2, WR-11.3 on `B-16` (the action services, the approval surfaces, the dispatcher, the engine, `tests/denials.py` and `walle/config/hard_denied.yaml` — see the scope line of WR-0.5); WR-10.3 on `B-04` (the `k7-executor` image; the human path of [18](18-model-armor-floor-spikes-and-kill-switch.md) is run instead and is what G20 reads until then). **IRREVERSIBLE:** WR-1.3 (the twin project id is permanent), WR-2.4 (the twin robot's Super Admin in the sandbox, removed only by K6), WR-3.3 (a twin client secret is shown once), WR-8.6 and WR-8.7 (K4 and K5 consume the twin credential), WR-11.4 (the restored database is deleted).
@@ -424,17 +425,15 @@ comm -13 "${R}-1.3-apis.txt" <(jq -r '.apis[]' "$PLATFORM_REPO_DIR/factory/specs
 
 - **WHO:** Platform owner.
 - **WHERE:** Twin shell.
-- **ACTION:**
+- **ACTION:** `BD-37-1` is written in 01 PR-4.1's thirteen columns and inserted into the register's first table with 01's `bd_insert`, which commits it as `BD-37-1 opened` (never appended to the file end, which would land inside the Closures table). If 17 FM-2.22, run inside WR-1.3, already wrote its row under the id `BD-37-1`, `bd_insert` prints `exists: BD-37-1` and writes nothing.
 
 ```bash
 penv_set WALLE_TWIN_PROJECT_NUMBER "$(gcloud projects describe "$WALLE_TWIN_PROJECT" --format='value(projectNumber)')"
-cat >> "$DEVIATION_REGISTER" <<EOF
-| BD-37-1 | FM-AGENT run by hand for the Wall-E twin | $(date -u +%F) | platform owner | none (SD-42 nonprod variant) | zero diff, run ${RUN_ID} | superseded by terraform import + empty plan when B-01 lands; reviewed at the Tier W gate |
-EOF
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "deviation BD-37-1: FM-AGENT twin run (setup 37 WR-1.4)"
+need DEVIATION_REGISTER BUILD_LOG_DIR FLD_AGENTS_P_SA_NONPROD WALLE_TWIN_PROJECT RUN_ID
+bd_insert "| BD-37-1 | $(date -u +%F) | 37 WR-1.3, WR-1.4 | MOD | FM-AGENT run by hand for the Wall-E twin | folder $FLD_AGENTS_P_SA_NONPROD, project $WALLE_TWIN_PROJECT | WR-1.1 register row; run ${RUN_ID} | what 17 FM-AGENT produces for the nonprod row | zero diff, run ${RUN_ID} | removed by 17 FM-2.19 | none (SD-42 nonprod variant); recorded by the platform owner | superseded by terraform import + empty plan when B-01 lands; reviewed at the Tier W gate | open |"
 ```
 
-- **VERIFY:** `grep -c '^| BD-37-1' "$DEVIATION_REGISTER"` prints `1`; `WALLE_TWIN_PROJECT_NUMBER` is a digit string equal to the describe output. `penv_set` accepted it because the name matches `*TWIN*`.
+- **VERIFY:** `grep -c '^| BD-37-1' "$DEVIATION_REGISTER"` prints `1`, at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); `WALLE_TWIN_PROJECT_NUMBER` is a digit string equal to the describe output. `penv_set` accepted it because the name matches `*TWIN*`.
 - **ROLLBACK:** `penv_set --force` for a typing error, with a build-log line.
 - **EVIDENCE:** The commit. E-05. TISAX 1.3.1.
 
@@ -1963,7 +1962,7 @@ done | tee "$BUILD_LOG_DIR/records/$(date -u +%F)-WR-13.1-freshness-v1.tsv"
 
 - **WHO:** Platform owner.
 - **WHERE:** `DEVIATION_REGISTER`, `rerun-index.tsv`, README §8 and §9.
-- **ACTION:** Deviation rows opened here: `BD-37-1` (the hand FM-AGENT run, WR-1.4), `BD-37-2` (twin robot 2SV weaker than hardware key, only if SD-29 decided so), `BD-37-3` (a twin client JSON on the local disk for seconds). Re-run lines:
+- **ACTION:** Deviation rows opened here, each inserted into the register's first table with 01's `bd_insert` and closed with `bd_close`: `BD-37-1` (the hand FM-AGENT run, WR-1.4), `BD-37-2` (twin robot 2SV weaker than hardware key, only if SD-29 decided so), `BD-37-3` (a twin client JSON on the local disk for seconds). Re-run lines:
 
 | Id | When | Re-run | Where |
 |---|---|---|---|

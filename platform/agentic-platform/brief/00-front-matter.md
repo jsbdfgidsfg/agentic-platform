@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- 2026-10-01: the register range is now P1–P204, with P144–P191 from the setup procedures and P192–P204 from the proof of value.
+- 2026-10-01: the register range is now P1–P207, with P144–P191 from the setup procedures, P192–P204 from the proof of value and P205–P207 added on 2026-10-01; new rows start at P208.
 
 ## What you will understand by the end
 
@@ -65,7 +65,7 @@ The brief carries the design's conventions unchanged ([design set status](../REA
 
 ### Decision identifiers and states
 
-The platform register's identifiers form one sequence: P1–P34 are the HLD's decisions, P35–P141 those of the detailed pages in page order, then P142 and P143, then P144–P191 from the setup procedures and P192–P204 from the proof of value ([how the register works](../12-open-decisions.md#1-how-this-register-works)). Every other identifier family — tiers, primitives, detections, agent-set registers — is listed once, with the chapter that explains it, in Appendix A, Glossary.
+The platform register's identifiers form one sequence: P1–P34 are the HLD's decisions, P35–P141 those of the detailed pages in page order, then P142 and P143, then P144–P191 from the setup procedures, P192–P204 from the proof of value and P205–P207 added on 2026-10-01; new rows start at P208 ([how the register works](../12-open-decisions.md#1-how-this-register-works)). Every other identifier family — tiers, primitives, detections, agent-set registers — is listed once, with the chapter that explains it, in Appendix A, Glossary.
 
 Five state words are used exactly as the register defines them (in full in Chapter 25, Decisions awaiting the owner): *decided* (the named owner decided, on a date), *closed* (answered by a later row or a verified fact), *proposed* (stands until its owner overturns it in writing), *open* (nobody has decided; the gate it blocks stays red) and *spike* (settled by a test on a throwaway resource in nonprod). A proposed or open row is never presented as settled.
 
@@ -76,5 +76,5 @@ Every chapter opens with a Status block and what you will understand by the end,
 ## Key decisions and what to read next
 
 - **P33, decided** by the owner: Wall-E holds Super Admin, and the design is built around that choice rather than re-arguing it; the deviation signatures are pending ([decision record](../../../decisions/2026-09-13-wall-e-holds-super-admin.md)). Chapter 15, Wall-E, the doer, explains what it costs and what compensates.
-- The register's states and gate rule, P1–P204 — [12-open-decisions.md §1](../12-open-decisions.md#1-how-this-register-works).
+- The register's states and gate rule, P1–P207 — [12-open-decisions.md §1](../12-open-decisions.md#1-how-this-register-works).
 - Read next: the [design set README](../README.md#status) for the page inventory and maturity, [what the platform deliberately is not](../README.md#what-it-deliberately-is-not), then the first chapter on your path.

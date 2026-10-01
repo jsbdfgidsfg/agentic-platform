@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (WI-4.4).
 - Last executed: never
 - Stage: review §2 stage 27 ([../13-setup-procedure-review.md](../13-setup-procedure-review.md) §2), the part of it that must finish **before the engine exists**: `wall-e/SETUP.md` Phase 12b steps 1 to 6 and the whole of Phase 12c. The engine itself, Phase 12b step 7's folder read and Phase 13 are [35](35-wall-e-engine-registration-and-gateways.md).
 - Step prefix: `WI`. Steps: 51 (revision of 2026-09-16: §5 no longer carries steps of its own, §6 is three read-only steps run in this file, and the template-conformance check is `WI-7.10b`, placed where it runs). BLOCKED: `WI-2.1`, `WI-2.2`, `WI-2.5`, `WI-2.6`, `WI-7.14` (all B-16: the spike agent, the probe tool and the injection regression suite are Wall-E code that is not committed); `WI-1.5`'s CI half is BLOCKED on the same id while the commands stand alone. **Nothing in this file is executed by [35](35-wall-e-engine-registration-and-gateways.md)**: the after-binding work is owned there as `WE-4.1` to `WE-4.6` and the deny-policy read as `WE-6.1` to `WE-6.3`; §5 here is the requirement list those steps must satisfy, and the two requirements 35 does not yet cover are named handoffs in `WI-8.3`, never `PENDING-35` checkpoints of this file.
@@ -931,7 +932,7 @@ gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten='bindings[].members' -
 
 - **WHO:** Platform owner; the second human countersigns.
 - **WHERE:** The decision 19 record and `DEVIATION_REGISTER`.
-- **ACTION:** Add `BD-34-2`: "Wall-E runs on the `SERVICE_ACCOUNT` fallback. Agent Identity is
+- **ACTION:** Insert `BD-34-2` into the register's first table with 01's `bd_insert`, in 01 PR-4.1's thirteen columns (never appended to the file end, which would land inside the Closures table), its "Module or exception" cell reading: "Wall-E runs on the `SERVICE_ACCOUNT` fallback. Agent Identity is
   deferred hardening. Re-opened when Google documents the Cloud Run ID-token hop for agent
   identities, or at the next engine recreate, whichever is first; a recreate is an identity change
   under the IAM change checklist and needs a new spike." Add the three losses in the record's own
@@ -939,7 +940,7 @@ gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten='bindings[].members' -
   deny form for this agent, so rules R1-R5 of `deny-agents-platform` reach it only through the
   **service-account** principal set; and no gateway-mediated screening.
 - **VERIFY:** `BD-34-2` is in the register with an owner and a review date; the decision record carries the three losses.
-- **ROLLBACK:** n/a; a register row is closed by a closure line, never edited away.
+- **ROLLBACK:** n/a; a register row is closed by a closure line written with `bd_close`, never edited away.
 - **EVIDENCE:** `evidence_add WI-4.4 fallback-consequences E-03 1.4.1 "build-log:registers/bootstrap-deviation-register.md"`.
 
 ## 5. The after-binding requirements — owned and executed by [35](35-wall-e-engine-registration-and-gateways.md) §4

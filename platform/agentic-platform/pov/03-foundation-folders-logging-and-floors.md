@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-17
+- Last reviewed: 2026-10-01
+- 2026-10-01: PF-2.1 expects the five roles of setup/06 OB-3.7 (Security Admin added); PF-1.4 names the deviation by its register id `BD-06-3`.
 - Last executed: never
 - Step prefix: `PF`. Steps: 40. BLOCKED: PF-9.4 (the `k7-executor` job, B-04). PENDING by design: PF-10.2's drift and reconciliation line (B-02). IRREVERSIBLE: PF-1.7 (group label), PF-3.3 (tag keys), PF-4.1 (project ids), PF-4.3 (key rings and the HSM key name), PF-6.2 and PF-6.3 (bucket and dataset names, locations, CMEK), PF-6.6 (log bucket locks), PF-7.1 and PF-7.2 (evidence bucket name, location and lock), PF-7.4 (SCC residency choice), PF-10.3 (withdrawal of the bootstrap exception).
 - Stage: POV-1, week 1 to week 2. Hands-on about 3 person-days; elapsed about 1.5 to 2 weeks, because a new security key may take up to 7 days to work at sign-in, the allow-list dry run on empty folders lasts at least 7 days (PF-5.3), and the first shared Workspace logs take up to 24 hours. `Assumption:` all three figures. Part 6 does not start before PV-08, SD-11 and PV-10 are signed, and PF-1.5 action 4 and PF-2.2 wait for the `G3-ROSTER` and `ORG-CREATOR-DEFAULTS` records (Preconditions), so either can lengthen the elapsed time.
@@ -176,7 +177,7 @@ penv_set SA_1_ADMIN "sa-1-admin@${DOMAIN}"
 penv_set SA_2_ADMIN "sa-2-admin@${DOMAIN}"
 ```
 
-- **VERIFY:** Account > Admin roles > Super Admin lists both accounts; rule C mailed both recipients for each assignment; the safe log lists the envelopes with no generator who is also custodian; the `v2` custody scan exists. `DEV-06-03`'s shape of exposure is opened and closed the same day in `DEVIATION_REGISTER` as `BD-P03-1`.
+- **VERIFY:** Account > Admin roles > Super Admin lists both accounts; rule C mailed both recipients for each assignment; the safe log lists the envelopes with no generator who is also custodian; the `v2` custody scan exists. `BD-06-3`'s shape of exposure is opened and closed the same day in `DEVIATION_REGISTER` as `BD-P03-1`.
 - **ROLLBACK:** Unassign the role and delete the user; a mis-sealed envelope is regenerated as the next version, never overwritten.
 - **EVIDENCE:** Custody scans and screenshots as `<date>-PF-1.4-admin-accounts-v1`. The custody records stay interim: no witness organisation exists to receive them (PV-D-03). E-08. TISAX 3.1, 4.1.2.
 
@@ -287,7 +288,7 @@ done
 ```
 
   Both methods are Admin Activity entries of `privilegedaccessmanager.googleapis.com` ([PAM audit logging](https://docs.cloud.google.com/iam/docs/audit-logging/audit-logging-pam), updated 2026-09-16). Any row whose principal is `sa-1-admin@` and that has no merged pull request under `pam/` is an incident: the second person revokes the exception with PF-10.3's removal loop the same day and reports it to the third person. `Assumption:` a daily hand read, not an alert, because a log-based alerting policy is a project-level object ([log-based alerts](https://docs.cloud.google.com/logging/docs/alerting/log-based-alerts), updated 2026-09-09) and whether it fires on organisation- and folder-level entries routed in by `S-org` is not settled here; Eve (file 06) takes the watch over.
-- **VERIFY:** OB-3.7's check prints `EXCEPTION EXACT`: four roles, each once, each carrying the condition. The Admin Activity entries for the four `SetIamPolicy` calls name `sa-2-admin@` as principal, never `sa-1-admin@`. If the second person took a sitting-long Organization Administrator, `gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.members:user:$SA_2_ADMIN" --format="value(bindings.role)"` prints nothing after its removal. `DEV-06-01`'s entry is written to `DEVIATION_REGISTER` as `BD-P03-2` with the expiry, PF-10.3 as the withdrawal step, the PAM Admin watch above, and **the second person's written acceptance of the exception and of the watch**, signed and dated in the row.
+- **VERIFY:** OB-3.7's check prints `EXCEPTION EXACT`: five roles (Security Admin is the fifth since 2026-10-01), each once, each carrying the condition. The Admin Activity entries for the five `SetIamPolicy` calls name `sa-2-admin@` as principal, never `sa-1-admin@`. If the second person took a sitting-long Organization Administrator, `gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.members:user:$SA_2_ADMIN" --format="value(bindings.role)"` prints nothing after its removal. `DEV-06-01`'s entry is written to `DEVIATION_REGISTER` as `BD-P03-2` with the expiry, PF-10.3 as the withdrawal step, the PAM Admin watch above, and **the second person's written acceptance of the exception and of the watch**, signed and dated in the row.
 - **ROLLBACK:** The second person runs `gcloud organizations remove-iam-policy-binding` with the same member, role and `--condition-from-file`.
 - **EVIDENCE:** Policy JSON, the audit entries naming the granter, and the signed `BD-P03-2` row as `<date>-PF-2.1-org-exception-v1`; the daily watch outputs as `<date>-PF-2.1-pam-watch-v<n>`. E-05. TISAX 1.4, 4.2.1.
 

@@ -6,7 +6,8 @@
 - 2026-10-01: B1 adds the explicit `europe` value (Cloud KMS multi-region) and drops "the Gemini
   folder adds `eu`"; B4 records why the legacy form is kept; B15 no longer claims refusal at
   enable time; §4.2 gains a column naming the services outside the constraint's supported list,
-  whose absences are detection-grade; the tier folders' `agentregistry` absence is held until P206.
+  whose absences are detection-grade; the tier folders' `agentregistry` absence is held until P206;
+  §5 cites the full build's departure `BD-42-1` (the evidence lake's bucket in `LOGGING_PROJECT`).
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md) §0.4 (tier gate),
   §3 (landing zone), §11 (tier model) and §15 (trust boundaries). Nothing is built. This page
   details one part of the platform HLD; where the HLD left a choice open this page proposes
@@ -731,6 +732,15 @@ split and the two candidates the HLD did not decide.
 | Validator custodian; the platform verifier's golden fixtures | `VALIDATOR_PROJECT` | one custodian the proposer cannot reach (HLD §12.4) | security reviewer | dataset-level `READER` on every audit dataset, made by each agent's factory run |
 | Model Armor **template standard** per tier (a Terraform module, not a shared template resource) | `CORE_PROJECT` repository; instantiated in every project | floors do not check SDP; the template must exist per project (quota is per project) | platform owner | CI diff |
 | Monitoring baseline module, `audit.schema`, `ladder.schema`, the manifest schema, the notification channel | `CORE_PROJECT` repository | PR9: services, not code each agent rewrites | platform owner | — |
+
+**Amendment of 2026-10-01 (departure `BD-42-1`).** The full build creates the evidence lake's
+locked bucket in `LOGGING_PROJECT`, beside the locked log buckets, rather than in `CORE_PROJECT`
+as the table above says, on its own Autokey key handle `kh-platform-evidence` and never on
+`KEY_PLATFORM_LOGS` ([setup/42](setup/42-gates-drills-and-evidence.md) §3 and GD-3.1). The
+accepted cost is the lien a locked retention policy puts on `LOGGING_PROJECT`. Until the set's
+next revision settles the placement, read `LOGGING_PROJECT` for that bucket;
+[08 §5.4](08-data-logging-retention-sovereignty.md#54-the-daily-export-to-the-evidence-bucket-closes-decision-31)
+cites the same departure.
 
 | Stays per agent (in the agent's project) | Why |
 |---|---|

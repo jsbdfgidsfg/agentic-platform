@@ -3,7 +3,9 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-16 (fix round against the 2026-09-15 procedure review; commands added that day re-checked, §9 and §10)
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (MQ-2.5, MQ-5.1).
+- Reviewed 2026-09-16: fix round against the 2026-09-15 procedure review; commands added that day re-checked, §9 and §10.
 - Last executed: never
 - Stage: review §2 stage 30 (Eve Phase 10b step 5 — the `eve_quality` authorised views and their two readers) and the Eve half of stage 25 (the Eve-pack queries of the superseded Mo-4). It has two halves with two performers and one join: Eve's side gives the reads, Mo's side computes on them.
 - **This file gates nothing in Wall-E.** It may start while [30](30-wall-e-workspace-side.md) runs and finish after it. Nothing in files 30 to 39 waits on `MO_EVE_PACK_CONFIGS` (plan SD-45; [README](README.md) §3.4).
@@ -392,17 +394,18 @@ gcloud projects get-iam-policy "$MO_PROJECT" --format=json | jq -r '[.bindings[]
 
 - **WHO:** Platform owner; the second human initials.
 - **WHERE:** Shell; `DEVIATION_REGISTER`.
-- **ACTION:** The views and the two access entries were made by hand, where the `verifier-project` module would have made them. Record it so the zero-diff checker and 42's supersession see it.
+- **ACTION:** The views and the two access entries were made by hand, where the `verifier-project` module would have made them. Record it so the zero-diff checker and 42's supersession see it: the row is built into a variable and inserted into the register's first table with 01's `bd_insert`, which commits it as `BD-29-1 opened` (never appended to the file end, which would land inside the Closures table).
 
 ```bash
-printf '| BD-29-1 | %s | 29 MQ-1, MQ-2 | DEV | eve_quality views and readers (hand, SD-01) | dataset %s:%s | eve/quality at %s | six authorised views; view entries on %s; READER for %s%s | build-log:records/%s | - | PAM %s | terraform import of the views and both access arrays + empty plan | open |\n' \
-  "$(date -u +%F)" "$EVE_PROJECT" "$EVE_QUALITY_DS" "${EVE_CONFIG_COMMIT:-tbd}" "$EVE_DS" "$SA_MO_METRICS" "${SA_VALIDATOR_CUSTODIAN:+ and $SA_VALIDATOR_CUSTODIAN}" "$(basename "${R}-1.4-eve-readback-v1.json")" "ENT_PROJECT_REPAIR_EVE" >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-29-1 eve_quality views and readers (setup 29 MQ-2.5)"
+need DEVIATION_REGISTER BUILD_LOG_DIR
+row=$(printf '| BD-29-1 | %s | 29 MQ-1, MQ-2 | DEV | eve_quality views and readers (hand, SD-01) | dataset %s:%s | eve/quality at %s | six authorised views; view entries on %s; READER for %s%s | build-log:records/%s | - | PAM %s | terraform import of the views and both access arrays + empty plan | open |\n' \
+  "$(date -u +%F)" "$EVE_PROJECT" "$EVE_QUALITY_DS" "${EVE_CONFIG_COMMIT:-tbd}" "$EVE_DS" "$SA_MO_METRICS" "${SA_VALIDATOR_CUSTODIAN:+ and $SA_VALIDATOR_CUSTODIAN}" "$(basename "${R}-1.4-eve-readback-v1.json")" "ENT_PROJECT_REPAIR_EVE")
+bd_insert "$row"
 pam_revoke "$g_eve"
 gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_EVE" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name)"
 ```
 
-- **VERIFY:** `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-29-1`; the grants list prints nothing; `gcloud projects get-iam-policy "$EVE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:user:" --format="value(bindings.role)"` prints nothing, so no human holds a standing role on Eve's project after the sitting.
+- **VERIFY:** `grep -n '^| BD-29-1 |' "$DEVIATION_REGISTER"` shows the row at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); the grants list prints nothing; `gcloud projects get-iam-policy "$EVE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:user:" --format="value(bindings.role)"` prints nothing, so no human holds a standing role on Eve's project after the sitting.
 - **ROLLBACK:** The register is append-only; a revoked grant is not restored.
 - **EVIDENCE:** The commit; `evidence_add MQ-2.5 bd-29-1 E-05 5.2.4 build-log:<register> `. TISAX 5.2.4, 4.2.1.
 
@@ -692,18 +695,19 @@ git -C "$PLATFORM_REPO_DIR" add decisions/ && git -C "$PLATFORM_REPO_DIR" commit
 
 - **WHO:** Mo owner.
 - **WHERE:** Shell; `DEVIATION_REGISTER`.
-- **ACTION:**
+- **ACTION:** `BD-29-2` is built into a variable and inserted into the register's first table with 01's `bd_insert`, which commits it as `BD-29-2 opened` (never appended to the file end, which would land inside the Closures table).
 
 ```bash
-printf '| BD-29-2 | %s | 29 MQ-3 | DEV | Eve-pack tables and transfer configs (hand, SD-01) | project %s | mo/config/metrics at %s | ten schema29 tables; four scheduled configs and two on-demand probes pinned to %s | build-log:records/%s | - | PAM %s + %s | terraform import of the tables and transfer configs + empty plan | open |\n' \
-  "$(date -u +%F)" "$MO_PROJECT" "${MO_INPUTS_COMMIT:-tbd}" "$SA_MO_METRICS" "$(basename "${R}-3.4-ownerinfo-v1.tsv")" "ENT_PROJECT_REPAIR_MO" "ENT_DEPLOY_CREDENTIAL_HOLDER_MO" >> "$DEVIATION_REGISTER"
-git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-29-2 Eve pack (setup 29 MQ-5.1)"
+need DEVIATION_REGISTER BUILD_LOG_DIR
+row=$(printf '| BD-29-2 | %s | 29 MQ-3 | DEV | Eve-pack tables and transfer configs (hand, SD-01) | project %s | mo/config/metrics at %s | ten schema29 tables; four scheduled configs and two on-demand probes pinned to %s | build-log:records/%s | - | PAM %s + %s | terraform import of the tables and transfer configs + empty plan | open |\n' \
+  "$(date -u +%F)" "$MO_PROJECT" "${MO_INPUTS_COMMIT:-tbd}" "$SA_MO_METRICS" "$(basename "${R}-3.4-ownerinfo-v1.tsv")" "ENT_PROJECT_REPAIR_MO" "ENT_DEPLOY_CREDENTIAL_HOLDER_MO")
+bd_insert "$row"
 pam_revoke "$g_dep"; pam_revoke "$g_mo"
 gcloud projects get-iam-policy "$MO_PROJECT" --flatten="bindings[].members" --filter="bindings.members:user:" --format="value(bindings.role)"
 gcloud iam service-accounts get-iam-policy "$SA_MO_METRICS" --project="$MO_PROJECT" --format=json | jq -r '[.bindings[]?.members[]?] | .[]'
 ```
 
-- **VERIFY:** `tail -n 1 "$DEVIATION_REGISTER"` shows `BD-29-2`; no human role is printed on `MO_PROJECT`; the service-account policy prints nothing, so no standing `actAs` on `mo-metrics@` survives the sitting (S143's rule, applied here).
+- **VERIFY:** `grep -n '^| BD-29-2 |' "$DEVIATION_REGISTER"` shows the row at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); no human role is printed on `MO_PROJECT`; the service-account policy prints nothing, so no standing `actAs` on `mo-metrics@` survives the sitting (S143's rule, applied here).
 - **ROLLBACK:** Append-only; a revoked grant is not restored.
 - **EVIDENCE:** The commit and both policy outputs as `${R}-5.1-close-v1.txt`; `evidence_add MQ-5.1 bd-29-2 E-05 5.2.4 build-log:<register> `. TISAX 5.2.4, 4.2.1.
 

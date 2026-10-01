@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: the decision range is P1 to P207.
 - What this page is: a plain-words account of how an agent on the platform is contained, how it is stopped, and what a signature accepts because it cannot be stopped. Nothing described here is built.
 
 ## In one sentence
@@ -32,7 +33,7 @@ Why the difference matters: for most agents, the enforced controls carry the saf
 
 ## The six ways an agent is contained
 
-Every agent on the platform, from a read-only assistant to a Super Admin robot, inherits six containment controls. They are numbered CP1 to CP6 so they are never confused with the platform's decisions, which are numbered P1 to P204. A **project** is Google Cloud's container for one program's resources; a **folder** groups projects so that rules set on the folder bind every project in it.
+Every agent on the platform, from a read-only assistant to a Super Admin robot, inherits six containment controls. They are numbered CP1 to CP6 so they are never confused with the platform's decisions, which are numbered P1 to P207. A **project** is Google Cloud's container for one program's resources; a **folder** groups projects so that rules set on the folder bind every project in it.
 
 | # | In plain words | What it stops | Grade |
 |---|---|---|---|

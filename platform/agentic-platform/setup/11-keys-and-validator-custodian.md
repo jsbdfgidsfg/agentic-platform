@@ -10,7 +10,8 @@
 - Runs under: the dated bootstrap exception of 06 (`BOOTSTRAP_EXCEPTION_EXPIRY`) and the creator's Owner on the five core projects kept from 10 (SD-01). Both are withdrawn at the end of 12. A custodian step run after 12 uses `ENT_PROJECT_REPAIR_CORE` (12), approved by the second human.
 - Replaces: nothing executable. The old sets had no key procedure. Wall-E's `SETUP.md` Phase 7 carried only a comment for the validator's read (l.859-860), and no procedure made `VALIDATOR_PROJECT`, `eve_grades` or `grades_eve`.
 - Closes: S055 for its validator-custodian half; X-GE-05 for its key half. See "Findings" at the end.
-- 2026-10-01: KV-1.1 and KV-1.2 aligned with 10 (`cloudkms` is already on every row that needs it; this file never enables an API); deviation lines rewritten as rows `BD-11-1` to `BD-11-4` in 01's register format; `exists_or_pending` calls given three arguments (KV-4.3, KV-5.5, KV-8.10, KV-8.11); KV-6.3's rollback writes `DISABLED`; KV-6.4 removes by condition instead of `--all`; KV-1.3, KV-7.1 and KV-8.12 write their files with here-documents and push named branches; KV-9.2 ends with 01's `sitting_end`; pronouns made neutral.
+- 2026-10-01: KV-1.1 and KV-1.2 aligned with 10 (`cloudkms` is already on every row that needs it; this file never enables an API); deviation lines rewritten as rows `BD-11-1` to `BD-11-4` in 01's register format; `exists_or_pending` calls given three arguments (KV-4.3, KV-5.5, KV-8.10, KV-8.11); KV-6.3's rollback writes `DISABLED`; KV-6.4 removes by condition instead of `--all`; KV-1.3, KV-7.1 and KV-8.12 write their files with here-documents and push named branches; KV-9.2 ends with 01's `sitting_end`; pronouns made neutral; KV-2.3 and the hand-over row for 42 say that 42 GD-3.1's evidence bucket takes its own Autokey key handle `kh-platform-evidence`, so `KEY_PLATFORM_LOGS` keeps the Logging service account as its sole Encrypter/Decrypter.
+- 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (KV-1.3, KV-4.4, KV-6.2, KV-8.1).
 
 ## What this part builds
 
@@ -194,11 +195,11 @@ YAML
 git -C "$PLATFORM_REPO_DIR" add bootstrap/expected/11-keys.yaml
 git -C "$PLATFORM_REPO_DIR" commit -m "11: expected state of the core keys, attestors, Autokey and validator custodian"
 git -C "$PLATFORM_REPO_DIR" push -u origin bootstrap/11-keys
-grep -q '^| BD-11-1 |' "$DEVIATION_REGISTER" || printf '| BD-11-1 | %s | 11 KV-1.3 to KV-9.1 | MOD | platform-core and tenant-app key rows by hand (09 2.4; SD-01) | projects %s, %s, %s; the five Autokey folders of KV-6 | signed key table %s; bootstrap/expected/11-keys.yaml | key rings logging, engines, gemini, supply-chain; keys platform-logs-europe-west1, gemini-cmek, binauthz-vuln-gated, binauthz-promoted; attestors vuln-gated, promoted-to-prod; Autokey on five folders; validator custodian resources (section 8) | KV-9.1 live-state diff | n/a (creator Owner is BD-10-6) | second human (KV-1.3 pull request) | superseded by terraform import and an empty plan (SD-01) | open |\n' "$(date -u +%F)" "$KMS_PROJECT" "$CICD_PROJECT" "$VALIDATOR_PROJECT" "$KEY_TABLE_RECORD" >> "$DEVIATION_REGISTER"
+bd_insert "$(printf '| BD-11-1 | %s | 11 KV-1.3 to KV-9.1 | MOD | platform-core and tenant-app key rows by hand (09 2.4; SD-01) | projects %s, %s, %s; the five Autokey folders of KV-6 | signed key table %s; bootstrap/expected/11-keys.yaml | key rings logging, engines, gemini, supply-chain; keys platform-logs-europe-west1, gemini-cmek, binauthz-vuln-gated, binauthz-promoted; attestors vuln-gated, promoted-to-prod; Autokey on five folders; validator custodian resources (section 8) | KV-9.1 live-state diff | n/a (creator Owner is BD-10-6) | second human (KV-1.3 pull request) | superseded by terraform import and an empty plan (SD-01) | open |\n' "$(date -u +%F)" "$KMS_PROJECT" "$CICD_PROJECT" "$VALIDATOR_PROJECT" "$KEY_TABLE_RECORD")"
 ```
 
-- **VERIFY:** The pull request is merged with the second human's approval. `grep -c '^| BD-11-1 |' "$DEVIATION_REGISTER"` prints `1`. Section 9 diffs live state against this file.
-- **ROLLBACK:** Revert the commit before any create; close `BD-11-1` under the register's Closures with a build-log note (the register is append-only).
+- **VERIFY:** The pull request is merged with the second human's approval. `grep -c '^| BD-11-1 |' "$DEVIATION_REGISTER"` prints `1`, and its line number is smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check; `bd_insert` prints both numbers, or `exists: BD-11-1` on a re-run). Section 9 diffs live state against this file.
+- **ROLLBACK:** Revert the commit before any create; close `BD-11-1` with `bd_close BD-11-1 "withdrawal: KV-1.3 reverted before any create" "11 KV-1.3 ROLLBACK"` and a build-log note (the register is append-only).
 - **EVIDENCE:** Merge commit id; `DEVIATION_REGISTER` row `BD-11-1`. TISAX 5.2.1. EU AI Act E-05.
 
 ## 2. The logging key
@@ -267,7 +268,7 @@ gcloud kms keys add-iam-policy-binding platform-logs-europe-west1 --keyring=logg
 gcloud kms keys get-iam-policy platform-logs-europe-west1 --keyring=logging --location=europe-west1 --project="$KMS_PROJECT" --format=json | jq -c '.bindings'
 ```
 
-  Exactly one binding appears: `roles/cloudkms.cryptoKeyEncrypterDecrypter` with that one member, which makes it the sole Encrypter/Decrypter as 09 §2.4 requires. The bucket's location must match the key's region; file 14 creates both buckets in `europe-west1`.
+  Exactly one binding appears: `roles/cloudkms.cryptoKeyEncrypterDecrypter` with that one member, which makes it the sole Encrypter/Decrypter as 09 §2.4 requires. The bucket's location must match the key's region; file 14 creates both buckets in `europe-west1`. The key serves those two log buckets only: no later file binds another member on it (14 CL-2.2 re-checks), and 42 GD-3.1's Cloud Storage evidence bucket takes its own Autokey key handle `kh-platform-evidence` rather than this key.
 - **ROLLBACK:** `gcloud kms keys remove-iam-policy-binding platform-logs-europe-west1 --keyring=logging --location=europe-west1 --member="serviceAccount:${LOG_KMS_SA}" --role=roles/cloudkms.cryptoKeyEncrypterDecrypter --project="$KMS_PROJECT"`, and only before file 14 creates a bucket on the key. After that, removing the grant makes the evidence unreadable at once (§7).
 - **EVIDENCE:** The policy JSON as `<date>-KV-2.3-key-platform-logs-iam-v1`. TISAX 5.1.1, 4.2.1. EU AI Act E-06.
 
@@ -382,12 +383,12 @@ gcloud kms keys get-iam-policy gemini-cmek --keyring=gemini --location=europe --
 
 ```bash
 gcloud services enable cloudquotas.googleapis.com --project="$CICD_PROJECT"
-grep -q '^| BD-11-2 |' "$DEVIATION_REGISTER" || printf '| BD-11-2 | %s | 11 KV-4.4 | DEV | cloudquotas.googleapis.com enabled on CICD_PROJECT as the quota project for a KMS_PROJECT quota read (not on the 02 4.2 core allow-list) | project %s | KV-4.4 optional shell path | API cloudquotas on CICD_PROJECT | n/a | n/a | second human | disabled in the same sitting by KV-4.4 ROLLBACK, or handed to 13 for the allow-list pull request | open |\n' "$(date -u +%F)" "$CICD_PROJECT" >> "$DEVIATION_REGISTER"
+bd_insert "$(printf '| BD-11-2 | %s | 11 KV-4.4 | DEV | cloudquotas.googleapis.com enabled on CICD_PROJECT as the quota project for a KMS_PROJECT quota read (not on the 02 4.2 core allow-list) | project %s | KV-4.4 optional shell path | API cloudquotas on CICD_PROJECT | n/a | n/a | second human | disabled in the same sitting by KV-4.4 ROLLBACK, or handed to 13 for the allow-list pull request | open |\n' "$(date -u +%F)" "$CICD_PROJECT")"
 gcloud quotas info list --service=cloudkms.googleapis.com --project="$KMS_PROJECT" --billing-project="$CICD_PROJECT" --format=json | jq '.[] | select(.metric=="cloudkms.googleapis.com/hsm_symmetric_requests") | {quotaId, metric, dimensionsInfos}' | tee "$BUILD_LOG_DIR/records/$(date -u +%F)-KV-4.4-hsm-quota-v1.json"
 ```
 
 - **VERIFY:** The recorded `europe` limit (or the default, if no location-specific row exists) is written down with its usage, and the screenshot is filed. Headroom is the limit minus current usage, which is zero today because no key is yet in use. The value must leave at least 1,000 QPM of headroom for file 19. Add the re-check to file 19 (before `CmekConfig` registration) and to file 42 (quarterly): peak usage from Cloud Monitoring must stay at least 1,000 QPM below the limit. `Assumption:` on the optional path, the `dimensionsInfos` field lists the per-location value, as the Cloud Quotas `QuotaInfo` reference describes; the console page is authoritative if it does not.
-- **ROLLBACK:** Nothing changed on the console path. On the optional path, `gcloud services disable cloudquotas.googleapis.com --project="$CICD_PROJECT"` after the read, and close `BD-11-2` under the register's Closures — do this in the same sitting unless 13 has already accepted the API.
+- **ROLLBACK:** Nothing changed on the console path. On the optional path, `gcloud services disable cloudquotas.googleapis.com --project="$CICD_PROJECT"` after the read, and close `BD-11-2` with `bd_close BD-11-2 "withdrawal: cloudquotas disabled on CICD_PROJECT after the read" "11 KV-4.4 ROLLBACK"` — do this in the same sitting unless 13 has already accepted the API.
 - **EVIDENCE:** The screenshot `<date>-KV-4.4-hsm-quota-v1.png` (`EVIDENCE_INTERIM_LOCATION`) and the transcribed values `<date>-KV-4.4-hsm-quota-v1.txt` (`BUILD_LOG_DIR/records/`); on the optional path also the JSON of the same name; a `DRILL_CALENDAR` line for the quarterly re-check. TISAX 5.2.8 (continuity). Closes X-GE-05's quota half.
 
 ## 5. Binary Authorization in `CICD_PROJECT`
@@ -568,7 +569,7 @@ AK_FOLDERS="$FLD_PLATFORM_CORE $FLD_AGENTS_W $FLD_AGENTS_P $FLD_CONTROLLERS $FLD
 test "$(printf '%s\n' $AK_FOLDERS | wc -l | tr -d ' ')" -eq 5 || { echo "AK_FOLDERS is not five folders: stop"; false; }
 AK_EXP="$(python3 -c 'import datetime as d;print((d.datetime.now(d.timezone.utc)+d.timedelta(hours=4)).strftime("%Y-%m-%dT%H:%M:%SZ"))')"
 for F in $AK_FOLDERS; do gcloud resource-manager folders add-iam-policy-binding "$F" --member="user:${SA_1_ADMIN}" --role=roles/cloudkms.autokeyAdmin --condition="expression=request.time < timestamp('${AK_EXP}'),title=kv-6-2-autokey-bootstrap,description=KV-6.2 bootstrap exception"; done
-grep -q '^| BD-11-3 |' "$DEVIATION_REGISTER" || printf '| BD-11-3 | %s | 11 KV-6.2 | DEV | time-bound roles/cloudkms.autokeyAdmin to the platform owner instead of PAM (no entitlement before 12) | folders %s | KV-1.2 probe | user:%s roles/cloudkms.autokeyAdmin, condition kv-6-2-autokey-bootstrap until %s | KV-6.4 zero-count check | n/a | none: SD-01 bootstrap exception | removed in KV-6.4 | open |\n' "$(date -u +%F)" "$AK_FOLDERS" "$SA_1_ADMIN" "$AK_EXP" >> "$DEVIATION_REGISTER"
+bd_insert "$(printf '| BD-11-3 | %s | 11 KV-6.2 | DEV | time-bound roles/cloudkms.autokeyAdmin to the platform owner instead of PAM (no entitlement before 12) | folders %s | KV-1.2 probe | user:%s roles/cloudkms.autokeyAdmin, condition kv-6-2-autokey-bootstrap until %s | KV-6.4 zero-count check | n/a | none: SD-01 bootstrap exception | removed in KV-6.4 | open |\n' "$(date -u +%F)" "$AK_FOLDERS" "$SA_1_ADMIN" "$AK_EXP")"
 ```
 
 - **VERIFY:** For each folder, `gcloud resource-manager folders get-iam-policy "$F" --format=json | jq -c '.bindings[] | select(.role=="roles/cloudkms.autokeyAdmin")'` shows one conditional binding with the expiry timestamp. No unconditional binding may exist. Basic roles cannot take a condition; this is a predefined role, so the condition applies.
@@ -731,7 +732,7 @@ gcloud essential-contacts create --email="$VALIDATOR_CUSTODIAN_EMAIL" --notifica
   - **Precondition, checked here:** `essentialcontacts.googleapis.com` is **not** on `VALIDATOR_PROJECT`'s API list (10 §1 table row 5, which enables `serviceusage`, `cloudresourcemanager`, `iam`, `logging`, `monitoring`, `storage`, `bigquery`, `observability`). If either command fails naming the API as disabled on the target project, take the same fallback CP-1.10 records for `KMS_PROJECT`: **do not enable the API here**. Leave `VALIDATOR_PROJECT`'s contacts to the Essential Contacts set on `fld-platform-core` and `fld-agentic-platform` in 09, and record the gap as row `BD-11-4` naming 10 CP-1.10 and 10 §1 row 5, so that 13's allow-list pass and 17's zero-diff checker both expect it. Then name the security reviewer and the custodian in the ownership record below instead, which is the binding artefact.
 
 ```bash
-grep -q '^| BD-11-4 |' "$DEVIATION_REGISTER" || printf '| BD-11-4 | %s | 11 KV-8.1 | DEV | essentialcontacts not enabled on VALIDATOR_PROJECT (10 section 1 row 5); project contacts left to the folder contacts of 09, as 10 CP-1.10 does for KMS_PROJECT | project %s | 10 CP-1.10; 10 section 1 row 5 | no project-level contacts; the folder contacts of 09 apply | n/a | n/a | platform owner; ownership record signed by the security reviewer | superseded when 13 settles the core allow-list | open |\n' "$(date -u +%F)" "$VALIDATOR_PROJECT" >> "$DEVIATION_REGISTER"
+bd_insert "$(printf '| BD-11-4 | %s | 11 KV-8.1 | DEV | essentialcontacts not enabled on VALIDATOR_PROJECT (10 section 1 row 5); project contacts left to the folder contacts of 09, as 10 CP-1.10 does for KMS_PROJECT | project %s | 10 CP-1.10; 10 section 1 row 5 | no project-level contacts; the folder contacts of 09 apply | n/a | n/a | platform owner; ownership record signed by the security reviewer | superseded when 13 settles the core allow-list | open |\n' "$(date -u +%F)" "$VALIDATOR_PROJECT")"
 ```
 
   Then commit `decisions/<date>-validator-project-ownership.md`, signed by the security reviewer. It names the owner role and the custodian, and states that no standing human IAM role is granted on `VALIDATOR_PROJECT`. Ownership is exercised through `ENT_PROJECT_REPAIR_CORE` with the security reviewer as approver (a re-run row for 12). The record also adds a CODEOWNERS entry making the security reviewer the required reviewer on `validator/` and `bootstrap/expected/11-keys.yaml`.
@@ -1037,7 +1038,7 @@ sitting_end
 | 31 | `SA_VALIDATOR_CUSTODIAN` for the `walle_audit` READER (row 21) through `exists_or_pending` | KV-8.2 |
 | 33 | `ROLE_GRADER_INSERT` and KV-8.10's re-run for the grading identity; writes by Storage Write API or streaming inserts, never DML | KV-8.4, KV-8.10, KV-8.12 |
 | 40 | WIF impersonation of `SA_VALIDATOR_CUSTODIAN` by CI; the custodian recompute | KV-8.3 |
-| 42 | Quarterly HSM quota re-check; key rotation records (class B annual); the deviation line's supersession | KV-4.4, KV-5.2, KV-1.3 |
+| 42 | Quarterly HSM quota re-check; key rotation records (class B annual); the deviation line's supersession; Autokey on `fld-platform-core` for GD-3.1's key handle `kh-platform-evidence` (the evidence bucket's own key, never a second member on `KEY_PLATFORM_LOGS`) | KV-4.4, KV-5.2, KV-1.3, KV-6.3, KV-2.3 |
 | README, plan §5 | Two added variables, `BINAUTHZ_ATTESTOR_PROMOTED` and `KEY_BINAUTHZ_PROMOTED`; Autokey folder set corrected to five folders; E-21 row for 03's tracker | KV-5.2, KV-5.4, KV-6.3, KV-8.7 |
 
 ## Findings

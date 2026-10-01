@@ -5,7 +5,8 @@
 - Last reviewed: 2026-10-01
 - 2026-10-01: §4.1 and §8 G1 record Google's 2026-09-09 release note (VPC-SC enforced for gateways
   created after 2026-09-08 with a connectivity template); §4.1 and G5 add the Model Armor PSC
-  endpoint a perimeter needs; §3.2 and M1 quote template conformance at project level too;
+  endpoint a perimeter needs; §3.2 and M1 quote template conformance at project level too, and
+  §3.2 says a conformance test proves the folder floor only on a project set to Inherit;
   "Agent Designer and Workflow Builder" is one product, written Workflow Builder.
 - 2026-09-18: §4.3 rewritten for the pre-spike state — ingress `all` with IAM-only invoke and the
   audience check is the expected state for engine-called services, recorded as a dated deviation
@@ -315,6 +316,12 @@ below them is refused); the protection on the `generateContent` hop is a **proje
 and whoever holds `roles/modelarmor.floorSettingsAdmin` on a project can loosen or disable that
 project's floor whatever the folders say. "Never looser" is therefore not a property of the
 hierarchy; it is a property of *who can write a project floor* and *how fast a write is seen*.
+
+Because a project floor is also a conformance control, a test that creates a weaker template in a
+project proves that project's own floor, not the folder's: every agent project carries a factory-
+written Custom floor, so such a test on `canary-r` proves `canary-r`'s floor. Proving the folder
+floor's ordering needs a project whose floor is set to **Inherit** (the full build's KS-2.8 test,
+[setup/18](setup/18-model-armor-floor-spikes-and-kill-switch.md), must meet this condition).
 
 Also verified on the page: the console sets floors at project level only, gcloud and REST at all
 three; floors do not check Sensitive Data Protection conformance; "Agent Platform" (GA) and the

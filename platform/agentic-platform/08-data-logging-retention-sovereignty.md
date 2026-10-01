@@ -6,7 +6,9 @@
 - 2026-10-01: §3.2's identity and evidence filters take setup 14's `identity.txt` (OAuth-token
   entries are `oauth2.googleapis.com`); §3.3's view filters use `SOURCE()` and `LOG_ID()` only,
   with actor filtering in the BigQuery views, and the `logging.views.access` holders are
-  corrected; §6.1 adds `roles/dlp.admin` for the discovery configuration.
+  corrected; §6.1 adds `roles/dlp.admin` for the discovery configuration; §5.4 cites the full build's
+  departure `BD-42-1` (the platform evidence bucket in `LOGGING_PROJECT`, on its own Autokey key
+  handle) as an amendment.
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md). Nothing is built.
   This page details the HLD's §3.1 `LOGGING_PROJECT`, §7.1 "Central logging" and "Data Access
   audit config" rows, §7.5 "Retention", §8.2 "Sovereignty", the data-at-rest lines of §8.3, the
@@ -434,6 +436,20 @@ Eve's independent sink carries the same three streams (HLD §13.2 widened it to 
 Decision 31 of the Wall-E register ("off-project copy of `walle_audit` at Stage 1") and
 topology decision 51 ("the mirror is the copy") are both satisfied: the mirror is the queryable
 copy, the export is the immutable one, the witness is the out-of-organisation one.
+
+**Amendment of 2026-10-01: where the full build puts the bucket (departure `BD-42-1`).** The full
+build creates the platform evidence bucket in `LOGGING_PROJECT`, beside the locked log buckets,
+not in `CORE_PROJECT` as S15 (§2) and the "Where" row above say, and encrypts it with its own
+Autokey key handle `kh-platform-evidence`, never with `KEY_PLATFORM_LOGS`, whose sole
+Encrypter/Decrypter stays the Logging service account
+([setup/42](setup/42-gates-drills-and-evidence.md) §3 and GD-3.1;
+[09 §2.2](09-supply-chain-secrets-recovery.md#22-the-cmek-and-autokey-stance-recorded-once)). The
+reason is that the evidence stores belong together; the accepted cost is that a locked retention
+policy puts a lien on `LOGGING_PROJECT`, which can then no longer be deleted while the bucket
+lives. Until the set's next revision settles the placement, read `LOGGING_PROJECT` and the full
+build's `PLATFORM_EVIDENCE_BUCKET` wherever this page names `CORE_PROJECT` for S15 and the
+platform verifier's `exports/` path; [02 §5](02-landing-zone-and-tiers.md#5-platform-core-what-is-shared-what-stays-per-agent-p45-p46)
+cites the same departure.
 
 ### 5.5 Alert, incident and evidence-register exports
 

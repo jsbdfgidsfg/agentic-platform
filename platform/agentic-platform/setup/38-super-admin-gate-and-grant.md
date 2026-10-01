@@ -5,6 +5,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
+- Revised 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (GT-9.4).
 - Last executed: never
 - Revised 2026-09-18: `GT-4.7`'s who-can-mint check now covers the two approval surfaces `SA_APPROVAL_A` and `SA_APPROVAL_SUPER` as well as the two credential holders, with the same five permissions and the same pass line — an impersonated surface is a forged approver, and [33](33-wall-e-action-services-and-approval-surfaces.md) `WS-5.2` granted `SA_1_ADMIN` that impersonation for a sitting, withdrawn only by `WS-9.0`. The two names join the Consumes line.
 - Stage: review §2 stages 33 and 34, re-cut. It closes the **P-SA tier gate** and the **Stage 0-pre** milestone, and makes the one assignment the whole design is built around: Workspace Super Admin on `ROBOT`. It does **not** reach Stage 0; that is [39](39-wall-e-stage-0.md).
@@ -1238,20 +1239,21 @@ penv_set GRANT_RECORD "decisions/$(date -u +%F)-wall-e-super-admin-granted.md"
 
 - **WHO:** Platform owner.
 - **WHERE:** `DEVIATION_REGISTER`, `DRILL_CALENDAR`, README §9.
-- **ACTION:**
+- **ACTION:** `BD-38-1` is written in 01 PR-4.1's thirteen columns, built into a variable and inserted into the register's first table with 01's `bd_insert`, which commits it as `BD-38-1 opened` (never appended to the file end, which would land inside the Closures table).
 
 ```bash
-need DEVIATION_REGISTER DRILL_CALENDAR
-printf '| BD-38-1 | %s | gate checklist parsed by two signers, not CI (B-03 open) | GT-3.3 | superseded when REGISTER_CI_COMMIT lands | %s |\n' \
-  "$(date -u +%F)" "$SECURITY_REVIEWER_EMAIL" >> "$DEVIATION_REGISTER"
+need DEVIATION_REGISTER BUILD_LOG_DIR DRILL_CALENDAR SECURITY_REVIEWER_EMAIL
+row=$(printf '| BD-38-1 | %s | 38 GT-3.3 | DEV | gate checklist parsed by two signers, not CI (B-03 open) | the super-admin gate checklist | GT-3.3 signed parse | a two-signer parse in place of the CI result | n/a | n/a | %s | superseded when REGISTER_CI_COMMIT lands | open |\n' \
+  "$(date -u +%F)" "$SECURITY_REVIEWER_EMAIL")
+bd_insert "$row"
 printf '| %s | GT-2 | tabletop RB-01+RB-02 | %s | done (G17) | next: quarterly, scheduled in 42 |\n' \
   "$(date -u +%F)" "$INCIDENT_COMMANDER_EMAIL" >> "$DRILL_CALENDAR"
 ```
 
   Re-run lines to confirm in README §9: `ROSTER_FILE` updated with `ROBOT` as Super Admin (this file, `GT-6.4`); the interim Admin console activity rule of [06](06-organisation-bootstrap-and-roster.md) already retired by the second human after `EVE_H_LIVE_RECORD`; the quarterly tabletop and the K6 and K7 drill recurrences owned by [42](42-gates-drills-and-evidence.md); Eve's `SA-05` client-id list, added in [25](25-eve-human-super-admin-detections.md) against [32](32-wall-e-consents.md)'s `PENDING` line, confirmed present at `GT-7.6`.
 
-- **VERIFY:** Both rows exist; README §9 holds the four lines; `BD-38-1` names its supersession condition.
-- **ROLLBACK:** A wrong row is superseded by a dated line, never deleted.
+- **VERIFY:** Both rows exist; `grep -n '^| BD-38-1 |' "$DEVIATION_REGISTER"` shows the row at a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); README §9 holds the four lines; `BD-38-1` names its supersession condition.
+- **ROLLBACK:** A wrong row is superseded by a dated line, never deleted: for `BD-38-1`, a `bd_close` line naming the superseding row, inserted with `bd_insert`.
 - **EVIDENCE:** Both files, committed. E-13. TISAX 6.3, 7.1.1.
 
 ### GT-9.5 End the sitting

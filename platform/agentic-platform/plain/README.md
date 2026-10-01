@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Changed 2026-10-01: the no-price rule now names the one vendor list price on record.
+- Changed 2026-10-01: the no-price rule now names the one vendor list price on record; the design set counted at sixteen files, 00 to 15, and the register at 207 decisions, P1 to P207.
 - What this page is: the front door to a ten-page set that explains, to any reader, a secure platform for software agents on Google Cloud and Google Workspace, and its three agents; the set opens the door to the full documentation and replaces none of it.
 
 ## In one sentence
@@ -12,7 +12,7 @@ This set tells you, without assuming any computing background, what is being des
 
 ## What this set is, and who it is for
 
-The full documentation is large. It has a set of design pages, a brief of about 200 A4 pages, three human-executed build procedures and a register of 204 decisions. It is written for people who build and review systems. This set is written for everyone else.
+The full documentation is large. It has a set of design pages, a brief of about 200 A4 pages, three human-executed build procedures and a register of 207 decisions. It is written for people who build and review systems. This set is written for everyone else.
 
 It is for an employee whose account the doer will one day touch. It is for a manager who will be asked to approve a run. It is for a works-council member, an elected representative of the employees. They are to be informed, or consulted where the law requires it, before Eve begins watching the human administrators and before any agent acts on employee accounts. It is for a board member who will be asked to sign. And it is for a new engineer who wants the shape of the thing before the detail.
 
@@ -81,7 +81,7 @@ A new engineer reads the whole set once, then goes to the full documentation thr
 
 ## From your question to the page, and to the full documentation
 
-The full documentation has four parts. The **design set** is the specification, fourteen files numbered 00 to 13, of which [01-hld.md](../01-hld.md), the high-level design, is the parent every other page details ([the document table](../README.md#documents)). The **brief** explains the intent behind the design in about 200 A4 pages, in 33 chapter files ([brief/README.md](../brief/README.md)). The **three build procedures** are human-executed, step by step: the three-day build ([3-day/README.md](../3-day/README.md)), the proof of value ([pov/README.md](../pov/README.md)) and the full build ([setup/README.md](../setup/README.md), files 01 to 42). The **register** is one page that holds every platform decision, P1 to P204, with its state ([12-open-decisions.md](../12-open-decisions.md)).
+The full documentation has four parts. The **design set** is the specification, sixteen files numbered 00 to 15, of which [01-hld.md](../01-hld.md), the high-level design, is the parent every other page details ([the document table](../README.md#documents)). The **brief** explains the intent behind the design in about 200 A4 pages, in 33 chapter files ([brief/README.md](../brief/README.md)). The **three build procedures** are human-executed, step by step: the three-day build ([3-day/README.md](../3-day/README.md)), the proof of value ([pov/README.md](../pov/README.md)) and the full build ([setup/README.md](../setup/README.md), files 01 to 42). The **register** is one page that holds every platform decision, P1 to P207, with its state ([12-open-decisions.md](../12-open-decisions.md)).
 
 | Your question | Plain page | Where the full documentation defines it |
 |---|---|---|
@@ -153,7 +153,7 @@ Only the decisions that touch this page. Each id is a row of [the register](../1
 - [../README.md](../README.md) — the design set's front page: maturity, the document table, what the platform is and is not
 - [../01-hld.md](../01-hld.md) — the high-level design, the parent of every design page
 - [../brief/README.md](../brief/README.md) — the brief: intent, reading paths per reader, 33 chapter files
-- [../12-open-decisions.md](../12-open-decisions.md) — the register of record, P1 to P204
+- [../12-open-decisions.md](../12-open-decisions.md) — the register of record, P1 to P207
 - [../3-day/README.md](../3-day/README.md), [../pov/README.md](../pov/README.md), [../setup/README.md](../setup/README.md) — the three build procedures
 - [../../../decisions/2026-09-13-wall-e-holds-super-admin.md](../../../decisions/2026-09-13-wall-e-holds-super-admin.md) — the one decided row, P33
 - [../brief/31-glossary.md](../brief/31-glossary.md) — the glossary of record
