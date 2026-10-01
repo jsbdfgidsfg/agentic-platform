@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: register range now P1–P204; CP5 names the Agent Platform API (`aiplatform.googleapis.com`, formerly the Vertex AI API).
 
 ## What you will understand by the end
 
@@ -46,7 +47,7 @@ A safety case may rest on an enforcement-grade control; a detection-grade contro
 
 ## 4.3 The six containment primitives
 
-Containment for any agent reduces to six primitives, numbered CP1 to CP6 so they are never confused with register rows P1–P143, each with a named enforcer and a grade ([HLD §0.2](../01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded)).
+Containment for any agent reduces to six primitives, numbered CP1 to CP6 so they are never confused with register rows P1–P204, each with a named enforcer and a grade ([HLD §0.2](../01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded)).
 
 **CP1: a trust boundary the agent cannot redraw.** The factory creates the agent's principal, project, gateway, Model Armor floor and deny policy, governed at the folder; the agent's owner cannot loosen them. Folders, organisation policy, the factory's CI identity and Privileged Access Manager enforce it. Enforcement-grade, because a boundary its occupant can edit is only a preference.
 
@@ -56,7 +57,7 @@ Containment for any agent reduces to six primitives, numbered CP1 to CP6 so they
 
 **CP4: a fleet kill switch outside any agent project.** One organisation-policy change and one deny rule stop every agent principal in the selected tier folders, drilled monthly. Enforcement-grade, though two of its levers count only as far as unresolved decisions allow. K7 is Chapter 8, Identity, privileged access and the fleet kill switch.
 
-**CP5: a model-free monitor with halt authority.** The path that approves, halts, demotes or vetoes contains no model. Enforcement by absence: a CI check forbids a model client in the image, and a service-usage denylist removes the Vertex AI API from Eve's project. The reporting path may reason but writes reports and pages only, and nothing it writes feeds a verdict (P34, proposed). Chapter 16, Eve, the independent controller.
+**CP5: a model-free monitor with halt authority.** The path that approves, halts, demotes or vetoes contains no model. Enforcement by absence: a CI check forbids a model client in the image, and a service-usage denylist removes the Agent Platform API (`aiplatform.googleapis.com`, formerly the Vertex AI API) from Eve's project. The reporting path may reason but writes reports and pages only, and nothing it writes feeds a verdict (P34, proposed). Chapter 16, Eve, the independent controller.
 
 **CP6: evidence the judged thing cannot forge or silence.** Organisation-level sinks copy Google-written audit streams into a locked bucket and the SIEM export and, for the super-admin case, to the witness organisation, beyond the agent, its owner and the tenant's super admins. Detection-grade with an absence alarm: evidence stops nothing, but an attacker who stops the logs causes a page. Chapters 11 and 12.
 

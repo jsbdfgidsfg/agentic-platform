@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-17
+- Last reviewed: 2026-10-01
+- Changed on 2026-10-01: GI-0.1 and GI-10.3 use 01's sitting blocks; `gi_done` and `gi_evidence` now call 01's `checkpoint` and `evidence_add`; GI-8.4 uses the GA agent-gateways group only.
 - Stage: review §2 stage 4 (GE-0 and GE-1 of [03 §16](../03-gemini-enterprise-environment.md#16-runbook-bringing-the-environment-to-baseline), extended). Runs any time from week one, in parallel with files 02, 03, 04 and 08.
 - Step prefix: `GI`. 39 steps, none BLOCKED (no code is needed), none IRREVERSIBLE (nothing is written to the cloud or the tenant).
 - Replaces: the GE-0 and GE-1 rows of 03 §16, step 1 of [topology §7.4](../../project-topology.md), and the D8 check of `wall-e/SETUP.md` §1.1. It keeps their intent (record the project, the number, the app and its location before anything regional) and drops 'Standard/Plus' (X-GE-18) and 'eu or global' (X-GE-13).
@@ -62,7 +63,7 @@ flowchart LR
 - [ ] `DOMAIN`, `ORG_ID`, `GE_LOCATION` (value `eu`), `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, `EVIDENCE_INTERIM_LOCATION`, `GCLOUD_CONFIG_NAME`, `WORKSPACE_EDITION` are set (01).
 - [ ] The D8 row in the decision tracker of `03-decisions-and-people.md` reads 'eu only; a global or us app stops the build and opens a decision record' (SD-21). The stop rule below applies whether or not the row is signed yet.
 - [ ] The operator's workstation has `gcloud`, `curl` (7.76 or later, for `--fail-with-body`), `jq`, `git` and `shasum`.
-- [ ] gcloud is current and the `beta` component is installed (`gcloud components install beta`; `gcloud components list` shows it Installed). GI-8.3 uses the GA `gcloud agent-registry` group, which ships with gcloud itself, and GI-8.4 falls back to `beta`. An outdated gcloud errors with `Invalid choice`, which reads as an absent registry and silently shortens GI-8.5's import list.
+- [ ] gcloud is current and the `beta` component is installed (`gcloud components install beta`; `gcloud components list` shows it Installed). GI-8.3 uses the GA `gcloud agent-registry` group, which ships with gcloud itself, and GI-8.4 the GA `gcloud network-services agent-gateways` group. An outdated gcloud errors with `Invalid choice`, which reads as an absent registry and silently shortens GI-8.5's import list.
 - [ ] The operator's account holds, today, the Gemini Enterprise Admin role (`roles/discoveryengine.agentspaceAdmin`) on the app's project, and Workspace super admin or the Service Settings privilege. `roles/discoveryengine.viewer` alone is not enough: it lacks `discoveryengine.userStores.listUserLicenses` ([03 §4](../03-gemini-enterprise-environment.md#4-administration-who-holds-what-standing-or-elevated)).
 - [ ] No change window is needed and no user is told: nothing here writes.
 
@@ -160,16 +161,21 @@ The files file 19 and file 20 read. `D` stands for the date of the sitting.
 - **WHERE:** the workstation shell.
 - **ACTION:**
 ```bash
-source ~/.platform-env
+source "$HOME/.platform-env"
+penv_guard && echo "guard clean"
+gcloud auth list --format='value(account)'
+SITTING_ID="SITTING-$(date -u +%Y%m%d%H%M)"; export SITTING_ID
+checkpoint "$SITTING_ID" START - - "present: platform owner alone"
 gcloud config configurations activate "$GCLOUD_CONFIG_NAME"
 test -z "$(gcloud config get project 2>/dev/null)" || { echo "STOP: configuration has a default project"; false; }
-need DOMAIN ORG_ID GE_LOCATION BUILD_LOG_DIR EVIDENCE_REGISTER EVIDENCE_INTERIM_LOCATION WORKSPACE_EDITION
+need DOMAIN ORG_ID GE_LOCATION BUILD_LOG_DIR EVIDENCE_REGISTER EVIDENCE_INTERIM_LOCATION WORKSPACE_EDITION OWNER_DAILY_ACCOUNT
 test "$GE_LOCATION" = "eu" || { echo "STOP: GE_LOCATION must be eu (SD-21)"; false; }
-gcloud auth login
+gcloud auth login "$OWNER_DAILY_ACCOUNT" --no-launch-browser
 gcloud auth list --filter=status:ACTIVE --format='value(account)'
 ```
-- **VERIFY:** the guard prints nothing; `need` returns 0; the last command prints the one account that holds the Gemini Enterprise Admin role today.
-- **ROLLBACK:** none needed; nothing is created. `gcloud auth revoke` closes the sitting (GI-10.3).
+  This is 01 PR-3.2's start-of-sitting block, followed by the sign-in 01 §6.1 prescribes; the URL is opened in the account's own browser profile. If file 06 has already moved admin work to `sa-1-admin@`, sign in with that account instead.
+- **VERIFY:** `guard clean`; the first `gcloud auth list` prints nothing; the default-project guard prints nothing; `need` returns 0; the last command prints the one account that holds the Gemini Enterprise Admin role today.
+- **ROLLBACK:** none needed; nothing is created. `sitting_end` closes the sitting (GI-10.3).
 - **EVIDENCE:** none yet; the account name goes into the fact sheet in GI-10.2.
 
 #### GI-0.2 Create the inventory directory and the sitting helpers
@@ -188,15 +194,26 @@ gi_file() { gi_path "$GE_INVENTORY_DIR" "$@"; }
 gi_rfile() { gi_path "$GE_INVENTORY_DIR/restricted" "$@"; }
 ge_host() { case "$1" in eu) echo https://eu-discoveryengine.googleapis.com;; us) echo https://us-discoveryengine.googleapis.com;; global) echo https://global-discoveryengine.googleapis.com;; esac; }
 ge_get() { curl -sS --fail-with-body -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" "$1"; }
-gi_done() { printf '%s\t%s\t%s\n' "$(date -u +%FT%TZ)" "$1" "${2:-done}" >> "$BUILD_LOG_DIR/05-gemini-enterprise-inventory.log"; }
-gi_evidence() { printf '%s\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "$1" "$2" "$3" "$4" >> "$EVIDENCE_REGISTER"; }
+# gi_done STEP [NOTE]: a checkpoints.tsv line through 01's checkpoint; STOP: notes are BLOCKED, PENDING: notes are PENDING.
+gi_done() { case "${2:-done}" in STOP:*) checkpoint "$1" BLOCKED - - "$2";; PENDING:*) checkpoint "$1" PENDING - - "$2";; *) checkpoint "$1" DONE - - "${2:-done}";; esac; }
+# gi_evidence STEP FILE E_ID "TISAX <id>": one EVIDENCE_REGISTER row through 01's evidence_add (01 PR-4.2 columns).
+gi_evidence() {
+  _gt="${4#TISAX }"
+  if [ -f "$2" ]; then
+    _gb="$(basename "$2")"; _gs="${_gb#"${GI_DATE}-${1}-"}"; _gs="${_gs%.*}"; _gs="${_gs%-v[0-9]*}"
+    _gs="$(printf '%s' "$_gs" | tr 'A-Z_.' 'a-z--' | tr -cd 'a-z0-9-')"
+    evidence_add "$1" "${_gs:-ge-inventory}" "$3" "$_gt" "build-log:ge-inventory/$_gb" "$2"
+  else
+    evidence_add "$1" ge-inventory-restricted "$3" "$_gt" "interim:$2"
+  fi
+}
 EOF
 source "$GE_INVENTORY_DIR/gi-helpers.sh"
 gi_done GI-0.2
 ```
 - **VERIFY:** `type gi_file gi_rfile ge_host ge_get gi_done gi_evidence` names six functions; `git -C "$BUILD_LOG_DIR" check-ignore "$GE_INVENTORY_DIR/restricted/x"` prints the path.
 - **ROLLBACK:** none needed. On resume, run only the `source` line.
-- **EVIDENCE:** none. `Assumption:` the evidence register columns are date, step, record, E-id, TISAX id; if 01 defines another order, 01 wins and `gi_evidence` is edited to match.
+- **EVIDENCE:** none. `gi_done` and `gi_evidence` write nothing of their own: they call 01's `checkpoint` and `evidence_add`, so every GI step lands in `checkpoints.tsv` and in the ten-column `EVIDENCE_REGISTER` that 42 reads. A call with several files is made once per file.
 
 ### GI-1 The project
 
@@ -712,9 +729,9 @@ grep -liE 'Invalid choice|unrecognized arguments|Invalid command|is not a valid'
 - **WHO:** platform owner. Solo.
 - **WHERE:** shell, then Google Cloud console → **Gemini Enterprise** → the app → **Security** → **Agent Gateway configuration** (read only).
 - **ACTION:**
-`agent-gateways list` is documented on the GA, beta and alpha tracks; the line below takes GA and falls back to beta, so an older gcloud cannot turn a listing failure into a false 'no gateway'.
+`agent-gateways list` is documented on the GA track (reference updated 2026-06-16, read 2026-10-01), and 01 PR-1.1's gcloud floor (586.0.0) carries it, so no beta fallback is used; the track check below still catches an older gcloud, so it cannot turn a listing failure into a false 'no gateway'.
 ```bash
-for loc in europe-west1 us-central1; do f="$(gi_file GI-8.4 agent-gateways-$loc json)"; gcloud network-services agent-gateways list --location="$loc" --project="$GEMINI_PROJECT" --format=json > "$f" 2>&1 || gcloud beta network-services agent-gateways list --location="$loc" --project="$GEMINI_PROJECT" --format=json > "$f" 2>&1 || echo "failed: $loc (see $f)"; done
+for loc in europe-west1 us-central1; do f="$(gi_file GI-8.4 agent-gateways-$loc json)"; gcloud network-services agent-gateways list --location="$loc" --project="$GEMINI_PROJECT" --format=json > "$f" 2>&1 || echo "failed: $loc (see $f)"; done
 grep -liE 'Invalid choice|unrecognized arguments|Invalid command|is not a valid' "$GE_INVENTORY_DIR"/*-GI-8.4-agent-gateways-*.json && echo "STOP: command track wrong, re-run GI-8.4" || echo "track ok"
 jq '{name, agentGatewaySetting}' "$(ls -t "$GE_INVENTORY_DIR"/*-GI-2.2-engine-v*.json | head -1)"
 gi_done GI-8.4
@@ -798,9 +815,9 @@ gi_done GI-9.4 "CAA re-check: visible=<yes|no>; support case <number or none>"
 ```bash
 m="$(gi_file GI-10.1 manifest sha256)"
 ( cd "$GE_INVENTORY_DIR" && find . -type f ! -name '*-GI-10.1-manifest-*' ! -name 'gi-helpers.sh' -print0 | sort -z | xargs -0 shasum -a 256 ) > "$m"
-git -C "$BUILD_LOG_DIR" add .gitignore ge-inventory 05-gemini-enterprise-inventory.log
+git -C "$BUILD_LOG_DIR" add .gitignore ge-inventory
 git -C "$BUILD_LOG_DIR" status --short | grep restricted && echo "STOP: restricted file staged" || true
-git -C "$BUILD_LOG_DIR" commit -m "05 Gemini Enterprise inventory $GI_DATE"
+git -C "$BUILD_LOG_DIR" diff --cached --quiet || git -C "$BUILD_LOG_DIR" commit -m "05 Gemini Enterprise inventory $GI_DATE"
 gi_done GI-10.1
 ```
 Upload every file under `restricted/` to `EVIDENCE_INTERIM_LOCATION` by hand in the browser, then compare the hash shown after download of one file, or re-hash the local copy, against the manifest line.
@@ -861,12 +878,13 @@ gi_done GI-10.2
 - **WHERE:** shell.
 - **ACTION:**
 ```bash
-git -C "$BUILD_LOG_DIR" add ge-inventory 05-gemini-enterprise-inventory.log
-git -C "$BUILD_LOG_DIR" commit -m "05 fact sheet $GI_DATE"
+git -C "$BUILD_LOG_DIR" add ge-inventory
+git -C "$BUILD_LOG_DIR" diff --cached --quiet || git -C "$BUILD_LOG_DIR" commit -m "05 fact sheet $GI_DATE"
 gi_done GI-10.3
-gcloud auth revoke
+sitting_end
+checkpoint "$SITTING_ID" DONE - - "credentials revoked"
 ```
-- **VERIFY:** `gcloud auth list --filter=status:ACTIVE --format='value(account)'` prints nothing; `ls ~/Downloads/*.csv` no longer shows the export.
+- **VERIFY:** `sitting_end` prints `SITTING-END OK` (no account, no ADC file); the last two `SITTING-` lines of `checkpoints.tsv` carry the same id, `START` then `DONE`; `ls ~/Downloads/*.csv` no longer shows the export.
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** the checkpoint line.
 
@@ -889,7 +907,7 @@ gcloud auth revoke
 - [ ] Service status and Workspace data access are recorded per OU and per group.
 - [ ] Context-Aware Access is recorded as visible, or re-checked on or after 2026-09-23.
 - [ ] No restricted file is in git; the manifest verifies; the restricted files are in `EVIDENCE_INTERIM_LOCATION`.
-- [ ] Every checkpoint GI-0.2 to GI-10.3 is in `$BUILD_LOG_DIR/05-gemini-enterprise-inventory.log`.
+- [ ] Every checkpoint GI-0.2 to GI-10.3 is in `$BUILD_LOG_DIR/checkpoints.tsv`, and the sitting's `START` and `DONE` lines carry the same id; every EVIDENCE record has a row in `EVIDENCE_REGISTER`.
 - [ ] `git -C "$BUILD_LOG_DIR" log --stat` shows no write to any cloud resource was needed: the part's only changes are files.
 
 ## 8. What the next files need from this part
@@ -943,7 +961,7 @@ Read on 2026-09-15; the date after each page is Google's 'last updated'.
 - https://docs.cloud.google.com/model-armor/reference/rest/v1/projects.locations.templates/get; https://docs.cloud.google.com/model-armor/data-residency — `modelarmor.LOCATION.rep.googleapis.com`; 2026-08-19, 2026-09-10
 - gcloud reference: `projects describe`, `projects get-iam-policy`, `projects get-ancestors`, `projects get-ancestors-iam-policy --include-deny`, `services list --enabled`, `asset search-all-resources`, `asset search-all-iam-policies`, `org-policies describe --effective`, `org-policies list`, `identity groups memberships list`, `components install`, `config get`, wide flag `--billing-project`; https://docs.cloud.google.com/sdk/gcloud/reference; 2026-05-27 to 2026-09-09
 - https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry — the group is **GA**, updated 2026-06-23, read 2026-09-16, with command groups `agents`, `bindings`, `endpoints`, `mcp-servers`, `operations`, `services`; the page notes an alpha variant (`gcloud alpha agent-registry`, which adds `publishers` and `skills`). `list` takes `--location`, which is required.
-- https://docs.cloud.google.com/sdk/gcloud/reference/network-services/agent-gateways/list and https://docs.cloud.google.com/sdk/gcloud/reference/beta/network-services/agent-gateways/list — `agent-gateways list --location=LOCATION` documented on GA, beta and alpha; GI-8.4 takes GA and falls back to beta; 2026-09-15
+- https://docs.cloud.google.com/sdk/gcloud/reference/network-services/agent-gateways/list and https://docs.cloud.google.com/sdk/gcloud/reference/beta/network-services/agent-gateways/list — `agent-gateways list --location=LOCATION` documented on GA, beta and alpha; GI-8.4 takes GA only; GA page updated 2026-06-16, re-read 2026-10-01
 - https://docs.cloud.google.com/asset-inventory/docs/searching-resources — the API must be enabled in the project the command runs from; 2026-09-03
 - https://docs.cloud.google.com/asset-inventory/docs/supported-asset-types — `discoveryengine.googleapis.com/Engine`, `DataStore`, `Collection`, `Assistant`; 2026-09-03
 - https://docs.cloud.google.com/resource-manager/docs/project-migration — roles at the source parent are lost on a move; 2026-09-09

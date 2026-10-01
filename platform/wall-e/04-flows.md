@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: Flow A's example prompt uses "they" for the employee.
 - Placement: callers that cross a project are named with their home project;
   [../project-topology.md](../project-topology.md) is the authority for every such grant.
 - Scope: the robot holds Super Admin ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
@@ -14,7 +15,7 @@
 Seven journeys, each with its failure branch. Levels and stages are defined in
 [05-autonomy-ladder.md](05-autonomy-ladder.md).
 
-## Flow A — on request, high risk: "suspend jdoe, he left today"
+## Flow A — on request, high risk: "suspend jdoe, they left today"
 
 Trigger class T0 (chat). Level L3. Available from Stage 1.
 

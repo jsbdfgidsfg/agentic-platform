@@ -2,13 +2,14 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
 - Last executed: never
 - Stage: review §2 stage 12, the folder baseline, one of the four Tier R gate items. Runs after file 12 and before file 14. Files 14 to 16 may start once §6 is done; the enforcement in §8, 14 days after §3, must be done before 17 writes the Tier R record.
 - Step prefix: OP. Steps: 54 (OP-8.5b was added so that the destruction of any key the B2 negative test creates is a step with its own verification, not a sentence). BLOCKED steps: none. Two proofs are re-run points, not gaps: the agent-principal entries (made by 17's module equivalents, first proven by 18's P8 spike) and the conditioned `deny-improvers` rules (proven by the denial test of 36).
 - Replaces: nothing executable. Salvages only the read commands of `wall-e/PREREQUISITES.md` §4.2, with `--folder` in place of `--project`. Builds the design of [02 §4.1-§4.4](../02-landing-zone-and-tiers.md) and [04 §3-§4](../04-identity-and-privileged-access.md), corrected where Google's pages of 2026-09-14 differ (see "What the design and the old text got wrong").
 - Applies decisions SD-01 (hand-made factory work is a deviation), SD-15 (SCC before any location policy), SD-22 (deny principal form), SD-24 (`deny-improvers`), SD-25 (sandbox customer id, made in 21) and SD-46 (`ent-bootstrap-module`), all signed in 03.
 - Closes: S001 (the policy, deny and PAB half), S006 (the folder allow-list half), S072 (the platform half), S119 (the allow-list half), X-RQB-04 (the folder-scoped SCC check). See "Findings".
+- 2026-10-01: `op-set.sh` compares the read-back semantically and checks a project policy's name against the project number; Agent Registry writes are now deniable and are added to `deny-core-agents`; the troubleshooter helpers probe the `beta` command and fall back to the v3beta REST call; OP-1.4 searches project targets with `--project` and the project number; OP-1.1 and OP-1.2 run under an `ENT_PROJECT_REPAIR_CORE` grant for the quota project; every `gcloud pam` call passes `--billing-project`; OP-0.1 uses `decision-need.sh`; PAB enforcement version 4 is today's default; three Unverified rows closed.
 
 ## What this part builds
 
@@ -40,7 +41,7 @@ What this part does not build, and who does:
 |---|---|---|
 | "Rule for every new constraint: dry-run first, 14 days minimum" (02 §4.1); "org-policy baseline B1-B22 ... dry-run 14 days first" (S001 fix) | Dry run is refused for legacy constraints other than the four named above (dry-run page, updated 2026-09-09; S001 facts verdict). B1, B4-B6, B8-B13, B17, B18 and B21 cannot be dry-run. | §3 dry-runs the supported set (B2, B3, B14, B15, B19, B22, CC-3, CC-5, CC-9). §4 to §6 apply the legacy set to `fld-improvers-nonprod` first, prove it on a probe, then apply it at production. |
 | `principalSet://agents.global.org-${ORG_ID}.system.id.goog/*` in a deny policy (SETUP 12b step 7); `principalSet://.../attribute.platformContainer/aiplatform/projects/N` as the denied agent principal (04 §3) | Google's principals overview (updated 2026-09-14) lists Deny among policy types that "don't support sets of agent identities", and gives the deny form for all agents in a project as `principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/PROJECT_NUMBER`. The principal-identifiers page, same date, still lists the `principalSet` forms in its deny table: the two pages conflict (S072). | SD-22: the `principal://` form, written by 17 per project, proven by 18's P8 spike with a denied call. 13 creates no agent entry. |
-| `agentregistry`, `admin`, `iam`, `logging`, `monitoring`, `essentialcontacts`, `billingbudgets`, `observability`, `telemetry`, `agentidentity`, `gmail` and others inside `gcp.restrictServiceUsage` allow-lists (02 §4.2); P71's "agentregistry is refused by the P-SA allow-list" (SETUP l.2048) | None of these is on Google's list of services supported by the constraint (updated 2026-09-09). A service that is not on the list is neither allowed nor refused by it. Listing it creates a false control. | Committed allow-lists hold only governed services. The rest is listed per folder as "not governed, fenced by" (deny rule, IAM, CI). `agentregistry` is fenced by project IAM in the agent projects (05 §2.2) and the shared registry's admission rules enforced by the register's CI (16): it is neither on the `gcp.restrictServiceUsage` supported list nor on the deny-policy supported list, so no deny rule can name it either (OP-2.5). |
+| `agentregistry`, `admin`, `iam`, `logging`, `monitoring`, `essentialcontacts`, `billingbudgets`, `observability`, `telemetry`, `agentidentity`, `gmail` and others inside `gcp.restrictServiceUsage` allow-lists (02 §4.2); P71's "agentregistry is refused by the P-SA allow-list" (SETUP l.2048) | None of these is on Google's list of services supported by the constraint (updated 2026-09-09). A service that is not on the list is neither allowed nor refused by it. Listing it creates a false control. | Committed allow-lists hold only governed services. The rest is listed per folder as "not governed, fenced by" (deny rule, IAM, CI). `agentregistry` is not governed by `gcp.restrictServiceUsage`; its writes are deniable since the deny-support page of 2026-09-29, and are denied on core by `deny-core-agents` (OP-2.5), beside project IAM in the agent projects (05 §2.2) and the shared registry's admission rules enforced by the register's CI (16). |
 | `pab-agents` rules listing "the aggregated Pub/Sub topics in `CORE_PROJECT` and the approval surface ... never a whole core project" (04 §4.3) | A PAB rule's `resources` accepts "Resource Manager resources (projects, folders, and organizations)" only (PAB policies page, updated 2026-09-14). A topic cannot be listed. | `pab-agents` has one rule, `fld-agentic-platform`, which already contains `fld-platform-core`. The topic-level fence is IAM on the topic. |
 | "`pab-core-ci`, a second PAB binding `factory-apply@` and `platform-drift@`" (02 §4.4) | A PAB binds a principal set (a workload pool, a Workspace domain, a project, folder or organisation principal set, or a project's agent identities). No single service account can be a target. | Two bindings on the project principal sets of `CICD_PROJECT` and `CORE_PROJECT`, each with a condition on `principal.subject`, so only those two accounts are subject to the policy (conditions attribute reference). |
 | B1 `in:eu-locations` alone (02 §4.1) | The `eu-locations` value group holds `EU`, `eu` and the EU regions, but not `europe`. `europe` is only in `europe-locations`, which also holds the UK and Switzerland (defining-locations page, updated 2026-09-09). Eve's key ring `eve-eu` (SD-47) and the `gemini` key ring use Cloud KMS location `europe`, so 23 would be refused. | B1 = `in:eu-locations` plus the single value `is:europe`, with the residency note passed to 08's table. |
@@ -74,7 +75,7 @@ flowchart TD
 - [ ] File 03 has signed SD-15, SD-22, SD-24, SD-25 and SD-46, and set `GIT_OIDC_ISSUER`, `PLATFORM_REPO_REMOTE`, `SECOND_HUMAN_EMAIL` and `SECURITY_REVIEWER_EMAIL` (a value or `*tbd*`). Branch protection on `main` requires two human reviewers.
 - [ ] File 01 values: `ORG_ID`, `DIRECTORY_CUSTOMER_ID`, `DOMAIN`, `REGION`, `PLATFORM_REPO_DIR`, `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER`, `DRILL_CALENDAR`, and its helpers.
 - [ ] File 07 values: `BILLING_ACCOUNT_ID`, and a `BOOTSTRAP_BILLING_EXPIRY` at least 20 days away. The probe project of §5 is linked under `sa-1-admin@`'s Billing Account User.
-- [ ] Workstation: gcloud with the `beta` component (Policy Troubleshooter is `gcloud beta`), `jq`, `curl`, `git`. The gcloud configuration has no default project.
+- [ ] Workstation: gcloud with the `beta` component, `jq`, `curl`, `git`. Policy Troubleshooter with PAB is `gcloud beta policy-intelligence troubleshoot-policy iam` where that command exists, otherwise the v3beta REST call `iam:troubleshoot` (OP-7.7 probes which). The gcloud configuration has no default project.
 - [ ] The second human (and the security reviewer, if appointed) can be reached to approve PAM grants in each sitting window, and to review two pull requests.
 
 ## People
@@ -164,14 +165,14 @@ need FLD_AGENTIC_PLATFORM FLD_PLATFORM_CORE FLD_AGENTS_R FLD_AGENTS_R_NONPROD FL
 need FLD_GEMINI_ENTERPRISE FLD_AGENTS_R_PROD FLD_AGENTS_W_PROD FLD_AGENTS_P_PROD FLD_AGENTS_P_SA_PROD FLD_AGENTS_P_SA_NONPROD FLD_CONTROLLERS_PROD FLD_IMPROVERS_PROD PLATFORM_ENV_FILE DRILL_CALENDAR SA_1_ADMIN
 need SCC_TIER TAG_KEY_TIER CICD_PROJECT CORE_PROJECT LOGGING_PROJECT KMS_PROJECT VALIDATOR_PROJECT SA_FACTORY_APPLY SA_PLATFORM_DRIFT SA_K7_EXECUTOR WIF_PROVIDER TF_STATE_BUCKET GIT_OIDC_ISSUER BILLING_ACCOUNT_ID
 need ENT_PLATFORM_POLICY ENT_PROJECT_REPAIR_CORE ENT_BOOTSTRAP_MODULE_IMPROVERS_NONPROD SECOND_HUMAN_EMAIL PLATFORM_REPO_REMOTE
-test "$SCC_TIER" = "PREMIUM/eu" && echo "SCC gate OK"
-for d in SD-15 SD-22 SD-24 SD-25 SD-46; do ls "$PLATFORM_REPO_DIR"/decisions/*"$d"* >/dev/null 2>&1 && echo "SIGNED $d" || echo "UNSIGNED $d"; done
+test "$SCC_TIER" = "PREMIUM/eu" && echo "SCC gate OK" || { echo "STOP: SCC_TIER is not PREMIUM/eu"; false; }
+"$PLATFORM_REPO_DIR/tools/decision-need.sh" SD-15 SD-22 SD-24 SD-25 SD-46
 grep -E $'\t(PA-[0-9.]+)\tDONE\t' "$BUILD_LOG_DIR/checkpoints.tsv" | tail -1
 gcloud auth list --filter=status:ACTIVE --format="value(account)"
 checkpoint OP-0.1 START
 ```
 
-- **VERIFY:** No `MISSING` line; `SCC gate OK`; five `SIGNED` lines; the last file-12 checkpoint is `DONE` for its closing step; the active account is `SA_1_ADMIN`. Any other result stops the file. `SECURITY_REVIEWER_EMAIL` may be `*tbd*`: then write `checkpoint OP-0.1 DONE - - "one-approver mode: security reviewer not appointed"`.
+- **VERIFY:** No `MISSING` line; `SCC gate OK` and no `STOP:` line; five `SIGNED` lines from 03's `decision-need.sh`, which checks each record's signature hashes, not only that a file exists (any `UNSIGNED`, `MISMATCH` or `INVALID` line stops the file); the last file-12 checkpoint is `DONE` for its closing step; the active account is `SA_1_ADMIN`. Any other result stops the file. `SECURITY_REVIEWER_EMAIL` may be `*tbd*`: then write `checkpoint OP-0.1 DONE - - "one-approver mode: security reviewer not appointed"`.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** The output as `<date>-OP-0.1-gates-v1.txt`. TISAX 1.2.2 (separation of duties recorded).
 
@@ -185,15 +186,15 @@ Repeat this step at the start of each 1-hour window; every later step that chang
 
 ```bash
 PR_URL="<URL of the merged pull request this window applies, from OP-2.6 or OP-8.2>"
-gcloud pam grants create --entitlement="$ENT_PLATFORM_POLICY" --requested-duration=3600s --justification="setup 13 ${PR_URL}"
-gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --format="table(name,state,createTime)"
+gcloud pam grants create --entitlement="$ENT_PLATFORM_POLICY" --requested-duration=3600s --justification="setup 13 ${PR_URL}" --billing-project="$CICD_PROJECT"
+gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --billing-project="$CICD_PROJECT" --format="table(name,state,createTime)"
 ```
 
   Approver, after opening `PR_URL` and checking the merge commit:
 
 ```bash
-gcloud pam grants search --entitlement="<ENT_PLATFORM_POLICY value>" --caller-relationship=can-approve --format="table(name,justification.unstructuredJustification)"
-gcloud pam grants approve "<grant name from the search>" --reason="checked merged commit of <PR_URL>"
+gcloud pam grants search --entitlement="<ENT_PLATFORM_POLICY value>" --caller-relationship=can-approve --billing-project="$CICD_PROJECT" --format="table(name,justification.unstructuredJustification)"
+gcloud pam grants approve "<grant name from the search>" --reason="checked merged commit of <PR_URL>" --billing-project="$CICD_PROJECT"
 ```
 
 - **VERIFY:** The requester's search shows the grant `ACTIVE`. Then, after up to a few minutes:
@@ -203,11 +204,11 @@ curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H
 ```
 
   echoes the three permissions. The same call before approval echoes none, which proves nothing is standing.
-- **ROLLBACK:** At the end of the window, revoke the grant. `gcloud pam grants` has no `withdraw` subcommand (its subcommands are `approve`, `create`, `deny`, `describe`, `list`, `revoke` and `search`: `gcloud pam grants` reference, read 2026-09-15); the name `gcloud pam grants search` returns is already fully qualified, so no `--location` or `--organization` flag is passed:
+- **ROLLBACK:** At the end of the window, revoke the grant. `gcloud pam grants` has no `withdraw` subcommand (its subcommands are `approve`, `create`, `deny`, `describe`, `list`, `revoke` and `search`: `gcloud pam grants` reference, read 2026-09-15); the name `gcloud pam grants search` returns is already fully qualified, so no `--location` or `--organization` flag is passed; `--billing-project` is, as on every PAM call (12):
 
 ```bash
-G="$(gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --filter="state=ACTIVE" --format="value(name)")"
-test -n "$G" && gcloud pam grants revoke "$G" --reason="setup 13 window closed"
+G="$(gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --filter="state=ACTIVE" --billing-project="$CICD_PROJECT" --format="value(name)")"
+test -n "$G" && gcloud pam grants revoke "$G" --reason="setup 13 window closed" --billing-project="$CICD_PROJECT"
 ```
 
   Otherwise the grant expires after 1 hour.
@@ -242,15 +243,19 @@ fi
 rm -f "$d/probe.err"
 gcloud org-policies set-policy "$f" --update-mask='*'
 sleep 5
-gcloud org-policies describe "$con" "$flag" --format=json | jq -S 'del(.etag,.spec.etag,.spec.updateTime,.dryRunSpec.etag,.dryRunSpec.updateTime)' > "$d/${kind}-${id}-${con}.applied.json"
-if jq -S . "$f" | diff -u - "$d/${kind}-${id}-${con}.applied.json"; then echo "APPLIED $name"; else echo "READBACK-DIFF $name: read the diff; a value format difference is acceptable only if the meaning is identical" >&2; exit 3; fi
+a="$d/${kind}-${id}-${con}.applied.json"
+gcloud org-policies describe "$con" "$flag" --format=json | jq -S 'del(.etag,.spec.etag,.spec.updateTime,.dryRunSpec.etag,.dryRunSpec.updateTime)' > "$a"
+# Responses name a project by number, and proto3 JSON may omit inheritFromParent:false, so compare the meaning, not the text.
+case "$kind" in projects) want="projects/$(gcloud projects describe "$id" --format='value(projectNumber)')/policies/$con";; *) want="$name";; esac
+norm='{s:(.spec.rules // null), si:(.spec.inheritFromParent // false), d:(.dryRunSpec.rules // null), di:(.dryRunSpec.inheritFromParent // false)}'
+if [ "$(jq -r .name "$a")" = "$want" ] && diff -u <(jq -S "$norm" "$f") <(jq -S "$norm" "$a"); then echo "APPLIED $name"; else echo "READBACK-DIFF $name: expected name $want; read the diff; a value format difference is acceptable only if the meaning is identical" >&2; exit 3; fi
 SCRIPT
 chmod 755 "$PLATFORM_REPO_DIR/policies/tools/op-set.sh"
 ```
 
   Rollback of any applied file is the predecessor: `{"predecessor":"none"}` means `gcloud org-policies delete <constraint> --folder=<id>` (or `--project=<id>`); otherwise `gcloud org-policies set-policy <predecessor file> --update-mask='*'` after removing its `etag` fields with `jq 'del(.etag,.spec.etag,.spec.updateTime,.dryRunSpec.etag,.dryRunSpec.updateTime)'`. Commands and fields: `set-policy` reference (JSON or YAML file; update mask `*`), dry-run page, `gcloud org-policies describe` reference (all read 2026-09-15).
 
-  Exit codes, which every caller in this file relies on: `0` applied and read back identical; `2` an attachment point this file does not set; `3` read-back difference; `4` the predecessor could not be read, so nothing was applied. The predecessor is probed with `gcloud org-policies describe`, never with an unchecked `curl`: an HTTP error must never be read as "no predecessor", because the rollback of every later step is that file, and a false `{"predecessor":"none"}` turns a rollback into a `delete` of an inherited or hand-made policy.
+  Exit codes, which every caller in this file relies on: `0` applied and read back identical in meaning; `2` an attachment point this file does not set; `3` read-back difference; `4` the predecessor could not be read, so nothing was applied. The predecessor is probed with `gcloud org-policies describe`, never with an unchecked `curl`: an HTTP error must never be read as "no predecessor", because the rollback of every later step is that file, and a false `{"predecessor":"none"}` turns a rollback into a `delete` of an inherited or hand-made policy. The read-back for code `3` compares `spec` and `dryRunSpec` rules and `inheritFromParent` (an absent value read as `false`) on both sides, and checks the policy name separately: Google accepts `projects/{projectId}/policies/...` in a request "but responses will return the name using the equivalent project number" (Organization Policy API v2 `organizations.policies`, updated 2026-07-22, read 2026-10-01), so a project file's name is checked against `projects/<project number>/policies/<constraint>`. A text diff of the whole file would exit `3` on every project-level file after applying it. `Assumption:` proto3 JSON also leaves out `inheritFromParent: false`, which the normalisation absorbs.
 
   Every caller loops as below, so one bad file stops the batch instead of being passed over:
 
@@ -267,7 +272,7 @@ n=0; for f in <the files of the step>; do policies/tools/op-set.sh "$f" || { ech
 ### OP-1.1 Snapshot every existing policy on the organisation and the platform folders
 
 - **WHO:** Platform owner.
-- **WHERE:** Shell. No grant needed if `platform-readers@` holds `roles/orgpolicy.policyViewer` (12); otherwise under the grant of OP-0.2.
+- **WHERE:** Shell, under an `ENT_PROJECT_REPAIR_CORE` grant requested as in OP-0.2 (approver: the one 12 recorded), and also under the grant of OP-0.2 unless `platform-readers@` holds `roles/orgpolicy.policyViewer` (12). The REST reads send `x-goog-user-project: $CORE_PROJECT`, and using a quota project needs `serviceusage.services.use` on it (quota-project page, read 2026-10-01); after 12 PA-9.2 the platform owner holds that on `CORE_PROJECT` only through the repair grant's `roles/serviceusage.serviceUsageAdmin`. `CICD_PROJECT` cannot stand in, because `orgpolicy` is not enabled there (10 §1).
 - **ACTION:**
 
 ```bash
@@ -285,8 +290,8 @@ jq -r 'if type=="array" then .[] else .policies[]? end | .name' "$S"/*.json | te
 FOUND="$(grep -c . "$S/all-policy-names.txt" || true)"
 ORGLOC="$(grep -c 'gcp.resourceLocations' "$S/all-policy-names.txt" || true)"
 NONORG="$(grep -vc '^organizations/' "$S/all-policy-names.txt" || true)"
-test "$NONORG" -eq 0 || echo "STOP: a folder or core project already holds a policy"
-test "$ORGLOC" -eq 0 || echo "STOP: a gcp.resourceLocations policy already exists (SD-15 order broken)"
+test "$NONORG" -eq 0 || { echo "STOP: a folder or core project already holds a policy"; false; }
+test "$ORGLOC" -eq 0 || { echo "STOP: a gcp.resourceLocations policy already exists (SD-15 order broken)"; false; }
 echo "policies found: $FOUND"
 unset TOKEN_HDR
 ```
@@ -300,7 +305,7 @@ unset TOKEN_HDR
 ### OP-1.2 Read the constraint catalogue from Google, and stop on any mismatch
 
 - **WHO:** Platform owner.
-- **WHERE:** Shell.
+- **WHERE:** Shell, under the same `ENT_PROJECT_REPAIR_CORE` grant as OP-1.1, for the same quota-project reason.
 - **ACTION:** The organization-policy API returns, per constraint, `supportsDryRun` and, for managed constraints, the parameter schema (`ListConstraintsResponse` reference, read 2026-09-15). Read it at the platform folder, so the answer is the one that applies there.
 
 ```bash
@@ -352,12 +357,13 @@ echo "== pab bindings targeting the organisation" >> "$B"
 gcloud iam policy-bindings search-target-policy-bindings --organization="$ORG_ID" --location=global --target="//cloudresourcemanager.googleapis.com/organizations/$ORG_ID" --format="value(name)" >> "$B" || { echo "STOP: binding search failed on the organisation"; false; }
 for p in CICD_PROJECT CORE_PROJECT; do
   echo "== pab bindings targeting $p" >> "$B"
-  gcloud iam policy-bindings search-target-policy-bindings --organization="$ORG_ID" --location=global --target="//cloudresourcemanager.googleapis.com/projects/$(eval echo \$$p)" --format="value(name)" >> "$B" || { echo "STOP: binding search failed on $p"; false; }
+  P=$(eval echo \$$p); PN=$(gcloud projects describe "$P" --format='value(projectNumber)')
+  gcloud iam policy-bindings search-target-policy-bindings --project="$P" --location=global --target="//cloudresourcemanager.googleapis.com/projects/$PN" --format="value(name)" >> "$B" || { echo "STOP: binding search failed on $p"; false; }
 done
 grep -c '^[a-z]' "$B" || true
 ```
 
-  `search-target-policy-bindings` requires `--target`, `--location` and one of `--organization` or `--folder`; it has no `--project` flag, and the parent flag names where the search runs, not the target's own parent (its reference, read 2026-09-15; the reference's own example is `--organization=123 --location=global --target=//cloudresourcemanager.googleapis.com/organizations/123`). Each call is followed by `|| { echo STOP...; false; }`, because an errored call prints nothing on stdout and would otherwise read as "empty, therefore proven".
+  `search-target-policy-bindings` takes `--target`, `--location` and a parent: `--organization`, `--folder` or, for a project parent (resource type `iam.projects.locations`), `--project`. The parent "should be the nearest Resource Manager resource (project, folder, or organization) to the target", and a project target is written `//cloudresourcemanager.googleapis.com/projects/{project_number}` (its reference, updated 2026-05-27, read 2026-10-01). So the organisation is searched from the organisation, and each core project from itself, by number. Each call is followed by `|| { echo STOP...; false; }`, because an errored call prints nothing on stdout and would otherwise read as "empty, therefore proven".
 - **VERIFY:** No `STOP:` line; every call exited 0; the `grep -c` count of listed names is `0`, or the only names are policies the organisation already had, which are recorded and left untouched. An empty result from a call that errored proves nothing, so a `STOP:` line ends the file. A policy named `deny-agents-platform`, `deny-core-agents`, `deny-improvers`, `pab-agents` or `pab-core-ci` already present also stops the file: a hand edit happened outside this procedure.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `$B`, registered: `evidence_add OP-1.4 deny-pab-before E-05 4.2.1 "build-log:records/<file>" "$B"`. TISAX 4.2.1.
@@ -569,7 +575,7 @@ dry "policies/dryrun/FLD_AGENTIC_PLATFORM/custom.fldFolderNaming.json" "folders/
 Two consequences of that rule, applied above:
 
 - Permission names take the form SERVICE_FQDN/RESOURCE.ACTION, and Resource Manager's FQDN is `cloudresourcemanager.googleapis.com`, not `resourcemanager.googleapis.com`. `CORE_GOV` therefore reads `cloudresourcemanager.googleapis.com/projects.setIamPolicy` and `cloudresourcemanager.googleapis.com/folders.setIamPolicy` (deny-permissions-support page, read 2026-09-15).
-- `agentregistry.googleapis.com/services.create|update|delete` is **not** written into any deny policy: Agent Registry is a new surface and is not on the deny-support list, so the three names would make the `deny-core-agents` create call fail outright. The fence for Agent Registry is project IAM in the agent projects (05 §2.2) and the shared registry's own admission rules (16), which the register's CI enforces; it is neither a deny rule nor `gcp.restrictServiceUsage`, which does not govern the service either.
+- `agentregistry.googleapis.com/services.create`, `.update` and `.delete` are deniable since the deny-support page of 2026-09-29 ("Agent Registry `agentregistry.googleapis.com/*.*`", read 2026-10-01), and are denied on core by `deny-core-agents` through `CORE_GOV`. Agent Registry is not governed by `gcp.restrictServiceUsage` (supported-services page, updated 2026-09-30). Project IAM in the agent projects (05 §2.2) and the shared registry's own admission rules (16), which the register's CI enforces, remain the other fences. Re-save `deny-supported-<date>.txt` on the day (OP-2.6) so the `NOT-DENIABLE` check reads the list that carries these names.
 
 A deny condition may use only resource-tag functions (deny page), so each conditioned rule carries one `resource.matchTag` call.
 
@@ -578,7 +584,7 @@ R1='"secretmanager.googleapis.com/versions.access","secretmanager.googleapis.com
 R2='"cloudkms.googleapis.com/cryptoKeyVersions.useToSign","cloudkms.googleapis.com/cryptoKeyVersions.useToDecrypt","cloudkms.googleapis.com/cryptoKeys.setIamPolicy"'
 R3='"iam.googleapis.com/serviceAccountKeys.create","iam.googleapis.com/serviceAccounts.getAccessToken","iam.googleapis.com/serviceAccounts.getOpenIdToken","iam.googleapis.com/serviceAccounts.signBlob","iam.googleapis.com/serviceAccounts.signJwt","iam.googleapis.com/serviceAccounts.implicitDelegation","iam.googleapis.com/serviceAccounts.setIamPolicy"'
 R6='"secretmanager.googleapis.com/versions.access","secretmanager.googleapis.com/versions.add","secretmanager.googleapis.com/secrets.setIamPolicy","cloudkms.googleapis.com/cryptoKeyVersions.useToSign","cloudkms.googleapis.com/cryptoKeyVersions.useToDecrypt","cloudkms.googleapis.com/cryptoKeys.setIamPolicy","iam.googleapis.com/serviceAccounts.getAccessToken","iam.googleapis.com/serviceAccounts.signBlob","iam.googleapis.com/serviceAccounts.signJwt","iam.googleapis.com/serviceAccounts.implicitDelegation","iam.googleapis.com/serviceAccounts.actAs","iam.googleapis.com/serviceAccounts.setIamPolicy"'
-CORE_GOV='"iam.googleapis.com/serviceAccounts.actAs","run.googleapis.com/services.create","run.googleapis.com/services.update","run.googleapis.com/services.delete","run.googleapis.com/services.setIamPolicy","run.googleapis.com/jobs.create","run.googleapis.com/jobs.update","run.googleapis.com/jobs.setIamPolicy","artifactregistry.googleapis.com/repositories.uploadArtifacts","cloudbuild.googleapis.com/builds.create","logging.googleapis.com/sinks.create","logging.googleapis.com/sinks.update","logging.googleapis.com/sinks.delete","logging.googleapis.com/buckets.update","logging.googleapis.com/buckets.delete","storage.googleapis.com/buckets.setIamPolicy","bigquery.googleapis.com/datasets.setIamPolicy","cloudresourcemanager.googleapis.com/projects.setIamPolicy","cloudresourcemanager.googleapis.com/folders.setIamPolicy","iam.googleapis.com/roles.create","iam.googleapis.com/roles.update","iam.googleapis.com/roles.delete"'
+CORE_GOV='"iam.googleapis.com/serviceAccounts.actAs","run.googleapis.com/services.create","run.googleapis.com/services.update","run.googleapis.com/services.delete","run.googleapis.com/services.setIamPolicy","run.googleapis.com/jobs.create","run.googleapis.com/jobs.update","run.googleapis.com/jobs.setIamPolicy","artifactregistry.googleapis.com/repositories.uploadArtifacts","cloudbuild.googleapis.com/builds.create","logging.googleapis.com/sinks.create","logging.googleapis.com/sinks.update","logging.googleapis.com/sinks.delete","logging.googleapis.com/buckets.update","logging.googleapis.com/buckets.delete","storage.googleapis.com/buckets.setIamPolicy","bigquery.googleapis.com/datasets.setIamPolicy","cloudresourcemanager.googleapis.com/projects.setIamPolicy","cloudresourcemanager.googleapis.com/folders.setIamPolicy","iam.googleapis.com/roles.create","iam.googleapis.com/roles.update","iam.googleapis.com/roles.delete","agentregistry.googleapis.com/services.create","agentregistry.googleapis.com/services.update","agentregistry.googleapis.com/services.delete"'
 set_of() { printf '"principalSet://cloudresourcemanager.googleapis.com/folders/%s/type/ServiceAccount"' "$1"; }
 cat > policies/deny/deny-agents-platform.json <<EOF
 {"displayName":"deny-agents-platform","rules":[
@@ -606,8 +612,9 @@ jq -n --arg f "//cloudresourcemanager.googleapis.com/folders/$FLD_AGENTIC_PLATFO
 
   What each deny policy holds today, and why nothing more:
   - `deny-agents-platform`: rule R6 of 04 §3 only. R1-R5 and R3b name agent-project principals and action-service exceptions that do not exist; 17 adds them per project under `ENT_PLATFORM_POLICY`, in SD-22's `principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${PROJECT_NUMBER}` form beside the project's `principalSet://cloudresourcemanager.googleapis.com/projects/N/type/ServiceAccount`. 22 adds `MO_PROJECT`'s entry.
-  - `deny-core-agents` at `fld-platform-core`: one rule over the service accounts of every agent, controller and improver folder, for credential, impersonation, deployment and governance permissions on core resources. It does not deny Pub/Sub publishing, BigQuery reads or registry reads, which agents legitimately use in core (04 §4.3). It denies no Agent Registry permission, for the reason above. `iam.googleapis.com/serviceAccounts.actAs` is denied here, because no agent account acts as a core account. The "every permission to every agent principal form" rule of 02 §2.3 needs agent principals: 17 adds an agent-identity rule per project, and 18's P8 spike proves it.
+  - `deny-core-agents` at `fld-platform-core`: one rule over the service accounts of every agent, controller and improver folder, for credential, impersonation, deployment and governance permissions on core resources. It does not deny Pub/Sub publishing, BigQuery reads or registry reads, which agents legitimately use in core (04 §4.3). It denies the three Agent Registry write permissions (`services.create`, `.update`, `.delete`), for the reason above; reads stay allowed. `iam.googleapis.com/serviceAccounts.actAs` is denied here, because no agent account acts as a core account. The "every permission to every agent principal form" rule of 02 §2.3 needs agent principals: 17 adds an agent-identity rule per project, and 18's P8 spike proves it.
   - `deny-improvers` at `fld-agentic-platform`: credential and impersonation permissions for improver accounts everywhere, unconditioned. No `actAs`: Mo's per-project deployer needs it, as R3b allows. `run.googleapis.com/routes.invoke` is denied only on resources tagged `agp-tier` = `w`, `p`, `p-sa` or `ctl` (09's tag values), so Mo can still invoke its own services under `fld-improvers` (SD-24).
+  - No deny policy needs an `exceptionPrincipals` entry for the PAM service agent `service-org-ORG_ID@gcp-sa-pam.iam.gserviceaccount.com`, which Google's PAM setup page now asks for ("Deny policies: Add the Privileged Access Manager service agent to the exceptionPrincipals field of your policies", updated 2026-09-24, read 2026-10-01): R6 names one account, and the folder sets are `type/ServiceAccount`, not `type/ServiceAgent`. The re-run line for 16 asks its drift job to assert that the agent stays out of every denied set.
 - **VERIFY:** `jq -e . policies/deny/*.json policies/pab/*.json >/dev/null && echo json-ok`; `yq`-free check of the custom constraints: `grep -c '^name: organizations/' policies/custom/*.yaml` prints `1` per file. Then, with Google's deny-support list already saved as OP-2.6 describes, run OP-2.6's `NOT-DENIABLE` loop here, before the branch is pushed:
 
 ```bash
@@ -817,7 +824,7 @@ A throwaway project under `fld-improvers-nonprod` is the only way to see a legac
 
 ```bash
 PROBE="agp-imp-opprobe-nonprod"
-gcloud pam grants create --entitlement="$ENT_BOOTSTRAP_MODULE_IMPROVERS_NONPROD" --requested-duration=3600s --justification="setup 13 OP-5.1 probe project for legacy constraint proofs; deviation BD-13-1; no register row (throwaway)"
+gcloud pam grants create --entitlement="$ENT_BOOTSTRAP_MODULE_IMPROVERS_NONPROD" --requested-duration=3600s --justification="setup 13 OP-5.1 probe project for legacy constraint proofs; deviation BD-13-1; no register row (throwaway)" --billing-project="$CICD_PROJECT"
 # after the second human's approval:
 gcloud projects create "$PROBE" --folder="$FLD_IMPROVERS_NONPROD" --labels="agent=opprobe,tier=imp,env=nonprod,created_by=setup-13"
 gcloud billing projects link "$PROBE" --billing-account="$BILLING_ACCOUNT_ID"
@@ -1053,7 +1060,7 @@ op_grant_guard() {
   local got
   got="$(curl -sS --fail-with-body -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -d '{"permissions":["iam.denypolicies.create","iam.principalaccessboundarypolicies.create"]}' "https://cloudresourcemanager.googleapis.com/v3/organizations/${ORG_ID}:testIamPermissions" | jq -r '[.permissions[]?] | length')"
   test "$got" = "2" || { echo "STOP: no ACTIVE grant on ENT_PLATFORM_POLICY (OP-0.2); nothing created"; return 1; }
-  gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --filter="state=ACTIVE" --format="value(name,requestTime)" | grep . || { echo "STOP: no ACTIVE grant listed"; return 1; }
+  gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --filter="state=ACTIVE" --billing-project="$CICD_PROJECT" --format="value(name,requestTime)" | grep . || { echo "STOP: no ACTIVE grant listed"; return 1; }
 }
 ```
 
@@ -1196,10 +1203,17 @@ gcloud resource-manager tags values list --parent="$TAG_KEY_TIER" --format="valu
 
 - **WHO:** Platform owner runs; the second human reads the outputs and initials the record.
 - **WHERE:** Shell and the git host. Wait 10 minutes after OP-7.6.
-- **ACTION:** First the evaluation, then the denied calls. Troubleshooter command: `gcloud policy-intelligence troubleshoot-policy iam RESOURCE --principal-email --permission`, whose `beta` version adds PAB (Policy Troubleshooter page, read 2026-09-15). `denyAccessState` is read from the response.
+- **ACTION:** First the evaluation, then the denied calls. The GA `gcloud policy-intelligence troubleshoot-policy iam` evaluates allow and deny policies only, not PAB, and the `beta` reference of 2026-05-27 publishes only `simulate`; Google's how-to (updated 2026-09-30) says to use the beta version, and the REST `v3beta` `iam:troubleshoot` method returns `overallAccessState`, `denyPolicyExplanation` and `pabPolicyExplanation` (all read 2026-10-01). `TS_RAW` therefore probes the `beta` command and otherwise posts to the REST method; both name `CORE_PROJECT` as quota project, so the step runs under the `ENT_PROJECT_REPAIR_CORE` grant of §7. `denyAccessState` is read from the response.
 
 ```bash
-TS() { gcloud beta policy-intelligence troubleshoot-policy iam "$1" --principal-email="$2" --permission="$3" --billing-project="$CORE_PROJECT" --format=json | jq -r '[.. | .denyAccessState? // empty] | unique | join(",")'; }
+TS_RAW() {  # RESOURCE PRINCIPAL_EMAIL PERMISSION -> troubleshooter JSON
+  if gcloud beta policy-intelligence troubleshoot-policy iam --help >/dev/null 2>&1; then
+    gcloud beta policy-intelligence troubleshoot-policy iam "$1" --principal-email="$2" --permission="$3" --billing-project="$CORE_PROJECT" --format=json
+  else
+    jq -n --arg p "$2" --arg r "$1" --arg x "$3" '{accessTuple:{principal:$p, fullResourceName:$r, permission:$x}}' | curl -sS --fail-with-body -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "x-goog-user-project: $CORE_PROJECT" -H "Content-Type: application/json" --data-binary @- "https://policytroubleshooter.googleapis.com/v3beta/iam:troubleshoot"
+  fi
+}
+TS() { TS_RAW "$@" | jq -r '[.. | .denyAccessState? // empty] | unique | join(",")'; }
 TS "//iam.googleapis.com/projects/${CORE_PROJECT}/serviceAccounts/op-probe-target@${CORE_PROJECT}.iam.gserviceaccount.com" "$SA_FACTORY_APPLY" iam.serviceAccounts.getAccessToken
 TS "//iam.googleapis.com/projects/${PROBE}/serviceAccounts/op-probe-target@${PROBE}.iam.gserviceaccount.com" "op-probe@${PROBE}.iam.gserviceaccount.com" iam.serviceAccounts.getAccessToken
 TS "//storage.googleapis.com/projects/_/buckets/${CORE_PROJECT}-op-probe" "op-probe@${PROBE}.iam.gserviceaccount.com" storage.buckets.setIamPolicy
@@ -1210,7 +1224,7 @@ TS "//iam.googleapis.com/projects/${PROBE}/serviceAccounts/op-probe-target@${PRO
 
   Then run **op-deny-probe** again on `main`, and repeat OP-7.3's first two commands.
 - **VERIFY:**
-  1. Troubleshooter: the first three lines contain a denied state (`DENY_ACCESS_STATE_DENIED`; `Assumption:` the enum spelling beside `DENY_ACCESS_STATE_NOT_DENIED`, which the page shows); the fourth, a control, contains only `DENY_ACCESS_STATE_NOT_DENIED`.
+  1. Troubleshooter: the first three lines contain a denied state (`DENY_ACCESS_STATE_DENIED`); the fourth, a control, contains only `DENY_ACCESS_STATE_NOT_DENIED` (enum values from the v3beta `iam.troubleshoot` reference, updated 2026-09-30, read 2026-10-01). Record which path `TS_RAW` took (`beta` command or REST).
   2. `actAs`, troubleshooter lines 5 and 6: both show a denied state. R6 denies `iam.googleapis.com/serviceAccounts.actAs` to `factory-apply@` on the whole of `fld-agentic-platform`, and `actAs` is the permission a factory needs to attach a runtime service account to a Cloud Run service or job, a Cloud Scheduler job or a Cloud Build trigger. This is a deliberate consequence, proved here rather than discovered by 17: file 17's FM-AGENT and FM-IMPROVER module equivalents cannot attach runtime service accounts as `factory-apply@`, and must do it under a privileged-phase identity. It is written into OP-9.2's re-run line for 17. If either line shows `DENY_ACCESS_STATE_NOT_DENIED`, record it: R6 is then not reaching that project and 17 must re-test before it relies on the denial.
   3. Workflow: `R6-PROBE: REFUSED` with a `Permission 'iam.serviceAccounts.getAccessToken' denied` line; `INSIDE: state bucket readable`; `BUDGETS: readable`. With OP-7.2's baseline, this is R6 proven for `factory-apply@`, in the `principal://iam.googleapis.com/projects/-/serviceAccounts/` form.
   4. Human probes: `DI-PROBE REFUSED 403 ...` (deny-improvers rule 1 over `folders/<FLD_IMPROVERS>/type/ServiceAccount`); the bucket binding refused with 403 (deny-core-agents over the same folder set, on `storage.googleapis.com/buckets.setIamPolicy`, which deny-improvers does not hold). With OP-7.3's baseline, both principal-set entries are proven.
@@ -1234,7 +1248,7 @@ gcloud iam principal-access-boundary-policies search-policy-bindings pab-agents 
 penv_set PAB_AGENTS "organizations/${ORG_ID}/locations/global/principalAccessBoundaryPolicies/pab-agents"
 ```
 
-  Commands and flags: create-and-apply, view pages and the `gcloud iam principal-access-boundary-policies` reference (updated 2026-09-14). Enforcement version pinned to `4`: chosen deliberately over the current default `3`, because each version can block every permission of the versions before it plus more, and the OP-7.10 proof depends on Resource Manager permissions being blockable (enforcement-version reference, read 2026-09-15). Never `latest`, and never left unset: `latest` and an unset value both track the default, so the set of blocked permissions would change under the platform without a decision (04 §4.3). The gcloud reference illustrates the flag with `1` or `latest`; an explicit number is what this file uses.
+  Commands and flags: create-and-apply, view pages and the `gcloud iam principal-access-boundary-policies` reference (updated 2026-09-14). Enforcement version pinned to `4`, today's default ("The current default enforcement version is 4", enforcement-version reference, updated 2026-09-25, read 2026-10-01); pinned so that a future default does not move it. `cloudresourcemanager.googleapis.com/*` and `billing.googleapis.com/budgets.*` are already in the version 2 table, so the Resource Manager permissions the OP-7.10 proof reads are blockable under `4`. Never `latest`, and never left unset: `latest` and an unset value both track the default, so the set of blocked permissions would change under the platform without a decision (04 §4.3). The gcloud reference illustrates the flag with `1` or `latest`; an explicit number is what this file uses.
 - **VERIFY:** `details.enforcementVersion` is `4`; one rule, `//cloudresourcemanager.googleapis.com/folders/<FLD_AGENTIC_PLATFORM>`; the binding search prints nothing. With no binding, the policy affects no principal: 17 binds it per agent project to `//agents.global.org-${ORG_ID}.system.id.goog/attribute.container/projects/N` (principal-identifiers page), and 18 proves the first binding on `canary-r`.
 - **ROLLBACK:** `gcloud iam principal-access-boundary-policies delete pab-agents --organization="$ORG_ID" --location=global` while no binding exists.
 - **EVIDENCE:** `evidence_add OP-7.8 pab-agents E-05 4.2.1 ...`. TISAX 4.2.1.
@@ -1255,7 +1269,7 @@ gcloud iam principal-access-boundary-policies search-policy-bindings pab-core-ci
 penv_set PAB_CORE_CI "organizations/${ORG_ID}/locations/global/principalAccessBoundaryPolicies/pab-core-ci"
 ```
 
-  The project principal set "contains all service accounts, workload identity pools, and agent identities in the specified project"; a binding condition may use only `principal.type` and `principal.subject`, with up to 10 logical operators and 250 characters; "if the condition evaluates to false, IAM doesn't enforce the policy for the principal" (PAB policies page and conditions attribute reference, updated 2026-09-14). So `walle-deployer@`, `factory-groups@`, the build identity and `k7-executor@` stay outside the boundary: K7 must be able to replace PAB policies, which are organisation resources outside the folder (04 §9.3). `gcloud iam policy-bindings create` flags: its reference, read 2026-09-15; `--project` is the gcloud-wide flag selecting a project parent (create-and-apply page: resource type `project`).
+  The project principal set "contains all service accounts, workload identity pools, and agent identities in the specified project"; a binding condition may use only `principal.type` and `principal.subject`, with up to 10 logical operators and 250 characters; "if the condition evaluates to false, IAM doesn't enforce the policy for the principal" (PAB policies page and conditions attribute reference, updated 2026-09-14). So `walle-deployer@`, `factory-groups@`, the build identity and `k7-executor@` stay outside the boundary: K7 must be able to replace PAB policies, which are organisation resources outside the folder (04 §9.3). `gcloud iam policy-bindings create` flags: its reference (updated 2026-08-04, read 2026-10-01) lists `iam.projects.locations.policyBindings` and, "for bindings parented by a project", the target forms `//cloudresourcemanager.googleapis.com/projects/PROJECT_NUMBER` and `.../projects/PROJECT_ID`, so `--project` selects the project parent.
 - **VERIFY:** `op_grant_guard` printed no `STOP:`; both grant names (`ENT_PLATFORM_POLICY` and `ENT_PROJECT_REPAIR_CORE`) are recorded with this step. Two bindings, each with its condition text exactly as above; `details.enforcementVersion` `4`, for the reason given in OP-7.8.
 - **ROLLBACK:** `gcloud iam policy-bindings delete pab-core-ci-factory-apply --project="$CICD_PROJECT" --location=global` (and the drift binding with `--project="$CORE_PROJECT"`), then `gcloud iam principal-access-boundary-policies delete pab-core-ci --organization="$ORG_ID" --location=global`. Deleting the binding restores the principal's access to everything its roles allow.
 - **EVIDENCE:** Bindings file and describe: `evidence_add OP-7.9 pab-core-ci E-05 4.2.1 ...`. TISAX 4.2.1.
@@ -1267,7 +1281,7 @@ penv_set PAB_CORE_CI "organizations/${ORG_ID}/locations/global/principalAccessBo
 - **ACTION:**
 
 ```bash
-TSP() { gcloud beta policy-intelligence troubleshoot-policy iam "$1" --principal-email="$2" --permission="$3" --billing-project="$CORE_PROJECT" --format=json | jq '{overall: .overallAccessState, pab: .pabPolicyExplanation}'; }
+TSP() { TS_RAW "$@" | jq '{overall: .overallAccessState, pab: .pabPolicyExplanation}'; }   # TS_RAW from OP-7.7; paste it again after a cut
 TSP "//cloudresourcemanager.googleapis.com/organizations/${ORG_ID}" "$SA_FACTORY_APPLY" resourcemanager.organizations.get
 TSP "//cloudresourcemanager.googleapis.com/projects/${CICD_PROJECT}" "$SA_FACTORY_APPLY" resourcemanager.projects.get
 TSP "//cloudresourcemanager.googleapis.com/organizations/${ORG_ID}" "$SA_PLATFORM_DRIFT" resourcemanager.organizations.getIamPolicy
@@ -1276,7 +1290,7 @@ TSP "//cloudresourcemanager.googleapis.com/organizations/${ORG_ID}" "$SA_K7_EXEC
 
   Then run **op-deny-probe** once more.
 - **VERIFY:**
-  1. Lines 1 and 3: the PAB explanation shows `pab-core-ci` applying and the principal not eligible (`PAB_ACCESS_STATE_NOT_ALLOWED`), because the organisation resource is outside `fld-agentic-platform` and Resource Manager permissions are blockable under enforcement version 4 (enforcement-version reference, updated 2026-09-14). Line 2: not blocked by PAB. Line 4, the control: `pab-core-ci` not enforced for `k7-executor@`.
+  1. Lines 1 and 3: the PAB explanation shows `pab-core-ci` applying and the principal not eligible (`PAB_ACCESS_STATE_NOT_ALLOWED`; the other values are `PAB_ACCESS_STATE_ALLOWED` and `PAB_ACCESS_STATE_NOT_ENFORCED`, v3beta reference read 2026-10-01), because the organisation resource is outside `fld-agentic-platform` and Resource Manager permissions are blockable from enforcement version 2 (enforcement-version reference, updated 2026-09-25). Line 2: not blocked by PAB. Line 4, the control: `pab-core-ci` not enforced for `k7-executor@`.
   2. Workflow: `INSIDE: state bucket readable` (the boundary does not break the factory inside the folder). `BUDGETS:` is either `readable` or `REFUSED`. Budgets on the billing account are a `billing.googleapis.com/budgets.*` permission blockable by PAB, and whether a billing account counts as inside a Resource Manager rule is not documented. If `REFUSED`: that is a live PAB denial for `factory-apply@`, and 02 §3.4's own fallback applies ("the billing link and the budgets move into the privileged phase"), recorded for 17 as a re-run point. If `readable`: the live out-of-boundary denial for `factory-apply@` is not yet shown, and 17's negative test adds one.
   3. Recorded consequence for 16: `platform-drift@` cannot read organisation-level policy or IAM while bound (line 3). 04 §5.2's "no role bound standing at the organisation" assertion needs a separate reader identity that `pab-core-ci` does not bind, holding only `roles/iam.securityReviewer` at the organisation, decided in 16. The drift job is BLOCKED on code, so nothing breaks today.
 - **ROLLBACK:** Read only. If 16 decides otherwise, OP-7.9's rollback removes the drift binding.
@@ -1471,12 +1485,12 @@ gcloud services disable policytroubleshooter.googleapis.com --project="$CORE_PRO
 
 ```bash
 d=$(date -u +%Y-%m-%d)
-printf '| BD-13-2 | %s | 13 OP-2 to OP-8 | DEV | recorded differences from 02 4.1-4.4 and 04 3-4 | fld-agentic-platform and children | policy commits of OP-2.6 and OP-8.2 | (1) allow-lists hold governed services only; (2) platform control set added to every list; (3) controllers add binaryauthorization and compute; (4) B1 adds is:europe; (5) pab-agents rule is the folder only; (6) pab-core-ci binds project principal sets with principal.subject conditions; (7) deny-core-agents and deny-improvers hold folder service-account sets now, agent entries later; (8) B7 applied directly; (9) policytroubleshooter enabled in CORE_PROJECT <kept or disabled>; (10) one-approver mode <yes until DATE, or no>; (11) no agentregistry permission is written into a deny policy (not on Googles deny-support list); the fence is project IAM and the registry admission of 16; (12) B17 stands at private-ranges-only; the all-traffic question of OP-5.6 is open as a dated decision for 03; (13) OP-5.6 second deploy outcome <refused, or deployed and recorded> | n/a | n/a | second human initialled OP-9.2 | wiki pages 02 and 04 corrected by pull request; Tier W gate at the latest | open |\n' "$d" >> "$DEVIATION_REGISTER"
+printf '| BD-13-2 | %s | 13 OP-2 to OP-8 | DEV | recorded differences from 02 4.1-4.4 and 04 3-4 | fld-agentic-platform and children | policy commits of OP-2.6 and OP-8.2 | (1) allow-lists hold governed services only; (2) platform control set added to every list; (3) controllers add binaryauthorization and compute; (4) B1 adds is:europe; (5) pab-agents rule is the folder only; (6) pab-core-ci binds project principal sets with principal.subject conditions; (7) deny-core-agents and deny-improvers hold folder service-account sets now, agent entries later; (8) B7 applied directly; (9) policytroubleshooter enabled in CORE_PROJECT <kept or disabled>; (10) one-approver mode <yes until DATE, or no>; (11) B17 stands at private-ranges-only; the all-traffic question of OP-5.6 is open as a dated decision for 03; (12) OP-5.6 second deploy outcome <refused, or deployed and recorded> | n/a | n/a | second human initialled OP-9.2 | wiki pages 02 and 04 corrected by pull request; Tier W gate at the latest | open |\n' "$d" >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" commit -m "registers: BD-13-2 (setup 13)"
 ```
 
   Then add these lines to README's re-run index, if not already there:
-  - "16: `platform-drift@` is bound by `pab-core-ci` and cannot read organisation-level IAM or policy; decide a separate organisation reader for 04 §5.2's assertion; live PAB proof for `platform-drift@` when its job exists".
+  - "16: `platform-drift@` is bound by `pab-core-ci` and cannot read organisation-level IAM or policy; decide a separate organisation reader for 04 §5.2's assertion; live PAB proof for `platform-drift@` when its job exists; the drift job asserts that the PAM service agent stays out of every denied principal set".
   - "17: add R1-R5, R3b entries per agent project to `DENY_AGENTS_PLATFORM` (SD-22 form) and the agent rule to `DENY_CORE_AGENTS`; bind `PAB_AGENTS` per project; add a live out-of-boundary denial for `factory-apply@` and a refused second WIF provider (B19) to the factory negative test; R6 denies `factory-apply@` both `getAccessToken` **and** `iam.googleapis.com/serviceAccounts.actAs` across `fld-agentic-platform` (both proved in OP-7.7), so from the routine phase `factory-apply@` can neither impersonate a runtime account nor attach one to a Cloud Run service or job, a Cloud Scheduler job or a Cloud Build trigger: 02 §3.4's 'first revision as the project deployer' and every `--service-account` attachment move to the privileged phase, or R6 gains a recorded `exceptionPermissions` entry for `actAs` by pull request under `ENT_PLATFORM_POLICY`; if OP-7.10 showed `BUDGETS: REFUSED`, budgets move to the privileged phase too".
   - "18: P8 spike proves the agent-principal deny form and the first `pab-agents` binding on `canary-r`; KF-1 uses the `policies/org/*/gcp.restrictServiceUsage.json` files as its restore set; if OP-5.6's second deploy succeeded, add to the spike list a custom constraint on `run.googleapis.com/Service` requiring a VPC egress setting, because `run.allowedVPCEgress` fences a wrong value but not the absence of VPC connectivity".
   - "19: `fld-gemini-enterprise` allow-list as the union of enabled governed services and the design list; confirm B1 admits the app's `eu` location".
@@ -1502,19 +1516,19 @@ git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" com
 - **ACTION:**
 
 ```bash
-for G in $(gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --filter="state=ACTIVE" --format="value(name)"); do
-  gcloud pam grants revoke "$G" --reason="setup 13 complete"
+for G in $(gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --filter="state=ACTIVE" --billing-project="$CICD_PROJECT" --format="value(name)"); do
+  gcloud pam grants revoke "$G" --reason="setup 13 complete" --billing-project="$CICD_PROJECT"
 done
-for G in $(gcloud pam grants search --entitlement="$ENT_PROJECT_REPAIR_CORE" --caller-relationship=had-created --filter="state=ACTIVE" --format="value(name)"); do
-  gcloud pam grants revoke "$G" --reason="setup 13 complete"
+for G in $(gcloud pam grants search --entitlement="$ENT_PROJECT_REPAIR_CORE" --caller-relationship=had-created --filter="state=ACTIVE" --billing-project="$CICD_PROJECT" --format="value(name)"); do
+  gcloud pam grants revoke "$G" --reason="setup 13 complete" --billing-project="$CICD_PROJECT"
 done
-gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --filter="state=ACTIVE" --format="value(name)"
+gcloud pam grants search --entitlement="$ENT_PLATFORM_POLICY" --caller-relationship=had-created --filter="state=ACTIVE" --billing-project="$CICD_PROJECT" --format="value(name)"
 penv_guard
 checkpoint OP-9.3 DONE - - "file 13 complete; dry runs enforced; deny and PAB created and proven for existing principals"
 sitting_end
 ```
 
-  Revoke, not withdraw: `gcloud pam grants` has no `withdraw` subcommand, and the grant names the search returns are already fully qualified, so `revoke` takes the name and `--reason` alone (its reference, read 2026-09-15).
+  Revoke, not withdraw: `gcloud pam grants` has no `withdraw` subcommand, and the grant names the search returns are already fully qualified, so `revoke` takes the name and `--reason`, plus `--billing-project="$CICD_PROJECT"` because the shell has no default project (12's rule for every PAM call; its reference, read 2026-09-15).
 - **VERIFY:** The final search prints nothing, so no grant is active; `SITTING-END OK`; a `DONE` line for every OP step in `checkpoints.tsv`, OP-8.5b included.
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** The final checkpoint line. TISAX 4.1.2.
@@ -1568,21 +1582,20 @@ sitting_end
 |---|---|
 | Google's principals overview says Deny does not support sets of agent identities; the principal-identifiers page lists `principalSet://.../attribute.platformContainer/...` in its deny table (both updated 2026-09-14) | 18's P8 spike, with SD-22's `principal://` form first |
 | Whether a folder-scoped `gcp.resourceLocations` policy can deactivate SCC | OP-4.2 and OP-6.2 readings |
-| The exact `denyAccessState` and PAB state enum values in troubleshooter output | OP-7.7 and OP-7.10 outputs, read against the Policy Troubleshooter page's sample |
 | The parameter name of `iam.managed.workloadIdentityPoolProviders` (not shown on the constraints reference) | OP-1.2's catalogue read |
 | That the platform control set (`securitycenter`, `securitycentermanagement`, `privilegedaccessmanager`, `policyanalyzer`) is what the lists need, and that controllers need no `artifactregistry` for cross-project image pulls | OP-8.1's 14-day violations |
 | Whether a billing account's budgets are inside or outside a PAB rule of Resource Manager resources | OP-7.10 step 2 |
 | PAB propagation time (no figure on Google's pages) | OP-7.10's 30-minute wait, re-read if needed |
 | Whether `gcp.restrictTLSVersion` is observable from a local `curl` against Cloud Storage | OP-8.5 (3) |
 | That a deny-policy condition accepts one `resource.matchTag` call per rule (the deny page says only tag functions are supported, and does not show `\|\|`) | OP-7.6's create call; each rule uses a single call |
-| That `gcloud iam policy-bindings create` accepts `--project` for a project parent (its reference lists `--folder` and `--organization`; the create-and-apply page names resource type `project`). `search-target-policy-bindings`, by contrast, is confirmed to take only `--organization` or `--folder`, which is why OP-1.4 searches project targets from the organisation | OP-7.9's create call |
-| Which enforcement version first blocks the Resource Manager permissions OP-7.10 reads (version 4 is a superset of the default 3, but the per-version tables were not read line by line on 2026-09-15) | OP-7.10's output: if `pab-core-ci` does not block `resourcemanager.organizations.get`, the pin is re-decided by pull request |
 | Whether `constraints/run.allowedVPCEgress` refuses a Cloud Run service that sets no VPC egress at all (Google documents it as restricting the *value*) | OP-5.6's second deploy, recorded either way; a custom constraint goes to 18's spike list if it does not |
 | Whether B17 should be `all-traffic` rather than `private-ranges-only` on `fld-agents-w`, `fld-agents-p` and `fld-controllers` (Google's guidance for forcing all egress through the VPC is `all-traffic`) | A dated decision raised in OP-5.6, signed in 03 before 23's and 33's first production deploys |
 
 ## Sources
 
 Google pages, all read on 2026-09-15 (last-updated dates as shown on the page): [Organization policy dry run](https://docs.cloud.google.com/resource-manager/docs/organization-policy/dry-run-policy) (2026-09-09); [Organization policy constraints reference](https://docs.cloud.google.com/organization-policy/reference/org-policy-constraints) (2026-09-14); [Restricting resource service usage](https://docs.cloud.google.com/resource-manager/docs/organization-policy/restricting-resources) (2026-09-09); [Services supported by restrict service usage](https://docs.cloud.google.com/organization-policy/reference/restrict-services-supported-services) (2026-09-09); [Restricting resource locations](https://docs.cloud.google.com/resource-manager/docs/organization-policy/defining-locations) (2026-09-09); [Restricting identities by domain](https://docs.cloud.google.com/resource-manager/docs/organization-policy/restricting-domains); [Creating and managing organization policies](https://docs.cloud.google.com/resource-manager/docs/organization-policy/using-constraints) (2026-09-09); [gcloud org-policies set-policy](https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/set-policy); [Organization Policy API v2 policies](https://docs.cloud.google.com/resource-manager/docs/reference/orgpolicy/rest/v2/organizations.policies) and [ListConstraintsResponse](https://docs.cloud.google.com/resource-manager/docs/reference/orgpolicy/rest/v2/ListConstraintsResponse); [Creating custom constraints](https://docs.cloud.google.com/organization-policy/create-custom-constraints) (2026-09-09); [Resource Manager custom constraints](https://docs.cloud.google.com/resource-manager/docs/custom-constraints); [Cloud Run custom constraints](https://docs.cloud.google.com/run/docs/securing/custom-constraints) (2026-09-01); [Binary Authorization for Cloud Run](https://docs.cloud.google.com/binary-authorization/docs/run/enabling-binauthz-cloud-run) (2026-09-03); [Deny access](https://docs.cloud.google.com/iam/docs/deny-access) (2026-09-14); [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support) (2026-09-14); [Principal identifiers](https://docs.cloud.google.com/iam/docs/principal-identifiers) (2026-09-14); [Principals overview](https://docs.cloud.google.com/iam/docs/principals-overview) (2026-09-14); [Principal Access Boundary policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies) (2026-09-14); [Create and apply PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-create) (2026-09-14); [View PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-view) and [Remove PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-remove) (2026-09-14); [PAB enforcement versions](https://docs.cloud.google.com/iam/docs/pab-blocked-permissions) (2026-09-14); [gcloud iam policy-bindings create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/create); [gcloud iam principal-access-boundary-policies update](https://docs.cloud.google.com/sdk/gcloud/reference/iam/principal-access-boundary-policies/update); [IAM conditions attribute reference](https://docs.cloud.google.com/iam/docs/conditions-attribute-reference); [IAM roles: iam](https://docs.cloud.google.com/iam/docs/roles-permissions/iam); [Policy Troubleshooter: troubleshoot access](https://docs.cloud.google.com/policy-intelligence/docs/troubleshoot-access); [gcloud policy-intelligence troubleshoot-policy iam](https://docs.cloud.google.com/sdk/gcloud/reference/policy-intelligence/troubleshoot-policy/iam); [gcloud pam grants create](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/create), [search](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/search), [approve](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/approve), [revoke](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/revoke) and the [subcommand list](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants) (no `withdraw`); [gcloud iam policy-bindings search-target-policy-bindings](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/search-target-policy-bindings); [gcloud org-policies describe](https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/describe); [gcloud storage buckets update](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/update); [gcloud iam service-accounts keys list](https://docs.cloud.google.com/sdk/gcloud/reference/iam/service-accounts/keys/list) and [delete](https://docs.cloud.google.com/sdk/gcloud/reference/iam/service-accounts/keys/delete); [Cloud Run with VPC Service Controls](https://docs.cloud.google.com/run/docs/securing/using-vpc-service-controls); [SCC data residency](https://docs.cloud.google.com/security-command-center/docs/data-residency-support) (2026-09-14); [SCC activation overview](https://docs.cloud.google.com/security-command-center/docs/activate-scc-overview) (2026-09-14); [gcloud scc manage services describe](https://docs.cloud.google.com/sdk/gcloud/reference/scc/manage/services/describe); [gcloud scc findings list](https://docs.cloud.google.com/sdk/gcloud/reference/scc/findings/list); [gcloud kms keys create](https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/create); [Agent Gateway set-up, Required APIs](https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/set-up-agent-gateway); [Manage workload identity pools and providers](https://docs.cloud.google.com/iam/docs/manage-workload-identity-pools-providers).
+
+Read on 2026-10-01: [Organization Policy API v2 `organizations.policies`](https://docs.cloud.google.com/resource-manager/docs/reference/orgpolicy/rest/v2/organizations.policies) (2026-07-22; responses name projects by number); [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support) (2026-09-29; Agent Registry listed); [Services supported by restrict service usage](https://docs.cloud.google.com/organization-policy/reference/restrict-services-supported-services) (2026-09-30; no `agentregistry`); [Policy Troubleshooter: troubleshoot access](https://docs.cloud.google.com/policy-intelligence/docs/troubleshoot-access) (2026-09-30); [Policy Troubleshooter v3beta `iam.troubleshoot`](https://docs.cloud.google.com/policy-intelligence/docs/reference/policytroubleshooter/rest/v3beta/iam/troubleshoot) (2026-09-30; deny and PAB enum values); [gcloud beta policy-intelligence](https://docs.cloud.google.com/sdk/gcloud/reference/beta/policy-intelligence) (2026-05-27); [gcloud iam policy-bindings search-target-policy-bindings](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/search-target-policy-bindings) (2026-05-27; `--project` parent, project number target); [gcloud iam policy-bindings create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/create) (2026-08-04; project parent); [PAB enforcement versions](https://docs.cloud.google.com/iam/docs/pab-blocked-permissions) (2026-09-25; default 4); [PAM permissions and setup](https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup) (2026-09-24; service agent in deny `exceptionPrincipals`); [Set the quota project](https://docs.cloud.google.com/docs/quotas/set-quota-project) (`serviceusage.services.use`).
 
 ## Related
 

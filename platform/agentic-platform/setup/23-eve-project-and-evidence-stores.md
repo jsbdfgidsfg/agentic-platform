@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-17
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed; Eve is "it".
 - Last executed: never
 - Stage: review §2 stage 22 (Eve's register row and the FM-VERIFIER runs), the dataset half of stage 24 and the bucket of stage 30, re-cut as **Eve-H part 1** (plan SD-10). Runs after the Tier R record of [17](17-factory-module-equivalents-and-tier-r-gate.md) and after [21](21-sandbox-tenant-and-nonprod-foundation.md) (the twin's id and the sandbox customer). **It does not wait on [22](22-mo-foundations.md)**, and no BLOCKED Mo input holds it (plan SD-45).
 - Step prefix: `EP`. Steps: 45. BLOCKED steps: EP-5.2 on its first run, EP-5.3 (the `eve` tables), EP-6.2 and EP-6.3 (the table-level writer bindings and their negative proof) — all on README **B-07**, which holds nine schema files of which the **eight `eve23` files** gate this file and the ninth (`eve36`) gates 36 (§5). Steps that record `PENDING` rather than `BLOCKED`: EP-3.8 and EP-4.5 (the twin's key and datasets, until the key table names a twin ring), EP-5.4 (the mirror dataset and table, made in 36), EP-7.4's live create-only proof (26) and EP-7.7's `keys/` prefix grant (41).
@@ -30,7 +31,7 @@
 
 ## What this part builds
 
-Eve watches the humans who hold the tenant's highest privilege, and the person who installs her is one of them. Everything in this file is therefore built **under grants the second human approves**, in a project the platform owner cannot change afterwards without asking, and ends in stores whose destruction leaves a trace outside his reach.
+Eve watches the humans who hold the tenant's highest privilege, and the person who installs it is one of them. Everything in this file is therefore built **under grants the second human approves**, in a project the platform owner cannot change afterwards without asking, and ends in stores whose destruction leaves a trace outside their reach.
 
 1. **Eve's register row and manifest, merged before any project exists** (§1). The register schema of 16 has no controller shape, so EP-1.1 adds `CTL` by reviewed pull request, beside the `IMP` shape 22 adds. The deny policy 17 FM-4.3 attaches is written here (EP-1.4), and the repair entitlement 17 FM-2.17 instantiates is amended here to carry the three roles the later steps of this file and of 41 need (EP-1.5).
 2. **`EVE_PROJECT` by FM-VERIFIER** in `fld-controllers-prod` (§2), under `ENT_FACTORY_SINGLETON_CTL_PROD` **approved by the second human, never by the platform owner** (SD-12), with the project-level `gcp.restrictServiceUsage` denial of `aiplatform.googleapis.com`, `deny-eve-project-foreign`, exactly the spec's services including `admin.googleapis.com` and neither `cloudbuild` nor `artifactregistry`, and no standing Owner. `EVE_TWIN_PROJECT` follows in `fld-controllers-nonprod`.
@@ -101,7 +102,7 @@ flowchart TD
 | Role | Does | Present at |
 |---|---|---|
 | Platform owner (as `sa-1-admin@`) | Writes every file, requests every grant, performs every shell step | every step |
-| **Second human** (`SECOND_HUMAN_EMAIL`) | **Approves** `ENT_FACTORY_SINGLETON_CTL_*`, `ENT_PROJECT_REPAIR_EVE` and `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` grants — the platform owner never approves his own access to Eve (SD-12 item 2); code owner review on `eve/`, `register/eve.yaml`, `factory/runs/eve-*.json` and `pam/`; **is physically present and countersigns the retention lock** | EP-1.1, EP-1.3, EP-1.4, EP-1.5, EP-2.2, EP-2.4, EP-3.1, EP-7.1, **EP-7.8**, EP-9.1 |
+| **Second human** (`SECOND_HUMAN_EMAIL`) | **Approves** `ENT_FACTORY_SINGLETON_CTL_*`, `ENT_PROJECT_REPAIR_EVE` and `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` grants — the platform owner never approves their own access to Eve (SD-12 item 2); code owner review on `eve/`, `register/eve.yaml`, `factory/runs/eve-*.json` and `pam/`; **is physically present and countersigns the retention lock** | EP-1.1, EP-1.3, EP-1.4, EP-1.5, EP-2.2, EP-2.4, EP-3.1, EP-7.1, **EP-7.8**, EP-9.1 |
 | Second operator (`SECOND_OPERATOR_EMAIL`) | Reviews the schema inputs list and the committed schema files | EP-5.1, EP-5.2 |
 | Security reviewer (`SECURITY_REVIEWER_EMAIL`, or IT security until appointed, ratified in 03 RATIFY-SR) | Ratifies SD-43's accepted limit before S2; reviews the two custom-role definitions | EP-6.1, EP-6.4 |
 | Billing administrator | 17 FM-2.5 and FM-2.10 only if `BOOTSTRAP_BILLING_EXPIRY` has passed | EP-2.2, EP-2.4 |
@@ -171,7 +172,7 @@ grep -n 'eve-eu' "$PLATFORM_REPO_DIR/decisions/"*-key-table.md | head -5
 
 - **WHO:** Platform owner writes; the security reviewer approves as code owner of `/register/schema/` and `/contract/` (the second human until appointed, per 16 RG-1.2); a second human reviewer.
 - **WHERE:** `PLATFORM_REPO_DIR`, branch `ep-1-controller-schema`, then the git host.
-- **ACTION:** 16's row schema admits tiers `C`, `R`, `W`, `P`, `P-SA`, `X`, and its manifest schema requires agent-only blocks. Eve is neither an agent nor an improver: she has no family, no gateway, no autonomy ceiling and no model pin before S4, and 02 §3.6 gives controllers their own tier code `ctl`. Add `CTL` with its own rules, and a controller manifest schema. 22 MO-1.1 adds `IMP` the same way; **whichever pull request merges second rebases on the first**, and the fixture loop of 16 RG-2.5 is re-run on the merged result.
+- **ACTION:** 16's row schema admits tiers `C`, `R`, `W`, `P`, `P-SA`, `X`, and its manifest schema requires agent-only blocks. Eve is neither an agent nor an improver: it has no family, no gateway, no autonomy ceiling and no model pin before S4, and 02 §3.6 gives controllers their own tier code `ctl`. Add `CTL` with its own rules, and a controller manifest schema. 22 MO-1.1 adds `IMP` the same way; **whichever pull request merges second rebases on the first**, and the fixture loop of 16 RG-2.5 is re-run on the merged result.
 
 ```bash
 git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
@@ -233,7 +234,7 @@ git -C "$PLATFORM_REPO_DIR" push -u origin ep-1-controller-schema
 
 - **WHO:** Platform owner reads; the second human confirms the membership from their own session.
 - **WHERE:** Shell; Admin console **Menu > Directory > Groups > eve-owners** for the owner column.
-- **ACTION:** SD-12 item 1 puts Eve's owner group under the second human from 06, precisely so that the person Eve watches cannot add himself to it. Nothing is created here: 06 OB-6.2 made it. This step proves it, because every later grant in this file names `eve-owners@` as a requester.
+- **ACTION:** SD-12 item 1 puts Eve's owner group under the second human from 06, precisely so that the person Eve watches cannot add themselves to it. Nothing is created here: 06 OB-6.2 made it. This step proves it, because every later grant in this file names `eve-owners@` as a requester.
 
 ```bash
 need GRP_EVE_OWNERS SECOND_HUMAN_EMAIL
@@ -503,7 +504,7 @@ jq -r '.services[]' "$RUN_SPEC" | grep -c '^admin.googleapis.com$'
 
 ### EP-2.2 Run FM-VERIFIER for `EVE_PROJECT`
 
-- **WHO:** Platform owner performs; **approver of every grant in the run: the second human** (17 FM-4.1 checks this before FM-2.2 and stops the run if the approver list contains the platform owner or his daily account).
+- **WHO:** Platform owner performs; **approver of every grant in the run: the second human** (17 FM-4.1 checks this before FM-2.2 and stops the run if the approver list contains the platform owner or their daily account).
 - **WHERE:** Shell, with 17 §2's run header sourced for `factory/runs/eve-prod.json`.
 - **ACTION:** Run [17](17-factory-module-equivalents-and-tier-r-gate.md) §2 FM-2.1 to FM-2.22 in order, with §4's steps inserted where §4 says:
 

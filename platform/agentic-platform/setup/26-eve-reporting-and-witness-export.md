@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Stage: review §2 stage 30 (Eve Phase 10b steps 1 to 4) re-cut to Eve-H. Opens gate line G-6 (the reporting contract live on both routes); 28 records the drill evidence against it.
 - Step prefix: `ER`. Steps: 43. BLOCKED steps: ER-4.4, ER-4.5, ER-4.6 and ER-4.7 (the export and heartbeat entrypoints of Eve's reconciler image, README B-08), ER-5.4 (the four `eve_quality` views whose columns come from Eve's schema files, README B-07), ER-7.1, ER-7.2 and ER-7.3 (Eve's first run, which needs the jobs 25 deploys, README B-08). The whole file is BLOCKED while README B-12 is open: see ER-0.2.
@@ -69,7 +70,7 @@ What the old text got wrong, and must not come back:
 |---|---|---|
 | Severity 1 goes "through the witness channels: SMS + mobile app + the third-party pager" (eve/03 §15; Phase 10b step 3) | Notification channels are project resources of `EVE_WITNESS_PROJECT`; no Eve identity holds anything in the witness except `eve-export@`'s two grants, and that push is periodic, so the witness would learn of a severity 1 up to a day later (X-ORG-07) | Route 1 in the tenant through the organisation paging service and Eve's own channels in `EVE_PROJECT` (§3); route 2 is the witness backstop on an incident-mode push, whose witness-side policy is 27 |
 | Reports about the administrator on the platform escalation | The platform owner is the L2 responder on `agp-platform-escalation`: the subject would be paged about themself and could acknowledge it away (SD-12) | ER-2.1 routes them to `PAGER_SUBJECT_SERVICE_NAME` and `PAGER_SUBJECT_SH_SERVICE_NAME`, administered by IT security; ER-2.2 fails CI if any rule routes a subject report to the platform escalation; ER-3.6 and ER-3.7 prove it |
-| Eve's Monitoring channels in `CORE_PROJECT` | `CORE_PROJECT` is the platform owner's; a channel he can delete or re-point is not a report about him | `NOTIF_CH_EVE_*` live in `EVE_PROJECT`, whose every elevation needs the second human's approval (SD-12 item 2); 25's self-integrity rules already page on IAM changes there |
+| Eve's Monitoring channels in `CORE_PROJECT` | `CORE_PROJECT` is the platform owner's; a channel they can delete or re-point is not a report about them | `NOTIF_CH_EVE_*` live in `EVE_PROJECT`, whose every elevation needs the second human's approval (SD-12 item 2); 25's self-integrity rules already page on IAM changes there |
 | "a daily schedule off the hour"; `witness_push_absence_hours: 26`; a 60-minute witness alarm | A metric-absence condition allows at most 23.5 hours and never fires before its first data point, and a 60-minute alarm cannot be evaluated from data that arrives once a day (X-ORG-06) | ER-4.5 hourly heartbeat, ER-4.4 export every 6 hours; the witness windows (about 90 minutes and at most 23.5 hours) are 27's |
 | `run_pass eve-reports reports "*/5 * * * *"` | A shell function defined in a sitting months earlier and never saved; no image, no job, no scheduler, no grants (S030, S037) | The poll job is 25's; this file writes the table it lands in (ER-1.4) and the export and heartbeat jobs in full (§4), each naming the image digest, the runtime identity, the grants and the schedule |
 | `gcloud builds submit --tag ...` from whatever directory is current | Uploads the current directory as the build context (S030) | No build in this file. The image is `EVE_RECONCILER_IMAGE`, built and attested in `CICD_PROJECT` in 25 and deployed here by digest with `--binary-authorization=default` |
@@ -104,7 +105,7 @@ flowchart TD
 - [ ] 25 complete except its BLOCKED steps: `EVE_RECONCILER_IMAGE` (a digest), `EVE_CODE_COMMIT`, `EVE_CONFIG_REPO` with branch protection and the second human as required reviewer, `EVE_JOB_REPORTS_POLL`, `EVE_JOB_ROSTER`, `EVE_JOB_DETECT`, `EVE_JOB_HEARTBEAT`, each deployed with its **schedule paused** and each schedule named `<job>-schedule` (25 EH-5.2's `make_sched`). §7 is BLOCKED while any of them is.
 - [ ] 25 §1 complete, because ER-1.5 reads it back rather than repeating it: EH-1.2's project-level `eveTableWriter` binding for `eve-verifier@`, conditioned on `findings`, `incidents` and `pages` (condition title `eve-writer-three-tables`), and EH-1.3's dataset access entries, of which `WRITER` on `EVE_WS_REPORTS_DS` for `eve-verifier@` is the write path of `activities`. ER-1.5 adds **no** second binding on those tables.
 - [ ] 15 part A complete: `PAGER_SERVICE_NAME` with `agp-platform-escalation`; `PAGER_SUBJECT_SERVICE_NAME` with `agp-subject-po-escalation`; `PAGER_SUBJECT_SH_SERVICE_NAME` with `agp-subject-sh-escalation`; `ONCALL_FILE` merged; the escalation record signed by the incident commander (PS-2.7). If part A is not done, ER-3.4's dated deviation applies and §3's pager steps are deferred with a date, never skipped.
-- [ ] 08 complete: `EVE_WITNESS_PROJECT`, `WITNESS_MIRROR_DS`, `WITNESS_HEARTBEAT_TABLE`, `WITNESS_BUCKET` exist and their identifiers are in the tenant copy of the variables file. No tenant principal holds anything in the witness yet: that is 27. **08 WO-2.9's heartbeat contract record — the eleven-field schema file and its SHA-256 — has reached the platform owner through the second human** (WO-2.9's EVIDENCE line sends him a copy). ER-4.3 refuses to run without it: the witness owns that table's shape and this file copies it, never invents one.
+- [ ] 08 complete: `EVE_WITNESS_PROJECT`, `WITNESS_MIRROR_DS`, `WITNESS_HEARTBEAT_TABLE`, `WITNESS_BUCKET` exist and their identifiers are in the tenant copy of the variables file. No tenant principal holds anything in the witness yet: that is 27. **08 WO-2.9's heartbeat contract record — the eleven-field schema file and its SHA-256 — has reached the platform owner through the second human** (WO-2.9's EVIDENCE line sends them a copy). ER-4.3 refuses to run without it: the witness owns that table's shape and this file copies it, never invents one.
 - [ ] 03 signed: SD-07, SD-08, SD-10, SD-11, SD-12, SD-38, SD-43, SD-44; `SECOND_HUMAN_EMAIL`, `INCIDENT_COMMANDER_EMAIL`, `BUSINESS_TZ` set; **either** `SECURITY_REVIEWER_EMAIL` **or** `INCIDENT_COMMANDER_EMAIL` recorded as the recipient of reports about the second human (README B-12). ER-0.2 refuses the file otherwise.
 - [ ] 11: `EVE_EVIDENCE_KEY_EU` usable by the BigQuery service agent of `EVE_PROJECT` (23 proved it on the first table).
 - [ ] Workstation of [01](01-prerequisites-and-conventions.md): gcloud with `alpha` and `beta`, `bq`, `jq`, `curl`, `python3.12`, `git`; `~/.platform-env` sourced; `penv_guard` silent.
@@ -1295,7 +1296,7 @@ for T in incidents pages heartbeats activities; do printf '%s\t' "$T"; bq get-ia
 ### ER-4.3 Copy the witness heartbeat schema, write the tenant one, merge the export contract
 
 - **WHO:** Platform owner writes; the second human reviews **and confirms that the witness file is
-  byte-identical to the contract he carried from 08 WO-2.9**; the witness administrators apply it
+  byte-identical to the contract they carried from 08 WO-2.9**; the witness administrators apply it
   in 27.
 - **WHERE:** `PLATFORM_REPO_DIR`, branch `er-4-witness-contract`. The heartbeat table lives in the
   witness organisation (08 W-2) and no tenant principal can read its schema, so the contract is a
@@ -1417,7 +1418,7 @@ exporter (08 §5.4).
 6. If `sev1_since_last_heartbeat` is non-empty and `WITNESS_PUSH=enabled`, push those rows in
    full into `eve_mirror` in the same act, with `kind='incident'`. A severity-1 report whose
    subject is the person who administers the tenant must not wait up to six hours for the bulk
-   export to carry it out of the project he can repair; the hourly counts tell the witness that
+   export to carry it out of the project they can repair; the hourly counts tell the witness that
    something happened, and this tells it what was said.
 7. On the first enabled run, also push every finding, incident and page since the timestamp of
    `EVE_FIRST_RUN_RECORD` with `push_mode=backlog` and `kind='export'`.
@@ -1476,8 +1477,8 @@ git -C "$PLATFORM_REPO_DIR" push -u origin er-4-witness-contract
 - **VERIFY:** `WITNESS CONTRACT v1 MATCHES 08 WO-2.9`, `WO-2.9 HAND-OVER HASH MATCHES`,
   `json ok`, `PROJECTION COMPLETE` and `TABLE_COUNTS OK` are all printed. Any of the two `STOP`
   lines ends the step: the contract is the witness's and a mismatch is settled with the witness
-  administrators, never by editing the witness file here. The second human states, in his own
-  record, that the committed `witness_heartbeat.json` is the file he carried from 08. The merge
+  administrators, never by editing the witness file here. The second human states, in their own
+  record, that the committed `witness_heartbeat.json` is the file they carried from 08. The merge
   carries two approvals; the file path is sent to the two witness administrators for 27 (the
   platform owner sends the two schema files and `SA_EVE_EXPORT`'s address, and nothing else,
   across the boundary). 27 WG-1.1's gate check repeats the same diff from the witness side, so

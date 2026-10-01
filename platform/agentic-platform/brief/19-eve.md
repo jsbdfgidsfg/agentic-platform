@@ -2,8 +2,9 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
 - 2026-09-18: added "Eve's first job: the human super admins (2026-09-15)", carrying HLD §13.2's scope from the first run and the order of setup 23 to 28.
+- 2026-10-01: "When each part arrives" no longer says no robot account or token exists before the grant; that holds for the control path, while `eve@` and its read-only token exist from setup 24.
 
 ## What you will understand by the end
 
@@ -247,7 +248,7 @@ Scopes freeze at consent, so the set was widened before the one-sitting consent,
 
 Eve is staged in two layers ([the stage table](../../eve/05-stages.md#the-stage-table)).
 
-Through S2, Eve v0 is twelve scheduled queries, the ten ladder metrics plus reconciliation and drift, run under their own service account and read weekly by a human; no robot account, token or key exists before the grant. The six-stream sink arrives at S2, so that the first enforcing window has history behind it.
+Through S2, Eve v0 is twelve scheduled queries, the ten ladder metrics plus reconciliation and drift, run under their own service account and read weekly by a human; no robot account, token or key exists for Eve's control path before the grant; Eve's observe-and-report layer holds `eve@` and its read-only token from setup 24, before Wall-E exists (below). The six-stream sink arrives at S2, so that the first enforcing window has history behind it.
 
 **The observe-and-report layer** is not a stage but a gate before Super Admin is granted, at whatever stage the ladder is ([the grant checklist](../../eve/05-stages.md#the-super-admin-grant--the-observe-and-report-layer-and-its-checklist)). Its seven rows, G-1 to G-7, require among others the second human named, the witness running with its absence alarm drilled, each detection mechanism proved by a seeded event, and the whole layer drilled end to end on the sandbox tenant. This layer halts but never makes more happen; the key still waits.
 

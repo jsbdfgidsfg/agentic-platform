@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: the three-day day files recorded as not yet carrying the full build's names; past start dates marked not started; the proof of value's never-claims row corrected.
 - Who it is for: the board and the executive committee of the organisation, who fund, appoint and sign; expert in running the organisation, not in Google Cloud.
 - What it asks of them: to appoint the people the platform cannot open without, to fund purchases whose quotes nobody has yet obtained, to accept eight residual risks in writing, the one signature that is the board's own ([the residual risks a sponsor accepts by signing](../brief/23-threat-model-and-residual-risk.md#the-residual-risks-a-sponsor-accepts-by-signing)), to make three other signatures possible by appointing their signatories, and to choose one of three ways to start. Nothing is built on 2026-09-18; no price is quoted; no regulator's or assessor's decision is promised.
 - Format: seventeen slides and four backup slides, each with the notes the presenter says. The written version for the same audience is [the executive brief](executive-brief.md); the other documents of the set are listed in [the audiences README](README.md); the plain-language set is [../plain/README.md](../plain/README.md).
@@ -160,13 +161,13 @@ flowchart LR
 | The proof of value | three hands-on people, one engineer; 6 to 9 weeks to POV-1 (`Assumption:`) | Eve on every human super admin; a doer holding no admin role |
 | The full build | thirteen appointments; 85 to 90 person-days; Stage 0 not before 2027-03 | the platform; Eve with a witness; the gated grant; Stage 0 |
 
-> Notes: Three ways to start, and they chain: three-day, proof of value, full build, nothing torn down between them, every artefact bearing the full build's names. The three-day build is two people for three business days, Eve live before the doer exists; it is a demonstration of machinery under control, not compliance evidence and not a production grant, said to the sponsor before the demonstration. The proof of value runs Tiers C, R and W on the production tenant with a doer that holds no administrative role at all; Super Admin goes to no agent, ever. POV-1 ends 6 to 9 weeks after day one; POV-2 ends week 16 to 20 with a dedicated engineer, every figure an assumption; a sponsor told "three weeks" has been misled about both stages. Only the full build owns the grant, the sandbox tenant, the witness and every gate of the grant. Each path's never-claims are on slide A4 and in the appendix.
+> Notes: Three ways to start, and they chain: three-day, proof of value, full build, nothing torn down between them, every artefact to carry the full build's names and schemas; on 2026-10-01 the three-day day files do not yet (3-day README §6.1, owed rows). The three-day build is two people for three business days, Eve live before the doer exists; it is a demonstration of machinery under control, not compliance evidence and not a production grant, said to the sponsor before the demonstration. The proof of value runs Tiers C, R and W on the production tenant with a doer that holds no administrative role at all; Super Admin goes to no agent, ever. POV-1 ends 6 to 9 weeks after day one; POV-2 ends week 16 to 20 with a dedicated engineer, every figure an assumption; a sponsor told "three weeks" has been misled about both stages. Only the full build owns the grant, the sandbox tenant, the witness and every gate of the grant. Each path's never-claims are on slide A4 and in the appendix.
 
 ## Slide 14: The timeline, by gate
 
 | When (`Assumption:` after 2026-09-24) | Gate or milestone | What must exist |
 |---|---|---|
-| 2026-09-21, day one | the DPO letter, the works-council question, the toil baseline, every purchase started | the platform owner alone |
+| 2026-09-21, day one (not started on 2026-10-01) | the DPO letter, the works-council question, the toil baseline, every purchase started | the platform owner alone |
 | 2026-09-29 to 2026-10-27 | decisions and people signed | the appointments of slide 9 |
 | 2026-11-10 to 2027-01-19 | Tier R open, then Tier C | Security Command Center Premium; nobody new |
 | 2026-12-22 to 2027-01-19 | Eve's observe-and-report layer live over the human super admins | the DPO record; the witness; Eve's code |
@@ -203,10 +204,10 @@ flowchart LR
 - Fund: quotes for the monitoring service, the witness, the penetration test, the keys
 - Enable: the owner signs lists and purpose; a reviewer and ISMS sign the deviation
 - Accept: the eight residual risks, in writing, row one pending a security reviewer
-- Choose: three days, the proof of value, or the full build, this month
+- Choose: three days, the proof of value, or the full build; every date runs from that choice
 - Send on day one: the DPO letter and the works-council question
 
-> Notes: The ask, in the order the platform can open. Appoint the three part-time Tier W roles now, and name the grant roles, above all the second human super admin outside the Wall-E line, because three of the six first signatures wait on them. Fund the quotes: nobody has priced the monitoring service, the witness organisation, the penetration test or the hardware keys, and each has a named role to obtain the figure. The platform owner signs the two lists and the purpose; the deviation record needs a security reviewer and an ISMS entry you make possible. Accept the eight risks in writing. Choose a start path this month, because the three-day build is planned for 2026-09-22 and the proof of value's day one for 2026-09-21, both assumptions. And send the data protection letter and the works-council question on day one: they are the longest item in the plan, and nothing that watches or touches an employee starts before the answers.
+> Notes: The ask, in the order the platform can open. Appoint the three part-time Tier W roles now, and name the grant roles, above all the second human super admin outside the Wall-E line, because three of the six first signatures wait on them. Fund the quotes: nobody has priced the monitoring service, the witness organisation, the penetration test or the hardware keys, and each has a named role to obtain the figure. The platform owner signs the two lists and the purpose; the deviation record needs a security reviewer and an ISMS entry you make possible. Accept the eight risks in writing. Choose a start path now: the three-day build planned for 2026-09-22 and the proof of value's day one planned for 2026-09-21, both assumptions, were not started on 2026-10-01, and every later date runs from the choice. And send the data protection letter and the works-council question on day one: they are the longest item in the plan, and nothing that watches or touches an employee starts before the answers.
 
 ## Appendix
 
@@ -258,7 +259,7 @@ flowchart LR
 | The doer's privilege | one scoped privilege over four synthetic accounts | none; no admin role at all | Super Admin, under the gate |
 | Eve | live before the doer; inside the administrators' reach | reports on every human super admin; no witness | with the witness; independent proof by the second human |
 | Exit | same-day unwind, signed | dated stop-or-continue record | Stage 1 stop-or-continue review; L3 as an end state |
-| Can never claim | super-admin safety; Eve's independence; Model Armor evidence; minutes saved | the same, plus that the doer does admin work; a tamper-proof audit | a regulator's or assessor's outcome |
+| Can never claim | super-admin safety; Eve's independence; Model Armor evidence; minutes saved | super-admin safety; Eve's independence; that Model Armor blocked anything; minutes saved; that the doer does admin work; a tamper-proof audit | a regulator's or assessor's outcome |
 
 > Notes: The three paths are one chain, not three options that exclude each other; each hands over to the next with nothing torn down, and a path that had to be torn down has failed. The three-day build buys nothing, signs no contract and leaves a run log, an audit table and Eve polling, or stopped and recorded. The proof of value is Track A only: Tiers C, R and W on the production tenant, Super Admin to no agent, and a doer whose model holds no credential and whose every action is written ahead to an audit dataset where alteration is detected by fingerprint. The full build is human-executed and alone owns the grant. In every path the standing constraints hold: no domain-wide delegation; the model holds no credential and cannot approve; a dry run never mutates; humans raise autonomy and machines lower it; Mo reaches production only through a merged pull request.
 

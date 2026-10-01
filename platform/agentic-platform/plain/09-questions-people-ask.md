@@ -2,12 +2,13 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: the no-price sentences name the one vendor minimum on record.
 - What this page is: thirty-nine questions people actually ask about the platform and its three agents, grouped by who asks them, each answered in plain words with a link to the page that holds the precise version.
 
 ## In one sentence
 
-Nothing is built, no price is quoted, no regulator's decision is promised, and the honest answer to most of these questions is "the design says this, and here is what it still cannot claim".
+Nothing is built, no price is quoted in the design (one vendor minimum is on record, [07](07-what-it-costs-and-what-you-get.md#why-no-price-is-quoted)), no regulator's decision is promised, and the honest answer to most of these questions is "the design says this, and here is what it still cannot claim".
 
 ## How to read this page
 
@@ -102,7 +103,7 @@ No, and the security verdict of 2026-09-18 says why. The deviation record is the
 ## A sponsor or board member asks
 
 **What does it cost?**
-No price is quoted anywhere; pricing pages were not read and every amount is to be decided. The design names each cost's driver and payer. The lines are Google's organisation-wide security findings subscription, log storage (the largest line), a licence per privileged agent, the witness organisation, browser licences, and human hours, the binding cost. One more is a security information and event management service, the system that collects logs, runs detections and staffs a desk that answers alarms, with a round-the-clock retainer. The one recorded figure is a subscription minimum of 15,000 USD a year for 12 months, as recorded on 2026-09-15, to be re-verified ([cost classes](../01-hld.md#05-cost-classes); [costs on no cloud budget](../setup/04-purchases-and-lead-times.md#5-costs-that-sit-on-no-google-cloud-budget)).
+No price is quoted in the design; one vendor minimum is on record ([07](07-what-it-costs-and-what-you-get.md#why-no-price-is-quoted)); pricing pages were not read and every amount is to be decided. The design names each cost's driver and payer. The lines are Google's organisation-wide security findings subscription, log storage (the largest line), a licence per privileged agent, the witness organisation, browser licences, and human hours, the binding cost. One more is a security information and event management service, the system that collects logs, runs detections and staffs a desk that answers alarms, with a round-the-clock retainer. The one recorded figure is a subscription minimum of 15,000 USD a year for 12 months, as recorded on 2026-09-15, to be re-verified ([cost classes](../01-hld.md#05-cost-classes); [costs on no cloud budget](../setup/04-purchases-and-lead-times.md#5-costs-that-sit-on-no-google-cloud-budget)).
 
 **What do we get?**
 No benefit figure exists yet, and none can until four weeks of today's manual work on the top three administrative tasks are measured before the doer's first stage; no "before" can be measured afterwards. The gain claimed without a number: routine administration done faster and on the record, weekly digests, leaver and joiner actions from chat, licence reclaim, and batch approval. Also a hundredth agent costing a register row and a factory run. The register is the file every agent must be in before it exists; the factory is the pipeline that builds its secured project ([why build it](../brief/02-executive-summary.md#why-build-it-and-how-the-programme-can-stop); [the thesis](../01-hld.md#01-thesis)).
@@ -157,7 +158,7 @@ The high-level design is the parent of every design page; read its thesis, its s
 
 **If you are a works-council member.** Eve's watching of administrators starts before Wall-E exists. The regulatory re-verification of 2026-09-18 asks for your information or consultation to be triggered there, at Eve's first stream, with consultation as the default, not at Wall-E's first write. The register row still says Wall-E's first writing stage (P129). The country, and so the exact duty, is not fixed; ask HR which.
 
-**If you are a sponsor.** The three questions to hold onto: no price is quoted, no benefit figure exists, and the people the design depends on do not yet exist. The exits are written down, and the eight residual risks are what your signature accepts.
+**If you are a sponsor.** The three questions to hold onto: no price is quoted in the design (one vendor minimum is on record, [07](07-what-it-costs-and-what-you-get.md#why-no-price-is-quoted)), no benefit figure exists, and the people the design depends on do not yet exist. The exits are written down, and the eight residual risks are what your signature accepts.
 
 ## What is still undecided
 

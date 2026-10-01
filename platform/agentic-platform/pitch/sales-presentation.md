@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: the three-day day files recorded as not yet carrying the full build's names; the grant's human count stated once; the three-day dates marked not run.
 - Who it is for: an audience outside the programme — a sponsor, a peer organisation, a partner — to whom the approach is presented; expert in their own field, not in Google Cloud. Every technical term is defined the first time a slide uses it.
 - What it asks of them: hear the approach with its honesty rules intact; take the approach, not a product, because none is offered; count their own roster, decide Super Admin for their own doer, obtain their own prices and start their own toil baseline, in the order slide 17 gives. It does not ask for a price to be approved, because no price is quoted anywhere in the design, and it does not ask for a commitment to full autonomy.
 - State on 2026-09-18: nothing is built — no folder, no factory run, no robot account, no witness organisation ([maturity](../README.md#maturity-what-exists-on-2026-09-13)). Every number on a slide links, in its notes or in the closing section, to the page that defines it; the security verdict and the regulatory state re-verified on 2026-09-18 are in [the cross-check review](../14-crosscheck-review.md). `Assumption:` marks an inferred fact. The organisation the design was written for is called "the designing organisation" on these slides; its roster, its decision and its jurisdiction are its own.
@@ -110,7 +111,7 @@ flowchart LR
     P --> F["Months to the grant<br/>the full build: 6–7 months to Stage 0, not before 2027-03<br/>85–90 person-days, 13 appointments, 13 purchase rows"]
 ```
 
-> Notes: Three build paths, one chain: every artefact carries the full build's names and schemas, so a three-day build or a proof of value that has to be torn down has failed. The three days (`Assumption:` 2026-09-22 to 2026-09-24) need two people, both super admins, and sign no new contract. The proof of value needs three hands-on people, one engineer for forty to sixty-four engineer-days, and sixty to ninety person-days in all; POV-1 ends six to nine weeks after day one and POV-2 ends week sixteen to twenty with a dedicated engineer; with one person writing the code and running the procedures it stretches to twenty-six to thirty-four weeks (`Assumption:` every figure). A sponsor told "three weeks" has been misled about both stages. Only the full build owns the super-admin grant, the sandbox tenant and the witness; its first act is the toil baseline, on day one, on paper if need be ([how it grows](../3-day/README.md#12-how-it-grows); [the two stages](../pov/README.md#4-pov_stage_dates-the-two-stages); [the critical path](../setup/README.md#34-parallel-sittings-and-the-critical-path)).
+> Notes: Three build paths, one chain: every artefact is to carry the full build's names and schemas (on 2026-10-01 the three-day day files do not yet: 3-day README §6.1, owed rows), so a three-day build or a proof of value that has to be torn down has failed. The three days (`Assumption:` three business days from the sponsor's choice; not run on 2026-10-01) need two people, both super admins, and sign no new contract. The proof of value needs three hands-on people, one engineer for forty to sixty-four engineer-days, and sixty to ninety person-days in all; POV-1 ends six to nine weeks after day one and POV-2 ends week sixteen to twenty with a dedicated engineer; with one person writing the code and running the procedures it stretches to twenty-six to thirty-four weeks (`Assumption:` every figure). A sponsor told "three weeks" has been misled about both stages. Only the full build owns the super-admin grant, the sandbox tenant and the witness; its first act is the toil baseline, on day one, on paper if need be ([how it grows](../3-day/README.md#12-how-it-grows); [the two stages](../pov/README.md#4-pov_stage_dates-the-two-stages); [the critical path](../setup/README.md#34-parallel-sittings-and-the-critical-path)).
 
 ## Slide 10: What the small paths cannot show
 
@@ -140,8 +141,7 @@ flowchart LR
 
 - Where it was designed, on 2026-09-13: one administrator; every role was one person.
 - That is the finding most likely to stop a TISAX assessment.
-- Distinct humans: one at Tier R, three at Tier W, four at the grant.
-- At the grant, five named humans; four only with a dated ISMS exception.
+- Distinct humans: one at Tier R, three at Tier W, five at the grant (four with a dated ISMS exception).
 - Tier W adds a second operator, a security reviewer and a blind grader, part-time.
 - Tier P adds a second super admin, an incident commander, a DPO, a desk.
 

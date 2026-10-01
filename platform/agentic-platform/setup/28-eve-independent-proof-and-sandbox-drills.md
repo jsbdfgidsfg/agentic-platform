@@ -3,11 +3,12 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-16
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed; Eve is "it" (EV-5.3 heading now "Eve reports its own pause").
 - Last executed: never
 - Stage: review §2 stage 30 (the Eve 10b drill, re-cut to Eve-H) and the Eve part of stage 32 (the sandbox tenant). It is the last file of the Eve-H block and the one that produces `EVE_H_LIVE_RECORD`, on which [30](30-wall-e-workspace-side.md) and every later Wall-E file depend.
 - Step prefix: `EV`. Steps: 50. BLOCKED: EV-5.3 (Eve's self-integrity rules and the configuration fingerprint, README B-08), EV-6.2, EV-6.3 and EV-6.4 (the twin reconciler and the detection catalogue, README B-08 and B-09; they run as written the day [25](25-eve-human-super-admin-detections.md)'s twin deploy is `DONE`). **IRREVERSIBLE:** EV-2.10, EV-4.5, EV-5.6 and EV-6.6 — each writes a record into the witness bucket, whose retention policy is locked, so the object cannot be removed before its retention period ends.
-- Revised 2026-09-16 against the second-round review of this file: the PAM grants of §4 and §5 are sized to the whole drill and checked before each wait (EV-4.2, EV-4.3, EV-4.4, EV-5.1); every `gcloud pam grants` call carries `--project` and `--billing-project`; the platform owner's negative tests in §3 use his own clone and a pull-request number, and a refusal is accepted only for the right reason; the four witness uploads carry the upload command, a no-clobber guard and a hash read-back; `T0` is persisted as `EVE_PROOF_T0`; EV-4.1 reads the Monitoring time series, not the policy list; seeded action 5 no longer needs an assignee; EV-1.3 reads the committed keys of `thresholds.yaml` and `detections/catalogue.yaml`; the twin shell is opened in its own step; the sandbox drill has its own seeded-action list (EV-6.0) covering the `SA-03` and `SI-08` classes; `protopayload_auditlog.metadataJson` is cited, not assumed.
+- Revised 2026-09-16 against the second-round review of this file: the PAM grants of §4 and §5 are sized to the whole drill and checked before each wait (EV-4.2, EV-4.3, EV-4.4, EV-5.1); every `gcloud pam grants` call carries `--project` and `--billing-project`; the platform owner's negative tests in §3 use their own clone and a pull-request number, and a refusal is accepted only for the right reason; the four witness uploads carry the upload command, a no-clobber guard and a hash read-back; `T0` is persisted as `EVE_PROOF_T0`; EV-4.1 reads the Monitoring time series, not the policy list; seeded action 5 no longer needs an assignee; EV-1.3 reads the committed keys of `thresholds.yaml` and `detections/catalogue.yaml`; the twin shell is opened in its own step; the sandbox drill has its own seeded-action list (EV-6.0) covering the `SA-03` and `SI-08` classes; `protopayload_auditlog.metadataJson` is cited, not assumed.
 - Replaces: the drill paragraph of [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md) Phase 10b (l.1597-1602) and the evidence columns of G-2, G-4, G-5, G-6 and G-7 in [../../eve/05-stages.md](../../eve/05-stages.md). Neither page is executed.
 - Salvaged: the intent of the 10b drill (a tenant-integrity event, a roster diff in both directions, `log_pipeline_silent`, a withheld export, a halt clear reaching one recipient, a dated record in the witness); the G-2 to G-7 rows of `eve/05`, with their evidence columns rewritten by SD-03 (G-4) and SD-26 (G-5, G-6, G-7).
 - Not copied: "rows in `eve_workspace_reports` for `walle@`'s shadow runs" as G-4 evidence (S039: circular, and the admin application records changes only); "expect rows for `walle@`'s shadow runs" in the 10b verify (S039); Phase 7 check 4's pre-grant expectation of a robot actor and "a shadow run is enough" (S141); one drill that runs "on the sandbox tenant" and at the same time expects the witness alarm, the witness channels and a witness record (X-ORG-12, SD-26); any nonprod identity granted on a witness resource (X-ORG-12); a sandbox drill run against an OU of the production tenant (S004, X-ORG-02).
@@ -23,15 +24,15 @@
 Nothing new is deployed here. This file is the proof that what files 23 to 27 built actually watches the person who built it, performed by the one person in the programme who is outside the administration line, and the drills that turn Eve's gate rows green.
 
 1. **The seeded-action list and the proof fixtures** (§1). Five harmless, reversible super-admin actions on objects that exist only for this purpose — a proof role with no assignment, a proof OU with no real users, and a proof account that no action touches (it is suspended, and a suspended account cannot be assigned a role from the console, so no seeded action needs an assignee) — each with the exact Admin log event it must produce and the lag budget it must meet. The list is committed so that a later reader can repeat the proof; which action is used, and when, is not.
-2. **The blind proof** (§2), which is the owner's question answered: the second human picks an unannounced window and one action from the list; the platform owner performs it and nothing else; the second human alone confirms the page on her own device, the row in `eve_workspace_logs`, the row in `eve_workspace_reports`, the `eve.incidents` and `eve.pages` rows, the sole recipient, the witness copy, and that nobody touched Eve's configuration or held a grant on `EVE_PROJECT` during the window. A witness administrator, not the platform owner, uploads the record.
+2. **The blind proof** (§2), which is the owner's question answered: the second human picks an unannounced window and one action from the list; the platform owner performs it and nothing else; the second human alone confirms the page on their own device, the row in `eve_workspace_logs`, the row in `eve_workspace_reports`, the `eve.incidents` and `eve.pages` rows, the sole recipient, the witness copy, and that nobody touched Eve's configuration or held a grant on `EVE_PROJECT` during the window. A witness administrator, not the platform owner, uploads the record.
 3. **The anti-silencing checks that do not need a drill** (§3): a merge to `eve/config` without the second human's review is refused; a direct push to its default branch is refused; the platform owner holds no standing role that can edit Eve, proven from the drift output and from live reads.
 4. **The witness part of the drill** (§4, gate row G-2, calendar row DR-28-3): after the first heartbeat has landed and long before the super-admin grant, production `eve-export@` misses exactly one push; the witness absence alarm fires; the backlog push carries what was withheld and the cumulative counts do not go backwards.
-5. **The anti-silencing drill** (§5, DR-28-2): the platform owner makes one *declared*, visible change to Eve — pausing a single schedule for a named window — under a grant the second human approves; the second human confirms that Eve's self-integrity page and the witness fingerprint or absence alarm reach her without the platform owner's help.
+5. **The anti-silencing drill** (§5, DR-28-2): the platform owner makes one *declared*, visible change to Eve — pausing a single schedule for a named window — under a grant the second human approves; the second human confirms that Eve's self-integrity page and the witness fingerprint or absence alarm reach them without the platform owner's help.
 6. **The sandbox part** (§6, gate rows G-5 and G-7): nonprod Eve, against the sandbox tenant and the sandbox organisation's own sink, sees a seeded tenant-integrity event, a roster diff in both directions and `log_pipeline_silent`; it pages nonprod channels only and never touches the witness. §6 carries its **own** seeded-action list (EV-6.0), separate from §2's: the production list is deliberately confined to role and organisational-unit fixtures, so it can prove `SA-02` and no more. The classes that carry the real risk — Sharing options, OAuth app trust, 2-step verification enforcement, domain-wide delegation, API controls, `SA-03` and `SI-08` — are exercised where they can be exercised safely, on the sandbox tenant, and `EVE_H_LIVE_RECORD` requires at least one of each class proven on the twin or a signed residual risk with an owner and a date (EV-8.2).
 7. **The recurrence** (§7): DR-28-1 (monthly blind proof, and after every `eve/config` merge), DR-28-2 and DR-28-3 written into `DRILL_CALENDAR` here, not deferred to [42](42-gates-drills-and-evidence.md).
 8. **`EVE_H_LIVE_RECORD`** (§8), refused unless the organisation exception is withdrawn, the break-glass envelopes are sealed and the witness alarms have seen data; and the second human's decision on whether [06](06-organisation-bootstrap-and-roster.md)'s interim Admin console activity rules are retired (recommended: kept).
 
-**The residual risk this file states rather than removes** (SD-12 item 8). An Organization Administrator, or a super admin willing to break the rules, can still reach Eve inside the tenant: pause a job, edit a sink, revoke `eve@`. Nothing here makes that impossible. What it makes is *noticed*: by the self-integrity rules ([25](25-eve-human-super-admin-detections.md)), by the configuration fingerprint and cumulative counts in every witness heartbeat ([26](26-eve-reporting-and-witness-export.md), [27](27-witness-grants-and-alarms.md)), by the witness alarms in an organisation the platform owner has no account in, and by this file's unannounced proof. The second human signs that she has read this paragraph before `EVE_H_LIVE_RECORD` is written.
+**The residual risk this file states rather than removes** (SD-12 item 8). An Organization Administrator, or a super admin willing to break the rules, can still reach Eve inside the tenant: pause a job, edit a sink, revoke `eve@`. Nothing here makes that impossible. What it makes is *noticed*: by the self-integrity rules ([25](25-eve-human-super-admin-detections.md)), by the configuration fingerprint and cumulative counts in every witness heartbeat ([26](26-eve-reporting-and-witness-export.md), [27](27-witness-grants-and-alarms.md)), by the witness alarms in an organisation the platform owner has no account in, and by this file's unannounced proof. The second human signs that they have read this paragraph before `EVE_H_LIVE_RECORD` is written.
 
 What the old text got wrong, and must not come back:
 
@@ -71,7 +72,7 @@ flowchart TD
 - [ ] [25](25-eve-human-super-admin-detections.md): the four production jobs and their twin counterparts deployed at `EVE_CODE_COMMIT` with green CI; `eve/config` has branch protection with `SECOND_HUMAN_EMAIL` as required reviewer; the platform owner's standing `actAs` on Eve's accounts removed.
 - [ ] [12](12-privileged-access-catalogue.md): `PA-9.3` shows `DONE` (the organisation exception withdrawn). Checked again in EV-8.1; a missing `DONE` refuses `EVE_H_LIVE_RECORD`, not this file's drills.
 - [ ] [06](06-organisation-bootstrap-and-roster.md): `OB-7.3` shows `DONE` (break-glass envelopes sealed); the interim activity rules A to D exist and their mail reaches the second human.
-- [ ] Workstations: the **second human's** workstation has gcloud (with `alpha`), `bq`, `jq`, `curl`, `python3.12` with PyYAML, `git` and the git host's CLI, her own `~/.platform-env` copy, and the browser profile of `sa-2-admin@`. The witness administrators use their own witness copies ([08](08-witness-organisation.md)). The platform owner's workstation is **not** used for any verification in this file; it is used only for his seeded action (EV-2.2), his negative tests (EV-3.1, EV-3.2, from a clone of his own) and the two declared changes (§4, §5).
+- [ ] Workstations: the **second human's** workstation has gcloud (with `alpha`), `bq`, `jq`, `curl`, `python3.12` with PyYAML, `git` and the git host's CLI, their own `~/.platform-env` copy, and the browser profile of `sa-2-admin@`. The witness administrators use their own witness copies ([08](08-witness-organisation.md)). The platform owner's workstation is **not** used for any verification in this file; it is used only for their seeded action (EV-2.2), their negative tests (EV-3.1, EV-3.2, from a clone of their own) and the two declared changes (§4, §5).
 - [ ] [12](12-privileged-access-catalogue.md) PA-2.1: the `ent-project-repair` template carries `maxRequestDuration` of `7200s`. Every grant in this file is sized inside that maximum (EV-4.2, EV-5.1); a request above it is refused by PAM, not by this file.
 - [ ] [08](08-witness-organisation.md) WO-3.3: the witness upload form (`--no-clobber`, `--retain-until`, `--retention-mode`, `--custom-metadata=sha256=…`) and the current retention mode (`Unlocked` before WO-2.17, `Locked` after) are known to witness administrator 1, who types every upload in this file.
 - [ ] [10](10-core-projects-and-ci-identities.md): `CICD_PROJECT` set — it is the billing project of every `gcloud pam` call, as in [23](23-eve-project-and-evidence-stores.md) and [26](26-eve-reporting-and-witness-export.md).
@@ -83,7 +84,7 @@ flowchart TD
 | Role | Does | Present at |
 |---|---|---|
 | Second human (`SECOND_HUMAN_EMAIL`, admin account `SA_2_ADMIN`; owner of `GRP_EVE_OWNERS`; IT security line) | Leads the file. Chooses the window and the action; performs every verification; approves the one grant of §5; signs `EVE_H_LIVE_RECORD`; decides on the interim rules | every step except EV-1.2, EV-2.2, EV-5.1, EV-5.2 |
-| Platform owner (as `SA_1_ADMIN`) | Creates the proof fixtures (EV-1.2); performs the one seeded action (EV-2.2); attempts the two negative tests from his own clone (EV-3.1, EV-3.2); requests and performs the withhold of §4 and the declared change of §5; performs nothing else and verifies nothing | EV-1.2, EV-2.2, EV-3.1, EV-3.2, EV-4.2, EV-4.4, EV-5.1, EV-5.2, EV-5.5 |
+| Platform owner (as `SA_1_ADMIN`) | Creates the proof fixtures (EV-1.2); performs the one seeded action (EV-2.2); attempts the two negative tests from their own clone (EV-3.1, EV-3.2); requests and performs the withhold of §4 and the declared change of §5; performs nothing else and verifies nothing | EV-1.2, EV-2.2, EV-3.1, EV-3.2, EV-4.2, EV-4.4, EV-5.1, EV-5.2, EV-5.5 |
 | Witness administrator 1 (`WITNESS_ADMIN_1_EMAIL`, working as `WITNESS_SA_1`) | Runs every witness-side query with the second human watching; uploads every drill record to `WITNESS_BUCKET` | EV-2.8, EV-2.10, EV-4.3, EV-4.5, EV-5.4, EV-5.6, EV-6.6 |
 | Witness administrator 2 (`WITNESS_ADMIN_2_EMAIL`) | Confirms receipt of the witness alarms on a second device; countersigns the records | EV-4.3, EV-4.5, EV-5.4 |
 | Sandbox super admin 1 (`SANDBOX_SA_1_EMAIL`) | Confirms the sandbox edition supports S1 to S4 (EV-6.0); seeds the sandbox events (§6) in the sandbox tenant | EV-6.0, EV-6.1a, EV-6.1b, EV-6.2, EV-6.3, EV-6.4 |
@@ -101,7 +102,7 @@ penv_guard
 R="$BUILD_LOG_DIR/records/$(date -u +%F)-EV"
 ```
 
-**Who types what.** Steps whose WHO is the second human are typed on her workstation, signed in as her own account or `SA_2_ADMIN`. The platform owner must not type, dictate or watch a verification command in this file; if he does, the run is void and is repeated from EV-2.1 with a new window.
+**Who types what.** Steps whose WHO is the second human are typed on their workstation, signed in as their own account or `SA_2_ADMIN`. The platform owner must not type, dictate or watch a verification command in this file; if they do, the run is void and is repeated from EV-2.1 with a new window.
 
 ## Facts this file relies on, read on 2026-09-15
 
@@ -120,7 +121,7 @@ R="$BUILD_LOG_DIR/records/$(date -u +%F)-EV"
 | Admin console: Menu → Reporting → Audit and investigation → Admin log events | Workspace admin help, *Admin log events* | The second human's independent read, which needs no Eve component and no platform-owner help |
 | `gcloud pam grants create --requested-duration= (--entitlement= : --location= [--folder\|--organization]) [--justification] [--additional-email-recipients]`, `--project` and `--billing-project` as gcloud-wide flags; `--requested-duration` is required and takes seconds (`5400s`); the grant ends at that duration. `gcloud pam grants approve GRANT --entitlement= --location= --reason=`; `gcloud pam grants list` and `describe GRANT` take the same `--entitlement= --location=` pair, with the project from `--project` | gcloud PAM reference, `grants create`, `describe`, `list` | The grants of §4 and §5, sized to the whole drill inside the entitlement's 7200 s maximum; the anti-collusion check of EV-2.7; the lifetime check before each wait (EV-4.3, EV-5.2) |
 | `gcloud scheduler jobs pause JOB --location=` and its `resume` counterpart | gcloud Scheduler reference | EV-4.2 and EV-5.2 |
-| `gcloud monitoring` has `dashboards`, `policies`, `snoozes` and `uptime`; **no command lists alerting incidents and none lists time series** | gcloud Monitoring reference | The second human reads incidents in the Monitoring console and, above all, on her own device and in the paging service; a row Eve wrote is never the proof that a page arrived. Time series are read through the API (next row) |
+| `gcloud monitoring` has `dashboards`, `policies`, `snoozes` and `uptime`; **no command lists alerting incidents and none lists time series** | gcloud Monitoring reference | The second human reads incidents in the Monitoring console and, above all, on their own device and in the paging service; a row Eve wrote is never the proof that a page arrived. Time series are read through the API (next row) |
 | Monitoring API `GET https://monitoring.googleapis.com/v3/projects/{id}/timeSeries` with query parameters `filter`, `interval.startTime`, `interval.endTime`, `view`; the response is `timeSeries[].points[].interval.endTime`, most recent first | Cloud Monitoring API v3, `projects.timeSeries.list` | EV-4.1 proves that the metrics behind the witness absence policies have written a point, which is the only fact a metric-absence condition depends on |
 | `gcloud logging read`: `--freshness` "works only with DESC ordering and filters without a timestamp"; `--limit` caps the returned entries; ordering is by timestamp descending | gcloud Logging reference, `logging read` | EV-2.7 filters on the actor and the window with `timestamp` predicates and drops `--freshness`, so a low limit cannot truncate the window under test |
 | `gcloud storage cp --no-clobber` "Do not overwrite existing files or objects at the destination. Skipped items will be printed"; `--print-created-message` "Prints the version-specific URL for each copied object"; `--retain-until`, `--retention-mode`, `--custom-metadata`; `gcloud storage objects describe URL --format=…` returns `generation` and `md5_hash` | gcloud Storage reference, `cp` and `objects describe`; [08](08-witness-organisation.md) WO-3.3 | The four witness uploads of this file: EV-2.10, EV-4.5, EV-5.6, EV-6.6 |
@@ -134,8 +135,8 @@ R="$BUILD_LOG_DIR/records/$(date -u +%F)-EV"
 
 ### EV-0.1 Open the sitting and read the inputs
 
-- **WHO:** Second human, on her own workstation, signed in as her own account.
-- **WHERE:** Shell, her copy of `~/.platform-env` sourced.
+- **WHO:** Second human, on their own workstation, signed in as their own account.
+- **WHERE:** Shell, their copy of `~/.platform-env` sourced.
 - **ACTION:**
 
 ```bash
@@ -183,7 +184,7 @@ awk -F'\t' '$2 ~ /^WG-/ && $3 == "DONE" {print $2"\t"$7}' "$BUILD_LOG_DIR/checkp
 
 - **WHO:** Second human; witness administrator 1 for the witness half.
 - **WHERE:** Shell; browser profile of `SA_2_ADMIN`; the witness administrator's own shell.
-- **ACTION:** The proof is worth nothing if she has to ask the subject for access.
+- **ACTION:** The proof is worth nothing if they have to ask the subject for access.
 
 ```bash
 gcloud projects get-iam-policy "$EVE_PROJECT" --format=json \
@@ -194,15 +195,15 @@ gcloud scheduler jobs list --project="$EVE_PROJECT" --location="$REGION" --forma
 ```
 
   In the browser: open the Admin console as `SA_2_ADMIN` → Menu → Reporting → Audit and investigation → Admin log events, and confirm the search returns results. Witness administrator 1 runs, in the witness organisation, a `SELECT` of the last five heartbeat rows and a `gcloud storage ls -l "${WITNESS_BUCKET}/exports/"`, with the second human watching the screen.
-- **VERIFY:** `GRP_EVE_OWNERS` holds at least `roles/bigquery.dataViewer` and `roles/bigquery.jobUser` (or the reader role 23 granted); the count query returns; the scheduler list prints the four jobs and their state. The Admin console search returns rows. The witness queries return rows. Any missing read is a **re-run line against [23](23-eve-project-and-evidence-stores.md)** (`rerun-index.tsv`, member `group:$GRP_EVE_OWNERS`), not a grant made here, and until it is closed the second human uses `EVE_CONSOLE_URL` behind IAP as her read path and says so in the record.
+- **VERIFY:** `GRP_EVE_OWNERS` holds at least `roles/bigquery.dataViewer` and `roles/bigquery.jobUser` (or the reader role 23 granted); the count query returns; the scheduler list prints the four jobs and their state. The Admin console search returns rows. The witness queries return rows. Any missing read is a **re-run line against [23](23-eve-project-and-evidence-stores.md)** (`rerun-index.tsv`, member `group:$GRP_EVE_OWNERS`), not a grant made here, and until it is closed the second human uses `EVE_CONSOLE_URL` behind IAP as their read path and says so in the record.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-0.3-independent-access-v1.txt` plus one console screenshot to `EVIDENCE_INTERIM_LOCATION`. E-06. TISAX 4.2.1.
 
 ### EV-0.4 Agree what may be announced, and what may not
 
-- **WHO:** Second human; the platform owner is told only the parts that concern him.
+- **WHO:** Second human; the platform owner is told only the parts that concern them.
 - **WHERE:** A short written note, committed to the build log.
-- **ACTION:** Write and have both parties initial a note stating: (a) the platform owner is told **that** a proof will happen in the next 30 days and that he will be asked to perform exactly one action from the committed list; (b) he is **not** told the date, the hour or which action, until the moment of EV-2.1; (c) he will not query Eve, the witness, the paging service or the audit log about the proof, and will not open a PAM grant on `EVE_PROJECT` during the window; (d) if he is paged for anything unrelated during the window he answers it normally and tells the second human afterwards; (e) the drill is announced to nobody else, including the IT security desk, because the subject-report escalation is exercised exactly as it would be in earnest.
+- **ACTION:** Write and have both parties initial a note stating: (a) the platform owner is told **that** a proof will happen in the next 30 days and that they will be asked to perform exactly one action from the committed list; (b) they are **not** told the date, the hour or which action, until the moment of EV-2.1; (c) they will not query Eve, the witness, the paging service or the audit log about the proof, and will not open a PAM grant on `EVE_PROJECT` during the window; (d) if they are paged for anything unrelated during the window they answer it normally and tell the second human afterwards; (e) the drill is announced to nobody else, including the IT security desk, because the subject-report escalation is exercised exactly as it would be in earnest.
 - **VERIFY:** Both initials on the note; the note names the 30-day span and nothing more precise.
 - **ROLLBACK:** Tear up and rewrite before EV-2.1; after EV-2.1 the note is part of the record.
 - **EVIDENCE:** `${R}-0.4-blind-window-note-v1.pdf` in `EVIDENCE_INTERIM_LOCATION`. E-08. TISAX 5.2.6.
@@ -276,7 +277,7 @@ penv_set EVE_PROOF_ACCOUNT "zz-eve-proof@$DOMAIN"
 penv_set EVE_PROOF_ROLE "zz-eve-proof-role"
 ```
 
-- **VERIFY:** The second human, from her own browser as `SA_2_ADMIN`, sees the OU with one suspended user and the role with its recorded privilege set, and confirms the role appears in no assignment. She also confirms in Admin log events that the four creation events (`CREATE_ORG_UNIT`, a user-creation event, `CREATE_ROLE`, and any `ADD_PRIVILEGE`) are present — which is itself a first, non-blind sanity check that the stream is alive.
+- **VERIFY:** The second human, from their own browser as `SA_2_ADMIN`, sees the OU with one suspended user and the role with its recorded privilege set, and confirms the role appears in no assignment. They also confirm in Admin log events that the four creation events (`CREATE_ORG_UNIT`, a user-creation event, `CREATE_ROLE`, and any `ADD_PRIVILEGE`) are present — which is itself a first, non-blind sanity check that the stream is alive.
 - **ROLLBACK:** Delete the role, the user and the OU in that order. Deleting them removes nothing Eve has already recorded.
 - **EVIDENCE:** Screenshots of the three objects and the privilege label as `${R}-1.2-proof-fixtures-v1` in `EVIDENCE_INTERIM_LOCATION`; the three variable names in the build log. E-08. TISAX 4.2.1.
 
@@ -348,38 +349,38 @@ This section is the owner's question — *does Eve actually watch the human supe
 ### EV-2.1 Open the window and name the action
 
 - **WHO:** Second human alone.
-- **WHERE:** Any channel she chooses; the time is recorded from her own device.
-- **ACTION:** At a moment of her choosing inside the 30-day span, and with no prior notice, she sends the platform owner one message: "Perform seeded action *k* now, and nothing else. Reply with the exact UTC minute when you have finished." She records, on paper or in a private note: the UTC time she sent it, *k*, and the drill token (`eve-proof-<YYYYMMDD-HHMM>`) she will look for in the event parameters.
-- **VERIFY:** Her note exists before the platform owner's reply. The chosen hour is inside business hours in `BUSINESS_TZ` for the first run (an out-of-hours run is a later drill, recorded as such, because H-1's business-hours rule changes the expected route).
+- **WHERE:** Any channel they choose; the time is recorded from their own device.
+- **ACTION:** At a moment of their choosing inside the 30-day span, and with no prior notice, they send the platform owner one message: "Perform seeded action *k* now, and nothing else. Reply with the exact UTC minute when you have finished." They record, on paper or in a private note: the UTC time they sent it, *k*, and the drill token (`eve-proof-<YYYYMMDD-HHMM>`) they will look for in the event parameters.
+- **VERIFY:** Their note exists before the platform owner's reply. The chosen hour is inside business hours in `BUSINESS_TZ` for the first run (an out-of-hours run is a later drill, recorded as such, because H-1's business-hours rule changes the expected route).
 - **ROLLBACK:** Not applicable; a cancelled window is simply not used and a new one chosen.
-- **EVIDENCE:** Her note, scanned after EV-2.10, as part of `${R}-2.10-proof-record-v1`. E-08. TISAX 5.2.6.
+- **EVIDENCE:** Their note, scanned after EV-2.10, as part of `${R}-2.10-proof-record-v1`. E-08. TISAX 5.2.6.
 
 ### EV-2.2 The seeded action
 
-- **WHO:** Platform owner as `SA_1_ADMIN`, alone, from his normal workstation and browser profile.
+- **WHO:** Platform owner as `SA_1_ADMIN`, alone, from their normal workstation and browser profile.
 - **WHERE:** Admin console, the path the chosen action needs (Menu → Account → Admin roles, or Menu → Directory → Organizational units).
 - **ACTION:** Perform action *k* from `SEEDED_ACTION_LIST` exactly as written, using the drill token as the new value where the action has one (the OU description, the child OU name, the role's temporary name). Note the UTC minute of each half of the action. Reverse it as the list prescribes. Perform nothing else in the console during the window: no other change, no audit search, no query against Eve, no grant request.
-- **VERIFY:** He replies to the second human with the two UTC minutes and the token used, and nothing else. He does **not** check whether Eve noticed.
-- **ROLLBACK:** The reversal is part of the action. If he mistypes and produces an extra event, he says so in the same reply; the extra event becomes part of the expected set and the run continues.
-- **EVIDENCE:** His reply, kept by the second human; the console screenshots are **not** taken by him (they would be his evidence, not hers). E-08. TISAX 5.2.6.
+- **VERIFY:** They reply to the second human with the two UTC minutes and the token used, and nothing else. They do **not** check whether Eve noticed.
+- **ROLLBACK:** The reversal is part of the action. If they mistype and produce an extra event, they say so in the same reply; the extra event becomes part of the expected set and the run continues.
+- **EVIDENCE:** Their reply, kept by the second human; the console screenshots are **not** taken by the platform owner (they would be the platform owner's evidence, not the second human's). E-08. TISAX 5.2.6.
 
-### EV-2.3 The page, on her own device
+### EV-2.3 The page, on their own device
 
 - **WHO:** Second human; the incident commander confirms the escalation's behaviour afterwards.
-- **WHERE:** Her phone and mailbox; the paging service `PAGER_SUBJECT_SERVICE_NAME`; Cloud Monitoring console of `EVE_PROJECT` (Alerting) as a cross-check.
+- **WHERE:** Their phone and mailbox; the paging service `PAGER_SUBJECT_SERVICE_NAME`; Cloud Monitoring console of `EVE_PROJECT` (Alerting) as a cross-check.
 - **ACTION:** Wait for Eve's budget from EV-1.3 plus the published Google lag, and record what arrived and when:
   1. the page on the subject-report escalation of [15](15-pager-siem-and-detections.md) — time received, severity, subject, the text of the finding, whether the platform owner is named as subject;
   2. the email on `NOTIF_CH_EVE_EMAIL_SECOND_HUMAN` and, for a severity 1, the SMS on `NOTIF_CH_EVE_SMS_SECOND_HUMAN`;
-  3. the acknowledgement she gives in the paging service, and its timestamp;
+  3. the acknowledgement they give in the paging service, and its timestamp;
   4. in the Monitoring console, the incident for the policy that fired (there is no gcloud command that lists incidents, so this is a console read).
-- **VERIFY:** In **full mode**: at least one of (1) and (2) arrived within the budget, the subject is the platform owner, and the recipient set contains her and nobody in the administration line — in particular the platform owner is not a recipient and is not a responder on that escalation (SD-12 item 10). In **evidence mode**: nothing arrives, which is the expected result, and the record says so. Either way she records the observed delta in minutes between the seeded minute and the page.
+- **VERIFY:** In **full mode**: at least one of (1) and (2) arrived within the budget, the subject is the platform owner, and the recipient set contains them and nobody in the administration line — in particular the platform owner is not a recipient and is not a responder on that escalation (SD-12 item 10). In **evidence mode**: nothing arrives, which is the expected result, and the record says so. Either way they record the observed delta in minutes between the seeded minute and the page.
 - **ROLLBACK:** None; acknowledge and close the page in the paging service as a drill.
 - **EVIDENCE:** Screenshots of the page, the mail headers and the acknowledgement, as `${R}-2.3-page-v1` in `EVIDENCE_INTERIM_LOCATION`. E-10. TISAX 1.6.2.
 
 ### EV-2.4 The `eve_workspace_logs` row
 
 - **WHO:** Second human.
-- **WHERE:** Shell on her workstation; and the Admin console for the independent read.
+- **WHERE:** Shell on their workstation; and the Admin console for the independent read.
 - **ACTION:** First the independent read that needs no Eve component: Menu → Reporting → Audit and investigation → Admin log events, filtered on the event name of action *k* and the drill token, as `SA_2_ADMIN`. Then Eve's copy:
 
 ```bash
@@ -426,7 +427,7 @@ bq query --project_id="$EVE_PROJECT" --location="$BQ_LOCATION" --use_legacy_sql=
 ```
 
   If the schema names the columns differently, use the printed names; the step's requirement is the content, not the spelling.
-- **VERIFY:** At least one row for actor `SA_1_ADMIN`, application `admin`, with the event name of action *k*, inside the poll budget (poll period plus the published lag). She records the observed delta. She also confirms that the table holds rows for **other** roster accounts in the same day, which proves the poll is by actor over the union of the roster and the live admin-role holders and not a one-account fixture.
+- **VERIFY:** At least one row for actor `SA_1_ADMIN`, application `admin`, with the event name of action *k*, inside the poll budget (poll period plus the published lag). They record the observed delta. They also confirm that the table holds rows for **other** roster accounts in the same day, which proves the poll is by actor over the union of the roster and the live admin-role holders and not a one-account fixture.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-2.5-ws-reports-v1.csv` and the schema listing. E-06. TISAX 5.2.4. This output, with EV-2.4's, is the production half of **G-4** under SD-03.
 
@@ -472,7 +473,7 @@ done
 ```
 
   The admin-activity read carries a `timestamp` predicate on both ends, so `--freshness` is not used (it "works only with … filters without a timestamp") and `--limit=50` cannot hide the window: the query is scoped to one actor and one window and is expected to return nothing at all.
-- **VERIFY:** `eve/config unchanged during the window`; no PAM grant on `ENT_PROJECT_REPAIR_EVE` was created or approved inside the window (she is the approver, so any grant would have needed her, but the list is read anyway); every scheduler job is `ENABLED`; **both actor reads return no rows** — a single row for `SA_1_ADMIN` or `OWNER_DAILY_ACCOUNT` in `EVE_PROJECT`'s Admin Activity log between `T0` and now is interference. Any exception voids the run: it is recorded, the cause is investigated as a finding, and the proof is repeated with a new window.
+- **VERIFY:** `eve/config unchanged during the window`; no PAM grant on `ENT_PROJECT_REPAIR_EVE` was created or approved inside the window (they are the approver, so any grant would have needed them, but the list is read anyway); every scheduler job is `ENABLED`; **both actor reads return no rows** — a single row for `SA_1_ADMIN` or `OWNER_DAILY_ACCOUNT` in `EVE_PROJECT`'s Admin Activity log between `T0` and now is interference. Any exception voids the run: it is recorded, the cause is investigated as a finding, and the proof is repeated with a new window.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-2.7-no-interference-v1.txt`. E-06. TISAX 4.2.1.
 
@@ -490,7 +491,7 @@ gcloud storage ls -l "${WITNESS_BUCKET}/exports/**" | tail -20
 gcloud storage cat "${WITNESS_BUCKET}/exports/<the export covering T0>/MANIFEST.sha256" | head
 ```
 
-- **VERIFY:** A heartbeat row exists for the hour containing `T0`; its cumulative per-table counts for the incidents, pages and `eve_workspace_reports` tables are **greater than** the values witness administrator 1 recorded at EV-1.4; its configuration fingerprint is **unchanged** from EV-1.4; and the export covering `T0` contains the finding, with a manifest whose SHA-256 matches the object. The second human reads the values herself from the screen and copies them into her record.
+- **VERIFY:** A heartbeat row exists for the hour containing `T0`; its cumulative per-table counts for the incidents, pages and `eve_workspace_reports` tables are **greater than** the values witness administrator 1 recorded at EV-1.4; its configuration fingerprint is **unchanged** from EV-1.4; and the export covering `T0` contains the finding, with a manifest whose SHA-256 matches the object. The second human reads the values themselves from the screen and copies them into their record.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** The three outputs, exported by the witness administrator to `${R}-2.8-witness-copy-v1.txt` in the witness organisation's own record area. E-06. TISAX 5.2.4. This is the witness half of **G-2**.
 
@@ -499,7 +500,7 @@ gcloud storage cat "${WITNESS_BUCKET}/exports/<the export covering T0>/MANIFEST.
 - **WHO:** Second human.
 - **WHERE:** Shell.
 - **ACTION:** Repeat the queries of EV-2.4 and EV-2.5 for the reversal half of action *k* (the `REMOVE_PRIVILEGE`, the second `RENAME_ROLE`, the `REMOVE_ORG_UNIT`, the `DELETE_ROLE`, or the restored description), opening the block with `need EVE_PROOF_T0 && T0="$EVE_PROOF_T0"` as EV-2.5 does.
-- **VERIFY:** Both rows exist. A pipeline that reports the change but not the undo would let an administrator hide the shape of what he did; this step is the check that it does not.
+- **VERIFY:** Both rows exist. A pipeline that reports the change but not the undo would let an administrator hide the shape of what they did; this step is the check that it does not.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** Appended to `${R}-2.4-ws-logs-v1` and `${R}-2.5-ws-reports-v1`. E-06. TISAX 5.2.4.
 
@@ -507,7 +508,7 @@ gcloud storage cat "${WITNESS_BUCKET}/exports/<the export covering T0>/MANIFEST.
 
 - **WHO:** Second human writes and signs; witness administrator 1 uploads; witness administrator 2 countersigns.
 - **WHERE:** `BUILD_LOG_DIR/records/`, then `${WITNESS_BUCKET}/drills/`.
-- **ACTION:** **IRREVERSIBLE** — the witness bucket's retention policy is locked, so the uploaded object cannot be deleted before its retention period ends. Before uploading, confirm: the date in the name is today's; the version suffix is not already used (the `ls` guard below); the file contains no secret, no key material, no personal data beyond the named administrators the DPO record of SD-11 covers. The second human writes the record on her workstation:
+- **ACTION:** **IRREVERSIBLE** — the witness bucket's retention policy is locked, so the uploaded object cannot be deleted before its retention period ends. Before uploading, confirm: the date in the name is today's; the version suffix is not already used (the `ls` guard below); the file contains no secret, no key material, no personal data beyond the named administrators the DPO record of SD-11 covers. The second human writes the record on their workstation:
 
 ```bash
 cat > "$R-2.10-proof-record-v1.md" <<'REC'
@@ -532,7 +533,7 @@ test -s "$R-2.10-proof-record-v1.md" && shasum -a 256 "$R-2.10-proof-record-v1.m
 penv_set EVE_PROOF_RECORD "records/$(basename "$R-2.10-proof-record-v1.md")"
 ```
 
-  She hands the signed file to witness administrator 1 by a channel of her choosing and reads its SHA-256 aloud. **Witness administrator 1 then uploads it**, on the witness workstation with the witness copy of `~/.platform-env` sourced, in the form of [08](08-witness-organisation.md) WO-3.3 (`RMODE` is `Unlocked` before WO-2.17 and `Locked` after; the second human watches the screen):
+  They hand the signed file to witness administrator 1 by a channel of their choosing and read its SHA-256 aloud. **Witness administrator 1 then uploads it**, on the witness workstation with the witness copy of `~/.platform-env` sourced, in the form of [08](08-witness-organisation.md) WO-3.3 (`RMODE` is `Unlocked` before WO-2.17 and `Locked` after; the second human watches the screen):
 
 ```bash
 F="<the handed-over file>"; N="$(date -u +%F)-eve-independent-proof-v1.md"; RMODE="<Unlocked | Locked, per 08 WO-2.17>"
@@ -545,8 +546,8 @@ gcloud storage objects describe "${WITNESS_BUCKET}/drills/$N" --format='value(ge
 openssl dgst -md5 -binary "$F" | openssl base64      # must equal the md5_hash just printed
 ```
 
-  He returns the object name, its generation number and its `md5_hash` to the second human, who writes them into the build log. The platform owner is given the fact that the drill passed, and nothing else.
-- **VERIFY:** `--print-created-message` printed one version-specific URL (a "Skipping" line means the name existed and nothing was written: stop and use `v2`); `gcloud storage ls -l "${WITNESS_BUCKET}/drills/"` lists the object with today's date; the printed `md5_hash` equals the local `openssl` digest, and the `sha256` custom metadata equals the SHA-256 the second human read aloud; `test -s "$BUILD_LOG_DIR/$EVE_PROOF_RECORD"` succeeds on her workstation; `checkpoint EV-2.10 DONE "$WITNESS_ADMIN_1_EMAIL" "witness:drills/$N generation <n>"`.
+  They return the object name, its generation number and its `md5_hash` to the second human, who writes them into the build log. The platform owner is given the fact that the drill passed, and nothing else.
+- **VERIFY:** `--print-created-message` printed one version-specific URL (a "Skipping" line means the name existed and nothing was written: stop and use `v2`); `gcloud storage ls -l "${WITNESS_BUCKET}/drills/"` lists the object with today's date; the printed `md5_hash` equals the local `openssl` digest, and the `sha256` custom metadata equals the SHA-256 the second human read aloud; `test -s "$BUILD_LOG_DIR/$EVE_PROOF_RECORD"` succeeds on their workstation; `checkpoint EV-2.10 DONE "$WITNESS_ADMIN_1_EMAIL" "witness:drills/$N generation <n>"`.
 - **ROLLBACK:** **None for the upload.** A wrong record is superseded by a `v2` object; `v1` stays for ever, which is the point of the witness.
 - **EVIDENCE:** The object name, generation and hash in the build log. E-08. TISAX 5.2.6, 5.2.4. Feeds **G-4**, **G-6** and, with EV-2.8, **G-2**.
 
@@ -554,9 +555,9 @@ openssl dgst -md5 -binary "$F" | openssl base64      # must equal the md5_hash j
 
 ### EV-3.1 A merge to `eve/config` without the second human's review is refused
 
-- **WHO:** Platform owner attempts, as himself, on **his own workstation and his own clone** (`$HOME/eve-config-owner`; the `$HOME/eve-config` clone of EV-1.3 is the second human's and does not exist on his machine); second human observes the result from her own session.
+- **WHO:** Platform owner attempts, as themselves, on **their own workstation and their own clone** (`$HOME/eve-config-owner`; the `$HOME/eve-config` clone of EV-1.3 is the second human's and does not exist on their machine); second human observes the result from their own session.
 - **WHERE:** `EVE_CONFIG_REPO` on the git host, from inside the clone (the git host's CLI infers the pull request from the current branch of the current repository, so the commands run inside it and name the head branch and the pull-request number explicitly).
-- **ACTION:** He opens a pull request that changes one harmless line of `thresholds.yaml` (a comment), then tries to merge it with no review, and then tries to approve it himself and merge. A refusal counts only when its message names the protection; a refusal for any other reason (network, authentication, a wrong repository name) is a tooling failure and proves nothing.
+- **ACTION:** They open a pull request that changes one harmless line of `thresholds.yaml` (a comment), then try to merge it with no review, and then try to approve it themselves and merge. A refusal counts only when its message names the protection; a refusal for any other reason (network, authentication, a wrong repository name) is a tooling failure and proves nothing.
 
 ```bash
 git clone "$EVE_CONFIG_REPO" "$HOME/eve-config-owner" 2>/dev/null || git -C "$HOME/eve-config-owner" pull --ff-only
@@ -580,17 +581,17 @@ merge_attempt() {
 }
 merge_attempt                                                     # attempt 1: no review at all
 gh pr review "$PR" --repo "$EVE_CONFIG_REPO" --approve --body "self-approval negative test" 2>&1 | tee .ev-3.1-self-approve.txt
-merge_attempt                                                     # attempt 2: after his own approval
+merge_attempt                                                     # attempt 2: after their own approval
 ```
 
   If the CLI refuses the URL form of `EVE_CONFIG_REPO`, pass it as `[HOST/]OWNER/REPO`; record which.
-- **VERIFY:** Both attempts print `refused for the right reason` and the message names the missing required review (CODEOWNERS: the second human); his self-approval either is refused outright or does not satisfy the requirement. Any `STOP` line stops the file: a successful merge is a severity-1 finding against [25](25-eve-human-super-admin-detections.md) EH-2.1's branch protection; an unrelated refusal is repaired and the step repeated. The second human reads the refusal in the pull request's own timeline (`gh pr view "$PR" --repo "$EVE_CONFIG_REPO" --comments` from her own workstation, or the git host's page), not from a screenshot he sends her. Close the pull request without merging and delete the branch.
+- **VERIFY:** Both attempts print `refused for the right reason` and the message names the missing required review (CODEOWNERS: the second human); their self-approval either is refused outright or does not satisfy the requirement. Any `STOP` line stops the file: a successful merge is a severity-1 finding against [25](25-eve-human-super-admin-detections.md) EH-2.1's branch protection; an unrelated refusal is repaired and the step repeated. The second human reads the refusal in the pull request's own timeline (`gh pr view "$PR" --repo "$EVE_CONFIG_REPO" --comments` from their own workstation, or the git host's page), not from a screenshot the platform owner sends. Close the pull request without merging and delete the branch.
 - **ROLLBACK:** `gh pr close "$PR" --repo "$EVE_CONFIG_REPO" --delete-branch`; nothing is merged.
 - **EVIDENCE:** The pull request URL, its timeline and the refusal message as `${R}-3.1-config-merge-refused-v1`. E-15. TISAX 5.3.1, 5.2.1.
 
 ### EV-3.2 A direct push to the default branch is refused, and a bypass would be audited
 
-- **WHO:** Platform owner attempts, from his own clone of EV-3.1; second human reads the result.
+- **WHO:** Platform owner attempts, from their own clone of EV-3.1; second human reads the result.
 - **WHERE:** `EVE_CONFIG_REPO`, inside `$HOME/eve-config-owner`.
 - **ACTION:**
 
@@ -609,8 +610,8 @@ fi
 git reset --hard origin/main
 ```
 
-  The second human then confirms in the repository settings that administrator bypass is either disabled or audited, and that the audit log of the git host is readable by her.
-- **VERIFY:** `refused for the right reason`, with the host's protected-branch message in the output (on GitHub, `GH006: Protected branch update failed`); no `STOP` line; local branch reset clean; the settings show the branch protection with "require a pull request", "require review from code owners" and either no admin bypass or an audited one; she can open the git host's audit log herself.
+  The second human then confirms in the repository settings that administrator bypass is either disabled or audited, and that the audit log of the git host is readable by them.
+- **VERIFY:** `refused for the right reason`, with the host's protected-branch message in the output (on GitHub, `GH006: Protected branch update failed`); no `STOP` line; local branch reset clean; the settings show the branch protection with "require a pull request", "require review from code owners" and either no admin bypass or an audited one; they can open the git host's audit log themselves.
 - **ROLLBACK:** `git reset --hard origin/main`, already in the action.
 - **EVIDENCE:** Terminal output and the settings screenshot as `${R}-3.2-direct-push-refused-v1`. E-15. TISAX 5.3.1.
 
@@ -687,7 +688,7 @@ bq query --project_id="$EVE_WITNESS_PROJECT" --use_legacy_sql=false --format=csv
 
 ### EV-4.2 Withhold exactly one push
 
-- **WHO:** Platform owner performs the pause under a grant the second human approves; she times it.
+- **WHO:** Platform owner performs the pause under a grant the second human approves; they time it.
 - **WHERE:** Shell; `EVE_PROJECT`.
 - **ACTION:** The withhold is a pause of the push schedule for one window, not a deletion and not an IAM change. **The grant is sized to the whole drill, not to the pause:** the same grant must still be active when EV-4.4 resumes the push, otherwise the resume fails with a permission error and the push stays paused with the witness alarm firing and nobody holding access to clear it. The arithmetic: [27](27-witness-grants-and-alarms.md)'s heartbeat absence window is 90 minutes, plus 15 minutes for the alarm to be observed on three devices, plus 15 minutes for EV-4.4's backlog check — 120 minutes, which is exactly the entitlement's maximum (`ent-project-repair`, `maxRequestDuration: 7200s`, [12](12-privileged-access-catalogue.md) PA-2.1; a longer request is refused by PAM). So the grant is requested at `7200s`, the second human approves it **at once**, and the pause is issued **within five minutes of the approval**; the grant's remaining lifetime is checked before the wait (EV-4.3) and again before the resume (EV-4.4), and a second grant is the documented fallback.
 
@@ -697,7 +698,7 @@ need ENT_PROJECT_REPAIR_EVE EVE_PROJECT CICD_PROJECT EVE_JOB_HEARTBEAT_PUSH REGI
 gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_EVE" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" \
   --requested-duration=7200s --justification="setup 28 EV-4.2 witness withhold drill DR-28-3: pause and resume $(basename "$EVE_JOB_HEARTBEAT_PUSH") only" \
   --format='value(name)' | tee "$R-4.2-grant.txt"
-# the second human approves, from her own workstation, without delay:
+# the second human approves, from their own workstation, without delay:
 gcloud pam grants approve "$(basename "$(cat "$R-4.2-grant.txt")")" --entitlement="$ENT_PROJECT_REPAIR_EVE" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" \
   --reason="approved for DR-28-3, one window, resume within 120 minutes"
 # the platform owner, within five minutes of the approval:
@@ -708,8 +709,8 @@ gcloud scheduler jobs describe "$(basename "$EVE_JOB_HEARTBEAT_PUSH")" --locatio
 date -u +%FT%TZ | tee "$R-4.2-pause-minute.txt"
 ```
 
-  The grant name is written to `$R-4.2-grant.txt` (a grant id is not a credential) because EV-4.3 and EV-4.4 run in later shells; the second human keeps her own copy of the pause minute.
-- **VERIFY:** The grant `describe` prints `ACTIVE` and `7200s`; `state` prints `PAUSED`; the pause minute is written and the second human notes it on her own device. The export job `EVE_JOB_EXPORT` is left running, so only the heartbeat's absence is under test in this run; the export absence alarm is exercised in a later semi-annual run and the calendar row says so.
+  The grant name is written to `$R-4.2-grant.txt` (a grant id is not a credential) because EV-4.3 and EV-4.4 run in later shells; the second human keeps their own copy of the pause minute.
+- **VERIFY:** The grant `describe` prints `ACTIVE` and `7200s`; `state` prints `PAUSED`; the pause minute is written and the second human notes it on their own device. The export job `EVE_JOB_EXPORT` is left running, so only the heartbeat's absence is under test in this run; the export absence alarm is exercised in a later semi-annual run and the calendar row says so.
 - **ROLLBACK:** `gcloud scheduler jobs resume ...` at any moment under the same grant (EV-4.4 does it on schedule). If the grant has ended before the resume, the fallback of EV-4.4 applies; the push is never left paused past the drill.
 - **EVIDENCE:** The grant id, the approval and the two command outputs as `${R}-4.2-withhold-v1.txt`. E-06. TISAX 5.2.6.
 
@@ -717,7 +718,7 @@ date -u +%FT%TZ | tee "$R-4.2-pause-minute.txt"
 
 - **WHO:** Witness administrators 1 and 2 receive; second human receives; none of them tells the platform owner.
 - **WHERE:** Their own mail and phones; the witness Monitoring console.
-- **ACTION:** **Before the wait begins**, the second human confirms the grant will outlive the window: she reads the grant and computes the remaining lifetime (grant end ≈ `createTime` + `requestedDuration`; the absence window plus the alarm margin is 105 minutes from the pause minute).
+- **ACTION:** **Before the wait begins**, the second human confirms the grant will outlive the window: they read the grant and compute the remaining lifetime (grant end ≈ `createTime` + `requestedDuration`; the absence window plus the alarm margin is 105 minutes from the pause minute).
 
 ```bash
 need CICD_PROJECT
@@ -727,7 +728,7 @@ cat "$R-4.2-pause-minute.txt"; date -u +%FT%TZ
 ```
 
   Then wait out the absence window (90 minutes for the heartbeat policy, per [27](27-witness-grants-and-alarms.md) WG-3.5, from the pause minute). Record what arrived, on which channel, at what time, on how many devices.
-- **VERIFY:** Before the wait: the grant is `ACTIVE` and its remaining lifetime exceeds 105 minutes from the pause minute; if it does not (the approval was slow, or the pause was late), **resume the push now**, revoke the grant, and restart the drill from EV-4.2 with a fresh grant — never start a wait the grant cannot cover. After the wait: the heartbeat absence alarm fired within its window; it reached both witness administrators **and** the second human; the platform owner received nothing on a witness channel (he has no account in the witness organisation, which is the design, and the record states that it held). If nothing arrives within the window plus 15 minutes, that is the finding: the witness alarm does not work, G-2 stays red, and the file stops until [27](27-witness-grants-and-alarms.md) is repaired.
+- **VERIFY:** Before the wait: the grant is `ACTIVE` and its remaining lifetime exceeds 105 minutes from the pause minute; if it does not (the approval was slow, or the pause was late), **resume the push now**, revoke the grant, and restart the drill from EV-4.2 with a fresh grant — never start a wait the grant cannot cover. After the wait: the heartbeat absence alarm fired within its window; it reached both witness administrators **and** the second human; the platform owner received nothing on a witness channel (they have no account in the witness organisation, which is the design, and the record states that it held). If nothing arrives within the window plus 15 minutes, that is the finding: the witness alarm does not work, G-2 stays red, and the file stops until [27](27-witness-grants-and-alarms.md) is repaired.
 - **ROLLBACK:** Acknowledge the alarm as a drill in the witness console.
 - **EVIDENCE:** Screenshots of the alarm on two devices as `${R}-4.3-witness-alarm-v1`. E-10. TISAX 1.6.2, 5.2.6.
 
@@ -783,13 +784,13 @@ penv_set WITNESS_WITHHOLD_RECORD "records/$(basename "$R-4.5-witness-withhold-v1
 
 ## 5. The anti-silencing drill (DR-28-2)
 
-The question this section answers is narrower and harder than §2's: *when the monitored administrator legitimately changes Eve, does the second human learn of it without his help?*
+The question this section answers is narrower and harder than §2's: *when the monitored administrator legitimately changes Eve, does the second human learn of it without their help?*
 
 ### EV-5.1 The declared change, requested and approved
 
 - **WHO:** Platform owner requests; second human approves, and starts a stopwatch.
 - **WHERE:** Shell.
-- **ACTION:** He declares, in the justification, exactly what he will change and for how long: pause `EVE_JOB_ROSTER` for 30 minutes. He tells her nothing else, and in particular does not tell her when inside the grant he will act. **The grant covers the pause and the resume**, which are 30 minutes apart by declaration; the page (EV-5.3) and the witness read (EV-5.4) need no grant and may complete after the resume. The arithmetic: up to 60 minutes of latitude for him to choose the pause minute, 30 minutes of declared pause, 15 minutes of margin — 105 minutes, inside the entitlement's `7200s` maximum, which is what is requested.
+- **ACTION:** They declare, in the justification, exactly what they will change and for how long: pause `EVE_JOB_ROSTER` for 30 minutes. They tell the second human nothing else, and in particular do not say when inside the grant they will act. **The grant covers the pause and the resume**, which are 30 minutes apart by declaration; the page (EV-5.3) and the witness read (EV-5.4) need no grant and may complete after the resume. The arithmetic: up to 60 minutes of latitude for them to choose the pause minute, 30 minutes of declared pause, 15 minutes of margin — 105 minutes, inside the entitlement's `7200s` maximum, which is what is requested.
 
 ```bash
 need ENT_PROJECT_REPAIR_EVE EVE_PROJECT CICD_PROJECT EVE_JOB_ROSTER REGION
@@ -797,7 +798,7 @@ gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_EVE" --location=glob
   --requested-duration=7200s \
   --justification="DR-28-2 anti-silencing drill: pause $(basename "$EVE_JOB_ROSTER") for 30 minutes at a minute of my choosing inside the first hour, then resume; no other change" \
   --format='value(name)' | tee "$R-5.1-grant.txt"
-# the second human approves and starts her stopwatch at the approval:
+# the second human approves and starts their stopwatch at the approval:
 gcloud pam grants approve "$(basename "$(cat "$R-5.1-grant.txt")")" --entitlement="$ENT_PROJECT_REPAIR_EVE" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" \
   --reason="DR-28-2 approved; scope limited to pausing and resuming $(basename "$EVE_JOB_ROSTER") within 120 minutes"
 gcloud pam grants describe "$(basename "$(cat "$R-5.1-grant.txt")")" --entitlement="$ENT_PROJECT_REPAIR_EVE" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" --format=json | tee "$R-5.1-declared-grant-v1.json"
@@ -822,19 +823,19 @@ gcloud scheduler jobs describe "$(basename "$EVE_JOB_ROSTER")" --location="$REGI
 date -u +%FT%TZ > "$R-5.2-pause-minute.txt"
 ```
 
-  He pauses inside the first hour of the grant, so that at least 45 minutes remain for the declared 30-minute pause and its resume; he notes the minute and says nothing until EV-5.5.
-- **VERIFY:** The grant is `ACTIVE` with at least 45 minutes of lifetime left (grant end ≈ `createTime` + `requestedDuration`); if less remains, he does not pause, the grant is revoked and EV-5.1 is repeated — a declared 30-minute pause must never outlive its grant. `state` prints `PAUSED`.
+  They pause inside the first hour of the grant, so that at least 45 minutes remain for the declared 30-minute pause and its resume; they note the minute and say nothing until EV-5.5.
+- **VERIFY:** The grant is `ACTIVE` with at least 45 minutes of lifetime left (grant end ≈ `createTime` + `requestedDuration`); if less remains, they do not pause, the grant is revoked and EV-5.1 is repeated — a declared 30-minute pause must never outlive its grant. `state` prints `PAUSED`.
 - **ROLLBACK:** Resume (EV-5.5).
-- **EVIDENCE:** His noted minute, handed over at EV-5.5. E-06. TISAX 5.2.6.
+- **EVIDENCE:** Their noted minute, handed over at EV-5.5. E-06. TISAX 5.2.6.
 
-### EV-5.3 Eve reports her own pause — **BLOCKED** until the self-integrity rules exist
+### EV-5.3 Eve reports its own pause — **BLOCKED** until the self-integrity rules exist
 
 - **WHO:** Second human.
-- **WHERE:** Her phone and mailbox; the paging service.
+- **WHERE:** Their phone and mailbox; the paging service.
 - **ACTION:** **BLOCKED (README B-08).** This step needs Eve's self-integrity rules and configuration fingerprint — the rule set of [25](25-eve-human-super-admin-detections.md) that treats a scheduler, job, IAM, sink, dataset, bucket, key or `eve@` change on `EVE_PROJECT` as severity 1 with the actor as subject. It needs: that rule set and the fingerprint computation committed in Eve's repository at a named commit with green CI, deployed at `EVE_CODE_COMMIT`. Until then the step records `BLOCKED`, the drill continues at EV-5.4 (the witness half, which does not need the rule), and the missing half is listed in README's BLOCKED index against `EVE_H_LIVE_RECORD`.
 
   When unblocked: wait for the detection period plus the budget, and record the page exactly as EV-2.3 does.
-- **VERIFY:** A severity-1 page reaches the second human naming `SA_1_ADMIN` as the actor and the paused job as the object, **without** the platform owner telling her. The page arrives even though the change was declared: Eve does not read the PAM justification and must not be taught to suppress declared changes — the approval record, not the detector, is what makes it benign.
+- **VERIFY:** A severity-1 page reaches the second human naming `SA_1_ADMIN` as the actor and the paused job as the object, **without** the platform owner telling them. The page arrives even though the change was declared: Eve does not read the PAM justification and must not be taught to suppress declared changes — the approval record, not the detector, is what makes it benign.
 - **ROLLBACK:** Acknowledge as a drill.
 - **EVIDENCE:** `${R}-5.3-self-integrity-page-v1` or a `BLOCKED` checkpoint with the B-08 reference. E-10. TISAX 1.6.2.
 
@@ -863,7 +864,7 @@ gcloud pam grants revoke "$(basename "$(cat "$R-5.1-grant.txt")")" --entitlement
 gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_EVE" --location=global --project="$EVE_PROJECT" --billing-project="$CICD_PROJECT" --format='table(name,state,createTime)'
 ```
 
-  Only now does he tell her the minute he paused. She compares it with the page time (EV-5.3) and the fingerprint change (EV-5.4) and records both deltas.
+  Only now does the platform owner tell the second human the minute they paused. The second human compares it with the page time (EV-5.3) and the fingerprint change (EV-5.4) and records both deltas.
 - **VERIFY:** `state` prints `ENABLED` and the job's next run completed; the grant list shows no `ACTIVE` grant (revoked, or ended); the roster check's output for the skipped window is either backfilled or explicitly absent, and the absence is recorded (a paused roster check is a blind window in the roster, which is why the drill window is short and declared).
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** `${R}-5.5-resume-v1.txt`. E-06. TISAX 5.2.6.
@@ -883,7 +884,7 @@ cat > "$R-5.6-anti-silencing-v1.md" <<'REC'
 - Self-integrity page (EV-5.3): arrived at ...:...Z naming ... as actor and ... as object | BLOCKED (README B-08, owner ..., due before 38)
 - Witness (EV-5.4): fingerprint changed and WITNESS_ALERT_FINGERPRINT fired to ... at ...:...Z | counts flat-lined and visible | neither (finding against 26, owner ..., due ...)
 - Deltas: pause to page ... minutes; pause to witness signal ... minutes
-- Verdict, in the second human's words: did I learn of it without his help? ...
+- Verdict, in the second human's words: did I learn of it without their help? ...
 - Signatures: second human ...; witness administrator 1 ...
 REC
 test -s "$R-5.6-anti-silencing-v1.md" && shasum -a 256 "$R-5.6-anti-silencing-v1.md"
@@ -941,7 +942,7 @@ penv_set SANDBOX_SEEDED_ACTION_LIST "eve/sandbox-seeded-actions.md"
 ### EV-6.1a Open the twin shell
 
 - **WHO:** Second human; sandbox super admin 1 present.
-- **WHERE:** Shell on her workstation. `twin_shell` opens an **interactive child shell** and blocks until `exit`; it is the only line of this step, and nothing is pasted after it in the same block — lines pasted behind it would be fed to the child's stdin in an unspecified order and, on exit, run in the parent shell against **production** names.
+- **WHERE:** Shell on their workstation. `twin_shell` opens an **interactive child shell** and blocks until `exit`; it is the only line of this step, and nothing is pasted after it in the same block — lines pasted behind it would be fed to the child's stdin in an unspecified order and, on exit, run in the parent shell against **production** names.
 
 ```bash
 twin_shell --sandbox-org
@@ -1008,7 +1009,7 @@ bq query --project_id="$EVE_TWIN_PROJECT" --location="$BQ_LOCATION" --use_legacy
   WHERE detected_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 2 HOUR) ORDER BY detected_at'
 ```
 
-  For each action she records a row: the event name the tenant **actually emitted** (from the sandbox Admin console's Admin log events and from the twin dataset), the name the list expected, the rule that fired or did not, and the page that arrived or did not. S4 is expected to reach the twin **only through the poll table** while sharing is off; the sink rows for that window never arrive, which is the point of SI-08.
+  For each action they record a row: the event name the tenant **actually emitted** (from the sandbox Admin console's Admin log events and from the twin dataset), the name the list expected, the rule that fired or did not, and the page that arrived or did not. S4 is expected to reach the twin **only through the poll table** while sharing is off; the sink rows for that window never arrive, which is the point of SI-08.
 - **VERIFY:** S1 produced `AUTHORIZE_API_CLIENT_ACCESS` and `REMOVE_API_CLIENT_ACCESS`, and nonprod Eve raised `SA-03` **and** `SI-08` with the sandbox super admin as subject, paging `NOTIF_CH_EVE_TWIN_EMAIL`, `NOTIF_CH_EVE_TWIN_SA1` and `NOTIF_CH_EVE_TWIN_SA2`; S4 produced an `SI-08` finding from the poll table. Those two lines are the **minimum** for `EVE_H_LIVE_RECORD`: at least one `SA-03`-class and one `SI-08`-class detection proven on the twin. S2 and S3 either page under `SA-03` or expose a catalogue predicate that does not match the tenant's real event name — each such miss is a finding against [25](25-eve-human-super-admin-detections.md) EH-2.3, owner the Eve owner, due before the super-admin gate of [38](38-super-admin-gate-and-grant.md), and is written into the record with the emitted name so the fix is a one-line catalogue change. **No** page reaches the production paging service, the witness channels or the incident commander; the production `eve_workspace_logs` contains **no** row for the sandbox actors (queried from a separate, non-twin shell). Every action is reversed before the sitting ends.
 - **ROLLBACK:** Each action's reversal is part of the action; if S4's restore fails, stop and repair before leaving the sitting — a sandbox with sharing off is a sandbox nonprod Eve cannot see.
 - **EVIDENCE:** `${R}-6.2-sandbox-seeded-actions-v1.txt` (the per-action table) and the nonprod page screenshots. E-10. TISAX 1.6.2, 5.2.2.
@@ -1096,8 +1097,8 @@ python3 - "$DRILL_CALENDAR" "$D0" "$NEXT" "$EVE_PROOF_RECORD" "$ANTI_SILENCING_R
 import sys
 path, d0, nxt, rec1, rec2, rec3 = sys.argv[1:7]
 rows = {
- "DR-28-1": f"| DR-28-1 | Second human's blind proof: an unannounced window, one seeded super-admin action from eve/seeded-actions.md, verified by her alone from the paging service, the two tables and the witness | monthly, and within five business days of every merge to eve/config | second human (platform owner performs the seeded action only) | a witness administrator records | 28 | {d0} | {rec1} | {nxt} | G-4, G-6; SD-12 item 5 |",
- "DR-28-2": f"| DR-28-2 | Anti-silencing drill: one declared change to Eve by the platform owner under an approved grant; the second human confirms the self-integrity page and the witness fingerprint arrive without his help | quarterly, and after any change to Eve's self-integrity rules or fingerprint definition | second human | a witness administrator | 28 | {d0} | {rec2} | *tbd* (quarter after the first) | SD-12 item 12 |",
+ "DR-28-1": f"| DR-28-1 | Second human's blind proof: an unannounced window, one seeded super-admin action from eve/seeded-actions.md, verified by them alone from the paging service, the two tables and the witness | monthly, and within five business days of every merge to eve/config | second human (platform owner performs the seeded action only) | a witness administrator records | 28 | {d0} | {rec1} | {nxt} | G-4, G-6; SD-12 item 5 |",
+ "DR-28-2": f"| DR-28-2 | Anti-silencing drill: one declared change to Eve by the platform owner under an approved grant; the second human confirms the self-integrity page and the witness fingerprint arrive without their help | quarterly, and after any change to Eve's self-integrity rules or fingerprint definition | second human | a witness administrator | 28 | {d0} | {rec2} | *tbd* (quarter after the first) | SD-12 item 12 |",
  "DR-28-3": f"| DR-28-3 | Witness push withheld for one window; the absence alarm fires; the backlog push restores the series and the counts do not decrease | once before the super-admin grant, then semi-annually, alternating heartbeat and export | platform owner pauses under an approved grant; second human times | both witness administrators | 28 | {d0} | {rec3} | *tbd* (six months after the first) | G-2; SD-07 |",
 }
 lines = open(path).read().split("\n")
@@ -1125,8 +1126,8 @@ git -C "$BUILD_LOG_DIR" commit -m "registers: DR-28-1 to DR-28-3 filled (setup 2
 
 - **WHO:** Second human; the Eve owner implements the reminder.
 - **WHERE:** `EVE_CONFIG_REPO` settings; `DRILL_CALENDAR`.
-- **ACTION:** A cadence nobody is reminded of is a cadence that lapses. Add to `eve/config`'s pull-request template a checkbox — "a DR-28-1 proof is due within five business days of this merge; second human to schedule" — and, where the git host supports it, a rule that notifies the second human on every merge to the default branch. While CI is BLOCKED (README B-03) the checkbox plus her own calendar entry is the mechanism, recorded as such.
-- **VERIFY:** A test pull request shows the checkbox; the merge notification reaches her (confirmed on the EV-3.1 negative test's close, or on the next real merge).
+- **ACTION:** A cadence nobody is reminded of is a cadence that lapses. Add to `eve/config`'s pull-request template a checkbox — "a DR-28-1 proof is due within five business days of this merge; second human to schedule" — and, where the git host supports it, a rule that notifies the second human on every merge to the default branch. While CI is BLOCKED (README B-03) the checkbox plus their own calendar entry is the mechanism, recorded as such.
+- **VERIFY:** A test pull request shows the checkbox; the merge notification reaches them (confirmed on the EV-3.1 negative test's close, or on the next real merge).
 - **ROLLBACK:** Revert the template change.
 - **EVIDENCE:** The template commit and one notification as `${R}-7.2-config-merge-trigger-v1`. E-15. TISAX 5.2.6.
 
@@ -1158,7 +1159,7 @@ done
 test "$FAIL" = 0 && echo "gates clear"
 ```
 
-  Then the two facts that no local file can prove: witness administrator 1 states in writing that all four witness alert policies have **seen data** (EV-4.1's time-series read is attached), and the second human states that she has read the residual-risk paragraph at the head of this file.
+  Then the two facts that no local file can prove: witness administrator 1 states in writing that all four witness alert policies have **seen data** (EV-4.1's time-series read is attached), and the second human states that they have read the residual-risk paragraph at the head of this file.
 - **VERIFY:** `gates clear`, both written statements present. A `RESIDUAL-RISK` line for `SA-03` or `SI-08` is accepted only with the second human's signature on it and is repeated verbatim in `EVE_H_LIVE_RECORD`. Any `REFUSED` line stops the step: `EVE_H_LIVE_RECORD` is not written, `checkpoint EV-8.1 BLOCKED` names which gate is open, and README's BLOCKED index gains a line — Wall-E does not start (SD-12 item 13).
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-8.1-refusal-gates-v1.txt`. E-05, E-08. TISAX 1.4.1.
@@ -1227,9 +1228,9 @@ git -C "$PLATFORM_REPO_DIR" push -u origin eve-h-live
 
 ### EV-8.3 The interim activity rules: kept or retired
 
-- **WHO:** Second human decides alone (she is their recipient).
+- **WHO:** Second human decides alone (they are their recipient).
 - **WHERE:** Admin console as `SA_2_ADMIN`: Menu → Rules; `06`'s OB-2.6 rules A to D.
-- **ACTION:** [06](06-organisation-bootstrap-and-roster.md) OB-2.6 created four activity rules that mail her on roster-account logins and admin-role changes, "until the second human retires them, never before `EVE_H_LIVE_RECORD`". Now she may. **Recommended: keep them.** They cost nothing, they run inside Workspace rather than inside anything the platform owner administers, and they are the only detector that survives the loss of `EVE_PROJECT` entirely — which is precisely the scenario Eve cannot report on. If she retires any rule, she records which, why, and what now covers it.
+- **ACTION:** [06](06-organisation-bootstrap-and-roster.md) OB-2.6 created four activity rules that mail them on roster-account logins and admin-role changes, "until the second human retires them, never before `EVE_H_LIVE_RECORD`". Now they may. **Recommended: keep them.** They cost nothing, they run inside Workspace rather than inside anything the platform owner administers, and they are the only detector that survives the loss of `EVE_PROJECT` entirely — which is precisely the scenario Eve cannot report on. If they retire any rule, they record which, why, and what now covers it.
 - **VERIFY:** A dated line in `EVE_H_LIVE_RECORD` stating `kept` or `retired: <rules>, covered by <what>`; if kept, a screenshot showing the four rules still enabled; README's re-run index line for the interim rules is closed or annotated.
 - **ROLLBACK:** Re-create a retired rule from OB-2.6's text.
 - **EVIDENCE:** `${R}-8.3-interim-rules-decision-v1`. E-08. TISAX 4.1.2.
@@ -1310,19 +1311,19 @@ No step in this file prints, pastes or stores a secret value. The only credentia
 
 ## 11. Verification checklist for the whole part
 
-- [ ] `EVE_FIRST_RUN_RECORD` existed before the first window opened; Eve had a recipient outside the administration line from her first run.
+- [ ] `EVE_FIRST_RUN_RECORD` existed before the first window opened; Eve had a recipient outside the administration line from its first run.
 - [ ] The seeded-action list is merged, and the platform owner did not review it.
 - [ ] The proof fixtures exist and hold no real user, no real role assignment and no production setting.
 - [ ] The window was unannounced; the second human's note predates the platform owner's reply.
 - [ ] The platform owner performed exactly one action and verified nothing.
-- [ ] A page reached the second human on her own device within the recorded budget (full mode), and the recipient set contained nobody in the administration line.
+- [ ] A page reached the second human on their own device within the recorded budget (full mode), and the recipient set contained nobody in the administration line.
 - [ ] The event is in `eve_workspace_logs` with actor `SA_1_ADMIN`, and the absence of `walle@` rows was recorded as expected and not acted on.
 - [ ] The event is in `eve_workspace_reports` through the Reports poll, and the table holds rows for other roster actors.
 - [ ] `eve.incidents` and `eve.pages` rows match what actually arrived; `halt_target_pending` is recorded.
 - [ ] The reversal is reported as well as the change.
 - [ ] No `eve/config` merge, no PAM grant and no scheduler change happened inside the window.
 - [ ] The witness heartbeat for the hour shows increased counts and an unchanged fingerprint; the export containing the finding verifies against its manifest.
-- [ ] A merge to `eve/config` without the second human is refused; a direct push is refused; bypass is disabled or audited and she can read the audit.
+- [ ] A merge to `eve/config` without the second human is refused; a direct push is refused; bypass is disabled or audited and they can read the audit.
 - [ ] No human principal on `EVE_PROJECT` outside `GRP_EVE_OWNERS` and `GRP_EVE_CONSOLE_READERS`; no human `actAs` or token-creator on any Eve service account.
 - [ ] The sink is enabled, its filter carries no actor exclusion, and the pinned token version is unchanged.
 - [ ] One push was withheld after the alarms had seen data and before the grant; the absence alarm fired to both witness administrators and the second human; the backlog restored the series and no count decreased.

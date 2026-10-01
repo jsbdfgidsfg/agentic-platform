@@ -2,7 +2,13 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- 2026-10-01: R5 names re-checked against the deny-support list of 2026-09-29 — the two
+  IAM-policy names are now `cloudresourcemanager.googleapis.com/projects.setIamPolicy` and
+  `…/folders.setIamPolicy`; deny policies name agents in the `principal://…/resources/aiplatform/projects/N`
+  form (SD-22), the `principalSet` form kept as P8's fallback; the PAB rule names the folder only
+  (Resource Manager resources) and `pab-agents-p-sa` two projects; §4.2's enforcement versions
+  corrected; §5.1 records the GA `gcloud pam grants` track.
 - 2026-09-18: K6 stated as a two-person act under multi-party approval in §9.7 and §8.4, with
   the one-person fallback if the sandbox tenant shows `users.makeAdmin` is not covered.
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md) §4 (identity), §4.4
@@ -116,7 +122,8 @@ both last updated within the week, spell "all agents in a project" differently:
 
 | Spelling | Where Google shows it | Used on this page for |
 |---|---|---|
-| `principalSet://agents.global.org-ORG_ID.system.id.goog/attribute.platformContainer/aiplatform/projects/N` | the Agent Runtime Agent Identity page, IAM allow-policy examples (§15 [S3]); the "Configure IAM agent policies" page [S4] | allow policies (the query grant, `run.invoker`), and the deny policy's first attempt |
+| `principalSet://agents.global.org-ORG_ID.system.id.goog/attribute.platformContainer/aiplatform/projects/N` | the Agent Runtime Agent Identity page, IAM allow-policy examples (§15 [S3]); the "Configure IAM agent policies" page [S4]; the principal-identifiers deny table (updated 2026-09-24) still lists it | allow policies (the query grant, `run.invoker`); in a deny policy, P8's fallback only |
+| `principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N` | the principals overview (updated 2026-09-24, read 2026-10-01): "All agent identities in a project in a deny policy : `principal://agents.global.org-123456789012.system.id.goog/resources/aiplatform/projects/9876543210`" | deny policies (SD-22, P165) |
 | `//agents.global.org-ORG_ID.system.id.goog/attribute.container/projects/N` | the Principal Access Boundary page, "Agent identities" principal-set row (§15 [S5]) | PAB policy bindings |
 | `principalSet://<org.id>.global.agent.id.goog/*` | the Agent Runtime page's **deny-policy example** ("deny all agents across the org") [S3] — a trust-domain spelling that matches neither of the above and that `wall-e/12` §1.4 already flagged | nothing until P8's spike says which spelling IAM accepts in a deny policy |
 | `principalSet://agents.global.org-ORG_ID.system.id.goog/*` | every agent identity in the trust domain, which is the organisation; the form `wall-e/12` §1.4 took from the principal-identifiers reference (read 2026-09-09; the page did not render its content on 2026-09-14, so **not re-verified**) and which matches the Agent Runtime page's allow examples | nothing until P8's spike; `Assumption:` a deny policy accepts it |
@@ -127,7 +134,8 @@ and confirms that the PAB binding form carries **no** `principalSet://` prefix: 
 is written as in this table, never as `principalSet://agents…/attribute.container/projects/N`
 (§4.1).
 
-The factory emits the first form for allow and deny and the second for PAB bindings; the
+The factory emits the first form for allow, the `principal://…/resources/aiplatform/projects/N` form
+for deny (SD-22) and the `//agents…/attribute.container/projects/N` form for PAB bindings; the
 throwaway-engine spike of P8 (§12) records which forms IAM accepts where, and the factory
 template is corrected from the spike's evidence, never from a page.
 
@@ -245,15 +253,21 @@ policies, which is why `roles/iam.denyAdmin` is PAM-only (§5) and every deny-po
 severity-1 detection (§2.6). Deny policies attach at organisation, folder or project, are
 inherited, are evaluated before allow policies, support `exceptionPrincipals`, and "in general,
 policy changes take effect within 2 minutes" but "can take 7 minutes or more" (§15 [S12], [S13]).
-Limits: 500 deny policies and 500 deny rules per resource [S12].
+Limits: 500 deny policies and 500 deny rules per resource [S12]. **Re-checked on 2026-10-01**
+against the deny-support list updated 2026-09-29
+([deny-permissions-support](https://docs.cloud.google.com/iam/docs/deny-permissions-support)): R5's
+two IAM-policy names are the `cloudresourcemanager.googleapis.com/` ones; the list carries no
+`resourcemanager.googleapis.com/` name.
 
 **Attachment point** `cloudresourcemanager.googleapis.com/folders/<fld-agentic-platform>`
 (URL-encoded in the API, [S13]); Terraform `google_iam_deny_policy` (§15 [S14]); managed only
 through the platform pipeline by a human holding the `ent-platform-policy` grant (§5).
 
 **Denied principals**, one entry pair per agent project, emitted by the factory:
+`principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N`
+(SD-22, P165; the principals overview's deny form, read 2026-10-01; the
 `principalSet://agents.global.org-ORG_ID.system.id.goog/attribute.platformContainer/aiplatform/projects/N`
-(spelling per §2.1, proven by P8's spike) and
+form is P8's fallback only, since the principal-identifiers page still lists it — §2.1) and
 `principalSet://cloudresourcemanager.googleapis.com/projects/N/type/ServiceAccount`; plus
 the service-account entry of `MO_PROJECT`, emitted by the `improver-project`
 module's privileged phase ([02](02-landing-zone-and-tiers.md) §3.3), so that R1–R5 fence Mo's
@@ -275,7 +289,7 @@ form, read 2026-09-13).
 | R2 signing | `cloudkms.googleapis.com/cryptoKeyVersions.useToSign`, `cloudkms.googleapis.com/cryptoKeyVersions.useToDecrypt`, `cloudkms.googleapis.com/cryptoKeys.setIamPolicy` | `eve-controller@` only (the approval signer, HLD §8.3) | no agent, no Mo identity (the `MO_PROJECT` entry above), no deployer can ever sign an approval | as R1 |
 | R3 impersonation and keys | `iam.googleapis.com/serviceAccountKeys.create`, `iam.googleapis.com/serviceAccounts.getAccessToken`, `iam.googleapis.com/serviceAccounts.getOpenIdToken`, `iam.googleapis.com/serviceAccounts.signBlob`, `iam.googleapis.com/serviceAccounts.signJwt`, `iam.googleapis.com/serviceAccounts.implicitDelegation`, `iam.googleapis.com/serviceAccounts.actAs`, `iam.googleapis.com/serviceAccounts.setIamPolicy` | `<agent>-deployer@<agent project>` — the per-project deploy identity of P142, the release pipeline's impersonation target, never a CI-project account — for `actAs` only, in its own rule R3b (it must act as the attached accounts to deploy); `<agent>-operators-caller@` is not a denied principal's target — the human callers who impersonate it are not in the denied set | the "impersonator becomes the service account" path `wall-e/12` §6 calls the one that makes deny-by-principal moot | refused at the API |
 | R4 self-modification | `run.googleapis.com/services.create`, `run.googleapis.com/services.update`, `run.googleapis.com/services.delete`, `run.googleapis.com/services.setIamPolicy`, `run.googleapis.com/jobs.create`, `run.googleapis.com/jobs.update`, `run.googleapis.com/jobs.setIamPolicy`, `aiplatform.googleapis.com/reasoningEngines.create`, `aiplatform.googleapis.com/reasoningEngines.update`, `aiplatform.googleapis.com/reasoningEngines.delete`, `aiplatform.googleapis.com/reasoningEngines.setIamPolicy`, `artifactregistry.googleapis.com/repositories.uploadArtifacts`, `cloudbuild.googleapis.com/builds.create` | `<agent>-deployer@<agent project>` (P142: the CI's impersonation target and the only principal that creates or updates the engine and the action service; no CI-project deployer account exists) — and **only** while the P4 spike has not made Binary Authorization plus CI-only deploy Google-enforced; even then the deployer keeps `services.update` because something must deploy | D11 of the charter: no agent deploys itself, its peers, or its ceilings | refused |
-| R5 governance and evidence | `orgpolicy.googleapis.com/policy.set`, `orgpolicy.googleapis.com/policies.create`, `orgpolicy.googleapis.com/policies.update`, `orgpolicy.googleapis.com/policies.delete`, `orgpolicy.googleapis.com/customConstraints.*`, `logging.googleapis.com/sinks.create`, `logging.googleapis.com/sinks.update`, `logging.googleapis.com/sinks.delete`, `logging.googleapis.com/buckets.update`, `logging.googleapis.com/buckets.delete`, `storage.googleapis.com/buckets.setIamPolicy`, `bigquery.googleapis.com/datasets.setIamPolicy`, `resourcemanager.googleapis.com/projects.setIamPolicy`, `resourcemanager.googleapis.com/folders.setIamPolicy`, `iam.googleapis.com/principalaccessboundarypolicies.*`, `iam.googleapis.com/roles.create`, `iam.googleapis.com/roles.update`, `iam.googleapis.com/roles.delete`, `modelarmor.googleapis.com/floorSettings.update`, `modelarmor.googleapis.com/templates.update`, `modelarmor.googleapis.com/templates.delete`, `agentregistry.googleapis.com/services.create`, `agentregistry.googleapis.com/services.update`, `agentregistry.googleapis.com/services.delete`, `agentidentity.googleapis.com/authProviders.create`, `agentidentity.googleapis.com/authProviders.update`, `agentidentity.googleapis.com/authProviders.delete`, `agentidentity.googleapis.com/authProviders.setIamPolicy`, `privilegedaccessmanager.googleapis.com/entitlements.*`, `privilegedaccessmanager.googleapis.com/grants.*`, `discoveryengine.googleapis.com/engines.setIamPolicy` | none | no agent or agent-project machine can loosen a floor, silence a sink, rewrite IAM, register itself, mint an auth provider, or touch PAM | refused |
+| R5 governance and evidence | `orgpolicy.googleapis.com/policy.set`, `orgpolicy.googleapis.com/policies.create`, `orgpolicy.googleapis.com/policies.update`, `orgpolicy.googleapis.com/policies.delete`, `orgpolicy.googleapis.com/customConstraints.*`, `logging.googleapis.com/sinks.create`, `logging.googleapis.com/sinks.update`, `logging.googleapis.com/sinks.delete`, `logging.googleapis.com/buckets.update`, `logging.googleapis.com/buckets.delete`, `storage.googleapis.com/buckets.setIamPolicy`, `bigquery.googleapis.com/datasets.setIamPolicy`, `cloudresourcemanager.googleapis.com/projects.setIamPolicy`, `cloudresourcemanager.googleapis.com/folders.setIamPolicy`, `iam.googleapis.com/principalaccessboundarypolicies.*`, `iam.googleapis.com/roles.create`, `iam.googleapis.com/roles.update`, `iam.googleapis.com/roles.delete`, `modelarmor.googleapis.com/floorSettings.update`, `modelarmor.googleapis.com/templates.update`, `modelarmor.googleapis.com/templates.delete`, `agentregistry.googleapis.com/services.create`, `agentregistry.googleapis.com/services.update`, `agentregistry.googleapis.com/services.delete`, `agentidentity.googleapis.com/authProviders.create`, `agentidentity.googleapis.com/authProviders.update`, `agentidentity.googleapis.com/authProviders.delete`, `agentidentity.googleapis.com/authProviders.setIamPolicy`, `privilegedaccessmanager.googleapis.com/entitlements.*`, `privilegedaccessmanager.googleapis.com/grants.*`, `discoveryengine.googleapis.com/engines.setIamPolicy` | none | no agent or agent-project machine can loosen a floor, silence a sink, rewrite IAM, register itself, mint an auth provider, or touch PAM | refused |
 | R6 factory credential fence (P142) | `secretmanager.googleapis.com/versions.access`, `secretmanager.googleapis.com/versions.add`, `secretmanager.googleapis.com/secrets.setIamPolicy`, `cloudkms.googleapis.com/cryptoKeyVersions.useToSign`, `cloudkms.googleapis.com/cryptoKeyVersions.useToDecrypt`, `cloudkms.googleapis.com/cryptoKeys.setIamPolicy`, `iam.googleapis.com/serviceAccounts.getAccessToken`, `iam.googleapis.com/serviceAccounts.signBlob`, `iam.googleapis.com/serviceAccounts.signJwt`, `iam.googleapis.com/serviceAccounts.implicitDelegation`, `iam.googleapis.com/serviceAccounts.actAs`, `iam.googleapis.com/serviceAccounts.setIamPolicy` (all from R1–R3's verified set); denied principal `principal://iam.googleapis.com/projects/-/serviceAccounts/factory-apply@CICD_PROJECT.iam.gserviceaccount.com` | none | the routine factory identity, which holds a conditioned `projectIamAdmin` on the agent tier folders, can never read `walle-refresh-token` or any other secret, use a key, impersonate a credential holder or re-point a secret's IAM, whatever a condition mistake allows — it creates empty secrets and accounts; the bindings that open them are the privileged phase's ([02](02-landing-zone-and-tiers.md) §3.4) | refused at the API; the factory's negative test reads a canary secret at every release and a success is severity 1 |
 
 Rules R1–R6 are one policy; R3b is a second rule inside it so that the `actAs` exception does
@@ -335,14 +349,14 @@ Roles (verified on the IAM roles reference [S17]): `roles/iam.principalAccessBou
 
 | Permission the safety case cares about | On the blocked list? (version) | Consequence |
 |---|---|---|
-| `aiplatform.googleapis.com/*` — every Vertex AI permission, so `reasoningEngines.query` | **yes** (version 1) [S16] | an agent's PAB fences it to engines **inside** the boundary: it cannot query an engine outside `fld-agentic-platform` even with a stray grant; and KF-4 (§9.3) swapped to an empty rule set stops every engine query by every bound agent principal — **enforcement-grade** |
-| `secretmanager.googleapis.com/*.*` | **yes** (version 3) | a secret outside the boundary is unreadable regardless of grant |
+| `aiplatform.googleapis.com/*` — every Gemini Enterprise Agent Platform (aiplatform) permission, so `reasoningEngines.query` | **yes** (version 1) [S16] | an agent's PAB fences it to engines **inside** the boundary: it cannot query an engine outside `fld-agentic-platform` even with a stray grant; and KF-4 (§9.3) swapped to an empty rule set stops every engine query by every bound agent principal — **enforcement-grade** |
+| `secretmanager.googleapis.com/*.*` | **yes** (version 4) | a secret outside the boundary is unreadable regardless of grant |
 | `cloudkms.googleapis.com/*.*`, `cryptoKeyVersions.useToSign` | **yes** (versions 2/3) | a key outside the boundary cannot sign for an agent principal |
-| `iam.googleapis.com/serviceAccounts.*` | **yes** (version 2) | no impersonation of an account outside the boundary |
+| `iam.googleapis.com/serviceAccounts.*` | **yes** (version 3) | no impersonation of an account outside the boundary |
 | `storage.googleapis.com/objects.*`, `buckets.*` | **yes** (version 1) | evidence buckets outside the boundary (the witness) are unreachable to agents — as designed |
 | `bigquery.googleapis.com/datasets.*`, `tables.*`, `jobs.*` | **yes** (version 1) | as above |
 | `pubsub.googleapis.com/*` | **yes** (version 1) | no publishing outside the boundary |
-| `orgpolicy.googleapis.com/*.*`, `artifactregistry.googleapis.com/*.*`, `cloudbuild.googleapis.com/*` | **yes** (versions 2/1) | belt to the deny policy's braces |
+| `orgpolicy.googleapis.com/*.*`, `artifactregistry.googleapis.com/*.*`, `cloudbuild.googleapis.com/*` | **yes** (versions 3/3/2) | belt to the deny policy's braces |
 | `run.googleapis.com/services.create/update/delete`, `run.googleapis.com/jobs.run` | **yes** (version 1) | deploy and job execution fenced |
 | **`run.googleapis.com/routes.invoke`** | **no** — the `run.googleapis.com` block lists `routes.get` and `routes.list` and not `routes.invoke` [S16] | **a PAB does not stop an agent invoking a Cloud Run service outside its boundary.** The only fence for Cloud Run invocation is IAM (resource-level `run.invoker` on named principals — the existing rule) plus the deny policy (`run.googleapis.com/routes.invoke` is deny-supported, §3) |
 | `logging.googleapis.com/logEntries.create` | **yes** (version 1) | an agent writes logs only inside the boundary — fine, its project is inside; recorded so nobody puts a log destination outside |
@@ -351,8 +365,8 @@ Roles (verified on the IAM roles reference [S17]): `roles/iam.principalAccessBou
 
 | Item | Decision |
 |---|---|
-| Policy | `pab-agents`, enforcement version pinned to **4** in Terraform (never `latest`, so a version bump is a reviewed change); rules: `//cloudresourcemanager.googleapis.com/folders/<fld-agentic-platform>` plus the named core resources agents legitimately reach — the aggregated Pub/Sub topics in `CORE_PROJECT` and the approval surface — each listed as a resource, never a whole core project |
-| Bindings | one `google_iam_folders_policy_binding`-class binding per agent project, made by the factory, on `//agents.global.org-ORG_ID.system.id.goog/attribute.container/projects/N`; the `-p-sa` singleton binds a stricter twin `pab-agents-p-sa` whose only resource is `WALLE_PROJECT` and the approval surface |
+| Policy | `pab-agents`, enforcement version pinned to **4** in Terraform (never `latest`, so a version bump is a reviewed change); rules: one entry, `//cloudresourcemanager.googleapis.com/folders/<fld-agentic-platform>` — a PAB rule takes Resource Manager resources only ("A list of Resource Manager resources … supported: Organizations … Folders … Projects", `gcloud iam principal-access-boundary-policies create` reference, read 2026-10-01), so the aggregated Pub/Sub topics in `CORE_PROJECT` are fenced by IAM on each topic, not by the PAB |
+| Bindings | one `google_iam_folders_policy_binding`-class binding per agent project, made by the factory, on `//agents.global.org-ORG_ID.system.id.goog/attribute.container/projects/N`; the `-p-sa` singleton binds a stricter twin `pab-agents-p-sa` whose only resources are the projects `WALLE_PROJECT` and the approval-surface project |
 | Grade | **enforcement-grade** for everything in §4.2 marked yes — which includes the engine-query path (`reasoningEngines.query` is blockable); **no effect** on `run.routes.invoke`, so the PAB is **not** in the safety case for "an agent cannot invoke a foreign action service": that sentence rests on resource-level IAM and the deny policy. Trust boundary B7's grade line in HLD §15 reads "PAB (enforcement for aiplatform, secrets, keys, storage, BigQuery, Pub/Sub; not for Cloud Run invoke)" |
 | K7 | KF-4 is **counted for engine queries** (§9.3) |
 | Owner / resource / verified / fails | platform owner through PAM (§5); the organisation (policy) and each project (binding); drift job compares policy JSON and binding list daily and reacts to the Cloud Asset feed in minutes; an edit or unbinding is severity 1; a version bump is a reviewed pull request whose evidence is the re-read blocked list |
@@ -377,7 +391,7 @@ This is decision **P60**.
 | IAM conditions can be set on entitlement roles "in the same way that you add conditions to allow policy role bindings"; "Don't include service agent roles in entitlements" | [S20] | the deploy entitlement's `serviceAccountUser` is conditioned to one account (`Assumption:` a `resource.name` condition on a service-account binding is honoured for `actAs` — verify at build) |
 | PAM "supports all types of identities, including Cloud Identity, Workforce Identity Federation, Workload Identity Federation, and agent identities"; service accounts and agent identities as **approvers** are Preview | [S18], [S20] | requesters: "All principal types are supported except `allUsers` and `allAuthenticatedUsers`", up to 20 requesting principals per entitlement, more through a group [S20] — so `k7-executor@`, a service account, **may request** the K7 grant, and so may the CI's WIF principal; approvers stay human until the service-account-approver Preview clears |
 | Setup needs `roles/privilegedaccessmanager.admin` plus, per scope, `roles/iam.securityAdmin` (organisation), `roles/resourcemanager.folderAdmin` (folder) or `roles/resourcemanager.projectIamAdmin` (project); the organisation-level service agent `service-org-ORG_NUMBER@gcp-sa-pam.iam.gserviceaccount.com` gets the PAM service agent role whatever the scope | [S24] | the PAM admin role itself is held by `platform-owners@` **standing** — it is the one standing administrative role on the platform, because PAM cannot bootstrap itself; its use is a severity-2 detection outside a change window and `roles/privilegedaccessmanager.admin` is on the roster review (§8) |
-| gcloud: `gcloud pam grants create --entitlement … --requested-duration … --justification …` (the page read on 2026-09-13 shows the `alpha` track — verify the GA track at build); `gcloud pam grants approve` / `deny` | [S25], [S21] | the runbook commands |
+| gcloud: GA `gcloud pam grants create/approve/deny/revoke/search` (`gcloud pam grants create --requested-duration … (--entitlement …)`, reference updated 2026-05-27, read 2026-10-01); two-level entitlements on the `alpha` track | [S25], [S21] | the runbook commands |
 
 ### 5.2 The catalogue
 

@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: the no-price rule now names the one vendor list price on record.
 - What this page is: the front door to a ten-page set that explains, to any reader, a secure platform for software agents on Google Cloud and Google Workspace, and its three agents; the set opens the door to the full documentation and replaces none of it.
 
 ## In one sentence
@@ -60,7 +61,7 @@ A new engineer reads the whole set once, then goes to the full documentation thr
 6. **Eve is the controller.** It is a rule-based watcher; no language model sits on the path that can stop Wall-E. Inside the organisation's own cloud a super admin could reach Eve, so Eve can see and report an attack on itself but cannot be put beyond reach. Only the copy of its evidence held in a separate "witness organisation", a second Google organisation run by IT security, is out of a super admin's reach ([Eve's independence, stated honestly](../../eve/01-hld.md#1-eves-independence-detective-inside-the-organisation-structural-through-the-witness)).
 7. **Mo is the improver.** It measures the other two and can only propose a change, through a pull request (a written change request) that two humans review, one outside the owner's line ([Mo](../01-hld.md#133-mo--improving-both-one-mo-per-platform-without-touching-eves-independence)).
 8. **No setting in Google can make a Super Admin account less powerful.** So for Wall-E the main safeguard is spotting misuse fast, not preventing it. If the robot's credential (the secret that proves to Google who is acting) is stolen, the thief controls the organisation's whole Google Workspace and can reach its cloud. Locked-away keys, powers split across two programs, alarms within minutes and people pulling switches limit the damage; nothing prevents it ([what nothing can narrow](../01-hld.md#16-what-the-platform-does-not-do); [the residual risks](../brief/23-threat-model-and-residual-risk.md#the-residual-risks-a-sponsor-accepts-by-signing)).
-9. **No price is quoted, no benefit figure exists, and the people do not yet exist.** On 2026-09-13 the organisation has one administrator, no second super admin outside that administrator's line, no security reviewer, no engaged data protection officer and no detection desk (a team that watches security alerts round the clock); the binding cost is human hours ([who exists](../01-hld.md#03-who-exists-on-2026-09-13-and-the-roles-the-platform-needs); [cost classes](../01-hld.md#05-cost-classes)).
+9. **No price is quoted in the design, no benefit figure exists, and the people do not yet exist.** On 2026-09-13 the organisation has one administrator, no second super admin outside that administrator's line, no security reviewer, no engaged data protection officer and no detection desk (a team that watches security alerts round the clock); the binding cost is human hours ([who exists](../01-hld.md#03-who-exists-on-2026-09-13-and-the-roles-the-platform-needs); [cost classes](../01-hld.md#05-cost-classes)).
 10. **The law is answered with mechanisms and evidence, never with a promised outcome.** For the EU AI Act (the European Union's law on artificial intelligence) and TISAX (the automotive industry's information-security assessment) the design lists what the regulator or the assessor still decides ([what "bulletproof" can and cannot mean](../10-eu-ai-act.md#6-what-bulletproof-can-and-cannot-mean)).
 
 ## The ten pages
@@ -104,7 +105,7 @@ Every page in this set follows the same rules, because the full documentation fo
 
 **Nothing is built.** Every sentence in the present tense describes a design. Where a page says "Eve halts Wall-E", read "the design says Eve would halt Wall-E". The objective is dated 2026-09-13; the build procedures added their decisions to the register on 2026-09-15 and 2026-09-16 ([the register's status](../12-open-decisions.md#status)). The first thing that could exist is a three-day demonstration on synthetic accounts, test accounts that belong to nobody ([the maturity table](../README.md#maturity-what-exists-on-2026-09-13)).
 
-**No price is quoted.** No page of the full documentation quotes a price. The design consulted no price list, and every amount is to be decided. The design names only each cost's driver and who pays ([cost classes](../01-hld.md#05-cost-classes)). This set follows suit. The one recorded figure, a yearly minimum for one Google security subscription, is repeated where it belongs, with its date, in [07-what-it-costs-and-what-you-get.md](07-what-it-costs-and-what-you-get.md).
+**No price is quoted.** No design page quotes a price. One vendor list price is on record in the purchase table (Security Command Center Premium's subscription minimum, recorded 2026-09-15, to be re-verified); no figure has been offered to this organisation. The design consulted no price list, and every amount is to be decided. The design names only each cost's driver and who pays ([cost classes](../01-hld.md#05-cost-classes)). This set follows suit. The one recorded figure, a yearly minimum for one Google security subscription, is repeated where it belongs, with its date, in [07-what-it-costs-and-what-you-get.md](07-what-it-costs-and-what-you-get.md).
 
 **No benefit figure exists.** The saving cannot be stated until four weeks of routine administrative work have been measured before the doer starts. No "before" can be measured afterwards ([why build it](../brief/02-executive-summary.md#why-build-it-and-how-the-programme-can-stop)).
 

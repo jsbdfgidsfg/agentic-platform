@@ -2,13 +2,14 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
 - Maturity: complete first edition; the design it explains is not built
+- 2026-10-01: "What this is" says the design pages describe what is to be built, not what is built.
 
 ## What this is
 
 The architecture document and project brief for the platform: about 200 A4 pages that explain the
-**intent** behind the design. The design pages in this set and in the three agent sets say *what* is built;
+**intent** behind the design. The design pages in this set and in the three agent sets say *what* is to be built;
 this brief says *why*, for whom, at what cost, against which risks, and what the platform deliberately does
 not do. It never copies a design table: it explains the idea and links to the canonical page that defines it.
 

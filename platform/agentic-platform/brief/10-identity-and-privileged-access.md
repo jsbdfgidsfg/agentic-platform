@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: three mentions of Vertex AI now use the Agent Platform names (`roles/aiplatform.expressUser`; the Agent Platform API, `aiplatform.googleapis.com`), Google's names since 2026-04-22.
 
 ## What you will understand by the end
 
@@ -38,7 +39,7 @@ Agent Identity for Cloud Run is Preview on 2026-09-13 and goes to production whe
 
 One environment line removes the protection against reusing an agent's token on Google Cloud services; CI refuses it fleet-wide, and a daily Security Health Analytics hit is severity 1, with K3 on the agent.
 
-Google's two automatic agent roles have unverified permission lists, so they are diffed at every release and a forbidden permission blocks it. The Vertex AI Express User role is never granted: bound at project level, it would let an agent query its own engine as any operator ([page 04 §2.1](../04-identity-and-privileged-access.md#21-agent-identity-for-every-reasoning-layer-promotes-wall-e12-1); [HLD §4.1](../01-hld.md#41-agent-identity-for-every-reasoning-layer)).
+Google's two automatic agent roles have unverified permission lists, so they are diffed at every release and a forbidden permission blocks it. `roles/aiplatform.expressUser` is never granted: bound at project level, it would let an agent query its own engine as any operator ([page 04 §2.1](../04-identity-and-privileged-access.md#21-agent-identity-for-every-reasoning-layer-promotes-wall-e12-1); [HLD §4.1](../01-hld.md#41-agent-identity-for-every-reasoning-layer)).
 
 ## The three principal populations
 
@@ -111,7 +112,7 @@ Changes usually apply within two minutes but can take seven or more. The grade i
 
 `pab-agents` is an organisation-level policy, bound by the factory to each agent project's set. Its resources are the platform folder plus the named core resources agents need, never a whole core project. The singleton binds a stricter twin whose only resources are `WALLE_PROJECT` and the approval surface. The enforcement version is pinned to 4, so a bump is a reviewed change.
 
-A boundary has no effect on permissions outside its enforcement version. Version 4 blocks Vertex AI (engine queries included), secrets, keys, impersonation, storage, BigQuery, Pub/Sub, organisation policy, Artifact Registry, Cloud Build, Cloud Run deploy and job runs. It does not block Cloud Run route invocation. The boundary is therefore enforcement-grade for engine queries and the blocked families, and **no fence for Cloud Run invocation**. "An agent cannot invoke a foreign action service" rests on resource-level invoker grants plus the deny policy.
+A boundary has no effect on permissions outside its enforcement version. Version 4 blocks the Agent Platform API (engine queries included), secrets, keys, impersonation, storage, BigQuery, Pub/Sub, organisation policy, Artifact Registry, Cloud Build, Cloud Run deploy and job runs. It does not block Cloud Run route invocation. The boundary is therefore enforcement-grade for engine queries and the blocked families, and **no fence for Cloud Run invocation**. "An agent cannot invoke a foreign action service" rests on resource-level invoker grants plus the deny policy.
 
 This is P60, which closes P9 and sets trust boundary B7's grade in Chapter 5, Architecture overview ([page 04 §4](../04-identity-and-privileged-access.md#4-the-principal-access-boundary-pab-agents-and-what-it-can-and-cannot-fence), [§4.3](../04-identity-and-privileged-access.md#43-the-policy-and-its-grade--p9-answered)).
 
@@ -270,7 +271,7 @@ flowchart TB
 
 The levers are applied in a fixed order, each counted only for what it verifiably stops ([page 04 §9.3](../04-identity-and-privileged-access.md#93-the-four-levers-verified)):
 
-1. **KF-1 comes first because it ignores who the caller is and is fastest.** It replaces the tier's service allow-list with one lacking Vertex AI and Cloud Run; logging stays outside the constraint, so evidence keeps flowing. It is enforcement-grade. `Assumption:` a running Cloud Run instance finishes the request it is serving rather than being killed, and takes no new ones; every drill measures it.
+1. **KF-1 comes first because it ignores who the caller is and is fastest.** It replaces the tier's service allow-list with one lacking `aiplatform.googleapis.com` and Cloud Run; logging stays outside the constraint, so evidence keeps flowing. It is enforcement-grade. `Assumption:` a running Cloud Run instance finishes the request it is serving rather than being killed, and takes no new ones; every drill measures it.
 2. **KF-3 is second.** A paused Scheduler cannot re-queue work when KF-1 lifts.
 3. **KF-4 is third.** An emptied boundary survives an organisation-policy revert. It is counted for engine queries, never for Cloud Run invocation.
 4. **KF-2 is last.** It propagates slowest, its principal spelling is still a spike, and it stops a mistaken KF-1 revert silently restarting the fleet ([page 04 §9.4](../04-identity-and-privileged-access.md#94-the-executor-job)).

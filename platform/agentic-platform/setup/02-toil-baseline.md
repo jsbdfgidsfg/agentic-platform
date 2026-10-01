@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Changed on 2026-10-01: they/them for the platform owner in TB WHO lines.
 - Last executed: never
 - Stage: review §2 stage 2. It starts on day one, before any other step of the set. It cannot be taken later: once Wall-E does the tasks, the "before" is gone.
 - Step prefix: TB. Steps: 14. BLOCKED steps: none, because no code is needed.
@@ -254,7 +255,7 @@ checkpoint TB-2.3 DONE "<second human's name>" "interim:$TOIL_EVIDENCE_FOLDER" "
 
 ### TB-3.1 Record every instance for four consecutive ISO weeks
 
-- **WHO:** The toil recorders. The platform owner records too when he does one of the tasks.
+- **WHO:** The toil recorders. The platform owner records too when they do one of the tasks.
 - **WHERE:** Tab `instances` of `toil-recording`, daily, from `TOIL_START_DATE`.
 - **ACTION:** On `TOIL_START_DATE`, before the first row is entered, the platform owner runs the gate check below and writes the START line. Then: one row per instance, entered the same day. Every Friday, each recorder adds one `week_confirmations` row for the ISO week (`all_instances_recorded` yes or no, and a note for any gap or public holiday).
 

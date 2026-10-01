@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: decision family now P1–P204, new ids from P205; entry added for Gemini Enterprise Agent Platform, the name of Vertex AI since 2026-04-22 (https://cloud.google.com/products/gemini-enterprise-agent-platform, read 2026-10-01).
 
 ## What this appendix gives you
 
@@ -44,7 +45,7 @@ By the end you can look up any identifier, term, product or abbreviation, with t
 | N1–N9 | Wall-E's must-never-happen statements | 19 |
 | R-01..R-17 | Platform risk rows; R-01 is the super-admin deviation (P140) | 19 |
 | E-01..E-15 | EU AI Act evidence register | 20 |
-| P1–P143 | Platform decisions, one sequence; new ids from P144 | 25 |
+| P1–P204 | Platform decisions, one sequence; new ids from P205 | 25 |
 | Wall-E 1–52, E-1..E-21, M-1..M-11 | Agent-set decisions; Wall-E 42–52 sit on the topology page, hence "topology decision 42" in Ch. 5 | 25 |
 
 ## Families that share letters
@@ -103,6 +104,7 @@ By the end you can look up any identifier, term, product or abbreviation, with t
 - **Cloud KMS Autokey.** Folder-level automatic CMEK keys in the key project; Firestore unsupported (Ch. 13).
 - **Context-Aware Access.** Access levels; on the robot, detection plus friction until Google confirms it binds super admins (P7, open) (Ch. 8).
 - **Gemini Enterprise.** The tenant app, the one human front door; Workflow Builder, formerly Agent Designer, builds Tier C agents (Ch. 6).
+- **Gemini Enterprise Agent Platform.** Google's agent platform, formerly Vertex AI (renamed 2026-04-22); API `aiplatform.googleapis.com` unchanged; hosts Agent Runtime, Agent Gateway, Agent Identity, Agent Registry (Ch. 8).
 - **GKE Agent Sandbox.** gVisor-isolated sandbox, GA 2026-05-21; the recorded Tier X sandbox (P122) (Ch. 14).
 - **Google SecOps.** Google's SIEM; proposed default a Europe multi-region instance with at least 400 days of retention (P93), the choice P10, open (Ch. 11).
 - **Model Armor.** Prompt and response screen, gateway integration GA 2026-06-24; probabilistic, so never a trust boundary (Ch. 10).

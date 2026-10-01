@@ -3,7 +3,14 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-20 (§14 corrected: the six rows at the end of §6.1 are still owed; the one-human variant linked). The corrections this page listed as owed on 2026-09-17 were made in
+- Last reviewed: 2026-10-01. On 2026-10-01 the six rows "owed after the review of 2026-09-18"
+  were carried into the day files and [code.md](code.md) and are now "made on 2026-10-01" lines
+  at the end of §6.1, so §6 row 11 can read green; the claim (§1) no longer asserts the full
+  build's names, §1.1 says it is adapted, §2 carries a tenth absolute and what is not carried, C-01
+  cites `WG-*`, C-09 cites setup/README §1, §6 row 12 and §11 name the caller path chosen, the
+  self-test was re-run (eighteen lines) and the twenty-eight rows of 2026-09-18 were checked.
+- Reviewed on 2026-09-20 (§14 corrected: the six rows at the end of §6.1 were then still owed; the
+  one-human variant linked). The corrections this page listed as owed on 2026-09-17 were made in
   the day files and the code on 2026-09-18; §6.1 records them.
 - Reviewed on 2026-09-18 against the proof-of-value set and the design, later the same day: the
   doer now takes the proof of value's Tier P identity rather than spending `steward` at Tier P
@@ -16,7 +23,7 @@
 - What this is: the one entry point to the three-day procedures in this folder,
   [day 1](day-1-platform-and-eve.md), [day 2](day-2-the-doer.md),
   [day 3](day-3-mo-demonstration-and-handover.md) and [the code](code.md). It holds the claim, the
-  nine absolutes, the team, the order, the project names, the twelve things three days cannot buy,
+  ten absolutes, the team, the order, the project names, the twelve things three days cannot buy,
   the cut list C-01 to C-27 and the unwind. **No step is executed from this page.**
 - Answers the owner's request of 2026-09-17: something two IT experts can implement in three
   business days with a simple procedure, with VS Code and Google Code Assist, as Workspace super
@@ -29,8 +36,8 @@
 - Maturity: never executed. Nothing here is built. Where a day file and this page disagree on a
   command, a flag or a console path, **the day file is right and this page is corrected**, unless
   the day file breaks a rule of this page, which is a defect in the day file. §10 carries no row
-  the day files do not; §6.1 ends with the corrections the review of 2026-09-18 found owed to the
-  day files and the code, each to be made before the run and struck from that list when made.
+  the day files do not; §6.1 ends with the six corrections the review of 2026-09-18 found owed to
+  the day files and the code, made on 2026-10-01.
 - Sizing, restated from the three day tables rather than from a nominal day: each day runs 08:30 to
   17:30 with a **90-minute** break, so **450 usable minutes** per person per day. Day 1 and day 2
   each allocate **375 minutes** of blocks, leaving **75 minutes** of reserve; day 3 allocates
@@ -54,14 +61,14 @@ The closing report uses this sentence and no other, with the dates filled in:
 > whose model holds no credential, whose every action is written ahead to an audit table, whose
 > first level forces a dry run and whose execution needs a second human; two kill levers pulled and
 > timed during live work; and an improver (Mo) counting the doer's own rows against a volume
-> baseline read from Google's admin history. Every artefact carries the full build's name, schema
-> and folder.
+> baseline read from Google's admin history.
 
 A clause whose record is missing or failed at the end is **struck from the sentence, not softened**.
 
 ### 1.1 Never to be used, in any report, slide or message
 
-Copied unchanged from [../pov/README.md](../pov/README.md) §1.2, and one more:
+Adapted from [../pov/README.md](../pov/README.md) §1.2, and one more; sentences 1 and 3 differ
+because this doer holds a delegated role and Model Armor is set but never exercised:
 
 1. "Wall-E is safe as a super admin." Nothing here touches super-admin containment. No agent holds
    Super Admin at any moment of the three days.
@@ -74,10 +81,11 @@ Copied unchanged from [../pov/README.md](../pov/README.md) §1.2, and one more:
 4. "We saved `<n>` minutes of admin work." The doer acted only on synthetic accounts. No human minute
    was saved, and Mo's scorecard says so in bold (C-07).
 
-## 2. The nine absolutes
+## 2. The ten absolutes
 
 Binding on every file in this folder. **A step that loosens one is a defect, not a deviation.**
-Restated verbatim from the owner's brief of 2026-09-17.
+The first nine are restated verbatim from the owner's brief of 2026-09-17; the tenth was added on
+2026-10-01 from the HLD's standing constraints.
 
 1. **No domain-wide delegation, ever.** Each robot holds its own consented refresh token and is
    never impersonated. Prove its absence in the Admin console rather than assuming it.
@@ -99,6 +107,13 @@ Restated verbatim from the owner's brief of 2026-09-17.
 9. **Never `--yes` on a destructive command; never a default gcloud project** (pass `--project`); no
    secret is printed, echoed or committed; secrets live in Secret Manager and are read by one
    identity.
+10. **Mo reaches production only through a pull request a human who is not its author merges**
+    ([../01-hld.md](../01-hld.md) Status). Day-3 `T3-13`: person B merges person A's change, and no
+    machine merges anything.
+
+**Not carried from the proof of value's absolutes:** the two-reviewer clause on a Mo merge
+([../pov/README.md](../pov/README.md) §2 item 4; [../setup/README.md](../setup/README.md) §1), cut
+as C-09 because two people cannot supply two reviewers who are not the author.
 
 On absolute 7, two things bind and neither is optional. **The pilot organisational unit is never
 widened to the organisation root.** The action service compares the target's `orgUnitPath` for
@@ -210,8 +225,8 @@ value's form check ([../pov/02](../pov/02-decisions-people-and-the-retrospective
 refuses any other shape, so an id such as `agp-ctl-eve-prod-d3` would be a project the factory can
 never adopt and the proof of value would create a second Eve project beside it. If an id is taken,
 `T1-1` applies exactly one four-hex suffix to that id, writes it into the run log, and changes
-nothing else. Until 2026-09-18 the day files carried `-${SUFFIX}` on every id; that is the first
-correction owed in §6.1.
+nothing else. Until 2026-10-01 the day files carried `-${SUFFIX}` on every id; day-1 `T1-1`
+dropped it on that date (§6.1, made row 1).
 
 Two values in `names.env` carry absolute 7 and have exactly one spelling across every file,
 because a mismatch means a request is refused for the wrong reason or a target is built that nothing
@@ -226,9 +241,9 @@ Mo's five views live in `MO_PROJECT.platform_metrics_views` and the retrospectiv
 Those two dataset names are fixed by the full build and the proof of value (SD-33, P176,
 [../pov/02](../pov/02-decisions-people-and-the-retrospective-baseline.md) `PD-3.2`) and are the only
 names under which pov/08 can take the views over without recreating them. [code.md](code.md) §5 is
-the one `mo.sql`, and day-3 `T3-2` pastes it unchanged; as written on 2026-09-18 it creates
-everything in a dataset called `mo`, which is not the full build's name, so its move to the two
-datasets above is owed in §6.1.
+the one `mo.sql`, and day-3 `T3-2` pastes it unchanged; until 2026-10-01 it created everything
+in a dataset called `mo`, and since that date it creates the views and the table in the two
+datasets above, which day-1 `T1-9` creates (§6.1, made row 3).
 
 **The doer's project is not called `walle`, and its `agent_id` is not `steward` either.** The
 reason is the same one the proof-of-value set gives ([../pov/README.md](../pov/README.md) §3):
@@ -248,14 +263,16 @@ doer takes that identity, `AGENT_ID` = `PILOT_ADMIN_AGENT_ID` (*tbd* until PV-07
 `agp-w-steward-prod` and `steward_audit`** are **reserved and never used by a step in this
 folder**. Everything the doer produces (its code, schemas, catalogue, consent procedure, kill switch
 and audit table) carries over to the Tier P agent of pov/07 §7 unchanged, and to Wall-E after it.
-As written on 2026-09-18 the day files and [code.md](code.md) still spell every doer name after
-`steward` (`steward_audit`, `steward-actions`, `steward-plan`, `stewardAuditWriter`,
-`STEWARD_OAUTH_CLIENT_ID`, `STEWARD_ACTIONS_URL`); §6.1 owes their derivation from `AGENT_ID` at
-`T1-1`, and where this page still quotes a `steward` name below it quotes the day files as they
-stand.
+Since 2026-10-01 every doer name in the day files and [code.md](code.md) derives from
+`AGENT_ID` at `T1-1`: `AUDIT_DATASET` (`pilot_admin_audit`), `DOER_ACTIONS` and `DOER_PLAN` (the
+service, the job and their service accounts), `DOER_TOKEN_SECRET`, `DOER_HALT_SECRET`,
+`DOER_CLIENT_JSON_SECRET`, `AUDIT_WRITER_ROLE`, `DOER_ROBOT`, and the learned
+`DOER_OAUTH_CLIENT_ID` and `DOER_ACTIONS_URL` (§6.1, made row 2). Until that date they were
+spelt after `steward`; where §6.1's record of 2026-09-18 quotes a `steward` name, it quotes the
+files as they then stood.
 
 Eve and Mo keep their own names, because they carry across every set: `eve`, `EVE_PROJECT`,
-`eve.ws_activities`, `eve.findings`; `mo`, `MO_PROJECT`, `platform_metrics`,
+`eve.ws_activities`, `eve.findings`; Mo, `MO_PROJECT`, `platform_metrics`,
 `platform_metrics_views`, `mo_volume_by_verdict` and its four siblings.
 
 ## 6. What must be true before day 1 starts
@@ -274,8 +291,8 @@ Check these the week before. Each one, unmet, costs hours on the day.
 | 8 | A sponsor is named, in writing | one line in the run log | C-19 has no recipient for a finding about person B |
 | 9 | Four synthetic account names are agreed and are nobody's | the names are not in the directory | pick names no leaver could ever hold |
 | 10 | Nothing in scope is a real employee account | the pilot organisational unit is empty at the start of day 1 | absolute 7 |
-| 11 | The day files and the code are the revision corrected on 2026-09-18 (§6.1) **and carry the corrections §6.1 lists as owed** | each of the four files' Status block says "Corrected on 2026-09-18"; day-1 `T1-12a` and `T1-14a` exist; [code.md](code.md) §7 is not a script; `T1-1` carries no `SUFFIX` and derives the doer's names from `AGENT_ID` | an older revision is being used: fetch the current one. Run from the older revision, three days does not fit |
-| 12 | **Mandatory, the week before:** the token both people will mint for the action service is proved on **both** accounts, and the code accepts it. [../setup/33](../setup/33-wall-e-action-services-and-approval-surfaces.md) `WS-3.6` records that `gcloud auth print-identity-token --audiences=` is **refused for a user credential** and accepted only for a service account or an impersonation, so as written every `TOK()` call of day 2 fails | run `gcloud auth print-identity-token --audiences=<any Cloud Run URL>` once on each account and record the refusal or the token; then prove the path §11 names instead | the alternative in §11 is prepared **in code before the run**, never at 14:30 on day 2: either `caller_email` accepts a user token minted without `--audiences` (audience Google's gcloud client id) as well as the service URL, or the caller-account path of §11 is built with its two-person rule intact |
+| 11 | The day files and the code are the revision corrected on 2026-09-18 (§6.1) **and carry the six rows made on 2026-10-01** | each of the four files' Status block says "Last reviewed: 2026-10-01"; day-1 `T1-12a` and `T1-14a` exist; [code.md](code.md) §7 is not a script; `T1-1` carries no `SUFFIX` and derives the doer's names from `AGENT_ID`; `grep -ci steward` on the four files counts only the reservation lines of `T1-1`; `actions.py --selftest` prints eighteen `PASS` | an older revision is being used: fetch the current one. Run from the older revision, three days does not fit |
+| 12 | **Mandatory, the week before:** the token both people will mint for the action service is proved on **both** accounts, and the code accepts it. [../setup/33](../setup/33-wall-e-action-services-and-approval-surfaces.md) `WS-3.6` records that `gcloud auth print-identity-token --audiences=` is **refused for a user credential** and accepted only for a service account or an impersonation, so a `TOK()` minted with `--audiences` would fail; since 2026-10-01 `TOK()` mints without it (Google's gcloud reference shows the flag only as "Intended recipient of the token", read 2026-10-01, so the refusal is recorded, not assumed) | run `gcloud auth print-identity-token --audiences=<any Cloud Run URL>` once on each account and record the refusal or the token; then prove the path §11 names instead | **made on 2026-10-01, option (a):** `caller_email` ([code.md](code.md) §3) verifies the token with no audience and admits `SERVICE_URL` or `GCLOUD_CLIENT_ID` (Google's gcloud client id, `Assumption:` read at day-2 `T2-1a`) with a verified address; `TOK()` drops `--audiences`; `T2-1a` records each person's `aud` and `T2-18` proves the path with one dry run. No caller service account is built |
 | 13 | **A DPO record on the monitoring of named administrators exists** (purpose, subjects, retention, recipient: the proof of value's SD-11 and PV-08 form, [../pov/02](../pov/02-decisions-people-and-the-retrospective-baseline.md) `PD-2.1` and `PD-5.1`), **and HR's written answer on information or consultation of the works council exists.** Eve's poll reads the admin audit log of every real administrator from day 1 (`userKey=all`, §15), which is a monitoring system at the workplace whether or not any doer ever acts | both documents are in the run log's evidence folder before `T1-19` | the poll is limited to persons A and B, each with written consent, for the three days (the fallback [../pov/README.md](../pov/README.md) §4 describes): `userKey` names them rather than `all`, the seeded test of day 1 is person A's own action, and the claim's "reading the Workspace admin audit log" is read as "of the two participants". Which of the two applies is written into the run log on day 1 |
 
 Read on the day, not from this page: the Google Auth Platform console path for a Desktop OAuth
@@ -371,30 +388,47 @@ otherwise: the six rows of §10 that were marked owed are now `T3-19 h` to `m` a
 `Eve Reader (3-day)` role carries Reports only (`T1-7`), as §10 asked; and the three timetables
 were recomputed from their blocks (§Status).
 
-**Owed after the review of 2026-09-18.** These the day files and [code.md](code.md) do not yet
-carry; each is made before the run and struck from this list when made (§6 row 11):
+**Owed after the review of 2026-09-18, made on 2026-10-01.** Each row was carried into the file
+and step it names on 2026-10-01; every command a row introduced was checked against Google's
+documentation that day and is cited in the day file's or [code.md](code.md)'s sources (§6 row 11):
 
-1. Day-1 `T1-1` drops `SUFFIX` and writes `agp-core-<name>`, `agp-ctl-eve-prod`,
-   `agp-p-${AGENT_ID}-prod` and `agp-imp-mo-prod` (§5), with one four-hex suffix applied only to
-   an id that is taken, written into the run log; `T1-1`'s read-back filter follows.
-2. Day-1 `T1-1` sets `AGENT_ID` to the proof of value's `PILOT_ADMIN_AGENT_ID` (`Assumption:`
-   `pilot-admin`) and every doer name in day 1, day 2, day 3 and the code is derived from it: the
-   dataset, the two services, the two service accounts, the three secrets, the custom IAM role,
-   the OAuth client variables and the service URL variable (§5).
-3. [code.md](code.md) §5 and day-3 `T3-2` create the five views in
-   `MO_PROJECT.platform_metrics_views` and `toil_retrospective` in `MO_PROJECT.platform_metrics`,
-   not in a dataset called `mo`; day-1 creates those two datasets where it creates `mo` (§5).
-4. [code.md](code.md) §3 `caller_email` accepts a user token minted without `--audiences`
-   (audience Google's gcloud client id) as well as the service URL, or the caller-account path of
-   §11 is built with `/act` refusing a service-identity requester unless that identity is a caller
-   account only the requester can impersonate; day-2 `T2-1a` proves the chosen path (§6 row 12,
-   §11).
-5. Day-1 `T1-19` reads `userKey` from `names.env` so that §6 row 13's fallback can name the two
-   participants instead of `all`; `T1-9a`'s seed keeps the robot and `eve-reader@` off
-   `admin_allowlist` (row 3 above, §7 item 12).
-6. Day-3 `T3-19` (§10 rows 11 and 12) stops the poller at the hand-over unless §6 row 13's DPO
-   record exists, and `T3-19a` reads back that no `serviceAccountTokenCreator` binding remains on
-   any caller account of §11.
+1. Made on 2026-10-01: day-1 `T1-1` has no `SUFFIX`; it writes `agp-core-platform`
+   (`Assumption:` until PV-03), `agp-ctl-eve-prod`, `agp-p-${AGENT_ID}-prod` and
+   `agp-imp-mo-prod`, checks each against the form of 02 §3.6 and pov/02 `PD-3.2` before
+   `T1-2`, and `T1-2` gives one four-hex suffix to a taken id only, written with `penv` and into
+   the run log; `T1-2`'s read-back names the four ids explicitly.
+2. Made on 2026-10-01: day-1 `T1-1` sets `AGENT_ID="pilot-admin"` (`Assumption:` until PV-07
+   signs `PILOT_ADMIN_AGENT_ID`) and derives `AUDIT_DATASET`, `DOER_ACTIONS`, `DOER_PLAN`,
+   `DOER_ROBOT`, the three secret names and `AUDIT_WRITER_ROLE` from it; the learned values are
+   `DOER_OAUTH_CLIENT_ID` and `DOER_ACTIONS_URL`. No literal `steward` name is left in day 1, day
+   2, day 3 or the code, except the `T1-1` lines that reserve and refuse it; the Workspace role is now
+   `Pilot Admin (3-day)`, and `CUSTOMER_ID` became `DIRECTORY_CUSTOMER_ID`, the full build's name (setup/01 PR-2.6).
+3. Made on 2026-10-01: [code.md](code.md) §5 creates the five views in
+   `MO_PROJECT.platform_metrics_views` and `toil_retrospective` in `MO_PROJECT.platform_metrics`;
+   day-1 `T1-9` creates those two datasets and no `mo`; day-3 `T3-2`, `T3-3`, `T3-5` to `T3-8`
+   and `T3-12` use them, and the `sed` substitutes `AUDIT_DATASET`.
+4. Made on 2026-10-01, option (a): [code.md](code.md) §3 verifies the token with no audience and
+   admits only `SERVICE_URL` or `GCLOUD_CLIENT_ID` with a verified address, refuses to start on an
+   empty `APPROVERS`, `SERVICE_URL`, `GCLOUD_CLIENT_ID`, `ORG_DOMAIN` or `AGENT_ID`, and
+   carries six new self-test cases; `TOK()` drops `--audiences`; day-2 `T2-1a` records each
+   person's token `aud` and `T2-18` sets `SERVICE_URL` on the first deploy and proves the path with
+   one dry run. No caller service account is built.
+5. Made on 2026-10-01: [code.md](code.md) §1 reads the admin stream once per entry of the
+   required `ADMIN_USER_KEYS`; `names.env` holds `EVE_ADMIN_USER_KEYS`, the two participants
+   unless the DPO record exists, then `all`; day-1 `T1-19` passes it and writes which was
+   deployed into the run log. `T1-9a`'s seed keeps the robot and `eve-reader@` off
+   `admin_allowlist`, unchanged.
+6. Made on 2026-10-01: day-3 `T3-19 d` disables `eve-refresh-token` and pauses `eve-poll-15m` by
+   default and `T3-19 g` suspends `eve-reader@` by default, each skipped only when the run log
+   cites §6 row 13's DPO record; `T3-19 a` reads back every caller account's policy for
+   `roles/iam.serviceAccountTokenCreator` (none exists under option (a)).
+
+**Checked on 2026-10-01.** The twenty-eight rows of 2026-09-18 above were each found in the
+file and step they name. `actions.py --selftest` was re-run on 2026-10-01 against the code as
+corrected that day and printed eighteen `PASS` lines (N1 to N8, N4b, P1 to P3, C1 to C3, X1 to X3)
+and `0 failure(s)`; it ran on Python 3.9 with flask 3.1.2 because no 3.12 was at hand
+(`Assumption:` the result holds on 3.12, re-run at day-2 `T2-12`), and the four Python files
+compile.
 
 **The honest statement is three days**, with the reserve stated in §Status, or three days ending
 with the executed pair struck from the claim rather than softened (§1).
@@ -454,7 +488,7 @@ unwind column names the file and step that puts the piece back.
 
 | Id | Cut | Why it is safe here | Where it comes back |
 |---|---|---|---|
-| C-01 | No witness organisation, no second tenant. Eve lives inside the reach of the administrators it watches | Nothing is claimed about Eve's independence; §1.1 bans the sentence | [../setup/08](../setup/08-witness-organisation.md); [../setup/27](../setup/27-witness-grants-and-alarms.md) `WI-*` |
+| C-01 | No witness organisation, no second tenant. Eve lives inside the reach of the administrators it watches | Nothing is claimed about Eve's independence; §1.1 bans the sentence | [../setup/08](../setup/08-witness-organisation.md); [../setup/27](../setup/27-witness-grants-and-alarms.md) `WG-*` |
 | C-02 | No organisation log sink. Eve reads the Admin SDK Reports API instead | The team may hold only project-level GCP access; the admin log lag is minutes, so the poll sees what a sink would | [../setup/24](../setup/24-eve-workspace-identity-and-audit-feeds.md) `EW-1.2` to `EW-1.11` adds the sink beside the poll |
 | C-03 | No SIEM contract, no managed detection, no 24x7 acknowledgement | Alerts go to one named person's own mailbox and are confirmed by that person alone, in working hours | [../setup/15](../setup/15-pager-siem-and-detections.md) |
 | C-04 | No penetration test, no Security Command Center Premium | Nothing accepts an unauthenticated request: the action service is deployed `--no-allow-unauthenticated` and `run.invoker` goes to two named principals only. Its URL is still reachable from the internet and IAM is the only thing in front of it, so this is a reason a penetration test is owed, not a reason it is not needed; the proof of value treats any grant as the trigger to unwind this deviation (PV-D-11) | [../setup/09](../setup/09-folders-and-security-command-center.md) |
@@ -462,7 +496,7 @@ unwind column names the file and step that puts the piece back.
 | C-06 | No privileged-access-management entitlements, and no time-boxing. Standing IAM grants stand in, removed by hand on the last day | The grants outlive the run by hours, not weeks, and day 3 removes them in front of both people and reads the bindings back. Nothing expires on its own, so the removal is the only control and it is a human one | [../pov/03](../pov/03-foundation-folders-logging-and-floors.md) `PF-5.1`; [../setup/12](../setup/12-privileged-access-catalogue.md) |
 | C-07 | No four-week prospective toil baseline. Retrospective volume only, and no minutes | Volume can be counted backwards because Google keeps admin log events six months and administrators cannot delete them. Minutes cannot be counted backwards, so none are claimed | [../setup/02](../setup/02-toil-baseline.md) `TB-1.2` sets the start date and records four prospective ISO weeks |
 | C-08 | No blind grading, no double-graded subset, no agreement record | Blind grading needs a third person who is neither builder nor approver, and there are two people | [../pov/08](../pov/08-mo-and-the-value-report.md) `PM-7.1` to `PM-7.3` |
-| C-09 | One reviewer on the improvement pull request, not two | The author is person A and the only other human is person B, so the merge still has a reviewer who is not the author; the rule that matters is kept, which is that nothing machine-written merges itself | [../pov/08](../pov/08-mo-and-the-value-report.md) `PM-9.2` |
+| C-09 | One reviewer on the improvement pull request, not two | The author is person A and the only other human is person B, so the merge still has a reviewer who is not the author; the rule that matters is kept, which is that nothing machine-written merges itself | [../pov/08](../pov/08-mo-and-the-value-report.md) `PM-9.2`; [../setup/README.md](../setup/README.md) §1 ("two human reviewers"). The cut is the HLD §9 fleet rule, not the standing constraint, which absolute 10 keeps |
 | C-10 | No autonomy ladder walk. No two weeks at L1 and two at L2 | There is no unattended running at any moment, so there is no dwell for a dwell period to protect | [../pov/07](../pov/07-the-doer-tier-w-and-the-optional-tier-p.md) `PW-6.2` |
 | C-11 | No Gemini Enterprise, no Tier C agents, no agent gateway, no Agent Registry, no engine registration | The only component that can act is the action service, reachable by two named principals | [../pov/05](../pov/05-gemini-enterprise-and-tier-c.md); [../setup/19](../setup/19-gemini-enterprise-import-and-baseline.md), [20](../setup/20-gemini-enterprise-gateway-and-tier-c-gate.md), [35](../setup/35-wall-e-engine-registration-and-gateways.md) |
 | C-12 | No data-protection impact assessment, no works-council information | Two consequences, not one. Nothing mutating touches a real employee: four synthetic accounts are the whole population, and the procedure refuses to run if a real account is in the pilot organisational unit. And Eve's poll is limited to the two participants, each with written consent, unless the DPO record and HR's answer of §6 row 13 exist, because reading every real administrator's admin audit log is monitoring at the workplace from day 1 | [../pov/02](../pov/02-decisions-people-and-the-retrospective-baseline.md) `PD-2.1`, `PD-5.1`, `PD-8.0`; [../pov/06](../pov/06-eve-over-the-human-super-admins.md) `PE-0.2`; [../setup/03](../setup/03-decisions-and-people.md) |
@@ -527,13 +561,13 @@ running and are named as such in rows 11 and 12; everything else goes.
 | 1 | Every standing IAM grant to a human principal removed (C-06), including any `roles/iam.serviceAccountTokenCreator` binding on a caller service account of §11 | `gcloud projects get-iam-policy` on each of the four projects prints **no `user:` binding other than the two named owners**, both written into the hand-over; `gcloud iam service-accounts get-iam-policy` on each caller account prints no binding at all. Every binding was made with `--condition=None` (§7 item 6) and is removed the same way, so nothing is left behind by a condition that did not match. The two people keep `roles/owner` on projects they created; stripping it would lock them out of the evidence | `T3-19a` |
 | 2 | The custom admin role unassigned from the robot | `roleAssignments.list` for the role prints nothing, read from person B's own session | `T3-19b` |
 | 3 | The custom admin role deleted. **IRREVERSIBLE** | Admin console > Account > Admin roles no longer lists it. Confirm first that row 2 read back empty and that the privilege list is in the hand-over | `T3-19b` |
-| 4 | The robot's OAuth grant revoked and the `steward-refresh-token` version disabled | the robot's Security > Connected applications page is empty; the secret version state is `DISABLED` | `T3-19c`, `T3-19d` |
+| 4 | The robot's OAuth grant revoked and the `$DOER_TOKEN_SECRET` version disabled | the robot's Security > Connected applications page is empty; the secret version state is `DISABLED` | `T3-19c`, `T3-19d` |
 | 5 | **The doer's OAuth client entry removed from app access control, and Eve's if Eve is stopped.** Day-1 `T1-14` and `T1-14a` each mark a client **Trusted** at organisation scope, which by Google's own words "can access all Google services (both restricted and unrestricted)" for any user in the organisation. A blocked app's tokens stop working, so Eve's entry stays exactly as long as Eve polls, and is recorded as deliberately left | Admin console > Menu > Security > Access and data control > API controls > Manage App Access: the doer's client id does not appear in the configured-apps list, or reads **Blocked**; Eve's reads as the hand-over says. Read back by person B, not person A. Google: "Changes can take up to 24 hours but typically happen more quickly" (§15), so a second look the next morning is written into the hand-over | `T3-19h` |
 | 6 | **The doer's OAuth client deleted** in the Google Auth Platform console for `DOER_PROJECT`, and Eve's in `EVE_PROJECT` only if Eve was stopped at row 11, since deleting a client invalidates its tokens | the doer's client id is not listed under Clients in `DOER_PROJECT`; "You can restore deleted clients within 30 days" (§15) | `T3-19i` |
-| 7 | **The client credentials destroyed.** Every version of the `steward-oauth-client` secret destroyed (irreversible), and `eve-client.json` shredded from person A's disk, which is safe whether or not Eve polls because Eve's refresh-token secret already carries its client id and secret | the secret's versions all read `DESTROYED`; `ls` on the JSON path fails | `T3-19j` |
+| 7 | **The client credentials destroyed.** Every version of the `$DOER_CLIENT_JSON_SECRET` secret destroyed (irreversible), and `eve-client.json` shredded from person A's disk, which is safe whether or not Eve polls because Eve's refresh-token secret already carries its client id and secret | the secret's versions all read `DESTROYED`; `ls` on the JSON path fails | `T3-19j` |
 | 8 | The five synthetic accounts left **suspended**: the four in the pilot organisational unit and `pilot-user-99@` in the nonprod organisational unit (day-2 `T2-15`) | Admin console > Directory > Users, filtered to each organisational unit, shows suspended accounts and **no other account**. A real account in either is an incident | `T3-19e` |
 | 9 | The halt secret left at `on` | the secret's latest version reads `on`. Clearing it is a procedure, not a control: both people hold project owner, so either can clear it alone | `T3-19f` |
-| 10 | The staging organisational unit, the `stewardAuditWriter` custom IAM role, the audit dataset's writer ACL entry and the two `run.invoker` user bindings removed | each reads back absent | `T3-19k` |
+| 10 | The staging organisational unit, the `$AUDIT_WRITER_ROLE` custom IAM role, the audit dataset's writer ACL entry and the two `run.invoker` user bindings removed | each reads back absent | `T3-19k` |
 | 11 | **`eve-reader@`, stopped at the hand-over unless §6 row 13's DPO record exists.** A read-only admin account holding one privilege (Reports) and a live consented refresh token, whose `eve-refresh-token` secret lives in `EVE_PROJECT`, not `DOER_PROJECT` (`T3-19d` names a project per secret and stops on an empty version list). The proof of value's Eve holds no Workspace credential at all (PV-D-07), so nothing in pov/06 receives this account: the default is that `T3-19d` disables the token version, `T3-19g` suspends the account, and both are recorded before pov/06 `PE-0.2` starts. It is left standing only if the DPO record of §6 row 13 exists, in which case it is PV-D-07's unwind exercised early, pov/06 records it under that record, and the hand-over names the account's owner and what would revoke it | the secret version reads `DISABLED` and the account reads suspended, with the run-log line; or the DPO record is cited in the hand-over and the account's owner is named | `T3-19d`, `T3-19g` |
 | 12 | **Eve polling, stopped with row 11 unless §6 row 13's DPO record exists.** A poll left standing is a standing monitoring system over every real administrator, and it names its DPO record in the hand-over or it does not stand | the scheduler job is `PAUSED` with a line in the run log saying who paused it and why; or it is `ENABLED` and the hand-over cites the DPO record | `T3-19d` |
 | 13 | The two application-default credentials revoked, on person A's machine (`T2-1a`) and person B's (`T2-8`): the only credentials a human holds on disk in these three days | `gcloud auth application-default print-access-token` fails on both machines | `T3-19l` |
@@ -565,16 +599,16 @@ in front of them (C-10).
 | R-01 | **Role assignment propagation.** Google says a few minutes, "However, it can take up to 24 hours". If it has not propagated, day 2's centrepiece is gone | the pilot organisational unit, the synthetic accounts and the unassigned role are built on day 1, so the assignment lands about 09:45 on day 2 and the first attempt is about 14:45 | the executed pair moves to day 3 morning; the demonstration shows the dry run, the approval chain and Google's own refusal. If it fails again, the executed pair is **struck from the claim, not softened** |
 | R-02 | **The consent fails.** The Desktop client is blocked by app access control, the key-only two-step verification makes the browser flow awkward, or the Internal audience is misconfigured. Google says a marking change "can take up to 24 hours but typically happen more quickly" (§15), and a consent that fails on an unpropagated marking presents as an unhelpful blocked-app error, not as a timing message | **both** clients are marked Trusted on day 1 (`T1-14`, `T1-14a`), a day before either is consented to, and the re-consent after K4 uses the same doer client (`T2-26`). Before each sitting, the client id is read back in the configured-apps list (`T1-18`, `T2-16`) and the sitting stops if it is not there | `gcloud auth application-default login --client-id-file --scopes` from the robot's own browser profile, which uses the same app access control and can fail the same way. Last resort: day 2 ends at the offline selftest, and every result is demonstrated against a fake Directory client |
 | R-03 | **`gcloud run --source` fails** on Cloud Build, Artifact Registry or build permissions | the APIs and grants are made on day 1; the poller's deploy is the canary, leaving a whole day to fix it | `gcloud builds submit --tag` then deploy `--image`. Last resort: run the poller by hand and defer the scheduler to day 2 |
-| R-04 | **The live results overrun.** 75 minutes for ten results is the tightest block in the plan, and the live block holds work the offline selftest does not: two Cloud Run revisions that must reach ready, two dataset ACL changes, a job execution and a log read | `actions.py --selftest` runs the same set offline (twelve lines), four hours earlier, so only the clock is at risk and not the code | treat day 2's own cut order as the expected case: the model step first, then the audit-unavailable test, then the organisational-unit scope test, which recovers about 45 minutes. **Never dropped:** the forced dry run, the dry run refusing a valid approval, the approval chain refusing a caller who is not an approver, and the approved execution with its write-ahead row. Note that **self-approval is proved offline**, not live: the live service refuses person A at `/approve` before a nonce exists, so the live refusal is `approver_not_authorised` and the two are not the same result; `T2-22` says which one was seen |
+| R-04 | **The live results overrun.** 75 minutes for ten results is the tightest block in the plan, and the live block holds work the offline selftest does not: two Cloud Run revisions that must reach ready, two dataset ACL changes, a job execution and a log read | `actions.py --selftest` runs the same set offline (eighteen lines), four hours earlier, so only the clock is at risk and not the code | treat day 2's own cut order as the expected case: the model step first, then the audit-unavailable test, then the organisational-unit scope test, which recovers about 45 minutes. **Never dropped:** the forced dry run, the dry run refusing a valid approval, the approval chain refusing a caller who is not an approver, and the approved execution with its write-ahead row. Note that **self-approval is proved offline**, not live: the live service refuses person A at `/approve` before a nonce exists, so the live refusal is `approver_not_authorised` and the two are not the same result; `T2-22` says which one was seen |
 | R-05 | **The halt flag does not halt.** A secret mounted at `:latest` resolves when the instance starts, so a warm instance would never see a halt written afterwards | the halt is read with `access_secret_version` on **every request** and never mounted; [code.md](code.md) states this in bold | none needed, but the drill is run against an instance that was already warm before the halt was written, so a regression shows |
 | R-06 | **Model Armor floor flags are beta and shift** | every flag is re-read on the day and the step fails loudly if gcloud rejects one | set the floor in the console, screenshot the settings page, record the console path instead of the command |
 | R-07 | **The edition does not carry every Reports application.** `token` or `access_transparency` may be absent, and empty detections read as a broken poller | the poller records a 403 or an empty stream as a coverage gap in the evidence pack, not as a stop; the `admin` application alone carries all six detections | none needed |
-| R-08 | **The two people are pulled into their day jobs.** The most likely failure of all, and nothing to do with Google | **75 minutes** of daily reserve per person on days 1 and 2 and **60** on day 3, restated from the day tables (§Status). It covers a fifteen-minute overrun in any block and no more; the corrections of §6.1 were made on 2026-09-18 precisely so that none of it is spent on a known defect | the cut order across the three days is: Mo's scorecard, then the retrospective baseline, then the improvement pull request, and under a three-hour overrun **all three go together** and Mo's five views collapse to one query over `steward_audit.actions` grouped by `agent_id`, `operation` and `verdict`. **Never cut:** Eve live before the doer exists; the forced dry run; the two-person approval; the write-ahead audit; the kill drills; the same-day unwind, started at 16:00 |
+| R-08 | **The two people are pulled into their day jobs.** The most likely failure of all, and nothing to do with Google | **75 minutes** of daily reserve per person on days 1 and 2 and **60** on day 3, restated from the day tables (§Status). It covers a fifteen-minute overrun in any block and no more; the corrections of §6.1 were made on 2026-09-18 precisely so that none of it is spent on a known defect | the cut order across the three days is: Mo's scorecard, then the retrospective baseline, then the improvement pull request, and under a three-hour overrun **all three go together** and Mo's five views collapse to one query over `${AUDIT_DATASET}.actions` grouped by `agent_id`, `operation` and `verdict`. **Never cut:** Eve live before the doer exists; the forced dry run; the two-person approval; the write-ahead audit; the kill drills; the same-day unwind, started at 16:00 |
 
 **If day 2 overruns by three hours**, which is the shape R-08 actually takes, the demonstration
 still happens and this is the plan, written down rather than improvised at 08:30: day 3 opens with
 day 2's carried-over kill drills and re-consent, about 80 minutes of both-person work; the sponsor
-slot stays at 14:30; Mo's five views collapse to one query over `steward_audit.actions` grouped by
+slot stays at 14:30; Mo's five views collapse to one query over `${AUDIT_DATASET}.actions` grouped by
 `agent_id`, `operation` and `verdict`; the retrospective baseline, the scorecard page and the
 improvement pull request are cut **together**, each written into the hand-over as owed; the unwind
 starts at 16:00. If what was dropped on day 2 was the re-consent itself, there is no working
@@ -597,11 +631,14 @@ HTTP status and falls back to the APIs Explorer). One thing this page listed as 
 2026-09-18 is settled by the full build: `gcloud auth print-identity-token --audiences=<url>` is
 **refused for a user credential**, gcloud accepting the flag only for a service account or an
 impersonation ([../setup/33](../setup/33-wall-e-action-services-and-approval-surfaces.md)
-`WS-3.6`), so as written every `TOK()` call of day 2 fails and the alternative is the main path.
-Every live call to the action service depends on it, so the pre-flight of §6 row 12 is mandatory
-the week before, and the alternative is prepared in code before the run (§6.1 owed row 4). The
-preferred alternative keeps both callers human: `caller_email` accepts a user token minted without
-`--audiences`, whose audience is Google's gcloud client id, as well as the service URL. The other
+`WS-3.6`), so a `TOK()` minted with `--audiences` would fail, and the alternative is the main
+path. Every live call to the action service depends on it, so the pre-flight of §6 row 12 is
+mandatory the week before; the alternative was carried into the code on 2026-10-01 (§6.1, made
+row 4). The path chosen keeps both callers human: `caller_email` accepts a user token minted
+without `--audiences`, whose audience is Google's gcloud client id, as well as the service URL,
+and `TOK()` mints exactly that. Google's own page for a developer calling a private service shows
+`curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" SERVICE_URL`, with no
+`--audiences` (Cloud Run, authenticating developers, read 2026-10-01). The other, not built
 is a dedicated caller service account holding `roles/run.invoker`, and it must not collapse
 absolute 4: `actions.py` compares approver and requester by e-mail and refuses a service identity
 as **approver** only, so whoever can impersonate one shared caller account can request as the
@@ -614,7 +651,8 @@ the run log and the bindings are in §10 row 1.
 
 ## 12. How it grows
 
-Every artefact here uses the full build's names and schemas, so nothing is torn down to move on. A
+Since the six owed rows of §6.1 were made on 2026-10-01, every artefact uses the full build's
+names and schemas, so nothing is torn down to move on. A
 three-day build that has to be torn down has failed. The one thing paused rather than carried is
 Eve's Reports poll (§10 rows 11 and 12), because the proof of value's Eve holds no Workspace
 credential; its tables stay and the full build brings the poll back.
@@ -658,8 +696,8 @@ machinery there is (C-15).
 Read this page once, both of you, the day before. **Work through §6 the week before**, not the day
 before: four of its rows (the budget role, the identity token on both accounts, the security
 keys, the DPO record and HR's answer) take days to put right. §6.1 is a record of what the day
-files carry, **except its last six rows, "owed after the review of 2026-09-18", which are made
-before the run** (§6 row 11 checks it). Then open [day 1](day-1-platform-and-eve.md) at `T1-1`
+files carry, including its last six rows, owed after the review of 2026-09-18 and made on
+2026-10-01 (§6 row 11 checks it). Then open [day 1](day-1-platform-and-eve.md) at `T1-1`
 and work down. If one human runs the three days with an assistant driving person A's terminal,
 read [one-human-and-an-assistant.md](one-human-and-an-assistant.md) first: it says what that
 human decides and provides, and why the run is a rehearsal that produces no claim sentence. Keep [code.md](code.md) open
@@ -696,6 +734,11 @@ command underneath.
 | The permissions `bigquery.tables.getData`, `.updateData`, `.get`, `bigquery.datasets.get`; dataset access entries by `bq update --source` show only `READER`, `WRITER`, `OWNER` in Google's examples (§6.1 row 2, `T1-12a`) | `docs.cloud.google.com/bigquery/docs/access-control` and `.../control-access-to-resources-iam` | 2026-09-18 |
 | `bq mk --table` with `--time_partitioning_field`, `--time_partitioning_type`, `--clustering_fields`; `bq insert` reads newline-delimited JSON (§6.1 rows 2 and 3) | `docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference` | 2026-09-18 |
 | Deleting an OAuth client: Clients page, tick, Delete; "You can restore deleted clients within 30 days of the deletion" (§10 row 6) | `support.google.com/cloud/answer/15549257` | 2026-09-18 |
+| `--audiences`: "Intended recipient of the token. Currently, only one audience can be specified"; the plain form with no flag (§6 row 12, §6.1 made row 4) | `docs.cloud.google.com/sdk/gcloud/reference/auth/print-identity-token` | 2026-10-01 |
+| A developer calls a private service with `curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" SERVICE_URL`, no `--audiences` (§11) | `docs.cloud.google.com/run/docs/authenticating/developers` | 2026-10-01 |
+| The deterministic service URL `https://[TAG---]SERVICE_NAME-PROJECT_NUMBER.REGION.run.app`, so `SERVICE_URL` is set on the first deploy (§6.1 made row 4) | `docs.cloud.google.com/run/docs/triggering/https-request` | 2026-10-01 |
+| `activities.list` `userKey`: "Can be `all` for all information, or ... their primary email address" (§6 row 13, §6.1 made row 5) | `developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list` | 2026-10-01 |
+| Liens are modified with `roles/resourcemanager.lienModifier`; `gcloud alpha resource-manager liens list` and `delete` are alpha (the one-human rehearsal tear-down) | `docs.cloud.google.com/resource-manager/docs/project-liens` | 2026-10-01 |
 
 Each day file cites the pages its own steps depend on, re-read on the day. Where a page has changed,
 **the page is right and the step is corrected before it is run.**

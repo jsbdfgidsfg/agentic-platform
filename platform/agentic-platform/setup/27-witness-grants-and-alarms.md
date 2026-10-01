@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Stage: review §2 stage 29 (W-3, the member constraint and the two grants to `eve-export@`; W-4, the alarms). It opens gate G-2 except for the deliberate withheld-push drill, which belongs to [28-eve-independent-proof-and-sandbox-drills.md](28-eve-independent-proof-and-sandbox-drills.md). W-1, W-2 and the records step are [08-witness-organisation.md](08-witness-organisation.md).
 - Step prefix: WG. Steps: 30 (W-3: 10; the tenant-side push: 4; W-4: 13; rota and closing: 3). BLOCKED steps: WG-2.2 and WG-2.3 (Eve's export and heartbeat code, B-08), WG-3.9 (the RP-5 re-page, until the `pages` mirror table exists at `EVE_SCHEMAS_COMMIT`, 08 WO-2.10). Gated but not BLOCKED: every policy step, WG-3.5 to WG-3.10, which is created only in sitting 3b, after its own metric has been shown to carry at least one point — a metric counts only entries received after it was created, and a metric-absence condition never fires until its metric has written one measurement. WG-3.8 and WG-3.9 are additionally gated on WG-3.0's schema diff.
@@ -69,7 +70,7 @@ flowchart TD
 - [ ] P13 is signed and 08 WO-2.16 has locked the bucket, or the PENDING line is in the README re-run index and the witness administrators accept that objects written under `exports/` before the lock are deletable by a witness administrator until it is done.
 - [ ] Both witness administrators have `roles/orgpolicy.policyAdmin` at `org-witness` (held through Organization Administrator from 08 WO-1.10) and `roles/owner` on `EVE_WITNESS_PROJECT` (08 WO-2.3).
 - [ ] A mobile telephone number for each of the three SMS recipients, and their consent to receive SMS on it (recorded; the numbers are not written to the variables file or to the build log).
-- [ ] The second human can sign in to the witness console with `SECOND_HUMAN_WITNESS_ACCOUNT` unaided, from his own machine.
+- [ ] The second human can sign in to the witness console with `SECOND_HUMAN_WITNESS_ACCOUNT` unaided, from their own machine.
 
 ## People
 
@@ -77,11 +78,11 @@ flowchart TD
 |---|---|---|
 | Witness administrator 1 (`WITNESS_SA_1`) | Performs W-3 and W-4 in the witness organisation | every witness sitting |
 | Witness administrator 2 (`WITNESS_SA_2`) | Reads every constraint and grant back before it is applied; performs the negative tests; countersigns | every witness sitting |
-| Second human (`SECOND_HUMAN_EMAIL`; witness account `SECOND_HUMAN_WITNESS_ACCOUNT`) | Approves the PAM grant of WG-2.1; **confirms receipt of every alarm test himself**, from his own mailbox and telephone, before anyone tells him it was sent; signs the W-4 record | WG-2.1, WG-3.4, WG-3.11, WG-3.12, WG-4.3 |
+| Second human (`SECOND_HUMAN_EMAIL`; witness account `SECOND_HUMAN_WITNESS_ACCOUNT`) | Approves the PAM grant of WG-2.1; **confirms receipt of every alarm test themselves**, from their own mailbox and telephone, before anyone tells them it was sent; signs the W-4 record | WG-2.1, WG-3.4, WG-3.11, WG-3.12, WG-4.3 |
 | Platform owner | **Hands over the `eve-export@` address and one other tenant service account address, and nothing else.** Performs only WG-2.1 to WG-2.4, in the tenant, under a grant the second human approves. Holds no witness account and appears in no witness IAM policy | WG-1.1 (hand-over only), WG-2.1 to WG-2.4 |
 | Incident commander (IT security) | Named in the documentation of the route 2 and RP-5 policies as the escalation past twice the target | reads WG-3.7 and WG-3.9 |
 
-The monitored administrator installs Eve (SD-12). That is why the platform owner performs nothing on the witness side of this file, why the grants are made by people he cannot instruct, and why every alarm here notifies three people of whom he is none.
+The monitored administrator installs Eve (SD-12). That is why the platform owner performs nothing on the witness side of this file, why the grants are made by people they cannot instruct, and why every alarm here notifies three people of whom they are none.
 
 ## Sittings
 
@@ -103,12 +104,12 @@ The monitored administrator installs Eve (SD-12). That is why the platform owner
 | A negative test (WG-1.8) **succeeds** | Stop. The door is wider than one principal. Remove the test binding at once, re-read the managed policy, and report a severity 1 to the incident commander. No push is enabled until a repeated test is refused. |
 | WG-2.2 has run and no heartbeat row arrives within 90 minutes | Do not create the absence policies (they would never fire, having no measurement). Read the job's execution log in `EVE_PROJECT` (platform owner), check the appender role and the dataset access entry (witness side), and check the table name against the contract of 08 WO-2.9. A shape mismatch is closed by `heartbeat_v2` (08 WO-3.5 re-run line), never by altering the table. |
 | A test entry in WG-3.2 shows `principalEmail` redacted | Build every metric on `protoPayload.resourceName` and the method only, and record the deviation: the filters then count writes by any principal to those tables, which is sound because only `eve-export@` and the two administrators can write them. |
-| **WG-3.2 returns no entry at all** | The heartbeat did not reach the witness through a table-level API, so no audit entry carries the heartbeat table's `resourceName` and the arrival metric of WG-3.3 would count nothing. This is a breach of 26 ER-4.3's export contract, not a filter to work around. Stop the file, record it as a contract breach, and hand it back to the platform owner through the second human. Only when he confirms in writing that the push uses a load or query job — a deviation he must justify — is WG-3.2's documented fallback filter used instead, and WG-3.3 records which of the two forms was chosen. |
+| **WG-3.2 returns no entry at all** | The heartbeat did not reach the witness through a table-level API, so no audit entry carries the heartbeat table's `resourceName` and the arrival metric of WG-3.3 would count nothing. This is a breach of 26 ER-4.3's export contract, not a filter to work around. Stop the file, record it as a contract breach, and hand it back to the platform owner through the second human. Only when they confirm in writing that the push uses a load or query job — a deviation they must justify — is WG-3.2's documented fallback filter used instead, and WG-3.3 records which of the two forms was chosen. |
 | Enabling `bigquerydatatransfer.googleapis.com` (WG-3.1) fails, or its transfer configs never run, after WG-1.3 | The API provisions a Google-owned service agent outside the witness domain and grants it `roles/bigquerydatatransfer.serviceAgent` automatically; domain-restricted sharing applies to grants made by service agents, so the automatic grant can be refused and the transfer configs then sit failed with no rows and no alarm. WG-3.1's first sub-step adds that one subject to `allowedMemberSubjects` before the API is enabled. If it was missed, add it now as a dated change countersigned by the second administrator, wait for propagation, disable and re-enable the API, and re-read the transfer runs. |
 | The SMS channel cannot be verified in the recipient's country | Record it, keep email and the paging service, and raise the gap to the incident commander; the G-2 record states which recipients have SMS. |
 | A policy is created before its metric has a data point | It will never fire. This is why sitting 3b is separate and why every policy step over a log-based metric (WG-3.5, WG-3.6, WG-3.8, WG-3.9) begins with a `timeSeries.list` pre-check that must return at least one point (there is no `gcloud monitoring` command for time series; the read is the Monitoring API, as files 19 and 40 use it). The two log-match policies (WG-3.7, WG-3.10) evaluate entries as they arrive and need no point. If a metric policy was nevertheless created early, delete it, wait for the metric's first point, and create it again; record both timestamps. |
 | A `bq ls --transfer_config` reading shows `FAILED`, or `bq ls --transfer_run` shows no `SUCCEEDED` run, for `witness-integrity` or `witness-rp5-repage` | The scheduled query is not writing alert rows, so `WITNESS_ALERT_FINGERPRINT` or the RP-5 policy is blind. Read the run's error message (`bq show --transfer_run <run name>`): a permission error is the service-agent grant of WG-3.1 or the dataset entry for `WITNESS_INTEGRITY_SA`; an `Unrecognized name` error is a shape change, which is WG-3.0's stop. Fix the cause, trigger one run with `bq mk --transfer_run --run_time`, and do not close the step until a `SUCCEEDED` run is listed. |
-| A recipient cannot say which policy notified him (route 2, RP-5 or the fingerprint alarm) | Every notification body names its policy's `displayName`; the three names are distinct and each policy reads its own metric (WG-3.3). Read the displayName from the message and from the incident in Monitoring > Alerting; a message that names the wrong policy for the test that was run is a defect in the filters, and the test is failed, not passed. |
+| A recipient cannot say which policy notified them (route 2, RP-5 or the fingerprint alarm) | Every notification body names its policy's `displayName`; the three names are distinct and each policy reads its own metric (WG-3.3). Read the displayName from the message and from the incident in Monitoring > Alerting; a message that names the wrong policy for the test that was run is a defect in the filters, and the test is failed, not passed. |
 | Billing on `EVE_WITNESS_PROJECT` is found disabled | Severity 1 to the incident commander and the second human; a witness administrator re-links the witness billing account (08 WO-1.12); every alarm in this file is assumed to have been blind for the outage, and the window is written into the G-2 record. |
 | An IRREVERSIBLE-by-name step is interrupted | None here is irreversible: every step of this file can be rolled back. The one exception in effect is a push that has already written rows into the witness, which nobody removes. |
 
@@ -140,7 +141,7 @@ Every witness command runs with `CLOUDSDK_ACTIVE_CONFIG_NAME=witness`, no defaul
 
 ### WG-1.1 Receive the export identity and check the gates
 
-- **WHO:** Witness administrator 1 receives; witness administrator 2 reads the hand-over aloud; the second human carries it from the platform owner and confirms he did not alter it.
+- **WHO:** Witness administrator 1 receives; witness administrator 2 reads the hand-over aloud; the second human carries it from the platform owner and confirms they did not alter it.
 - **WHERE:** A signed paper or PDF hand-over, then the witness workstation shell.
 - **ACTION:** The hand-over carries exactly two addresses and nothing else: `SA_EVE_EXPORT` and one other tenant service account address used **only** as the subject of the refused grant in WG-1.8. It also states the date of `EVE_FIRST_RUN_RECORD`, so that the witness knows what backlog to expect, and the six-hourly export cadence agreed in 26.
 
@@ -349,7 +350,7 @@ gcloud projects add-iam-policy-binding "$EVE_WITNESS_PROJECT" --member="serviceA
 
 ### WG-1.9 Negative test: an unlisted human is refused; and the positive control
 
-- **WHO:** Witness administrator 2 runs both; witness administrator 1 records; the second human is told afterwards that his tenant address was refused.
+- **WHO:** Witness administrator 2 runs both; witness administrator 1 records; the second human is told afterwards that their tenant address was refused.
 - **WHERE:** Witness workstation shell.
 - **ACTION:** The unlisted human is the second human's **tenant** address, `SECOND_HUMAN_EMAIL`: a person with every reason to be in the witness, whose witness identity is `SECOND_HUMAN_WITNESS_ACCOUNT` and whose tenant identity must never be. The positive control proves the constraint is not simply refusing everything.
 
@@ -385,7 +386,7 @@ diff -q <(jq -S '.bindings' "$BASE") "$WITNESS_CUSTODY_DIR/$(date -u +%F)-WG-1.9
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" WIT-DRS
 ```
 
-- **VERIFY:** `decision-need.sh` prints `SIGNED` for the new record. The witness build log holds ten W-3 lines, each DONE. The second human confirms the note names no new identifier (he reads it before carrying it).
+- **VERIFY:** `decision-need.sh` prints `SIGNED` for the new record. The witness build log holds ten W-3 lines, each DONE. The second human confirms the note names no new identifier (they read it before carrying it).
 - **ROLLBACK:** A record is superseded by `v2`, never edited.
 - **EVIDENCE:** `<date>-WG-1.10-w3-record-v1` under `custody/`, and the one-sentence note as `<date>-WG-1.10-push-may-be-enabled-v1`. EU AI Act E-06, E-08. TISAX 1.5, 4.1.
 
@@ -393,7 +394,7 @@ diff -q <(jq -S '.bindings' "$BASE") "$WITNESS_CUSTODY_DIR/$(date -u +%F)-WG-1.9
 
 ### WG-2.1 Take the repair grant on `EVE_PROJECT`
 
-- **WHO:** Platform owner requests; **the second human approves** (`ENT_PROJECT_REPAIR_EVE`'s approver, 23). The second human refuses the request if the note of WG-1.10 has not reached him.
+- **WHO:** Platform owner requests; **the second human approves** (`ENT_PROJECT_REPAIR_EVE`'s approver, 23). The second human refuses the request if the note of WG-1.10 has not reached them.
 - **WHERE:** Platform owner's shell, tenant `~/.platform-env` sourced.
 - **ACTION:** The platform owner holds no standing right that edits Eve (the drift check of 28 proves it). Everything in WG-2.2 and WG-2.3 happens inside one time-boxed grant whose justification names this step.
 
@@ -447,7 +448,7 @@ bq --project_id="$EVE_WITNESS_PROJECT" query --use_legacy_sql=false --format=pre
 gcloud storage ls -l "${WITNESS_BUCKET}/exports/**" | tail -20
 ```
 
-- **VERIFY:** The query runs at all — an `Unrecognized name` error means the push wrote a shape the contract does not describe, which is a stop, not a query to adjust. At least one row with `kind = 'hourly'` exists, its `schema_version` is the string `1`, its `source_project` is the Eve project named in the hand-over, `first_run_record` matches `EVE_FIRST_RUN_RECORD`, and `config_fingerprint` is a 64-character hexadecimal string. The bucket listing shows objects under `exports/<project>/<dataset>/<table>/dt=YYYY-MM-DD/` including a `MANIFEST.json`, covering every day since the first run. No warning or error appears in the job log. The witness administrator, not the platform owner, states aloud what he sees.
+- **VERIFY:** The query runs at all — an `Unrecognized name` error means the push wrote a shape the contract does not describe, which is a stop, not a query to adjust. At least one row with `kind = 'hourly'` exists, its `schema_version` is the string `1`, its `source_project` is the Eve project named in the hand-over, `first_run_record` matches `EVE_FIRST_RUN_RECORD`, and `config_fingerprint` is a 64-character hexadecimal string. The bucket listing shows objects under `exports/<project>/<dataset>/<table>/dt=YYYY-MM-DD/` including a `MANIFEST.json`, covering every day since the first run. No warning or error appears in the job log. The witness administrator, not the platform owner, states aloud what they see.
 - **ROLLBACK:** None: rows and objects in the witness are never removed. A wrong push is superseded by a corrected one and both are explained in the record.
 - **EVIDENCE:** The heartbeat rows, the object listing and the job log as `<date>-WG-2.3-first-heartbeat-and-backlog-v1`, written by the witness administrator (not the platform owner) and uploaded under `drills/`. EU AI Act E-06. TISAX 5.2, 1.5.
 
@@ -598,7 +599,7 @@ gcloud logging read "logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.g
 
 - **VERIFY, and this is a hard gate:**
 
-  1. **Zero entries stops the file.** It means the push did not write through a table-level API, so no audit entry carries the heartbeat table's `resourceName`, `witness-heartbeat-insert` would count nothing, WG-3.5's absence policy could never fire, and WG-3.11's chart would read "no data" — which looks exactly like an alarm with nothing to report. That is a **breach of the ER-4.3 export contract**, recorded as such and handed back to the platform owner through the second human. It is not worked around from the witness side, and W-4 does not continue on the fallback filter unless the platform owner confirms the deviation in writing with his reason.
+  1. **Zero entries stops the file.** It means the push did not write through a table-level API, so no audit entry carries the heartbeat table's `resourceName`, `witness-heartbeat-insert` would count nothing, WG-3.5's absence policy could never fire, and WG-3.11's chart would read "no data" — which looks exactly like an alarm with nothing to report. That is a **breach of the ER-4.3 export contract**, recorded as such and handed back to the platform owner through the second human. It is not worked around from the witness side, and W-4 does not continue on the fallback filter unless the platform owner confirms the deviation in writing with their reason.
   2. **The documented fallback, used only on that written confirmation.** A load or query job writes the table change as a `BigQueryAuditMetadata` event: the entry carries `protoPayload.metadata.tableDataChange` with the table as `protoPayload.resourceName`, and the job entry carries `jobChange` with the destination table inside its configuration. Its own VERIFY, run before WG-3.3 is allowed to use it:
 
 ```bash
@@ -636,7 +637,7 @@ gcloud logging metrics create witness-rp5-alert --project="$EVE_WITNESS_PROJECT"
 
 ### WG-3.4 Create and verify the three SMS channels
 
-- **WHO:** Witness administrator 1 creates; each recipient verifies his own number; the second human verifies his.
+- **WHO:** Witness administrator 1 creates; each recipient verifies their own number; the second human verifies theirs.
 - **WHERE:** Witness workstation shell, then the console (Monitoring > Alerting > Edit notification channels > SMS) for verification, which cannot be done from `gcloud`.
 - **ACTION:** Route 2 must reach three people on a path the tenant's administrators do not control. Email is already there (08 WO-2.4); SMS is the second path. SMS is not fully reliable and is not available in every region, so it is a second path and never the only one.
 
@@ -659,7 +660,7 @@ penv_set WITNESS_CHANNEL_COUNT "$(( $(printf '%s' "$WITNESS_EMAIL_CHANNEL" | tr 
 echo "every policy in this file carries ${WITNESS_CHANNEL_COUNT} channels"
 ```
 
-- **VERIFY:** `gcloud beta monitoring channels list --project="$EVE_WITNESS_PROJECT" --filter='displayName:witness-sms-' --format="table(displayName,type,enabled,verificationStatus)"` shows three enabled channels with `VERIFIED`, and then `printf '%s\n' "$WITNESS_SMS_CHANNEL" | tr ',' '\n' | grep -c .` prints `3` and `WITNESS_CHANNEL_COUNT` is `6`. If a channel could not be verified, the list shows it as not `VERIFIED`, it is absent from `WITNESS_SMS_CHANNEL`, `WITNESS_CHANNEL_COUNT` is `5` or `4`, and the sitting form records which recipient lacks SMS and in which country; that line goes into the G-2 record (WG-4.3) and is what WG-3.11 and the monthly check of WG-4.2 compare against. Each person states, in the sitting, that he entered his own code. Email is present for all three regardless (08 WO-2.4), so no recipient is ever on zero channels.
+- **VERIFY:** `gcloud beta monitoring channels list --project="$EVE_WITNESS_PROJECT" --filter='displayName:witness-sms-' --format="table(displayName,type,enabled,verificationStatus)"` shows three enabled channels with `VERIFIED`, and then `printf '%s\n' "$WITNESS_SMS_CHANNEL" | tr ',' '\n' | grep -c .` prints `3` and `WITNESS_CHANNEL_COUNT` is `6`. If a channel could not be verified, the list shows it as not `VERIFIED`, it is absent from `WITNESS_SMS_CHANNEL`, `WITNESS_CHANNEL_COUNT` is `5` or `4`, and the sitting form records which recipient lacks SMS and in which country; that line goes into the G-2 record (WG-4.3) and is what WG-3.11 and the monthly check of WG-4.2 compare against. Each person states, in the sitting, that they entered their own code. Email is present for all three regardless (08 WO-2.4), so no recipient is ever on zero channels.
 - **ROLLBACK:** `gcloud beta monitoring channels delete <channel> --project="$EVE_WITNESS_PROJECT"`, then re-run the two `penv_set` lines so that the count follows.
 - **EVIDENCE:** The channel table **without** numbers, and the computed `WITNESS_CHANNEL_COUNT` with the reason for any channel below three, as `<date>-WG-3.4-sms-channels-v1` under `custody/`; the verification statements on the sitting form. EU AI Act E-10. TISAX 1.6.
 
@@ -927,7 +928,7 @@ gcloud billing accounts describe "$WITNESS_BILLING_ACCOUNT_ID" --format="value(o
 
 ### WG-3.11 Prove that every alarm has seen data
 
-- **WHO:** Witness administrator 1 reads; **the second human confirms each receipt from his own mailbox and telephone before anyone tells him it was sent**; witness administrator 2 records the times.
+- **WHO:** Witness administrator 1 reads; **the second human confirms each receipt from their own mailbox and telephone before anyone tells them it was sent**; witness administrator 2 records the times.
 - **WHERE:** Witness workstation shell and the console (Monitoring > Metrics explorer, and Alerting > Policies).
 - **ACTION:** A metric-absence policy is only as good as its first measurement: until the metric has written one point, the policy cannot fire, and a policy that cannot fire looks exactly like a policy with nothing to report. Each of the five policies is read for evidence that its condition has data.
 
@@ -943,7 +944,7 @@ done
 gcloud logging read "logName=\"projects/${EVE_WITNESS_PROJECT}/logs/cloudaudit.googleapis.com%2Fdata_access\"" --project="$EVE_WITNESS_PROJECT" --freshness=24h --limit=5 --format="value(timestamp,protoPayload.methodName,protoPayload.resourceName)"
 ```
 
-- **VERIFY:** Each policy prints its name, `True` and the number equal to `WITNESS_CHANNEL_COUNT` (six when all three SMS channels verified; the G-2 record names any recipient without SMS). The loop prints at least one point for each of the four metrics — the heartbeat at least 20 after a day, the export at least 3, the two alert metrics at least the seed of WG-3.8 and WG-3.9 (the RP-5 line reads `0` while WG-3.9 is BLOCKED, and is recorded as such). The fingerprint, incident, RP-5 and billing policies each have the seeded or test firing of WG-3.7, WG-3.8, WG-3.9 and WG-3.10 recorded with its delivery time to each of the three people **and the `displayName` the message carried** — `witness-incident-route2`, `witness-integrity-alert`, `witness-rp5-repage`, `witness-billing-change` — matched against the test that was run; a receipt that names the wrong policy fails that policy's step. The second human writes, in his own words and from his own devices, what he received and when, for each test; a receipt relayed by anyone else is not a receipt.
+- **VERIFY:** Each policy prints its name, `True` and the number equal to `WITNESS_CHANNEL_COUNT` (six when all three SMS channels verified; the G-2 record names any recipient without SMS). The loop prints at least one point for each of the four metrics — the heartbeat at least 20 after a day, the export at least 3, the two alert metrics at least the seed of WG-3.8 and WG-3.9 (the RP-5 line reads `0` while WG-3.9 is BLOCKED, and is recorded as such). The fingerprint, incident, RP-5 and billing policies each have the seeded or test firing of WG-3.7, WG-3.8, WG-3.9 and WG-3.10 recorded with its delivery time to each of the three people **and the `displayName` the message carried** — `witness-incident-route2`, `witness-integrity-alert`, `witness-rp5-repage`, `witness-billing-change` — matched against the test that was run; a receipt that names the wrong policy fails that policy's step. The second human writes, in their own words and from their own devices, what they received and when, for each test; a receipt relayed by anyone else is not a receipt.
   The **deliberate withheld heartbeat** — the drill G-2 asks for — is not run here: it is 28's, on production `eve-export@`, after this file's first heartbeat and before the super-admin grant (SD-26), so that the person who proves it is the one outside the administration line.
 - **ROLLBACK:** None; the step only reads and records.
 - **EVIDENCE:** The policy table, the metric charts and the second human's signed receipts as `<date>-WG-3.11-alarms-have-seen-data-v1` under `drills/`. EU AI Act E-10, E-06. TISAX 1.6, 1.5.
@@ -982,7 +983,7 @@ gcloud storage cp --no-clobber --retain-until="$(date -u -v+10y +%FT%TZ)" --rete
 
 ### WG-4.2 Write the calendar entries, the re-run lines and the corrections other pages owe
 
-- **WHO:** A witness administrator writes; the second human reviews the pull request; the platform owner applies the two wiki corrections in his own repository.
+- **WHO:** A witness administrator writes; the second human reviews the pull request; the platform owner applies the two wiki corrections in their own repository.
 - **WHERE:** The pull request to `BUILD_LOG_DIR` and `DRILL_CALENDAR`; a separate note to the platform owner for the design-page corrections.
 - **ACTION:** Add to `DRILL_CALENDAR`:
   1. **Weekly**: the `billingEnabled` and account-open reading of WG-3.10, by the witness administrator on duty, recorded under `rota/`.
@@ -1008,7 +1009,7 @@ gcloud storage cp --no-clobber --retain-until="$(date -u -v+10y +%FT%TZ)" --rete
 
 ### WG-4.3 Assemble the G-2 pack, minus the drill
 
-- **WHO:** Witness administrator 1 assembles; the second human signs what he verified himself; witness administrator 2 countersigns.
+- **WHO:** Witness administrator 1 assembles; the second human signs what they verified themselves; witness administrator 2 countersigns.
 - **WHERE:** The witness bucket, under `drills/`.
 - **ACTION:** G-2 reads: the witness organisation exists with its project, locked bucket and `eve_mirror`; the two create-only grants to `eve-export@`; Access Approval and Access Transparency on; **the first push landed**; and **the absence alarm fires when the push is withheld in a drill**. Everything but the last line is evidenced here; the last line is 28's, by SD-26. The pack lists, for each element, the record that proves it and who signed it.
 
@@ -1022,7 +1023,7 @@ gcloud storage cp --no-clobber --retain-until="$(date -u -v+10y +%FT%TZ)" --rete
 | The alarm fires when the push is withheld | **open** | 28 |
 | Eve's monitoring of the human super admins is independently proven | **open** | 28, `EVE_H_LIVE_RECORD` |
 
-- **VERIFY:** Every row but the last two has a record id and a date; the last two name the file and the owner. `gcloud storage ls "${WITNESS_BUCKET}/drills/"` lists every record this file made. The second human signs only the rows he verified himself.
+- **VERIFY:** Every row but the last two has a record id and a date; the last two name the file and the owner. `gcloud storage ls "${WITNESS_BUCKET}/drills/"` lists every record this file made. The second human signs only the rows they verified themselves.
 - **ROLLBACK:** Superseded by `v2` when 28 completes the last two rows.
 - **EVIDENCE:** `<date>-WG-4.3-g2-pack-v1` under `drills/`; one line per row in `EVIDENCE_REGISTER`. EU AI Act E-06, E-08, E-10. TISAX 1.5, 1.6, 4.1.
 

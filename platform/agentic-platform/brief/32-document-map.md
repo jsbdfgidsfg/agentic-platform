@@ -2,8 +2,9 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
 - 2026-09-18: build procedures corrected — the one entry point is setup/README.md, with pov/ and 3-day/ beside it; SETUP.md, PREREQUISITES.md, eve/07 and mo/07 recorded as pointer pages since 2026-09-16 in the Wall-E, Eve and Mo bullets, the Builder reading path and chapter rows 15 and 24.
+- 2026-10-01: the platform folder is fifteen pages, 00 to 14, and three build sets; a bullet names the dated reviews 13 and 14; the register runs P1–P204, new rows at P205; chapter row 23 links setup/03 in place of the retired PREREQUISITES page.
 
 ## What this appendix gives you
 
@@ -15,12 +16,13 @@ The brief explains intent and defines no fact. **Where the brief and a design pa
 
 ## The platform set
 
-The platform folder holds thirteen pages, 00 to 12 ([README](../README.md#documents)).
+The platform folder holds fifteen pages, 00 to 14, and three build sets ([README](../README.md#documents)).
 
 - **00, objective review.** Quotes the objective verbatim, derives R1–R16 and names the reversals it forces; current positions live on 01–12.
 - **01, the HLD.** The parent: thesis, primitives and grading, roles, tier gate, charter, standing constraints, trust-boundary template, non-goals and what the agent sets must change (§18). Decisions P1–P34.
 - **02–11, the detailed pages.** Each owns one part of the HLD and its decisions, P35–P141 in page order; the table below maps them to chapters.
-- **12, the register of record.** P1–P143 in one sequence, grouped by the gate each blocks; new rows append at P144. An id on any page means the row here.
+- **12, the register of record.** P1–P204 in one sequence (P144–P191 proposed by the setup procedures, P192–P204 by the proof of value), grouped by the gate each blocks; new rows append at P205; §6a and §6b hold the rows the build sets proposed. An id on any page means the row here.
+- **13 and 14, dated reviews.** [13](../13-setup-procedure-review.md) reviews the setup procedures (2026-09-15); [14](../14-crosscheck-review.md) cross-checks the whole set (2026-09-18). Both are history, not authority.
 
 Two shared pages sit outside the folder. [project-topology.md](../../project-topology.md#status) is the single authority for where each project and resource lives and for every cross-project grant; its rows feed the factory, and Wall-E decisions 42–52 live there. [gemini-enterprise.md](../../gemini-enterprise.md#status) has been a pointer page since 2026-09-13, keeping only the tenant facts step GE-0 records; the tenant app's baseline is page 03.
 
@@ -101,7 +103,7 @@ The pointer page wall-e/07 belongs with these.
 | 20 EU AI Act | [10](../10-eu-ai-act.md), [mo/04 §1.8](../../mo/04-artefacts-and-proposals.md) | P125–P132, P19, P23, P28, P32 |
 | 21 TISAX | [11](../11-tisax.md) | P133–P141, P32 |
 | 22 Personal data and employees | [10](../10-eu-ai-act.md), [08](../08-data-logging-retention-sovereignty.md), [07](../07-monitoring-detection-incident-response.md) | P13, P18, P19, P126, P129 |
-| 23 Operating model | [01-hld §0.3](../01-hld.md#03-who-exists-on-2026-09-13-and-the-roles-the-platform-needs), [11 §7](../11-tisax.md#7-separation-of-duties-and-the-staffing-minimum-per-stage-p137), [PREREQUISITES §2](../../wall-e/PREREQUISITES.md#2-people) | P137 |
+| 23 Operating model | [01-hld §0.3](../01-hld.md#03-who-exists-on-2026-09-13-and-the-roles-the-platform-needs), [11 §7](../11-tisax.md#7-separation-of-duties-and-the-staffing-minimum-per-stage-p137), [setup/03](../setup/03-decisions-and-people.md) | P137 |
 | 24 Roadmap and cost | [01-hld §0.4–§0.5](../01-hld.md#04-the-tier-gate-what-must-exist-before-a-tier-opens), [setup/README](../setup/README.md), [pov/README](../pov/README.md), [3-day/README](../3-day/README.md), [eve/05](../../eve/05-stages.md), [mo/05](../../mo/05-staging.md) | P31, P143; spikes P3, P4, P57, P61 |
 | 25 Decisions awaiting the owner | [12](../12-open-decisions.md), [decisions](../../../decisions/README.md), agent registers | all open and proposed |
 | A Glossary | [01-hld §0.2](../01-hld.md#02-the-six-containment-primitives-and-how-each-is-graded), [05 §1](../05-registry-and-autonomy-contract.md#1-vocabulary-four-things-that-are-not-each-other), [wall-e/13 §1](../../wall-e/13-agent-interconnection.md#1-seven-things-with-confusable-names) | — |

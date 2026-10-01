@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: the quoted Flow A example follows [04](04-flows.md) and uses "they".
 - Objective: see the platform HLD ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md)).
 - Platform framing: the layer grades, the tool-result pattern, the template standard, the floors
   and the sanitize-log alerts are platform rules on
@@ -296,7 +297,7 @@ the false-block rate on a benign corpus of real operator prompts and real narrat
 shadow runs. The flip to `INSPECT_AND_BLOCK` is a reviewed change, taken when the false-block
 rate is below a threshold the S1 decision record fixes (the flip rule, 06 §3.3). `Assumption:`
 below 1 per cent on the benign corpus, to be confirmed with data. A block that fires on
-"suspend jdoe, he left today" is a finding against the template, not against the operator.
+"suspend jdoe, they left today" is a finding against the template, not against the operator.
 
 **Confidence level is a measured decision, not a default.** `HIGH` blocks least and misses
 most. `LOW_AND_ABOVE` catches any indication and has the highest false-positive rate.

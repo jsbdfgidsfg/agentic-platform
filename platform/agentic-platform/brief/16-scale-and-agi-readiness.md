@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: removed the sentence recording a four-or-five difference in Tier X's unmet conditions; HLD §0.4 and §11.5 both count one met and five unmet.
 
 ## What you will understand by the end
 
@@ -115,7 +116,7 @@ From [HLD §11.5](../01-hld.md#115-the-honest-line) and [supply-chain page §5.4
 | Advisory monitor on an independent model family running | Platform owner (P26) | Not met: P26 open |
 | Every buildable containment property live | Platform owner; security reviewer and Mo's owner for K7 and drift monitoring | Not met: properties 4, 6, 7 and 8 named not live; nothing is built |
 
-The pages count differently: HLD §0.4 and the supply-chain page's §4.1 and §5.3 say one met and four unmet, while HLD §11.5 and §5.4 enumerate five unmet, as above. The register also names Tier X as the gate of P15, relocating Eve's control path to the witness organisation, which §11.5 does not list. None of the unmet conditions is in reach in 2026.
+The register names Tier X as the gate of P15, relocating Eve's control path to the witness organisation, which §11.5 does not list. None of the unmet conditions is in reach in 2026.
 
 ## What remains open
 

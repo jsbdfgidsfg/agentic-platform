@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
 - Last executed: never
 - Stage: review §2 stage 16 ([../13-setup-procedure-review.md](../13-setup-procedure-review.md) §2, "Nonprod spikes and K7"). Runs after file 17 (`TIER_R_RECORD`) and before files 19 and 37. It opens the drill history that gate line G20 reads (a K7 drill on `fld-agents-p-sa-nonprod` younger than 30 days at the grant); the drill that G20 finally counts is re-run in file 37.
 - Step prefix: `KS`. Steps: 37. BLOCKED: KS-1.5, KS-3.3, KS-3.5, KS-3.6, KS-5.1, KS-5.2, KS-5.3, KS-6.6 (code: README B-04, extended here to the canary and spike engine sources and the P3 stand-in; KS-3.6 also waits on an `ent-bootstrap-module` entitlement for `fld-agents-w-nonprod` that 12 does not create). IRREVERSIBLE: KS-1.3 (the `canary-r` project id).
@@ -11,6 +11,7 @@
 - Decisions applied: SD-01 (bootstrap deviation), SD-22 (deny principal form), SD-41 (floor precedence), SD-46 (`ent-bootstrap-module`), SD-36 (G20), all from records signed in [03](03-decisions-and-people.md).
 - Closes: S052, S073, X-RQB-08 (this file's half), S072 (this file's half), S085 (this file's half). See "Findings closed and deferred".
 - Every command, flag, role, API field and console path was read on Google's pages on 2026-09-15 ("Sources"). Nothing was run against the live organisation while writing.
+- Changed 2026-10-01: KS-2.5 tries Google's documented mixed form first (gcloud flag values, REST-spelled RAI JSON, which `floors.json`'s `gcloud` block now carries) and the all-gcloud form second; KS-3.2 sets `DENY_AGENT_FORM` and `DENY_SA_FORM` in its fence and KS-6.3 builds the agent principal from them; KS-1.5 and KS-3.5 follow Google's same-project registry rule; KS-3.6 grants `iap.googleapis.com/resources.egressViaIAP` through an access policy, not `roles/iap.egressor`; KS-4.1 reads the second human's login with PyYAML and writes it with `@`; KS-3.1 waits for the grant; §6 runs in `/bin/bash`; KS-1.4 survives a resume; the KF-2 deny-support question is closed (all ten listed on 2026-10-01); facts rows on Agent Gateway and the SDK names re-read 2026-10-01.
 
 ## What this part builds
 
@@ -94,8 +95,8 @@ Conventions of [01](01-prerequisites-and-conventions.md) apply to every step: `c
 | Policy Troubleshooter: `gcloud policy-intelligence troubleshoot-policy iam RESOURCE --principal-email --permission` (GA: allow and deny; beta adds PAB); the principal "must refer to a user, a single service account, or a service account principal set" | Troubleshoot access page | usable for `canary-probe@`; not documented for agent identities, so P8's agent half rests on a denied call |
 | PAB: `gcloud iam principal-access-boundary-policies update … --details-rules \| --clear-details-rules`; `describe`; `search-policy-bindings`; "the resources that a principal is eligible to access are the union of all resources in all Principal Access Boundary policies"; fail closed | PAB create, edit, view and concepts pages (updated 2026-09-14) | KF-4 is `--clear-details-rules` on `pab-agents`; because eligibility is a union, KF-4 cannot be folder-selective (design correction, KS-4.1) |
 | `gcp.restrictServiceUsage`: `allowedValues` for allow-list; "Request is disallowed by organization's constraints/gcp.restrictServiceUsage constraint"; excludes IAM, Logging, Monitoring; eventual consistency; `gcloud org-policies set-policy FILE --update-mask` "can be empty, or have values `policy.spec`, `policy.dry_run_spec` or `*`. If the policy does not contain the dry_run_spec and update-mask flag is not provided, then it defaults to `policy.spec`" (re-read 2026-09-16; the short forms `spec` and `dryRunSpec` are **not** documented and must never be used); dry-run violations `protoPayload.metadata.dryRunResult = "DENIED" AND protoPayload.metadata.liveResult = "ALLOWED"`; `gcloud org-policies describe CONSTRAINT --folder=ID [--effective]` | Restricting resources (updated 2026-09-09); dry-run policy page; gcloud `org-policies describe` | KF-1 and its dry-run pass |
-| CC-1 YAML (`resource_types: aiplatform.googleapis.com/ReasoningEngine`, condition on `resource.spec.deploymentSpec.agentGatewayConfig.agentToAnywhereConfig.agentGateway`, `CREATE`, `UPDATE`, `ALLOW`); "VPC Service Controls are not supported with Agent Gateway" | Route Agent Runtime traffic through Agent Gateway (updated 2026-09-08) | KS-3.1 |
-| An Agent Runtime instance can be created without agent code (`client.agent_engines.create()` for Sessions and Memory Bank); REST `POST https://LOCATION-aiplatform.googleapis.com/v1/projects/P/locations/L/reasoningEngines`, `GET`, `list`, `DELETE` | Memory Bank set-up page; REST `reasoningEngines` reference | KS-3.1 creates a code-less engine that CC-1 must refuse |
+| CC-1 YAML (`resource_types: aiplatform.googleapis.com/ReasoningEngine`, condition on `resource.spec.deploymentSpec.agentGatewayConfig.agentToAnywhereConfig.agentGateway`, `CREATE`, `UPDATE`, `ALLOW`); "Agent Gateway now enforces VPC Service Controls perimeter rules … only supported for Agent Gateway deployments created after September 8, 2026 that use the agent connectivity template" | Route Agent Runtime traffic through Agent Gateway (updated 2026-09-08); Agent Platform release notes, 2026-09-09 entry (read 2026-10-01) | KS-3.1 |
+| An Agent Runtime instance can be created without agent code (`client.runtimes.create()` and `client.memory_banks.create()` from the `google-cloud-agentplatform` package, Memory Bank set-up page updated 2026-10-01; the REST call of KS-3.1 is unchanged); REST `POST https://LOCATION-aiplatform.googleapis.com/v1/projects/P/locations/L/reasoningEngines`, `GET`, `list`, `DELETE` | Memory Bank set-up page; REST `reasoningEngines` reference | KS-3.1 creates a code-less engine that CC-1 must refuse |
 | Agent Gateway and connectivity template created by `gcloud network-services agent-connectivity-templates import NAME --source --location` and `gcloud network-services agent-gateways import NAME --source --location`; template fields `accessPath`, `deploymentModel`, `egressNetworkConfig.networkAttachment`, `dnsPeeringConfig`, `vpcEgress` (`PRIVATE_RANGES_ONLY`, `ALL_TRAFFIC`); gateway fields `protocols`, `googleManaged.governedAccessPath`, `agentConnectivityTemplate`, `registries` | Set up VPC connectivity for Agent Gateway (updated 2026-09-11) | KS-3.5, KS-3.6 |
 | `gcloud pam grants create --entitlement --requested-duration --justification [--additional-email-recipients] [--organization\|--folder] --location`; `grants search --caller-relationship=had-created`; `revoke`; `pam entitlements list --folder\|--organization --location` | gcloud `pam` reference | every grant here |
 | `gcloud run jobs deploy JOB --image --region --service-account --binary-authorization=default --tasks --max-retries --task-timeout`; `gcloud run jobs execute JOB --region --args --wait` | gcloud `run jobs deploy`, `execute` references | KS-5.2, KS-6.6 |
@@ -207,15 +208,16 @@ checkpoint KS-1.3 START
 - **ACTION:**
 
 ```bash
+CANARY_ID="$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES CANARY_R_PROJECT)"   # re-derived, so a resumed shell works
 need CANARY_ID
 penv_set CANARY_R_PROJECT "$CANARY_ID"
 penv_set CANARY_R_PROJECT_NUMBER "$(gcloud projects describe "$CANARY_R_PROJECT" --format='value(projectNumber)')"
-penv_set ENT_PROJECT_REPAIR_CANARY_R "$(gcloud pam entitlements list --project="$CANARY_R_PROJECT" --location=global --filter="name~project-repair" --format='value(name)' --billing-project="$CICD_PROJECT")"
-penv_set ENT_DEPLOY_CREDENTIAL_HOLDER_CANARY_R "$(gcloud pam entitlements list --project="$CANARY_R_PROJECT" --location=global --filter="name~deploy-credential-holder" --format='value(name)' --billing-project="$CICD_PROJECT")"
+need ENT_PROJECT_REPAIR_CANARY_R ENT_DEPLOY_CREDENTIAL_HOLDER_CANARY_R   # set by 17 FM-2.17 during KS-1.3; never re-set here
+gcloud pam entitlements list --project="$CANARY_R_PROJECT" --location=global --format='value(name)' --billing-project="$CICD_PROJECT"
 # 17's zero-diff checker, with the canary-r manifest as input; output to the records directory
 ```
 
-  The `--project` form of `pam entitlements list` is shown in the reference's examples. Run the checker exactly as 17 committed it, writing `records/<date>-KS-1.4-canary-r-zero-diff-v1.txt`.
+  The `--project` form of `pam entitlements list` is shown in the reference's examples; the list must print exactly the two names `need` read, which 17 FM-2.17 set with `penv_set` (a second `penv_set` here would be refused if the name form differed). Run the checker exactly as 17 committed it, writing `records/<date>-KS-1.4-canary-r-zero-diff-v1.txt`.
 - **VERIFY:** `need CANARY_R_PROJECT CANARY_R_PROJECT_NUMBER ENT_PROJECT_REPAIR_CANARY_R ENT_DEPLOY_CREDENTIAL_HOLDER_CANARY_R` passes; each entitlement variable holds exactly one name; the checker reports zero differences — a difference on the FM-2.15 deny entries or the FM-2.16 PAB binding means `ENT_PLATFORM_POLICY` was missing or had expired during the run (KS-1.2): re-request it and re-run those two FM steps, never accept them as `pending` here, because KS-3.2 reads the entries back and KS-6.3's KF-2 principal list is built from them; `gcloud projects get-iam-policy "$CANARY_R_PROJECT" --flatten="bindings[].members" --filter="bindings.role=roles/owner" --format="value(bindings.members)"` prints nothing; `gcloud services list --enabled --project="$CANARY_R_PROJECT" --filter="config.name=agentregistry.googleapis.com" --format="value(config.name)"` prints nothing.
 - **ROLLBACK:** Variables: `penv_set --force` with a build-log line. A checker difference is repaired through FM-AGENT, never by hand here.
 - **EVIDENCE:** Checker output and variable names in `<date>-KS-1.4-canary-r-zero-diff-v1`. E-xx: E-05. TISAX: 1.3.1, 4.2.1.
@@ -226,7 +228,7 @@ penv_set ENT_DEPLOY_CREDENTIAL_HOLDER_CANARY_R "$(gcloud pam entitlements list -
 - **WHERE:** —
 - **ACTION:** > **BLOCKED**: Needs: the canary engine source (a minimal agent that answers one fixed query and makes no tool call), its gateway file, and its deploy configuration with `identity_type` `AGENT_IDENTITY` and `agent_gateway_config.agent_to_anywhere_config.agent_gateway` naming the `canary-r` egress gateway (the SDK form on the Agent Gateway runtime page). Commit it in: `PLATFORM_REPO_REMOTE`, `k7/canary/`, with green CI. Unblocked by: that commit id, recorded in the build log against README B-04 (extended by this file). Gate waiting: KS-3.5 (P71 part b), KS-6.6 (the job-path drill that measures a refused engine query). Until then: `checkpoint KS-1.5 BLOCKED - - "canary engine code, B-04"`.
 
-  When unblocked, the sequence is: import the egress gateway `canary-r-egress` in `REGION` with `gcloud network-services agent-gateways import canary-r-egress --source=k7/canary/gateway.yaml --location="$REGION" --project="$CANARY_R_PROJECT"` (Tier R: default `PRIVATE_RANGES_ONLY`, no connectivity template, 06 §4.2; `registries` naming `AGENT_REGISTRY` in `CORE_PROJECT`); add the gateway to CC-1's allowed list under `ent-platform-policy` (13's constraint file, pull request); deploy the engine in `REGION` with the engine key from `KR_ENGINES` that FM-AGENT created; record the engine resource name in the build log; confirm one query answers.
+  When unblocked, the sequence is: import the egress gateway `canary-r-egress` in `REGION` with `gcloud network-services agent-gateways import canary-r-egress --source=k7/canary/gateway.yaml --location="$REGION" --project="$CANARY_R_PROJECT"` (Tier R: default `PRIVATE_RANGES_ONLY`, no connectivity template, 06 §4.2; `registries` naming the working-set registry in `CANARY_R_PROJECT` that the P71 row of 12-open-decisions chooses, because Google's set-up page (updated 2026-10-01, read 2026-10-01) requires destinations in another project to be registered "with the Agent Registry in the gateway project", so a gateway cannot point at `AGENT_REGISTRY` in `CORE_PROJECT`); add the gateway to CC-1's allowed list under `ent-platform-policy` (13's constraint file, pull request); deploy the engine in `REGION` with the engine key from `KR_ENGINES` that FM-AGENT created; record the engine resource name in the build log; confirm one query answers.
 - **VERIFY:** Until unblocked: the BLOCKED line exists and README's BLOCKED index row B-04 lists "18 KS-1.5 canary engine".
 - **ROLLBACK:** Nothing created.
 - **EVIDENCE:** The BLOCKED checkpoint line. E-xx: none. TISAX: 1.4.1 (known gap recorded).
@@ -290,7 +292,7 @@ done | tee "$OUT"
 - **WHERE:** `PLATFORM_REPO_DIR`, branch and pull request.
 - **ACTION:** Commit `model-armor/floors.json`, the one source the writes and the drift read use.
 
-  **Two spellings, one file.** The REST reference spells filter values `ENABLED`, `HIGH`, `MEDIUM_AND_ABOVE`, and `describe` prints them in that form; the gcloud reference spells the same values `enable`/`disable` (enforcement), `high`/`medium-and-above`/`low-and-above` (confidence) and `enabled`/`disabled` for `--malicious-uri-filter-settings-enforcement` (re-read 2026-09-16). A file holding only one spelling either fails the write or fails every later `describe` comparison — 17, 34, 40 and 16's drift job all compare against this file. So each floor carries a `rest` block (the comparison form) and a `gcloud` block (the write form), the second derived from the first by one mapping, so the two cannot drift apart.
+  **Two spellings, one file.** The REST reference spells filter values `ENABLED`, `HIGH`, `MEDIUM_AND_ABOVE`, and `describe` prints them in that form; the gcloud reference spells the same values `enable`/`disable` (enforcement), `high`/`medium-and-above`/`low-and-above` (confidence) and `enabled`/`disabled` for `--malicious-uri-filter-settings-enforcement` (re-read 2026-09-16). A file holding only one spelling either fails the write or fails every later `describe` comparison — 17, 34, 40 and 16's drift job all compare against this file. So each floor carries a `rest` block (the comparison form) and a `gcloud` block (the write form), the second derived from the first by one mapping, so the two cannot drift apart. The `gcloud` block's RAI list is in the REST spelling: Google's [manage-templates page](https://docs.cloud.google.com/model-armor/manage-templates) (updated 2026-09-30, read 2026-10-01) writes `--rai-settings-filters='[{ "filterType": "HATE_SPEECH", "confidenceLevel": "MEDIUM_AND_ABOVE" }…]'` beside `--pi-and-jailbreak-filter-settings-enforcement=enabled`, the same mixed form KS-2.8 and 19 GE-7.2 use.
 
 ```bash
 need PLATFORM_REPO_DIR FLD_AGENTIC_PLATFORM FLD_AGENTS_W FLD_AGENTS_P FLD_AGENTS_P_SA FLD_CONTROLLERS
@@ -300,10 +302,10 @@ jq -n --arg p "$FLD_AGENTIC_PLATFORM" --arg w "$FLD_AGENTS_W" --arg pp "$FLD_AGE
 def g: ascii_downcase | gsub("_"; "-");
 def floor($level; $uri): {level:$level, full_uri:($uri+"/locations/global/floorSetting"), pi_measured:false, multi_language:true, enforce:true,
   rest: {pi:"HIGH", malicious_uri:"ENABLED", rai:$rai},
-  gcloud: {pi:("HIGH"|g), pi_enforcement:"enable", malicious_uri:"enabled", rai:($rai | map({filterType:.filterType, confidenceLevel:(.confidenceLevel|g)})), enforce_floor:"TRUE"}};
+  gcloud: {pi:("HIGH"|g), pi_enforcement:"enable", malicious_uri:"enabled", rai:$rai, enforce_floor:"TRUE"}};
 {precedence: "project-level floor settings override conflicting folder-level floor settings (Configure floor settings, 2026-09-15); folder floors are template conformance only",
  spellings: {rest: "the form describe prints and every later comparison uses (ENABLED, HIGH, MEDIUM_AND_ABOVE)",
-             gcloud: "the form the gcloud flags take (enable, high, medium-and-above, enabled); recorded as accepted in FLOOR_RECORD at KS-2.10",
+             gcloud: "the form the Google manage-templates page documents for gcloud: flag values enable, high, enabled, RAI JSON in REST spelling (MEDIUM_AND_ABOVE); gcloud-lower is the all-gcloud variant; the accepted one is recorded in FLOOR_RECORD at KS-2.10",
              accepted: "tbd until KS-2.5 runs"},
  floors: [
   floor("platform",    "folders/"+$p),
@@ -321,7 +323,7 @@ git -C "$PLATFORM_REPO_DIR" commit -m "model-armor: platform and tier floors, pr
 git -C "$PLATFORM_REPO_DIR" push -u origin ks-2-3-floors
 ```
 
-- **VERIFY:** `jq '.floors | length' model-armor/floors.json` prints `5`; `jq -e '.floors | all((.rest.rai | length) == 4 and (.gcloud.rai | length) == 4 and (.gcloud.pi == (.rest.pi | ascii_downcase)) and all(.gcloud.rai[]; .confidenceLevel == "medium-and-above"))' model-armor/floors.json` exits `0` (both spellings present and consistent); the pull request merges with two human approvals, the second human among them. If `SECURITY_REVIEWER_EMAIL` is `*tbd*`, the pull request carries the sentence "P-SA floor content unsigned by the security reviewer; identical to the platform floor until measured; re-signed at PA-8.1's appointment", and KS-7.2 opens a deviation row for it.
+- **VERIFY:** `jq '.floors | length' model-armor/floors.json` prints `5`; `jq -e '.floors | all((.rest.rai | length) == 4 and (.gcloud.rai | length) == 4 and (.gcloud.pi == (.rest.pi | ascii_downcase)) and (.gcloud.rai == .rest.rai))' model-armor/floors.json` exits `0` (both blocks present and consistent; the RAI JSON is REST-spelled in both); the pull request merges with two human approvals, the second human among them. If `SECURITY_REVIEWER_EMAIL` is `*tbd*`, the pull request carries the sentence "P-SA floor content unsigned by the security reviewer; identical to the platform floor until measured; re-signed at PA-8.1's appointment", and KS-7.2 opens a deviation row for it.
 - **ROLLBACK:** Revert by pull request before KS-2.5.
 - **EVIDENCE:** Merge commit as `<date>-KS-2.3-floors-file-v1`. E-xx: E-05. TISAX: 5.2.1.
 
@@ -361,11 +363,13 @@ ma_write() { # $1 full_uri, $2 rai JSON, $3 pi level, $4 pi enforcement, $5 mali
   local U="$1" R="$2" PI="$3" PIE="$4" MU="$5"; shift 5
   CLOUDSDK_API_ENDPOINT_OVERRIDES_MODELARMOR="https://modelarmor.googleapis.com/" gcloud model-armor floorsettings update --full-uri="$U" --pi-and-jailbreak-filter-settings-enforcement="$PIE" --pi-and-jailbreak-filter-settings-confidence-level="$PI" --malicious-uri-filter-settings-enforcement="$MU" --rai-settings-filters="$R" --enable-multi-language-detection --enable-floor-setting-enforcement=TRUE --billing-project="$CANARY_R_PROJECT" "$@"
 }
-ma_write "$URI" "$RAI_G" high enable enabled && SPELLING=gcloud || { ma_write "$URI" "$RAI_R" HIGH ENABLED ENABLED && SPELLING=rest; }
-echo "accepted spelling: ${SPELLING:-NONE}"; test -n "$SPELLING" || { echo "STOP: neither spelling accepted; read the error, do not guess a third"; false; }
+RAI_L="$(jq -c '.floors[] | select(.level=="platform") | .gcloud.rai | map(.confidenceLevel |= (ascii_downcase | gsub("_"; "-")))' "$F")"
+# attempt 1: Google's documented mixed form (gcloud flag values, REST-spelled RAI JSON); attempt 2: the all-gcloud form
+ma_write "$URI" "$RAI_G" high enable enabled && SPELLING=gcloud || { ma_write "$URI" "$RAI_L" high enable enabled && SPELLING=gcloud-lower; }
+echo "accepted spelling: ${SPELLING:-NONE}"; test -n "$SPELLING" || { echo "STOP: neither form accepted; read the error, do not guess a third"; false; }
 ```
 
-  The gcloud reference spells these values `enable`/`disable`, `high`/`medium-and-above`/`low-and-above` and `enabled`/`disabled` (malicious URI); the concept and REST pages spell them `ENABLED`, `HIGH`, `MEDIUM_AND_ABOVE`. The `gcloud` block of `floors.json` is tried first because it matches the flag reference; the `rest` block is the documented fallback. `$SPELLING` is recorded in `FLOOR_RECORD` at KS-2.10 and used unchanged by KS-2.6, KS-2.9 and by 17, 34 and 40. Whichever spelling is written, **the comparison form is always `rest`**: `describe` prints `ENABLED`, `HIGH`, `MEDIUM_AND_ABOVE`, and that is what the VERIFY below, KS-2.6, KS-2.10 and 16's drift job compare against.
+  The gcloud reference spells these values `enable`/`disable`, `high`/`medium-and-above`/`low-and-above` and `enabled`/`disabled` (malicious URI); the concept and REST pages spell them `ENABLED`, `HIGH`, `MEDIUM_AND_ABOVE`. The first attempt is the form Google's manage-templates page documents (updated 2026-09-30, read 2026-10-01): flags in the gcloud spelling (`high`, `enable`, `enabled`) and the RAI JSON in the REST spelling (`MEDIUM_AND_ABOVE`), which is what `floors.json`'s `gcloud` block holds (`SPELLING=gcloud`); the all-gcloud form, with the RAI confidence also lower-cased (`medium-and-above`), is the second (`SPELLING=gcloud-lower`). The accepted pair is recorded in `FLOOR_RECORD` at KS-2.10 and used unchanged by KS-2.6, KS-2.9 and by 17, 34 and 40. Whichever spelling is written, **the comparison form is always `rest`**: `describe` prints `ENABLED`, `HIGH`, `MEDIUM_AND_ABOVE`, and that is what the VERIFY below, KS-2.6, KS-2.10 and 16's drift job compare against.
 - **VERIFY:**
 
 ```bash
@@ -392,6 +396,8 @@ for L in tier-w tier-p tier-p-sa controllers; do
   echo "== $L $URI"
   if [ "$SPELLING" = gcloud ]; then
     ma_write "$URI" "$(jq -c --arg l "$L" '.floors[] | select(.level==$l) | .gcloud.rai' "$F")" "$(jq -r --arg l "$L" '.floors[] | select(.level==$l) | .gcloud.pi' "$F")" enable enabled
+  elif [ "$SPELLING" = gcloud-lower ]; then
+    ma_write "$URI" "$(jq -c --arg l "$L" '.floors[] | select(.level==$l) | .gcloud.rai | map(.confidenceLevel |= (ascii_downcase | gsub("_"; "-")))' "$F")" "$(jq -r --arg l "$L" '.floors[] | select(.level==$l) | .gcloud.pi' "$F")" enable enabled
   else
     ma_write "$URI" "$(jq -c --arg l "$L" '.floors[] | select(.level==$l) | .rest.rai' "$F")" "$(jq -r --arg l "$L" '.floors[] | select(.level==$l) | .rest.pi' "$F")" ENABLED ENABLED
   fi
@@ -478,8 +484,9 @@ PF_PROJECT="$CANARY_R_PROJECT"; PF_PROJECT_NUMBER="$CANARY_R_PROJECT_NUMBER"; PF
 need PF_PROJECT PF_PROJECT_NUMBER PF_TIER PLATFORM_REPO_DIR
 checkpoint KS-2.9 START
 case "$PF_TIER" in R) ET=INSPECT_ONLY;; P-SA) ET=INSPECT_AND_BLOCK;; W|P|controllers) ET="$(jq -r --arg t "$PF_TIER" '.measured_flip[$t] // "INSPECT_ONLY"' "$PLATFORM_REPO_DIR/model-armor/floors.json")";; *) echo "bad tier"; false;; esac
-SPELLING="$(jq -r '.spellings.accepted' "$PLATFORM_REPO_DIR/model-armor/floors.json")"   # gcloud | rest, from FLOOR_RECORD / KS-2.10
+SPELLING="$(jq -r '.spellings.accepted' "$PLATFORM_REPO_DIR/model-armor/floors.json")"   # gcloud | gcloud-lower | rest, from FLOOR_RECORD / KS-2.10
 case "$SPELLING" in gcloud) PI=high; PIE=enable; MU=enabled; RAI="$(jq -c '.floors[] | select(.level=="platform") | .gcloud.rai' "$PLATFORM_REPO_DIR/model-armor/floors.json")";;
+                    gcloud-lower) PI=high; PIE=enable; MU=enabled; RAI="$(jq -c '.floors[] | select(.level=="platform") | .gcloud.rai | map(.confidenceLevel |= (ascii_downcase | gsub("_"; "-")))' "$PLATFORM_REPO_DIR/model-armor/floors.json")";;
                     rest)   PI=HIGH; PIE=ENABLED; MU=ENABLED; RAI="$(jq -c '.floors[] | select(.level=="platform") | .rest.rai' "$PLATFORM_REPO_DIR/model-armor/floors.json")";;
                     *) echo "STOP: floors.json .spellings.accepted is not set; KS-2.5 records it and KS-2.10 commits it"; false;; esac
 gcloud services list --enabled --project="$PF_PROJECT" --filter="config.name=(aiplatform.googleapis.com OR modelarmor.googleapis.com)" --format="value(config.name)"
@@ -515,18 +522,18 @@ REC="records/$(date -u +%F)-KS-2.10-floor-record-v1.md"
   echo "Folder floors written: platform, tier-w, tier-p, tier-p-sa, controllers (KS-2.5, KS-2.6). Organisation floor: KS-2.2 outcome."
   echo "Conformance ordering: KS-2.8 result. Floor-write methodName: KS-2.7 result."
   echo "PF applied: canary-r (KS-2.9). PF due: WALLE_PROJECT (34, P-SA, INSPECT_AND_BLOCK; live proof 35); EVE_TWIN and controller projects (17 FM-VERIFIER); MO_PROJECT at S4 (40, with modelarmor and aiplatform added to fld-improvers by dated pull request); EVE_ADVISOR_PROJECT (deferred with the advisor path, plan 7)."
-  echo "Accepted gcloud enum spelling: <gcloud | rest> (KS-2.5). Comparison spelling: rest, always."
+  echo "Accepted write form: <gcloud (flags enable/high/enabled, RAI JSON MEDIUM_AND_ABOVE) | gcloud-lower (all gcloud, RAI medium-and-above)> (KS-2.5). Comparison spelling: rest, always."
   echo "PF grants: ENT_FOLDER_ADMIN (roles/modelarmor.floorSettingsAdmin, scoped at fld-agentic-platform and inherited by every project below it) for the floor write, plus the project's ent-project-repair-<agent_id> for roles/modelarmor.user and the service identity. The repair bundle carries no Model Armor role."
 } > "$BUILD_LOG_DIR/$REC"
 penv_set FLOOR_RECORD "$REC"
 # commit the proven spelling into the one source the writes and the drift read use
-jq --arg s "<gcloud | rest>" '.spellings.accepted = $s' "$PLATFORM_REPO_DIR/model-armor/floors.json" > /tmp/floors.json && mv /tmp/floors.json "$PLATFORM_REPO_DIR/model-armor/floors.json"
+jq --arg s "<gcloud | gcloud-lower>" '.spellings.accepted = $s' "$PLATFORM_REPO_DIR/model-armor/floors.json" > /tmp/floors.json && mv /tmp/floors.json "$PLATFORM_REPO_DIR/model-armor/floors.json"
 git -C "$PLATFORM_REPO_DIR" switch -c ks-2-10-floor-spelling && git -C "$PLATFORM_REPO_DIR" add model-armor/floors.json && git -C "$PLATFORM_REPO_DIR" commit -m "model-armor: record the accepted gcloud enum spelling (setup 18 KS-2.10)" && git -C "$PLATFORM_REPO_DIR" push -u origin ks-2-10-floor-spelling
 evidence_add KS-2.10 floor-record E-05 5.2.6 "build-log:$REC" "$BUILD_LOG_DIR/$REC"
 ```
 
   Add to README's re-run index, each line naming the grant pair: "34: PF with `PF_TIER=P-SA` on `WALLE_PROJECT`, under `ENT_FOLDER_ADMIN` **and** `ent-project-repair-walle`; read, never write, folder floors; fail when the project floor is looser than `floors.json`'s `rest` block"; "35: live PF proof on the first `generateContent`"; "40: PF on `MO_PROJECT` at S4, under `ENT_FOLDER_ADMIN` and `ent-project-repair-mo`"; "17 FM-AGENT and FM-VERIFIER: PF (`PF_TIER=controllers` for the verifier) needs `ENT_FOLDER_ADMIN` beside the run's own grants — the repair bundle has no Model Armor role"; "15 and 25: floor-write `methodName` from KS-2.7"; "16: the drift job compares `describe` output with `floors.json`'s `rest` block only".
-- **VERIFY:** `FLOOR_RECORD` set; the record holds the eight lines with the placeholders replaced; `jq -r '.spellings.accepted' "$PLATFORM_REPO_DIR/model-armor/floors.json"` prints `gcloud` or `rest` and the pull request merges; the README rows exist.
+- **VERIFY:** `FLOOR_RECORD` set; the record holds the eight lines with the placeholders replaced; `jq -r '.spellings.accepted' "$PLATFORM_REPO_DIR/model-armor/floors.json"` prints `gcloud` or `gcloud-lower` and the pull request merges; the README rows exist.
 - **ROLLBACK:** A superseding `-v2` record.
 - **EVIDENCE:** The record itself. E-xx: E-05. TISAX: 5.2.1.
 
@@ -541,12 +548,14 @@ Each spike ends in a written record with its result, what it proves and what it 
 - **ACTION:** Read how 13 left CC-1 at `fld-agentic-platform`. If its `spec` is enforced, test directly. If only its `dryRunSpec` is set (13's 14-day dry run), set an enforced copy on `canary-r` alone for the test, then delete it. Then create a **code-less** engine, which carries no `agentGatewayConfig` and must be refused.
 
 ```bash
-need FLD_AGENTIC_PLATFORM CANARY_R_PROJECT REGION ORG_ID ENT_PLATFORM_POLICY CICD_PROJECT
+need FLD_AGENTIC_PLATFORM CANARY_R_PROJECT REGION ORG_ID ENT_PLATFORM_POLICY CICD_PROJECT PLATFORM_REPO_DIR
 checkpoint KS-3.1 START
 C=custom.allowlistedEgressAgentGatewaysForAgentEngine
 gcloud org-policies describe "$C" --folder="$FLD_AGENTIC_PLATFORM" --format=json | tee "$BUILD_LOG_DIR/records/$(date -u +%F)-KS-3.1-cc1-folder-policy-v1.json" | jq '{spec: .spec, dryRunSpec: .dryRunSpec}'
 # only when the folder policy is dry-run only:
-gcloud pam grants create --entitlement="$ENT_PLATFORM_POLICY" --requested-duration=1800s --justification="setup 18 KS-3.1 P4 spike: enforce CC-1 on canary-r only" --billing-project="$CICD_PROJECT"
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
+g="$(gcloud pam grants create --entitlement="$ENT_PLATFORM_POLICY" --requested-duration=1800s --justification="setup 18 KS-3.1 P4 spike: enforce CC-1 on canary-r only" --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"
+pam_wait "$g" ACTIVE   # the second human approves; set-policy runs only after this prints ACTIVE
 printf 'name: projects/%s/policies/%s\nspec:\n  rules:\n  - enforce: true\n' "$CANARY_R_PROJECT" "$C" > /tmp/ks-3-1-cc1-project.yaml
 gcloud org-policies set-policy /tmp/ks-3-1-cc1-project.yaml --update-mask=policy.spec
 # wait for propagation, then the probe:
@@ -570,23 +579,30 @@ need ORG_ID FLD_AGENTIC_PLATFORM DENY_AGENTS_PLATFORM CANARY_R_PROJECT CANARY_R_
 checkpoint KS-3.2 START
 AP="cloudresourcemanager.googleapis.com/folders/${FLD_AGENTIC_PLATFORM}"
 DP="$(basename "$DENY_AGENTS_PLATFORM")"
-AGENT_P="principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${CANARY_R_PROJECT_NUMBER}"
+AGENT_P="principalSet://agents.global.org-${ORG_ID}.system.id.goog/attribute.platformContainer/aiplatform/projects/${CANARY_R_PROJECT_NUMBER}"   # the documented set form 17 FM-3.2 writes for a Tier R run
+AGENT_ALT="principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${CANARY_R_PROJECT_NUMBER}"   # SD-22's form, tried only if the set form is refused
 SA_SET="principalSet://cloudresourcemanager.googleapis.com/projects/${CANARY_R_PROJECT_NUMBER}/type/ServiceAccount"
 PROBE="canary-probe@${CANARY_R_PROJECT}.iam.gserviceaccount.com"
 SA_ONE="principal://iam.googleapis.com/projects/-/serviceAccounts/${PROBE}"
 gcloud iam policies get "$DP" --attachment-point="$AP" --kind=denypolicies --format=json > /tmp/ks-3-2-deny-before.json
-jq --arg a "$AGENT_P" --arg s "$SA_SET" --arg o "$SA_ONE" '[.rules[] | {desc: .description, agent: (.denyRule.deniedPrincipals | index($a) != null), sa_set: (.denyRule.deniedPrincipals | index($s) != null), sa_one: (.denyRule.deniedPrincipals | index($o) != null)}]' /tmp/ks-3-2-deny-before.json
+jq --arg a "$AGENT_P" --arg b "$AGENT_ALT" --arg s "$SA_SET" --arg o "$SA_ONE" '[.rules[] | {desc: .description, agent: (.denyRule.deniedPrincipals | index($a) != null), agent_alt: (.denyRule.deniedPrincipals | index($b) != null), sa_set: (.denyRule.deniedPrincipals | index($s) != null), sa_one: (.denyRule.deniedPrincipals | index($o) != null)}]' /tmp/ks-3-2-deny-before.json
 ```
 
-  If every rule R1 to R5 already lists `AGENT_P` and one service-account form, skip to the probe. Otherwise, inside an `ent-platform-policy` grant approved by the second human, add them to R1 to R5 (never R3b, never R6) and update with the etag the file carries:
+  If every rule R1 to R5 already lists `AGENT_P` and `SA_SET` (17 FM-2.15 applied them in KS-1.3), run `penv_set DENY_AGENT_FORM set; penv_set DENY_SA_FORM set` and skip to the probe; if they list `AGENT_ALT` instead, `penv_set DENY_AGENT_FORM principal`. Otherwise, inside an `ent-platform-policy` grant approved by the second human, add them to R1 to R5 (never R3b, never R6), one agent form only, and record the form the update accepted:
 
 ```bash
-jq --arg a "$AGENT_P" --arg s "$SA_SET" '.rules |= map(if (.description // "" | test("^R[1-5] ")) then .denyRule.deniedPrincipals += [$a, $s] | .denyRule.deniedPrincipals |= unique else . end) | {displayName, rules, etag}' /tmp/ks-3-2-deny-before.json > /tmp/ks-3-2-deny-after.json
-diff <(jq -S . /tmp/ks-3-2-deny-before.json) <(jq -S . /tmp/ks-3-2-deny-after.json)
-gcloud iam policies update "$DP" --attachment-point="$AP" --kind=denypolicies --policy-file=/tmp/ks-3-2-deny-after.json
+ks32_update() { # $1 agent form; adds it and SA_SET to R1..R5, shows the diff, updates with the etag the file carries
+  jq --arg a "$1" --arg s "$SA_SET" '.rules |= map(if (.description // "" | test("^R[1-5] ")) then .denyRule.deniedPrincipals += [$a, $s] | .denyRule.deniedPrincipals |= unique else . end) | {displayName, rules, etag}' /tmp/ks-3-2-deny-before.json > /tmp/ks-3-2-deny-after.json
+  diff <(jq -S . /tmp/ks-3-2-deny-before.json) <(jq -S . /tmp/ks-3-2-deny-after.json)
+  gcloud iam policies update "$DP" --attachment-point="$AP" --kind=denypolicies --policy-file=/tmp/ks-3-2-deny-after.json
+}
+if ks32_update "$AGENT_P"; then penv_set DENY_AGENT_FORM set; penv_set DENY_SA_FORM set
+elif ks32_update "$AGENT_ALT"; then penv_set DENY_AGENT_FORM principal; penv_set DENY_SA_FORM set
+else echo "STOP: both agent forms refused alongside SA_SET; read the error and apply the single-account fallback below"; false; fi
+need DENY_AGENT_FORM DENY_SA_FORM
 ```
 
-  Assumption: 13 wrote each rule's `description` starting `R1 `…`R6 ` (read the before file; adjust the selector to what 13 wrote, never to a guess). If the update is **refused because of `SA_SET`**, replace `$s` by one `principal://iam.googleapis.com/projects/-/serviceAccounts/EMAIL` per service account of `canary-r` and set `DENY_SA_FORM=single`; otherwise `DENY_SA_FORM=set`. Record the error text. The probe, code-free:
+  Assumption: 13 wrote each rule's `description` starting `R1 `…`R6 ` (read the before file; adjust the selector to what 13 wrote, never to a guess). If the update is **refused because of `SA_SET`**, replace `$s` by one `principal://iam.googleapis.com/projects/-/serviceAccounts/EMAIL` per service account of `canary-r`, re-run `ks32_update` with each agent form in the same order, and run `penv_set DENY_SA_FORM single` with `penv_set DENY_AGENT_FORM set` or `principal` for the form that update accepted. 17 FM-3.2 and KS-6.3 build the agent principal from `DENY_AGENT_FORM`, so only one agent form ever sits in the rules. Record the error text. The probe, code-free:
 
 ```bash
 EXP="$(date -u -v+1H +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"
@@ -598,7 +614,7 @@ gcloud policy-intelligence troubleshoot-policy iam "//cloudresourcemanager.googl
 ```
 
   The 420-second wait covers the "7 minutes or more" propagation note for deny policies. The conditioned bindings end on their own after an hour and are removed explicitly below.
-- **VERIFY:** The probe returns `403` and the saved body says the permission is denied by a deny policy (not merely missing), and the Troubleshooter output shows the deny policy `deny-agents-platform` denying `iam.roles.create` for `canary-probe@`. `gcloud iam roles describe ksP8Probe --project="$CANARY_R_PROJECT"` returns not found. A `200` means the service-account form **denies nothing**: delete the role, record P8 part a as failed, and stop K7 §6's KF-2 until 13 corrects the form. `penv_set DENY_SA_FORM set` (or `single`).
+- **VERIFY:** The probe returns `403` and the saved body says the permission is denied by a deny policy (not merely missing), and the Troubleshooter output shows the deny policy `deny-agents-platform` denying `iam.roles.create` for `canary-probe@`. `gcloud iam roles describe ksP8Probe --project="$CANARY_R_PROJECT"` returns not found. A `200` means the service-account form **denies nothing**: delete the role, record P8 part a as failed, and stop K7 §6's KF-2 until 13 corrects the form. `need DENY_AGENT_FORM DENY_SA_FORM` passes (both set in the ACTION).
 - **ROLLBACK:** `gcloud projects remove-iam-policy-binding "$CANARY_R_PROJECT" --member="serviceAccount:${PROBE}" --role=roles/iam.roleAdmin --condition="expression=request.time < timestamp('${EXP}'),title=ks-3-2-p8-probe"`; `gcloud iam service-accounts remove-iam-policy-binding "$PROBE" --project="$CANARY_R_PROJECT" --member="user:${SA_1_ADMIN}" --role=roles/iam.serviceAccountTokenCreator --condition="expression=request.time < timestamp('${EXP}'),title=ks-3-2-p8-probe"` (both run as the step's clean-up); the deny policy is restored from `/tmp/ks-3-2-deny-before.json` with `gcloud iam policies update` (etag refreshed by a new `get`) only if the added entries break something. Delete the `/tmp/ks-3-2-*` files after copying them to the records directory.
 - **EVIDENCE:** Before and after deny JSON, the diff, the probe response and the Troubleshooter output as `<date>-KS-3.2-p8-*`. E-xx: E-05. TISAX: 4.2.1, 5.2.6. Closes S072's service-account half for this file.
 
@@ -636,7 +652,7 @@ gcloud asset search-all-resources --scope="projects/${CANARY_R_PROJECT}" --forma
 - **WHERE:** —
 - **ACTION:** > **BLOCKED**: Needs: KS-1.5 (the canary engine and its gateway). Unblocked by: KS-1.5 `DONE`. Gate waiting: P71 "a Tier R gate item" is recorded open in `TIER_R_RECORD`'s annex until then; 31 and 35 (Wall-E's gateway points at the shared registry). Until then: `checkpoint KS-3.5 BLOCKED - - "needs KS-1.5"`.
 
-  When unblocked, assert on `canary-r` with `agentregistry.googleapis.com` disabled: (1) the engine answers its query, writes telemetry to its project, and its egress through `canary-r-egress` returns no `498`; (2) no `Service` for the canary appears in any registry: `gcloud asset search-all-resources --scope="organizations/${ORG_ID}" --query="canary-r" --format="value(assetType,name)"` lists nothing of an `agentregistry` type except the entry CI made in `AGENT_REGISTRY`; (3) the gateway's `registries` points at `AGENT_REGISTRY` in `CORE_PROJECT`, and a destination registered there is allowed while an unregistered hostname is refused in the gateway's dry-run log. If (1) or (3) fails, P71's fallback applies (a CI-generated working-set registry per agent project, by a dated row in 12-open-decisions overturning the exclusion), never a console enablement.
+  When unblocked, assert on `canary-r` with `agentregistry.googleapis.com` disabled: (1) the engine answers its query, writes telemetry to its project, and its egress through `canary-r-egress` returns no `498`; (2) no `Service` for the canary appears in any registry: `gcloud asset search-all-resources --scope="organizations/${ORG_ID}" --query="canary-r" --format="value(assetType,name)"` lists nothing of an `agentregistry` type except the entry CI made in `AGENT_REGISTRY`; (3) confirm Google's same-project rule: destinations in another project must be registered "with the Agent Registry in the gateway project" (set-up page, updated 2026-10-01, read 2026-10-01), so the gateway's `registries` names the working-set registry in `CANARY_R_PROJECT` that P71's row in 12-open-decisions chooses, a destination registered there is allowed while an unregistered hostname is refused in the gateway's dry-run log, and an attempt to name `AGENT_REGISTRY` in `CORE_PROJECT` is refused (record the error). If (1) fails, or the working-set registry cannot be created under the CI-generated path P71 records, stop and take it back to P71's owner; never a console enablement.
 - **VERIFY:** Until unblocked, the BLOCKED line.
 - **ROLLBACK:** Nothing created.
 - **EVIDENCE:** The BLOCKED checkpoint line. E-xx: none. TISAX: 1.4.1.
@@ -650,7 +666,7 @@ gcloud asset search-all-resources --scope="projects/${CANARY_R_PROJECT}" --forma
   When unblocked, in the throwaway project `ks-p3` (its own register row, `env=nonprod`, tier W), the protocol of 06 §4.3, in order:
   1. Deploy the stand-in in `REGION` with `--ingress=internal-and-cloud-load-balancing`, `--no-allow-unauthenticated` and `--binary-authorization=default`; `run.invoker` for the spike engine's agent principal only.
   2. A VPC with a `/28` subnet with Private Google Access, a proxy-only subnet (`gcloud compute networks subnets create … --purpose=REGIONAL_MANAGED_PROXY --role=ACTIVE --region="$REGION"`), a serverless NEG (`gcloud compute network-endpoint-groups create … --region="$REGION" --network-endpoint-type=serverless --cloud-run-service=<stand-in>`), a regional internal Application Load Balancer (`INTERNAL_MANAGED` backend service, URL map, target HTTPS proxy, forwarding rule), and a private Cloud DNS name. The TLS certificate source is *tbd* at unblock (a regional certificate without a private key file on the workstation; decided and recorded before the step runs).
-  3. A PSC network attachment; `gcloud network-services agent-connectivity-templates import ks-p3-template --source=spikes/p3/template.yaml --location="$REGION" --project=<ks-p3>` with `accessPath: AGENT_TO_ANYWHERE`, `vpcEgress: ALL_TRAFFIC`, the attachment and DNS peering for the load-balancer zone; `gcloud network-services agent-gateways import ks-p3-egress --source=spikes/p3/gateway.yaml --location="$REGION" --project=<ks-p3>` referencing the template; register the load-balancer hostname as an endpoint; bind `roles/iap.egressor` for the engine's principal on it.
+  3. A PSC network attachment; `gcloud network-services agent-connectivity-templates import ks-p3-template --source=spikes/p3/template.yaml --location="$REGION" --project=<ks-p3>` with `accessPath: AGENT_TO_ANYWHERE`, `vpcEgress: ALL_TRAFFIC`, the attachment and DNS peering for the load-balancer zone; `gcloud network-services agent-gateways import ks-p3-egress --source=spikes/p3/gateway.yaml --location="$REGION" --project=<ks-p3>` referencing the template; register the load-balancer hostname as an endpoint; grant `iap.googleapis.com/resources.egressViaIAP` to the engine's principal on that registered endpoint through an access-policy rule under `iapPolicyVersion: "V2"`, as [20](20-gemini-enterprise-gateway-and-tier-c-gate.md) GG-3.4 does — never `roles/iap.egressor`, whose `iap.webServiceVersions.egressViaIAP` belongs to the legacy allow model (IAP roles reference and the access-policy page, read 2026-10-01).
   4. Deploy the spike engine bound to `ks-p3-egress`; call the stand-in through the load-balancer name.
   5. Pass, all three: the call succeeds with `sub`, `email`, `aud` intact at the stand-in; a direct call to the stand-in's `run.app` URL from the engine and from the workstation is refused; the gateway's dry-run log shows only the registered destination. If the load-balancer route fails, repeat with a PSC endpoint to a service attachment published from the load balancer, and record which route the `agent-project` module emits.
   6. Delete the engine, gateway, template, load balancer and network pieces; FM-REVOKE the project. Spike 2 (VPC Service Controls) is not in this file: it is the Tier W perimeter gate's (see "Findings closed and deferred").
@@ -734,24 +750,24 @@ Order: KF-1, KF-3, KF-4, KF-2. Scope: tier folders only. Never fld-controllers, 
 KF-1: gcloud org-policies set-policy restrict-service-usage/<folder>.json --update-mask=policy.spec (dry run: the same content as dryRunSpec, --update-mask=policy.dry_run_spec). The mask values are policy.spec, policy.dry_run_spec or * (set-policy reference, re-read 2026-09-16); the short forms spec and dryRunSpec are not documented and are rejected.
 KF-3: scheduler-pause.txt.
 KF-4: gcloud iam principal-access-boundary-policies update pab-agents --organization=ORG_ID --location=global --clear-details-rules. PAB eligibility is a union: only when the selection covers every project bound to pab-agents.
-KF-2: deny-agents-halt.template.json with @AGENT_AND_SA_PRINCIPALS@ replaced, per selected project, by the agent form principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N and the service-account form proven by P8 (DENY_SA_FORM), attached with gcloud iam policies create deny-agents-halt at cloudresourcemanager.googleapis.com/folders/FLD_AGENTIC_PLATFORM.
+KF-2: deny-agents-halt.template.json with @AGENT_AND_SA_PRINCIPALS@ replaced, per selected project, by the agent form proven by P8 (DENY_AGENT_FORM: set = principalSet://agents.global.org-ORG_ID.system.id.goog/attribute.platformContainer/aiplatform/projects/N, principal = principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N) and the service-account form proven by P8 (DENY_SA_FORM), attached with gcloud iam policies create deny-agents-halt at cloudresourcemanager.googleapis.com/folders/FLD_AGENTIC_PLATFORM.
 KF-2 permissions: one entry per permission, service_fqdn/resource.action, from Google's supported-permissions list only; no wildcard form exists. The list this repository ships is deny-agents-halt.permissions.txt, checked against that page at every re-run.
 Lift: a two-human pull request with the incident or drill note; applied under ent-platform-policy; exit when every folder policy equals its saved predecessor.
 K7README
-CO="$(jq -r '.codeowners_path // empty' "$PLATFORM_REPO_DIR/identity/git-humans.yaml" 2>/dev/null)"; : "${CO:=.github/CODEOWNERS}"
+CO=.github/CODEOWNERS   # 16 RG-1.2's file
 test -f "$PLATFORM_REPO_DIR/$CO" || { echo "STOP: CODEOWNERS path not found (03 DC-9.4 / 16 RG-1.2 created it)"; false; }
-SH_HANDLE="$(python3 -c 'import sys,re;t=open(sys.argv[1]).read();m=re.search(r"second_human[^\n]*handle:\s*([^\s#]+)",t);print(m.group(1) if m else "")' "$PLATFORM_REPO_DIR/identity/git-humans.yaml")"
-test -n "$SH_HANDLE" || { echo "STOP: the second human's git handle is not in identity/git-humans.yaml (16 RG-1.4); do not type a handle by hand"; false; }
-printf '/k7/ %s\n' "$SH_HANDLE" >> "$PLATFORM_REPO_DIR/$CO"
+SH_HANDLE="$("${REGISTER_VENV_PYTHON:-$HOME/platform/venv-register/bin/python}" -c 'import sys,yaml;d=yaml.safe_load(open(sys.argv[1]));print(next((h["login"] for h in d.get("humans",[]) if h.get("role")=="second_human"),""))' "$PLATFORM_REPO_DIR/identity/git-humans.yaml")"
+test -n "$SH_HANDLE" || { echo "STOP: the second human's login is not in identity/git-humans.yaml (16 RG-1.4); do not type a login by hand"; false; }
+printf '/k7/ @%s\n' "${SH_HANDLE#@}" >> "$PLATFORM_REPO_DIR/$CO"
 git -C "$PLATFORM_REPO_DIR" add k7 "$CO"
 git -C "$PLATFORM_REPO_DIR" commit -m "k7: lever files generated from live allow-lists (setup 18 KS-4.1; P67)"
 git -C "$PLATFORM_REPO_DIR" push -u origin ks-4-1-k7-files
 gh pr create --repo "$repo" --head ks-4-1-k7-files --title "KS-4.1 k7 lever files and CODEOWNERS for /k7/" --body "K7 lever files generated from the live effective allow-lists (setup 18 KS-4.1; P67). /k7/ is added to CODEOWNERS with the second human as required reviewer, taking the handle from identity/git-humans.yaml (16 RG-1.4)."
 ```
 
-  The CODEOWNERS path and the handle are read, never typed: 16 RG-1.2 owns the file and 16 RG-1.4 owns `identity/git-humans.yaml`. *Assumption:* `git-humans.yaml` carries the second human's `handle:` key under a `second_human` entry as 16 RG-1.4 wrote it; if the key is spelled otherwise, adjust the reader to the committed file, never to a literal. The P-SA files reflect whatever 13 applied; when Wall-E's register row regenerates the P-SA allow-list (13 re-run), this step is re-run for the two P-SA files (README re-run index).
+  The CODEOWNERS path and the handle are read, never typed: 16 RG-1.2 owns the file and 16 RG-1.4 owns `identity/git-humans.yaml`. 16 RG-1.4 writes `humans:` as a list of `{login, role, appointment}` entries, so the reader uses PyYAML (16 RG-2.1's interpreter) and takes the `login` of the entry whose `role` is `second_human`; 16 RG-1.2 requires `@login` entries, so the line is written with `@`. The P-SA files reflect whatever 13 applied; when Wall-E's register row regenerates the P-SA allow-list (13 re-run), this step is re-run for the two P-SA files (README re-run index).
 
-  **Before the pull request is opened, check every KF-2 permission against Google's supported-permissions list** ([Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support), read on the day): a permission absent from that list cannot be denied at all. Record, in the KS-4.1 evidence, which of the `reasoningEngines.*` permissions the list contains and delete from `deny-agents-halt.permissions.txt` (and the template) every one it does not. If `aiplatform.googleapis.com/reasoningEngines.query` is **not** deniable, say so in the evidence and **re-grade KF-2 before KS-6.3**: KF-2 then stops engine management, not engine traffic, the drill's hold probe (KS-6.4) is re-specified against a permission the list does carry, and BD-18-3's row gains a second line for 04 §9.3.
+  **Before the pull request is opened, check every KF-2 permission against Google's supported-permissions list** ([Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support), read on the day): a permission absent from that list cannot be denied at all. On 2026-10-01 the list (updated 2026-09-29) carried all ten KF-2 permissions — `reasoningEngines.query`, `create`, `update`, `delete`, `list`, `get`, `run.googleapis.com/routes.invoke`, `jobs.run`, `jobs.runWithOverrides` and `pubsub.googleapis.com/topics.publish`; the re-read on the day still decides. Record, in the KS-4.1 evidence, which of the `reasoningEngines.*` permissions the list contains and delete from `deny-agents-halt.permissions.txt` (and the template) every one it does not. If `aiplatform.googleapis.com/reasoningEngines.query` is **not** deniable, say so in the evidence and **re-grade KF-2 before KS-6.3**: KF-2 then stops engine management, not engine traffic, the drill's hold probe (KS-6.4) is re-specified against a permission the list does carry, and BD-18-3's row gains a second line for 04 §9.3.
 - **VERIFY:**
 
 ```bash
@@ -862,11 +878,12 @@ The KF-2-alone column holds only if the call's permission is one KF-2 actually d
 ### KS-6.1 Prepare the drill
 
 - **WHO:** Platform owner; the IT security desk acknowledges the announcement.
-- **WHERE:** Shell (keep this shell for all of §6); the organisation's paging service or mail.
+- **WHERE:** Shell, **`/bin/bash`** (start it with `/bin/bash`, then `source ~/.platform-env`; keep this shell for all of §6): §6 relies on word splitting of `$SEL` and `$P` and on bash's `read -p`, which zsh does not do (zsh reads `-p` from a coprocess), so under zsh KF-1 would reach one folder only. The organisation's paging service or mail.
 - **ACTION:** Announce the window (date, start, expected end, scope, "drill, no incident") to the desk and the second human one business day ahead. Then, in the sitting, save every predecessor and define the probes:
 
 ```bash
-need ORG_ID REGION CANARY_R_PROJECT FLD_AGENTIC_PLATFORM FLD_AGENTS_R_NONPROD FLD_AGENTS_W_NONPROD FLD_AGENTS_P_NONPROD FLD_AGENTS_P_SA_NONPROD FLD_PLATFORM_CORE FLD_CONTROLLERS FLD_GEMINI_ENTERPRISE PAB_AGENTS PLATFORM_REPO_DIR BUILD_LOG_DIR SA_1_ADMIN DENY_SA_FORM
+need ORG_ID REGION CANARY_R_PROJECT FLD_AGENTIC_PLATFORM FLD_AGENTS_R_NONPROD FLD_AGENTS_W_NONPROD FLD_AGENTS_P_NONPROD FLD_AGENTS_P_SA_NONPROD FLD_PLATFORM_CORE FLD_CONTROLLERS FLD_GEMINI_ENTERPRISE PAB_AGENTS PLATFORM_REPO_DIR BUILD_LOG_DIR SA_1_ADMIN DENY_SA_FORM DENY_AGENT_FORM
+test -n "${BASH_VERSION:-}" || { echo "STOP: run §6 in /bin/bash, not zsh"; false; }
 checkpoint KS-6.1 START
 DRILL="$(date -u +%F)-K7-DRILL"; DR="$BUILD_LOG_DIR/records/$DRILL"; mkdir -p "$DR"
 SEL="fld-agents-r-nonprod:$FLD_AGENTS_R_NONPROD fld-agents-w-nonprod:$FLD_AGENTS_W_NONPROD fld-agents-p-nonprod:$FLD_AGENTS_P_NONPROD fld-agents-p-sa-nonprod:$FLD_AGENTS_P_SA_NONPROD"
@@ -950,7 +967,8 @@ if [ -s "$DR/dry-kf4-bound.txt" ] && ! grep -qv "projects/${CANARY_R_PROJECT_NUM
 else stamp "enf: KF-4 SKIPPED (pab-agents binds projects outside the selection; union rule)"; fi
 # KF-2
 PRINC="$(for PAIR in $SEL; do ID="${PAIR##*:}"; for NUM in $(gcloud projects list --filter="parent.type=folder AND parent.id=$ID" --format="value(projectNumber)"); do
-  echo "principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${NUM}"
+  if [ "$DENY_AGENT_FORM" = set ]; then echo "principalSet://agents.global.org-${ORG_ID}.system.id.goog/attribute.platformContainer/aiplatform/projects/${NUM}"
+  else echo "principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${NUM}"; fi
   if [ "$DENY_SA_FORM" = set ]; then echo "principalSet://cloudresourcemanager.googleapis.com/projects/${NUM}/type/ServiceAccount"
   else PID="$(gcloud projects list --filter="projectNumber=${NUM}" --format='value(projectId)')"; gcloud iam service-accounts list --project="$PID" --format="value(email)" | sed 's#^#principal://iam.googleapis.com/projects/-/serviceAccounts/#'; fi
 done; done | jq -R . | jq -s .)"
@@ -967,6 +985,7 @@ sort -u -o "$DR/kf2-allowed-numbers.txt" "$DR/kf2-allowed-numbers.txt"; sort -u 
 jq -r '.rules[0].denyRule.deniedPrincipals[]' "$DR/kf2-deny-agents-halt.json" | tee "$DR/kf2-principals.txt" | while read -r PR; do
   case "$PR" in
     principal://agents.global.org-*/resources/aiplatform/projects/*) NUM="${PR##*/}";;
+    principalSet://agents.global.org-*/attribute.platformContainer/aiplatform/projects/*) NUM="${PR##*/}";;
     principalSet://cloudresourcemanager.googleapis.com/projects/*/type/ServiceAccount) NUM="$(echo "$PR" | sed -n 's#.*/projects/\([0-9]*\)/type/ServiceAccount#\1#p')";;
     principal://iam.googleapis.com/projects/-/serviceAccounts/*) NUM="$(gcloud projects describe "$(echo "$PR" | sed -n 's#.*@\([^.]*\)\.iam\.gserviceaccount\.com$#\1#p')" --format='value(projectNumber)')";;
     *) echo "UNRECOGNISED PRINCIPAL FORM: $PR"; exit 1;;
@@ -1125,14 +1144,14 @@ git -C "$BUILD_LOG_DIR" commit -m "registers: K7 drill rows DR-18-1 to DR-18-5 (
 ```bash
 need DEVIATION_REGISTER
 d=$(date -u +%F)
-{
+grep -q '^| BD-18-1 |' "$DEVIATION_REGISTER" && echo "BD-18 rows already present: not appended again" || {
 printf '| BD-18-1 | %s | 18 KS-6.2 to KS-6.5 | DEV | first K7 drills on the human path; the job path is BLOCKED (B-04) | four nonprod tier folders | k7/ merge; K7_FIRST_DRILL_RECORD | levers applied and lifted by hand under ent-k7-human and ent-platform-policy | zero-diff outputs of KS-6.4 | n/a | second human co-signed the record | KS-6.6 job-path drill; G20 read in 37 | open |\n' "$d"
 printf '| BD-18-2 | %s | 18 KS-6.4 | DEV | K7 lift applied by hand from a merged pull request, not by CI (04 section 9.5 says CI applies) | organisation, fld-agentic-platform, four tier folders | lift pull request | restored predecessors | KS-6.4 zero diff | n/a | ent-platform-policy approved by the second human | the factory pipeline (B-01) | open |\n' "$d"
 printf '| BD-18-3 | %s | 18 KS-4, KS-6.3 | DEV | KF-4 cannot be folder-selective: PAB eligibility is a union (PAB concepts page 2026-09-14); KF-4 applied only when every project bound to pab-agents is in the selection | pab-agents | KS-6.2 dry-kf4-bound | none | n/a | n/a | none: design correction for 04 section 9.3 | 04 decision (per-tier PAB or fleet-only KF-4) | open |\n' "$d"
 printf '| BD-18-4 | %s | 18 KS-2.3, KS-2.6 | DEV | tier floors equal the platform floor until each tier benign corpus is measured; P-SA floor content <signed | unsigned> by the security reviewer | tier folders | floors.json merge | five folder floors | KS-2.6 compare | n/a | second human review | measured flips per tier (06 section 3.3); PA-8.1 signature | open |\n' "$d"
 printf '| BD-18-5 | %s | 18 KS-1.1, KS-2.1 | DEV | canary-r used as the quota project for Model Armor calls; canary-probe@ fixture account in an agent project with conditioned, expiring grants only | canary-r | register row | canary-probe@; expired conditioned bindings | KS-1.4 checker | n/a | second human merged the row | a platform quota project with modelarmor enabled, if 13 allow-lists one | open |\n' "$d"
 printf '| BD-18-6 | %s | 18 KS-3.1 to KS-3.7 | DEV | spikes partly BLOCKED: P8 agent half, P71 part b, P3 spike 1; CC-1 grade from P4 = <enforcement | detection> | canary-r | spike records | none | n/a | n/a | second human initialled the records | KS-3.3, KS-3.5, KS-3.6 when unblocked | open |\n' "$d"
-printf '| BD-18-7 | %s | 18 KS-4.1, KS-6.3 | DEV | KF-2 denies only permissions on Google IAM deny-support list, one service_fqdn/resource.action entry each: no wildcard form exists. Deniable reasoningEngines permissions found: <list>. reasoningEngines.query deniable: <yes | no>; if no, KF-2 stops engine management, not engine traffic, and the hold probe is re-specified | deny-agents-halt | k7/deny-agents-halt.permissions.txt | KF-2 permission list | KS-4.1 VERIFY; KS-6.3 KF-2 read back | n/a | second human reviewed the k7/ pull request | 04 section 9.3 re-grade of KF-2 if query is not deniable | open |\n' "$d"
+printf '| BD-18-7 | %s | 18 KS-4.1, KS-6.3 | DEV | KF-2 denies only permissions on Google IAM deny-support list, one service_fqdn/resource.action entry each: no wildcard form exists. Deniable reasoningEngines permissions found: <list> (all ten KF-2 permissions listed on 2026-10-01). reasoningEngines.query deniable: <yes | no>; if no, KF-2 stops engine management, not engine traffic, and the hold probe is re-specified | deny-agents-halt | k7/deny-agents-halt.permissions.txt | KF-2 permission list | KS-4.1 VERIFY; KS-6.3 KF-2 read back | n/a | second human reviewed the k7/ pull request | 04 section 9.3 re-grade of KF-2 if query is not deniable | open |\n' "$d"
 } >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" commit -m "registers: BD-18-1 to BD-18-7 (setup 18)"
@@ -1226,9 +1245,9 @@ Deferred, not a review finding of this file: P3 **spike 2** (VPC Service Control
 
 - Whether a Model Armor floor call with user credentials needs a quota project, and whether `canary-r` as `--billing-project` is accepted (KS-2.1).
 - Whether the environment-variable form `CLOUDSDK_API_ENDPOINT_OVERRIDES_MODELARMOR` is honoured exactly like `gcloud config set api_endpoint_overrides/modelarmor` (KS-2.1; fallback: set and unset the property within the step, recorded).
-- Which enum spelling gcloud accepts for floor filters. The flag reference (re-read 2026-09-16) gives `enable`/`disable` for the PI enforcement, `high`/`medium-and-above`/`low-and-above` for confidence and `enabled`/`disabled` for `--malicious-uri-filter-settings-enforcement`; the concept and REST pages give `ENABLED`, `HIGH`, `MEDIUM_AND_ABOVE`, and the reference does not enumerate the values inside `--rai-settings-filters`. `floors.json` therefore carries both blocks and KS-2.5 tries the `gcloud` block first, falls back to the `rest` block, and records which was accepted (KS-2.10 commits it). The comparison form is always `rest` (KS-2.5, KS-2.6, KS-2.9, and 16's drift job).
+- Which enum spelling gcloud accepts for floor filters. The flag reference (re-read 2026-09-16) gives `enable`/`disable` for the PI enforcement, `high`/`medium-and-above`/`low-and-above` for confidence and `enabled`/`disabled` for `--malicious-uri-filter-settings-enforcement`; the concept and REST pages give `ENABLED`, `HIGH`, `MEDIUM_AND_ABOVE`, and the reference does not enumerate the values inside `--rai-settings-filters`. `floors.json` therefore carries both blocks; since 2026-10-01 the `gcloud` block holds the mixed form Google's manage-templates page documents (flags in gcloud spelling, RAI JSON in REST spelling), KS-2.5 tries it first and the all-gcloud form second, and records which was accepted (KS-2.10 commits it). The comparison form is always `rest` (KS-2.5, KS-2.6, KS-2.9, and 16's drift job).
 - The `--update-mask` spelling for `gcloud org-policies set-policy`. Corrected on 2026-09-16 from the reference to `policy.spec`, `policy.dry_run_spec` or `*`; the short forms `spec` and `dryRunSpec` this file used are not documented. Re-read the reference on the day of the drill before KS-6.2 and KS-6.3, because every KF-1 application depends on it (KS-3.1, KS-6.2, KS-6.3, `k7/README.md`).
-- Which `aiplatform.googleapis.com/reasoningEngines.*` permissions appear on [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support). Deny policies take one `service_fqdn/resource.action` entry each, no wildcard is documented, and only listed permissions may be denied; KS-4.1 enumerates them, checks each against that page and re-grades KF-2 if `reasoningEngines.query` is not deniable.
+- ~~Which `aiplatform.googleapis.com/reasoningEngines.*` permissions appear on [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support).~~ Closed 2026-10-01: all ten KF-2 permissions are listed (page updated 2026-09-29). KS-4.1 still re-reads the page on the day and re-grades KF-2 if `reasoningEngines.query` has left it.
 - Whether a folder floor can be removed rather than set to enforcement `FALSE` (no delete command found) (KS-2.5 ROLLBACK).
 - The exact audit `methodName` of a floor update (KS-2.7).
 - The error text a floor returns when it refuses a non-conforming template (no Google page documents it) (KS-2.8).
@@ -1243,6 +1262,8 @@ Deferred, not a review finding of this file: P3 **spike 2** (VPC Service Control
 - Whether `gcloud asset search-all-resources` indexes a new Scheduler job within the KF-3 re-list window (a missed job is found by the 60-second re-list or reported).
 
 ## Sources
+
+Read on 2026-10-01: [Agent Platform release notes](https://docs.cloud.google.com/gemini-enterprise-agent-platform/release-notes) (2026-09-09 entry, VPC Service Controls on Agent Gateway); [Set up Agent Gateway](https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/set-up-agent-gateway) (updated 2026-10-01, the gateway-project registry rule); [Manage Model Armor templates](https://docs.cloud.google.com/model-armor/manage-templates) (updated 2026-09-30, the mixed spelling); [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support) (updated 2026-09-29); [Configure IAM access policies](https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/policies/configure-iam-policies-uap) (updated 2026-10-01, `iap.googleapis.com/resources.egressViaIAP`); [Set up Memory Bank](https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/memory-bank/setup) (updated 2026-10-01, `client.runtimes.create`, `client.memory_banks.create`).
 
 Re-read on 2026-09-16, after the setup-procedure review: `gcloud org-policies set-policy` (the `--update-mask` values), `gcloud model-armor floorsettings update` and `gcloud model-armor templates create` (the enum spellings), Deny access and Permissions supported in deny policies (the permission format and the absence of a wildcard form). Read on 2026-09-15: [Configure floor settings](https://docs.cloud.google.com/model-armor/configure-floor-settings); [gcloud model-armor floorsettings update](https://docs.cloud.google.com/sdk/gcloud/reference/model-armor/floorsettings/update); [gcloud model-armor floorsettings describe](https://docs.cloud.google.com/sdk/gcloud/reference/model-armor/floorsettings/describe); [Model Armor REST FloorSetting](https://docs.cloud.google.com/model-armor/reference/rest/v1/FloorSetting); [Model Armor REST templates](https://docs.cloud.google.com/model-armor/reference/rest/v1/projects.locations.templates); [Model Armor and Agent Platform integration](https://docs.cloud.google.com/model-armor/model-armor-vertex-integration); [Manage Model Armor templates](https://docs.cloud.google.com/model-armor/manage-templates); [gcloud model-armor templates create](https://docs.cloud.google.com/sdk/gcloud/reference/model-armor/templates/create); [IAM principals](https://docs.cloud.google.com/iam/docs/principals-overview); [Deny access](https://docs.cloud.google.com/iam/docs/deny-access); [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support); [gcloud iam policies update](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policies/update); [Troubleshoot IAM permissions](https://docs.cloud.google.com/policy-intelligence/docs/troubleshoot-access); [Principal access boundary policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies); [Create PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-create); [Edit PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-edit); [View PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-view); [Restricting resource usage](https://docs.cloud.google.com/resource-manager/docs/organization-policy/restricting-resources); [Dry-run organization policies](https://docs.cloud.google.com/resource-manager/docs/organization-policy/dry-run-policy); [gcloud org-policies describe](https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/describe); [gcloud org-policies set-policy](https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/set-policy); [Route Agent Runtime traffic through Agent Gateway](https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/runtime/agent-gateway-runtime-deploy); [Set up VPC connectivity for Agent Gateway](https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/set-up-vpc-connectivity); [Set up Memory Bank](https://docs.cloud.google.com/gemini-enterprise-agent-platform/scale/memory-bank/setup); [REST reasoningEngines](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/reference/rest/v1/projects.locations.reasoningEngines/create); [gcloud pam grants create](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/create); [gcloud pam grants search](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/search); [gcloud pam entitlements list](https://docs.cloud.google.com/sdk/gcloud/reference/pam/entitlements/list); [gcloud run jobs deploy](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/deploy); [gcloud run jobs execute](https://docs.cloud.google.com/sdk/gcloud/reference/run/jobs/execute); [gcloud beta container binauthz attestations sign-and-create](https://cloud.google.com/sdk/gcloud/reference/beta/container/binauthz/attestations/sign-and-create). Cited through the design pages and not re-read here: Cloud Scheduler `jobs pause` and `resume`, Cloud Asset `search-all-resources` asset types, serverless NEG and internal Application Load Balancer commands (06 §8 rows R2, R3), the Cloud Run IAM service agent.
 

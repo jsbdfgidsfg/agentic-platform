@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: the quoted Flow A example follows [04](04-flows.md) and uses "they"; no verdict changed.
 - The four-project topology of [../project-topology.md](../project-topology.md) (2026-09-13) moved Eve's trust root and evidence out of Wall-E's project; the dated notes under C50, C14, C11, the alternatives table and the accepted-risks table say where. No verdict changed.
 - **Objective restated 2026-09-13; see the platform HLD**
   ([../agentic-platform/01-hld.md](../agentic-platform/01-hld.md) "What this reverses and what it
@@ -1685,7 +1686,7 @@ path.
 
 ### C21 — The flagship journeys cannot be finished by Wall-E (stands)
 
-**Claim.** [04](04-flows.md) Flow A's example is "suspend jdoe, he left today" and S1
+**Claim.** [04](04-flows.md) Flow A's example is "suspend jdoe, they left today" and S1
 promises "leaver and joiner actions from chat". Joiners are impossible: `Users → Create` is
 "never". Leavers are only partly covered — suspension, group removal and licence reclaim are
 in; sign-out and token revocation are out pending [decision 3](09-open-decisions.md); Drive

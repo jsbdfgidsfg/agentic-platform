@@ -8,7 +8,14 @@
   [code.md](code.md) and is pasted, not written.
 - Date: 2026-09-22. Step prefix `T1`, steps T1-1 to T1-24, plus the five added on 2026-09-18 as
   suffixed steps rather than by renumbering: T1-9a, T1-12a, T1-14a, T1-16a and T1-19a.
-- Last reviewed: 2026-09-18. Corrected on 2026-09-18 against [README.md](README.md) §6.1: the
+- Last reviewed: 2026-10-01. On 2026-10-01 the owed rows 1, 2, 3 and 5 of [README.md](README.md)
+  §6.1 were carried: `T1-1` drops `SUFFIX`, writes the four bare ids and the one-suffix rule,
+  sets `AGENT_ID` to `pilot-admin` and derives every doer name from it, renames `CUSTOMER_ID` to
+  `DIRECTORY_CUSTOMER_ID` and adds `EVE_ADMIN_USER_KEYS` and `GCLOUD_CLIENT_ID`; `T1-9` creates
+  `platform_metrics` and `platform_metrics_views` instead of `mo`; `T1-12a` no longer grants the
+  action service `secretVersionAdder` on its own halt and reads that back; `T1-19` passes
+  `ADMIN_USER_KEYS` and states the code's `admin` default.
+- Corrected on 2026-09-18 against [README.md](README.md) §6.1: the
   doer's foundation (audit dataset, two tables, two service accounts, three secrets, OAuth client
   marked Trusted) is built today; Eve's three tables match the code that writes them and
   `eve.watchlists` is seeded; the detections view exists before the first poll and the schedule is
@@ -57,9 +64,11 @@ their own work.
       Billing Account Administrator or Billing Account Costs Manager on it**: Google's budgets page
       names those two roles for creating a budget (read 2026-09-18), and Billing Account User is
       not enough.
-- [ ] `gcloud auth print-identity-token --audiences=https://example-00000.run.app` prints a token
-      on **both** people's accounts, run once the week before ([README.md](README.md) §6 row 12).
-      Every live call to the action service on day 2 depends on it.
+- [ ] `gcloud auth print-identity-token --audiences=https://example-00000.run.app` was run once
+      the week before on **both** people's accounts, and the token or the refusal is in the run
+      log ([README.md](README.md) §6 row 12). Day 2's calls do not depend on it: they use a token
+      minted **without** `--audiences`, which [code.md](code.md) §3 accepts, and day-2 T2-1a proves
+      that path on both accounts.
 - [ ] `gcloud` 500.0.0 or later with the `alpha` and `beta` components, `bq`, `python3.12`, `jq`,
       `git`. `gcloud components list --only-local-state --format='value(id)'` shows `alpha` and
       `beta`.
@@ -88,20 +97,19 @@ cat > names.env <<'EOF'
 # names.env. Holds no secret. Every value below is chosen once, on day 1, and never edited after.
 # Values learned later (a client id, a service URL, a role id) are APPENDED with penv, never typed.
 export ORG_DOMAIN="example.com"                      # Assumption: replace with the tenant domain
-export CUSTOMER_ID="my_customer"
+export DIRECTORY_CUSTOMER_ID="my_customer"           # the full build's name (setup/01 PR-2.6); the API alias for this tenant
 export BILLING_ACCOUNT_ID="000000-000000-000000"     # Assumption: replace
-export SUFFIX="d3"   # keeps the ids unique; 4 characters at most, so every id stays inside
-                     # Google's 30, and the ids keep the form 02 section 3.6 fixes:
-                     # agp-<tier code>-<agent>-<env>, tier codes core, ctl, imp, p.
-                     # A project id is never reusable, and a project never moves between
-                     # tier folders, so an id spent in another form can never be adopted
-                     # by the factory later. Check before creating anything:
-                     # for v in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do
-                     #   printf '%s\n' "$v" | grep -Eqx 'agp-(core|ctl|imp|p)-[a-z0-9-]*[a-z0-9]' && [ ${#v} -le 30 ] && echo "form ok $v" || echo "FORM $v"; done
-export CORE_PROJECT="agp-core-${SUFFIX}"
-export EVE_PROJECT="agp-ctl-eve-prod-${SUFFIX}"
-export DOER_PROJECT="agp-p-steward-prod-${SUFFIX}"             # not "walle": the name is earned, not assumed
-export MO_PROJECT="agp-imp-mo-prod-${SUFFIX}"
+export AGENT_ID="pilot-admin"                        # Assumption: the proof of value's PILOT_ADMIN_AGENT_ID until PV-07 is
+                                                     # signed. Never "steward" (the POV's Tier W doer) and never "walle".
+# Project ids: the bare form 02 section 3.6 fixes, agp-<tier code>-<agent>-<env>, NO suffix.
+# A project id is never reusable and a project never moves between tier folders, so an id
+# spent in another form can never be adopted by the factory later. If T1-2 finds one id taken,
+# that id alone gets ONE four-hex suffix (agp-ctl-eve-prod-7c1a), written with penv and into
+# RUN_LOG; nothing else changes.
+export CORE_PROJECT="agp-core-platform"              # Assumption: <name> is "platform" until PV-03 is signed
+export EVE_PROJECT="agp-ctl-eve-prod"
+export DOER_PROJECT="agp-p-${AGENT_ID}-prod"         # the POV's optional Tier P agent; not "walle", not "steward"
+export MO_PROJECT="agp-imp-mo-prod"
 export REGION="europe-west1"
 export BQ_LOCATION="EU"
 export SERVICE_IDENTITY_OU="/service-identities"
@@ -110,11 +118,23 @@ export PILOT_OU="/pilot"                             # absolute 7: exact path, n
 export NONPROD_OU="/nonprod"
 export SYNTHETIC_PREFIX="pilot-user-"                # absolute 7: what T1-16 creates, one spelling
 export EVE_READER="eve-reader@${ORG_DOMAIN}"
-export DOER_ROBOT="steward-robot@${ORG_DOMAIN}"      # named today, created on day 2 (T2-2)
+export DOER_ROBOT="${AGENT_ID}-robot@${ORG_DOMAIN}"  # named today, created on day 2 (T2-2)
+# Every doer name derives from AGENT_ID. These are NAMES of resources, never their values.
+export AUDIT_DATASET="${AGENT_ID//-/_}_audit"        # the write-ahead audit dataset (hyphens become underscores)
+export DOER_ACTIONS="${AGENT_ID}-actions"            # the action service and its service account
+export DOER_PLAN="${AGENT_ID}-plan"                  # the plan job and its service account
+export DOER_TOKEN_SECRET="${AGENT_ID}-refresh-token" # secret name: the robot's consented refresh token
+export DOER_HALT_SECRET="${AGENT_ID}-halt"           # secret name: K0
+export DOER_CLIENT_JSON_SECRET="${AGENT_ID}-oauth-client"   # secret name: the doer's client JSON
+export AUDIT_WRITER_ROLE="${AGENT_ID//-/_}_auditWriter"     # custom IAM role id (letters, digits, underscores)
 export PERSON_A_EMAIL="a@${ORG_DOMAIN}"              # Assumption: replace with the builder's address
 export PERSON_B_EMAIL="b@${ORG_DOMAIN}"              # Assumption: replace with the approver's address
 export SPONSOR_EMAIL="sponsor@${ORG_DOMAIN}"         # Assumption: replace
-export AGENT_ID="steward"
+# Eve's admin-stream userKey list, ";"-separated (README section 6 row 13). "all" ONLY when the DPO
+# record and HR's written answer are in the run log's evidence folder; otherwise the two participants.
+export EVE_ADMIN_USER_KEYS="${PERSON_A_EMAIL};${PERSON_B_EMAIL}"
+export GCLOUD_CLIENT_ID="32555940559.apps.googleusercontent.com"   # Assumption: the aud of a user identity
+                                                     # token minted without --audiences; read on the day at T2-1a
 export RUN_LOG="$HOME/agp-3day/run-log.md"
 EOF
 cat > tools/penv.sh <<'EOF'
@@ -139,6 +159,12 @@ PY
 EOF
 set -a; . ./names.env; set +a; . ./tools/penv.sh
 [ "$PERSON_A_EMAIL" != "$PERSON_B_EMAIL" ] && echo "two people, two addresses" || echo "STOP: one address"
+# The form 02 section 3.6 and pov/02 PD-3.2 accept, and nothing else. Check before T1-2 creates anything.
+for v in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do
+  printf '%s\n' "$v" | grep -Eqx 'agp-(core-[a-z0-9]+|ctl-eve-prod|imp-mo-prod|p-[a-z0-9-]+-prod)(-[0-9a-f]{4})?' \
+    && [ ${#v} -le 30 ] && echo "form ok $v" || echo "STOP: form $v"
+done
+case "$AGENT_ID" in steward|walle) echo "STOP: AGENT_ID is a reserved name";; *) echo "agent id $AGENT_ID";; esac
 gcloud config configurations create agp3 --activate
 gcloud config unset project
 printf '# Run log, three-day build\n\n| UTC | step | who | what |\n|---|---|---|---|\n' > "$RUN_LOG"
@@ -146,8 +172,10 @@ git add names.env tools/penv.sh run-log.md && git commit -qm "T1-1 names, penv a
 ```
 
 - **VERIFY:** `gcloud config get-value project` prints `(unset)`. `grep -c '^export ' names.env`
-  prints `22`. No line of `names.env` contains `token`, `secret` or `password`. `two people, two
-  addresses` was printed.
+  prints `30`. No line of `names.env` holds a secret value: `grep -nE 'token|secret|password'
+  names.env` prints only comment lines and the `DOER_*_SECRET` lines, which hold secret **names**.
+  `two people, two addresses`, four `form ok` lines and `agent id pilot-admin` (or the id PV-07
+  signed) were printed; any `STOP` line stops the day before T1-2.
 - **Every later shell opens with** `set -a; . "$HOME/agp-3day/names.env"; set +a;
   . "$HOME/agp-3day/tools/penv.sh"`. Day 2 and day 3 read these names and no others; a name that
   is not in this file is not a name.
@@ -166,10 +194,15 @@ for P in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do
   gcloud projects create "$P" --name="$P" --no-enable-cloud-apis
   gcloud billing projects link "$P" --billing-account="$BILLING_ACCOUNT_ID"
 done
-gcloud projects list --filter="projectId:agp-*-${SUFFIX}" --format='table(projectId,lifecycleState)'
+for P in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do
+  gcloud projects describe "$P" --format='value(projectId,lifecycleState)'
+done
 ```
 
-- **VERIFY:** Four rows, all `ACTIVE`. `gcloud billing projects describe "$EVE_PROJECT"
+- **If an id is taken:** `gcloud projects create` refuses it. Give **that id alone** one four-hex
+  suffix, for example `penv EVE_PROJECT "agp-ctl-eve-prod-$(openssl rand -hex 2)"`, write the old
+  and new id into the run log, re-run T1-1's form check, and create it. Change nothing else.
+- **VERIFY:** Four rows, all `ACTIVE`, each one of the four explicit ids in `names.env`. `gcloud billing projects describe "$EVE_PROJECT"
   --format='value(billingEnabled)'` prints `True` for each of the four.
 - **ROLLBACK:** `gcloud projects delete "$P"` before T1-4 puts a lien on it. After the lien, remove
   the lien first.
@@ -344,11 +377,13 @@ for P in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do gcloud
 
 ## D1-A2 10:15 to 11:45. Stores, floor, registry, identities
 
-### T1-9 Three datasets and the watcher's three tables
+### T1-9 Four datasets and the watcher's three tables
 
 - **WHO:** Person A. **WHERE:** Terminal.
-- **ACTION:** One dataset for evidence, one for the watcher, one for the improver (the doer's
-  `steward_audit` is T1-12a). The three `eve` tables below are **exactly** the ones
+- **ACTION:** One dataset for evidence, one for the watcher, and two for the improver under the
+  full build's names, `platform_metrics` for the retrospective table and `platform_metrics_views`
+  for the five views (SD-33, P176; the only names under which pov/08 takes them over); the doer's
+  `$AUDIT_DATASET` is T1-12a. The three `eve` tables below are **exactly** the ones
   [code.md](code.md) §1 writes and §2 reads, copied from the table under §1's verify block:
   `ws_activities` with the eleven columns `poller.py`'s `flatten()` produces (`parameters` is a
   `STRING` holding JSON, not a `JSON` column), `poll_runs` which `record_run()` writes and
@@ -359,7 +394,8 @@ for P in "$CORE_PROJECT" "$EVE_PROJECT" "$DOER_PROJECT" "$MO_PROJECT"; do gcloud
 ```bash
 set -a; . "$HOME/agp-3day/names.env"; set +a; . "$HOME/agp-3day/tools/penv.sh"
 bq --project_id="$CORE_PROJECT" --location="$BQ_LOCATION" mk --dataset --description="Three-day build: sealed records" --label=programme:agp-3day "${CORE_PROJECT}:evidence"
-bq --project_id="$MO_PROJECT"  --location="$BQ_LOCATION" mk --dataset --description="Three-day build: measurement views" --label=programme:agp-3day "${MO_PROJECT}:mo"
+bq --project_id="$MO_PROJECT"  --location="$BQ_LOCATION" mk --dataset --description="Three-day build: measurement tables (the retrospective volume)" --label=programme:agp-3day "${MO_PROJECT}:platform_metrics"
+bq --project_id="$MO_PROJECT"  --location="$BQ_LOCATION" mk --dataset --description="Three-day build: Mo's metric views" --label=programme:agp-3day "${MO_PROJECT}:platform_metrics_views"
 bq --project_id="$EVE_PROJECT" --location="$BQ_LOCATION" mk --dataset --description="Three-day build: Admin SDK Reports poll and detections" --label=programme:agp-3day "${EVE_PROJECT}:eve"
 bq --project_id="$EVE_PROJECT" mk --table --time_partitioning_field=event_time --time_partitioning_type=DAY \
   "${EVE_PROJECT}:eve.ws_activities" \
@@ -374,7 +410,9 @@ bq --project_id="$EVE_PROJECT" ls --format=prettyjson "${EVE_PROJECT}:eve" | jq 
 - **VERIFY:** The last command prints `poll_runs`, `watchlists`, `ws_activities`, and nothing
   else. `bq show --format=json "${EVE_PROJECT}:eve.ws_activities" | jq -r
   '.timePartitioning.field, (.schema.fields | length)'` prints `event_time` and `11`.
-- **ROLLBACK:** `bq rm -r -f "${EVE_PROJECT}:eve"` and the same for the other two, before any row is
+  `bq ls --project_id="$MO_PROJECT"` lists `platform_metrics` and `platform_metrics_views`, and no
+  dataset called `mo`.
+- **ROLLBACK:** `bq rm -r -f "${EVE_PROJECT}:eve"` and the same for the other three, before any row is
   written. After the seeded test this destroys evidence: do not.
 - **RECORD:** The table list.
 - **Cited:** `bq mk --table` with `--time_partitioning_field`, `--time_partitioning_type` and an
@@ -511,65 +549,71 @@ set -a; . "$HOME/agp-3day/names.env"; set +a
 # 1. the dataset and its two tables. Location is IRREVERSIBLE: EU, like everything else.
 bq --project_id="$DOER_PROJECT" --location="$BQ_LOCATION" mk --dataset \
   --description="Three-day build: the doer's write-ahead audit, insert-only, keyed on agent_id" \
-  --label=programme:agp-3day "${DOER_PROJECT}:steward_audit"
+  --label=programme:agp-3day "${DOER_PROJECT}:${AUDIT_DATASET}"
 bq --project_id="$DOER_PROJECT" mk --table --time_partitioning_field=ts --time_partitioning_type=DAY \
-  --clustering_fields=operation,verdict "${DOER_PROJECT}:steward_audit.actions" \
+  --clustering_fields=operation,verdict "${DOER_PROJECT}:${AUDIT_DATASET}.actions" \
   'row_id:STRING,ts:TIMESTAMP,agent_id:STRING,request_id:STRING,phase:STRING,operation:STRING,target:STRING,level:INT64,requester:STRING,approver:STRING,approval_nonce:STRING,verdict:STRING,denial_reason:STRING,request_hash:STRING,dry_run:BOOL,halt_state:STRING,google_status:STRING,detail:STRING'
 bq --project_id="$DOER_PROJECT" mk --table --time_partitioning_field=created_at --time_partitioning_type=DAY \
-  "${DOER_PROJECT}:steward_audit.approvals" \
+  "${DOER_PROJECT}:${AUDIT_DATASET}.approvals" \
   'nonce:STRING,request_hash:STRING,approver:STRING,created_at:TIMESTAMP,operation:STRING,target:STRING,level:INT64'
 
-# 2. two keyless service accounts. steward-actions@ will be the only credential holder;
-#    steward-plan@ will hold nothing but the right to call a model.
-gcloud iam service-accounts create steward-actions --project="$DOER_PROJECT" --display-name="Steward actions: the only credential holder; writes steward_audit"
-gcloud iam service-accounts create steward-plan --project="$DOER_PROJECT" --display-name="Steward plan: calls a model, holds no credential, cannot invoke the action service"
-gcloud projects add-iam-policy-binding "$DOER_PROJECT" --member="serviceAccount:steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" --role=roles/bigquery.jobUser --condition=None
+# 2. two keyless service accounts. ${DOER_ACTIONS}@ will be the only credential holder;
+#    ${DOER_PLAN}@ will hold nothing but the right to call a model.
+gcloud iam service-accounts create "$DOER_ACTIONS" --project="$DOER_PROJECT" --display-name="${AGENT_ID} actions: the only credential holder; writes ${AUDIT_DATASET}"
+gcloud iam service-accounts create "$DOER_PLAN" --project="$DOER_PROJECT" --display-name="${AGENT_ID} plan: calls a model, holds no credential, cannot invoke the action service"
+gcloud projects add-iam-policy-binding "$DOER_PROJECT" --member="serviceAccount:${DOER_ACTIONS}@${DOER_PROJECT}.iam.gserviceaccount.com" --role=roles/bigquery.jobUser --condition=None
 
 # 3. the writer: ONE custom role, granted in the DATASET's own access array, never project-wide.
 #    tables.getData is required: the service reads its own approvals and nonce history.
-gcloud iam roles create stewardAuditWriter --project="$DOER_PROJECT" --title="Steward audit writer" --stage=GA \
+gcloud iam roles create "$AUDIT_WRITER_ROLE" --project="$DOER_PROJECT" --title="${AGENT_ID} audit writer" --stage=GA \
   --permissions=bigquery.tables.updateData,bigquery.tables.getData,bigquery.tables.get,bigquery.datasets.get
-bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:steward_audit" > "$HOME/agp-3day/ds-nowriter.json"
+bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:${AUDIT_DATASET}" > "$HOME/agp-3day/ds-nowriter.json"
 python3 - <<'PY'
 import json, os
-h, p = os.environ["HOME"], os.environ["DOER_PROJECT"]
+e = os.environ
+h, p = e["HOME"], e["DOER_PROJECT"]
 d = json.load(open(h + "/agp-3day/ds-nowriter.json"))
 d["access"] = [a for a in d["access"] if a.get("specialGroup") != "projectOwners"]   # owners read, never write
-d["access"].append({"role": "READER", "userByEmail": f"eve-verifier@{os.environ['EVE_PROJECT']}.iam.gserviceaccount.com"})
+d["access"].append({"role": "READER", "userByEmail": f"eve-verifier@{e['EVE_PROJECT']}.iam.gserviceaccount.com"})
 json.dump(d, open(h + "/agp-3day/ds-nowriter.json", "w"), indent=1)   # readers only: day-2 N4's lever
-d["access"].append({"role": f"projects/{p}/roles/stewardAuditWriter",
-                    "userByEmail": f"steward-actions@{p}.iam.gserviceaccount.com"})
+d["access"].append({"role": f"projects/{p}/roles/{e['AUDIT_WRITER_ROLE']}",
+                    "userByEmail": f"{e['DOER_ACTIONS']}@{p}.iam.gserviceaccount.com"})
 json.dump(d, open(h + "/agp-3day/ds-writer.json", "w"), indent=1)     # readers plus one writer
 PY
-bq --project_id="$DOER_PROJECT" update --source "$HOME/agp-3day/ds-writer.json" "${DOER_PROJECT}:steward_audit"
+bq --project_id="$DOER_PROJECT" update --source "$HOME/agp-3day/ds-writer.json" "${DOER_PROJECT}:${AUDIT_DATASET}"
 
 # 4. three secrets. Only the halt receives a value today. Values never pass on a command line.
-for S in steward-refresh-token steward-halt steward-oauth-client; do
+#    The service READS the halt and never writes it: no service identity gets secretVersionAdder.
+for S in "$DOER_TOKEN_SECRET" "$DOER_HALT_SECRET" "$DOER_CLIENT_JSON_SECRET"; do
   gcloud secrets create "$S" --replication-policy=user-managed --locations="$REGION" --project="$DOER_PROJECT" --labels=programme=agp-3day
 done
-printf 'off' | gcloud secrets versions add steward-halt --data-file=- --project="$DOER_PROJECT"
-for S in steward-refresh-token steward-halt; do
-  gcloud secrets add-iam-policy-binding "$S" --member="serviceAccount:steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" --role=roles/secretmanager.secretAccessor --project="$DOER_PROJECT" --condition=None
+printf 'off' | gcloud secrets versions add "$DOER_HALT_SECRET" --data-file=- --project="$DOER_PROJECT"
+for S in "$DOER_TOKEN_SECRET" "$DOER_HALT_SECRET"; do
+  gcloud secrets add-iam-policy-binding "$S" --member="serviceAccount:${DOER_ACTIONS}@${DOER_PROJECT}.iam.gserviceaccount.com" --role=roles/secretmanager.secretAccessor --project="$DOER_PROJECT" --condition=None
 done
-gcloud secrets add-iam-policy-binding steward-halt --member="serviceAccount:steward-actions@${DOER_PROJECT}.iam.gserviceaccount.com" --role=roles/secretmanager.secretVersionAdder --project="$DOER_PROJECT" --condition=None
 
 # 5. read it all back
-bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:steward_audit.actions" | jq -r '[.schema.fields[].name] | join(",")'
-bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:steward_audit" | jq -c '.access[]'
-gcloud secrets versions access latest --secret=steward-halt --project="$DOER_PROJECT"; echo
-for SA in steward-actions steward-plan; do
+bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:${AUDIT_DATASET}.actions" | jq -r '[.schema.fields[].name] | join(",")'
+bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:${AUDIT_DATASET}" | jq -c '.access[]'
+gcloud secrets versions access latest --secret="$DOER_HALT_SECRET" --project="$DOER_PROJECT"; echo
+gcloud secrets get-iam-policy "$DOER_HALT_SECRET" --project="$DOER_PROJECT" --format='table(bindings.role, bindings.members)'
+for SA in "$DOER_ACTIONS" "$DOER_PLAN"; do
   gcloud iam service-accounts keys list --iam-account="${SA}@${DOER_PROJECT}.iam.gserviceaccount.com" --managed-by=user --project="$DOER_PROJECT" --format='value(name)' | grep . && echo "STOP: ${SA} has a user-managed key" || echo "${SA}: no user-managed key, as required"
 done
 ```
 
 - **VERIFY:** The column line reads exactly
   `row_id,ts,agent_id,request_id,phase,operation,target,level,requester,approver,approval_nonce,verdict,denial_reason,request_hash,dry_run,halt_state,google_status,detail`.
-  The access array shows **one** entry naming `steward-actions@` with role
-  `projects/<DOER_PROJECT>/roles/stewardAuditWriter`, one `READER` for `eve-verifier@`, and no
-  `projectOwners` entry. The halt reads `off`. Two `no user-managed key` lines. `gcloud secrets
-  versions list steward-refresh-token --project="$DOER_PROJECT"` and the same for
-  `steward-oauth-client` list no version. `gcloud projects get-iam-policy "$DOER_PROJECT"
-  --flatten='bindings[].members' --filter='bindings.members:steward-actions@'
+  The access array shows **one** entry naming `${DOER_ACTIONS}@` with role
+  `projects/<DOER_PROJECT>/roles/${AUDIT_WRITER_ROLE}`, one `READER` for `eve-verifier@`, and no
+  `projectOwners` entry. The halt reads `off`. **The halt's policy (`gcloud secrets
+  get-iam-policy "$DOER_HALT_SECRET" --project="$DOER_PROJECT"`) shows `${DOER_ACTIONS}@` with
+  `roles/secretmanager.secretAccessor` only, and no service identity holds
+  `roles/secretmanager.secretVersionAdder`**: the process being halted can neither set nor clear
+  its own K0 ([code.md](code.md), "Two facts"). Two `no user-managed key` lines. `gcloud secrets
+  versions list "$DOER_TOKEN_SECRET" --project="$DOER_PROJECT"` and the same for
+  `$DOER_CLIENT_JSON_SECRET` list no version. `gcloud projects get-iam-policy "$DOER_PROJECT"
+  --flatten='bindings[].members' --filter="bindings.members:${DOER_ACTIONS}@"
   --format='value(bindings.role)'` prints `roles/bigquery.jobUser` and nothing else: **no
   project-wide `bigquery.dataEditor`, ever.**
 - **`Assumption:`** BigQuery accepts a project-level custom role in a dataset access entry;
@@ -581,10 +625,10 @@ done
 - **Why nothing here breaks the ordering rule:** no account can sign in, no credential exists, no
   role is assigned, nothing is deployed. A dataset with a writer that cannot be reached and two
   service accounts that hold no secret are ground, not a doer.
-- **ROLLBACK:** `bq rm -r -f "${DOER_PROJECT}:steward_audit"` (before any row exists);
+- **ROLLBACK:** `bq rm -r -f "${DOER_PROJECT}:${AUDIT_DATASET}"` (before any row exists);
   `gcloud secrets delete <name> --project="$DOER_PROJECT"` for each of the three;
   `gcloud iam service-accounts delete <address> --project="$DOER_PROJECT"`;
-  `gcloud iam roles delete stewardAuditWriter --project="$DOER_PROJECT"` (a deleted custom role id
+  `gcloud iam roles delete "$AUDIT_WRITER_ROLE" --project="$DOER_PROJECT"` (a deleted custom role id
   is not immediately reusable).
 - **RECORD:** The column line, the access array and the halt value, saved to
   `records/T1-12a-doer-foundation.txt`. Keep `ds-nowriter.json` and `ds-writer.json`: they are
@@ -642,28 +686,28 @@ done
   fails on an unpropagated marking presents as an unhelpful blocked-app error, not as a timing
   message ([README.md](README.md) R-02). The client is inert until day-2 T2-17: it has no consent
   and no token. **Nothing about the doer exists after this step except a client id and a secret.**
-  1. Menu > **Google Auth platform** > **Branding**: application name `agp-3day steward`, support
+  1. Menu > **Google Auth platform** > **Branding**: application name `agp-3day ${AGENT_ID}`, support
      and contact email person B's, Create. **Audience**: **Internal**. If Internal is not offered
      the project is not under the organisation: stop and check the project's parent rather than
      switching to External.
-  2. **Clients** > **Create client** > **Desktop app**, name `steward-desktop`, Create. The client
+  2. **Clients** > **Create client** > **Desktop app**, name `${AGENT_ID}-desktop`, Create. The client
      JSON is shown once: person A pastes it straight into Secret Manager on stdin, nothing on disk.
 
 ```bash
 set -a; . "$HOME/agp-3day/names.env"; set +a; . "$HOME/agp-3day/tools/penv.sh"
-gcloud secrets versions add steward-oauth-client --data-file=- --project="$DOER_PROJECT"
+gcloud secrets versions add ${DOER_CLIENT_JSON_SECRET} --data-file=- --project="$DOER_PROJECT"
 # paste the JSON, then Ctrl-D. Then:
 pbcopy </dev/null 2>/dev/null || true
 find "$HOME" -maxdepth 4 -name 'client_secret*' 2>/dev/null     # must print nothing
-penv STEWARD_OAUTH_CLIENT_ID "<the client id from the dialog, never the secret>"
-gcloud secrets versions list steward-oauth-client --project="$DOER_PROJECT" --format='value(name,state)'
+penv DOER_OAUTH_CLIENT_ID "<the client id from the dialog, never the secret>"
+gcloud secrets versions list ${DOER_CLIENT_JSON_SECRET} --project="$DOER_PROJECT" --format='value(name,state)'
 ```
 
   3. Admin console > Security > Access and data control > **API controls** > **Manage App Access**
-     > **Configure new app** > OAuth App Name Or Client ID > paste `STEWARD_OAUTH_CLIENT_ID` >
+     > **Configure new app** > OAuth App Name Or Client ID > paste `DOER_OAUTH_CLIENT_ID` >
      select > scope to the whole organisation > **Trusted** > finish.
 - **VERIFY:** The Clients page of `DOER_PROJECT` lists exactly one Desktop client. The secret shows
-  exactly one `enabled` version. `find` printed nothing. `grep STEWARD_OAUTH_CLIENT_ID
+  exactly one `enabled` version. `find` printed nothing. `grep DOER_OAUTH_CLIENT_ID
   "$HOME/agp-3day/names.env"` prints the id. The Manage App Access list shows this client id as
   **Trusted** beside Eve's. Screenshot the row. `eve-client.json` from T1-13 is the only client
   file on disk, and it is ignored by git.
@@ -674,7 +718,7 @@ gcloud secrets versions list steward-oauth-client --project="$DOER_PROJECT" --fo
 - **ROLLBACK:** Delete the client on the Clients page (check the box, Delete; "You can restore
   deleted clients within 30 days", Manage OAuth Clients, read 2026-09-18); disable the secret
   version. A replacement is always a **new** client with a new name.
-- **RECORD:** The client id in the run log; `records/T1-14a-steward-client.png`,
+- **RECORD:** The client id in the run log; `records/T1-14a-doer-client.png`,
   `records/T1-14a-trusted.png`.
 
 ### T1-15 The empty secret and its one reader
@@ -708,7 +752,7 @@ gcloud secrets versions list eve-refresh-token --project="$EVE_PROJECT" --format
      directly in `pilot`, given name `Synthetic`, family name `Pilot 0n`. No licence beyond what the
      tenant assigns automatically. **These accounts belong to nobody.** They receive no mail, are
      told to nobody, and no real employee is ever moved into `pilot` (absolute 7).
-  3. Menu > Account > Admin roles > Create new role: `Pilot Steward (3-day)`. Tick, under Admin
+  3. Menu > Account > Admin roles > Create new role: `Pilot Admin (3-day)`. Tick, under Admin
      console privileges, exactly **Users > Read** and **Users > Update > Suspend users**. Ticking
      Update grants Read automatically; Suspend users is one of Update's documented sub-options, and
      the Users privilege is one that may be limited to an organisational unit (read 2026-09-17).
@@ -716,10 +760,10 @@ gcloud secrets versions list eve-refresh-token --project="$EVE_PROJECT" --format
      person B approving.
 - **VERIFY:** `pilot` holds exactly four users, all with `@` addresses matching `pilot-user-0[1-4]`;
   `nonprod` holds zero. The role page lists exactly two privileges and the role's Assignments tab is
-  empty. Person B writes in the run log: "Pilot Steward created, assigned to nobody, at `<UTC>`".
+  empty. Person B writes in the run log: "Pilot Admin created, assigned to nobody, at `<UTC>`".
 - **ROLLBACK:** Delete the role (unassigned, so free). Suspend and later delete the four accounts;
   delete the two organisational units once empty.
-- **RECORD:** `records/T1-16-pilot-ou.png`, `records/T1-16-pilot-steward-privileges.png`.
+- **RECORD:** `records/T1-16-pilot-ou.png`, `records/T1-16-pilot-admin-privileges.png`.
 
 ### T1-16a The notification channel, its verification link, and the two log-based metrics
 
@@ -795,8 +839,8 @@ cd "$HOME/agp-3day/tools" && python3.12 -m venv .venv && .venv/bin/pip install -
   `activities.list` requires; read 2026-09-17). If a second scope appears, stop: revoke at
   `https://myaccount.google.com/permissions` as `eve-reader@`, disable the secret version, and
   re-run. A scope set cannot be narrowed after the fact. `eve-client.json` stays on person A's
-  disk, mode 600, ignored by git, until the day-3 unwind decides Eve's future (T3-19): Eve is
-  left polling, and a re-consent would need it.
+  disk, mode 600, ignored by git, until the day-3 unwind (T3-19 j) shreds it; by default Eve is
+  stopped at the hand-over unless the DPO record of [README.md](README.md) §6 row 13 exists.
 - **This is not domain-wide delegation and must never become it.** The account consented for
   itself, in front of two people. Nothing impersonates it.
 - **ROLLBACK:** Revoke the grant in the account's own Third-party access page; disable the secret
@@ -841,18 +885,25 @@ view (T1-19a), one poll by hand (T1-20), read the findings and only then schedul
 - **ACTION:** No `--set-secrets`: the job reads `eve-refresh-token` with `access_secret_version`
   under the accessor grant of T1-15, and the flag would only copy the token into the job's
   environment, readable by anyone with `run.viewer` (absolute 9). No `APPS` flag: the code's
-  default is already `admin,login,token,user_accounts,groups_enterprise`, and a comma-bearing
-  value would need gcloud's alternate delimiter (`--set-env-vars=^:^EVE_PROJECT=...:APPS=...`;
-  "In order to include commas in your arguments, specify an alternate delimiter", `gcloud topic
-  escaping`, read 2026-09-17).
+  default is `admin`; `login` is read per robot account from the `service_identity` watchlist;
+  widening to `token`, `user_accounts` or `groups_enterprise` is a decision under a DPO record
+  ([code.md](code.md) §1), and a comma-bearing value would need gcloud's alternate delimiter
+  (`--set-env-vars=^:^EVE_PROJECT=...:APPS=...`; "In order to include commas in your arguments,
+  specify an alternate delimiter", `gcloud topic escaping`, read 2026-09-17). **`ADMIN_USER_KEYS`
+  is required** and comes from `EVE_ADMIN_USER_KEYS` in `names.env`: the two participants'
+  addresses unless the DPO record and HR's answer of [README.md](README.md) §6 row 13 are in the
+  run log's evidence folder, in which case `all`. Which of the two was deployed is written into
+  the run log here. The `admin` stream is then read once per key (`activities.list` `userKey`:
+  "Can be `all` for all information, or ... their primary email address", read 2026-10-01).
 
 ```bash
 set -a; . "$HOME/agp-3day/names.env"; set +a
 cd "$HOME/agp-3day/eve"
 gcloud run jobs deploy eve-reports-poller --source=. --region="$REGION" \
   --service-account="eve-verifier@${EVE_PROJECT}.iam.gserviceaccount.com" \
-  --set-env-vars="EVE_PROJECT=${EVE_PROJECT}" \
+  --set-env-vars="EVE_PROJECT=${EVE_PROJECT},ADMIN_USER_KEYS=${EVE_ADMIN_USER_KEYS}" \
   --max-retries=1 --task-timeout=10m --project="$EVE_PROJECT"
+printf '%s  T1-19 Eve admin-stream userKey: %s\n' "$(date -u +%FT%TZ)" "$EVE_ADMIN_USER_KEYS" >> "$RUN_LOG"
 gcloud run jobs describe eve-reports-poller --region="$REGION" --project="$EVE_PROJECT" \
   --format='value(spec.template.spec.template.spec.containers[0].env)' \
   | grep -Eio '[A-Za-z0-9_-]{24,}' | grep -v "$EVE_PROJECT" || echo "no secret-looking value in env"
@@ -1115,14 +1166,15 @@ All of these must be true. A cross anywhere is tomorrow's failure.
       the T1-8 baseline (T1-18).
 - [ ] `eve-refresh-token` has exactly one enabled version and exactly one accessor, which is a
       service account (T1-15, T1-17).
-- [ ] `pilot` holds four synthetic accounts and no real one; `nonprod` is empty; `Pilot Steward
+- [ ] `pilot` holds four synthetic accounts and no real one; `nonprod` is empty; `Pilot Admin
       (3-day)` exists and is assigned to nobody (T1-16).
-- [ ] `steward_audit.actions` has the eighteen columns of [code.md](code.md) §3 and one writer
-      entry in the dataset's own access array; `steward-actions@` holds no project-wide
-      `bigquery.dataEditor`; `steward-halt` reads `off`; `steward-refresh-token` has **no**
-      version; `steward-oauth-client` has one (T1-12a, T1-14a).
+- [ ] `${AUDIT_DATASET}.actions` has the eighteen columns of [code.md](code.md) §3 and one writer
+      entry in the dataset's own access array; `${DOER_ACTIONS}@` holds no project-wide
+      `bigquery.dataEditor`; `${DOER_HALT_SECRET}` reads `off` and `${DOER_ACTIONS}@` holds
+      `secretAccessor` only on it, with no `secretVersionAdder` for any service identity; `${DOER_TOKEN_SECRET}` has **no**
+      version; `${DOER_CLIENT_JSON_SECRET}` has one (T1-12a, T1-14a).
 - [ ] The doer's OAuth client reads **Trusted** in Manage App Access and
-      `STEWARD_OAUTH_CLIENT_ID` is in `names.env` (T1-14a).
+      `DOER_OAUTH_CLIENT_ID` is in `names.env` (T1-14a).
 - [ ] **No doer account, no doer role assignment and no doer credential exists.** Eve is live and
       the doer does not exist. That sentence is the day's deliverable.
 - [ ] `git -C "$HOME/agp-3day" status --short` is clean except for `eve-client.json`, which is
@@ -1154,13 +1206,13 @@ Take these in order, and say in the run log which you took.
 |---|---|
 | `names.env` with every name, including `DOER_ROBOT`, `SYNTHETIC_PREFIX`, `STAGING_OU`, `PERSON_A_EMAIL`; `tools/penv.sh` | T1-1 |
 | `pilot` with four synthetic accounts | T1-16 |
-| `Pilot Steward (3-day)`, unassigned, so the assignment lands at about 09:45 | T1-16 |
+| `Pilot Admin (3-day)`, unassigned, so the assignment lands at about 09:45 | T1-16 |
 | `service-identities` with security-key-only two-step verification, and an empty `staging` beside it | T1-5, T1-6 |
 | A watcher that will page the doer's birth, with the doer's address already on the `service_identity` watchlist | T1-9a, T1-19 to T1-24 |
 | The delegation baseline, for the second half of the absence proof | T1-8 |
 | Artifact Registry and a proven `--source` deploy path | T1-11, T1-19 |
 | `DOER_PROJECT` with its APIs, floor, budget and lien | T1-3, T1-4, T1-10 |
-| `steward_audit` with `actions` (eighteen columns) and `approvals`; `steward-actions@` as the one writer, in the dataset's access array; `steward-plan@`; `steward-refresh-token` (empty), `steward-halt` (`off`), `steward-oauth-client` (one version); `ds-nowriter.json` and `ds-writer.json` | T1-12a, T1-14a |
+| `${AUDIT_DATASET}` with `actions` (eighteen columns) and `approvals`; `${DOER_ACTIONS}@` as the one writer, in the dataset's access array; `${DOER_PLAN}@`; `${DOER_TOKEN_SECRET}` (empty), `${DOER_HALT_SECRET}` (`off`), `${DOER_CLIENT_JSON_SECRET}` (one version); `ds-nowriter.json` and `ds-writer.json` | T1-12a, T1-14a |
 | The doer's OAuth client, marked Trusted a day early, its id in `names.env` | T1-14a |
 
 Day 2 **reads all of these back** (T2-9 to T2-11) and creates none of them. What day 2 creates is
@@ -1213,6 +1265,14 @@ Read on 2026-09-18, for the steps corrected or added on that date:
 | `gcloud logging read` is generally available; a filter positional, `--limit`, `--freshness`, `--project` (T1-20, T1-23) | https://docs.cloud.google.com/sdk/gcloud/reference/logging/read |
 | Deleting an OAuth client: Clients page, tick the id, Delete; "You can restore deleted clients within 30 days" (T1-14a rollback) | https://support.google.com/cloud/answer/15549257 |
 | `run_local_server(open_browser=...)`: "Whether or not to open the authorization URL in the user's browser" (T1-17) | https://google-auth-oauthlib.readthedocs.io/en/latest/reference/google_auth_oauthlib.flow.html |
+
+Read on 2026-10-01, for the steps corrected on that date:
+
+| What was checked | Page |
+|---|---|
+| `activities.list` `userKey`: "Can be `all` for all information, or `userKey` for a user's unique Google Workspace profile ID or their primary email address" (T1-19, `ADMIN_USER_KEYS`) | https://developers.google.com/workspace/admin/reports/reference/rest/v1/activities/list |
+| `gcloud auth print-identity-token`: `--audiences` "Intended recipient of the token. Currently, only one audience can be specified"; the plain form with no flag (the pre-flight line, `GCLOUD_CLIENT_ID`) | https://docs.cloud.google.com/sdk/gcloud/reference/auth/print-identity-token |
+| Liens are modified with the Project lien modifier role, `roles/resourcemanager.lienModifier` (`resourcemanager.projects.updateLiens`); `gcloud alpha resource-manager liens list` and `delete` (T1-4 rollback) | https://docs.cloud.google.com/resource-manager/docs/project-liens |
 
 Where Google has not settled something, the step says so and fails loudly rather than guessing: the
 Google Auth platform menu path (T1-13, T1-14a), whether `liens create` is generally available on

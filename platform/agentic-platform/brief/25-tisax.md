@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: ISA2027's three supplier-verification routes quoted (enx.com, read 2026-10-01); the R-01 and P136 disagreements resolved on 2026-09-18 are no longer reported; the fourth added gate row and its diagram node now require the DPIA complete for Eve's monitoring, the identity log store and the Stage 0 reads, as page 11 §6.3 and P136 do.
 
 ## What you will understand by the end
 
@@ -14,7 +15,7 @@ By the end you will know the target label, level and scope; what Google carries 
 
 TISAX is run by the ENX Association for the VDA; its questionnaire is the VDA ISA ([page 11 §1](../11-tisax.md#1-tisax-on-2026-09-13-verified)). Four verified facts shape the rest.
 
-**The catalogue is changing.** ISA 6.0.3 (published 2024-04-25) is in force. ISA2027 (published 2026-07-01) is the basis of assessments ordered from 2027; the last day to order on ISA 6 is 2026-12-31. ISA2027 requires organisations with high protection needs to verify suppliers "through TISAX labels or equivalent assessments", and wants a rationale for every "aspects considered" item. Nothing is built in 2026, so any assessment will be ordered on ISA2027.
+**The catalogue is changing.** ISA 6.0.3 (published 2024-04-25) is in force. ISA2027 (published 2026-07-01) is the basis of assessments ordered from 2027; the last day to order on ISA 6 is 2026-12-31. ISA2027 requires organisations with high protection needs to verify suppliers "through a TISAX label, an equivalent third-party assessment, or an appropriate supplier audit", and wants a rationale for every "aspects considered" item. Nothing is built in 2026, so any assessment will be ordered on ISA2027.
 
 **Labels set levels.** Of the twelve assessment objectives, Confidential leads to AL2, a plausibility check of the self-assessment with evidence review and a web-conference interview; Strictly confidential leads to AL3, with on-site observation and unplanned interviews. Maturity runs from 0 to 5, and most controls target 3, "established". A result is valid for three years.
 
@@ -90,11 +91,11 @@ The owner decided on 2026-09-13 that Wall-E holds Super Admin (P33), and nothing
 
 The deviation is one file, the P33 [decision record](../../../decisions/2026-09-13-wall-e-holds-super-admin.md), and the assessor is handed it and the evidence it points to, nothing else ([§6.2](../11-tisax.md#62-the-record--decisions2026-09-13-wall-e-holds-super-adminmd)): the loss table unsoftened, the residual risk, compensations with their status on the day of signing, review terms and signatures.
 
-Three signatures: the **platform owner decides**; the **security reviewer**, who is not the platform owner, **signs** the deviation and accepts risk row R-01; the **ISMS enters** it in the site's risk register. 1.2.2 forbids self-signature, so a record signed only by its beneficiary is not a control. On 2026-09-14 only the decision is signed; the reviewer's signature waits for a second person in that role. Page 11 names the platform owner as R-01's owner while the decision record names the security reviewer ([page 11 §10](../11-tisax.md#10-the-risk-register-p140)).
+Three signatures: the **platform owner decides**; the **security reviewer**, who is not the platform owner, **signs** the deviation and accepts risk row R-01; the **ISMS enters** it in the site's risk register. 1.2.2 forbids self-signature, so a record signed only by its beneficiary is not a control. On 2026-09-14 only the decision is signed; the reviewer's signature waits for a second person in that role. The security reviewer owns and signs R-01; the platform owner accepts it; the ISMS enters it ([page 11 §10](../11-tisax.md#10-the-risk-register-p140)).
 
 ### Compensations as gate conditions
 
-Every compensation is a gate condition ([§6.3](../11-tisax.md#63-compensations-as-preconditions--the-checklist-the-gate-reads)). The thirteen HLD items become rows of Wall-E's gate checklist, each with a stated meaning of green, a verification, a date and a signer, joined by a penetration test with no open critical or high finding, a dated tabletop of the abused-credential crisis scenario and a witnessed hardware-key custody record. Page 11's checklist carries a fourth added row that P136's wording omits: a started DPIA with dated works-council information (Chapter 22, Personal data, employees and the works council). The grant runbook refuses while any row is not green, and the order is fixed: Eve's observe-and-report layer live and drilled, then the grant, then Wall-E's Stage 0 with every write family at L1. On 2026-09-13 no row is green, and several wait on register decisions ([register §4](../12-open-decisions.md#4-before-the-super-admin-grant)): the two lists (P29, open), the witness organisation (P14, open), the SIEM choice (P10, open), the perimeter spike (P3), multi-party approval and the roster (P66, P68, proposed).
+Every compensation is a gate condition ([§6.3](../11-tisax.md#63-compensations-as-preconditions--the-checklist-the-gate-reads)). The thirteen HLD items become rows of Wall-E's gate checklist, each with a stated meaning of green, a verification, a date and a signer, joined by a penetration test with no open critical or high finding, a dated tabletop of the abused-credential crisis scenario and a witnessed hardware-key custody record. A fourth added row, also in P136: the DPIA complete for Eve's monitoring, the identity log store and the Stage 0 reads; the write families' DPIA started with a dated completion before Stage 1; works-council information or consultation given (Chapter 22, Personal data, employees and the works council). The grant runbook refuses while any row is not green, and the order is fixed: Eve's observe-and-report layer live and drilled, then the grant, then Wall-E's Stage 0 with every write family at L1. On 2026-09-13 no row is green, and several wait on register decisions ([register §4](../12-open-decisions.md#4-before-the-super-admin-grant)): the two lists (P29, open), the witness organisation (P14, open), the SIEM choice (P10, open), the perimeter spike (P3), multi-party approval and the roster (P66, P68, proposed).
 
 ### After the grant: the red-row rule
 
@@ -103,7 +104,7 @@ Any one row red is a severity-2 finding with 30 days to restore it. Two rows red
 ```mermaid
 flowchart TD
   EVE["Eve observe-and-report layer live and drilled"]
-  ROWS["Every gate row green - thirteen compensations, penetration test, DPIA started and works council informed, crisis tabletop, witnessed key custody"]
+  ROWS["Every gate row green - thirteen compensations, penetration test, DPIA complete for monitoring and Stage 0 reads; works council informed or consulted, crisis tabletop, witnessed key custody"]
   SIG["Three signatures - platform owner decides, security reviewer signs, ISMS enters"]
   GRANT["Grant - Super Admin on walle@"]
   WATCH["Rows re-verified while the grant is in force"]
@@ -122,7 +123,7 @@ flowchart TD
 
 ### Keeping the record honest over time
 
-A deviation with no expiry becomes the norm. The record is reviewed quarterly with the super-admin roster, re-signed at every Wall-E stage transition and whenever a compensation's grade changes, and expires with the assessment result after three years or earlier on any severity-1 incident involving the credential. Register row P136 words the quarterly event as a re-signature, page 11 and the decision record as a review ([§6.2](../11-tisax.md#62-the-record--decisions2026-09-13-wall-e-holds-super-adminmd)). However strong the compensations, an assessor may still refuse maturity 3 on 4.2.1 for a super-admin robot; only the assessment settles that.
+A deviation with no expiry becomes the norm. The record is reviewed quarterly with the super-admin roster, re-signed at every Wall-E stage transition and whenever a compensation's grade changes, and expires with the assessment result after three years or earlier on any severity-1 incident involving the credential. Register row P136 and page 11 now word these events the same way ([§6.2](../11-tisax.md#62-the-record--decisions2026-09-13-wall-e-holds-super-adminmd)). However strong the compensations, an assessor may still refuse maturity 3 on 4.2.1 for a super-admin robot; only the assessment settles that.
 
 ## Assurance: penetration test, internal audit, management review (P139)
 

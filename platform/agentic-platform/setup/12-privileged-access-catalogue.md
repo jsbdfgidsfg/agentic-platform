@@ -2,9 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
 - Last executed: never
 - Stage: review §2 stage 11. Runs after files 09, 10 and 11 and before file 13. It is the file that ends the organisation bootstrap: its last two steps remove the creator's Owner from the five core projects and withdraw the dated organisation exception of file 06.
+- 2026-10-01: PA-1.1's `BD-12-01` append made idempotent; PA-1.2 accepts either PAM service-agent role Google publishes; the gates of PA-3.1, PA-4.2 and PA-4.7 now halt the create instead of only printing `STOP`; PA-9.3 edits the roster at `$PLATFORM_REPO_DIR/$ROSTER_FILE` on a branch cut from an updated `main`.
 - Step prefix: `PA`. Steps: 40 (PA-2.3 and PA-4.0 added on 2026-09-16). BLOCKED: PA-4.7 (the security reviewer is not named, README B-20), PA-8.1 (same person), PA-8.5 (the factory does not exist, README B-01). IRREVERSIBLE: PA-9.3 (the withdrawal leaves the platform owner no standing path back; only break-glass or an approved grant restores it).
 - Replaces: nothing executable. The design is [04 §5.1-§5.2](../04-identity-and-privileged-access.md#5-privileged-access-manager-the-entitlement-catalogue); no runbook ever created an entitlement (S002). It supersedes `wall-e/PREREQUISITES.md` §4.1's standing organisation roles for the builder (S059) and the standing `user:` actAs grants of `eve/07-build-runbook.md` (S143, this file's half).
 - Decisions applied: SD-01 (exception withdrawn here), SD-12 (controller and witness-export entitlements approved by the second human, never the platform owner), SD-18 (`ent-org-sink` with approval), SD-19 (`ent-ge-admin` without approval at Tier C), SD-42 (singleton variants), SD-46 (`ent-bootstrap-module`), all from the signed record `decisions/<date>-platform-model-and-privilege.md` of [03](03-decisions-and-people.md) DC-6.1.
@@ -191,7 +192,7 @@ unset tok
 checkpoint PA-1.1 START
 gcloud services enable privilegedaccessmanager.googleapis.com --project="$CICD_PROJECT"
 gcloud projects add-iam-policy-binding "$CICD_PROJECT" --member="group:$GRP_PLATFORM_OWNERS" --role="roles/serviceusage.serviceUsageConsumer" --condition=None
-printf '| BD-12-01 | %s | 12 PA-1.1 | DEV | privilegedaccessmanager API outside the core allow-list | %s | - | API enabled; serviceUsageConsumer to %s | n/a | n/a | second human (PA-2.2 review) | until 13 adds it to the fld-platform-core allow-list | open |\n' "$(date -u +%F)" "projects/$CICD_PROJECT" "$GRP_PLATFORM_OWNERS" >> "$DEVIATION_REGISTER"
+grep -q '^| BD-12-01 |' "$DEVIATION_REGISTER" || printf '| BD-12-01 | %s | 12 PA-1.1 | DEV | privilegedaccessmanager API outside the core allow-list | %s | - | API enabled; serviceUsageConsumer to %s | n/a | n/a | second human (PA-2.2 review) | until 13 adds it to the fld-platform-core allow-list | open |\n' "$(date -u +%F)" "projects/$CICD_PROJECT" "$GRP_PLATFORM_OWNERS" >> "$DEVIATION_REGISTER"
 ```
 
 - **VERIFY:**
@@ -209,7 +210,7 @@ gcloud projects get-iam-policy "$CICD_PROJECT" --flatten="bindings[].members" --
 
 - **WHO:** Platform owner as `sa-1-admin@`.
 - **WHERE:** Google Cloud console (the `sa-1-admin@` browser profile of 01 PR-1.3) → IAM & Admin → Privileged Access Manager → resource picker: the organisation → **Set up PAM** → **Grant role**; then the shell.
-- **ACTION:** Google's setup page gives the console route and no gcloud command for this grant. The service agent is Google-provisioned (`service-org-ORGANIZATION_NUMBER@gcp-sa-pam.iam.gserviceaccount.com`); the console grants it `roles/privilegedaccessmanager.serviceAgent`. Do not create or grant anything else on that page. Then:
+- **ACTION:** Google's setup page gives the console route and no gcloud command for this grant. The service agent is Google-provisioned (`service-org-ORGANIZATION_NUMBER@gcp-sa-pam.iam.gserviceaccount.com`); the console grants it the PAM service-agent role. Google publishes two such roles, `roles/privilegedaccessmanager.serviceAgent` and `roles/privilegedaccessmanager.organizationServiceAgent` (PAM roles page, updated 2026-09-24, read 2026-10-01); `Assumption:` the console's **Grant role** may bind either. Do not create or grant anything else on that page. Then:
 
 ```bash
 checkpoint PA-1.2 START
@@ -220,8 +221,8 @@ gcloud pam check-onboarding-status --folder="$FLD_AGENTIC_PLATFORM" --location=g
 gcloud pam check-onboarding-status --project="$GEMINI_PROJECT" --location=global --billing-project="$CICD_PROJECT" | tee "$BUILD_LOG_DIR/evidence/12/PA-1.2-onboarding-gemini.txt"
 ```
 
-- **VERIFY:** The `jq` line prints exactly `roles/privilegedaccessmanager.serviceAgent`, unconditioned. The three onboarding outputs report no finding; record them verbatim. Google's reference does not document the output fields, so any line naming a missing permission or an unset service agent is a stop. The service agent's binding is the one PAM binding the sweep of PA-9 excepts (04 §5.2).
-- **ROLLBACK:** Remove the binding with `gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="serviceAccount:service-org-${ORG_ID}@gcp-sa-pam.iam.gserviceaccount.com" --role="roles/privilegedaccessmanager.serviceAgent"`, only while no entitlement exists (every entitlement stops working without it).
+- **VERIFY:** The `jq` line prints exactly one role, unconditioned: `roles/privilegedaccessmanager.serviceAgent` or `roles/privilegedaccessmanager.organizationServiceAgent`. Record which one in the checkpoint note; PA-1.2's ROLLBACK and PA-9.3's VERIFY use that role. The three onboarding outputs report no finding; record them verbatim. Google's reference does not document the output fields, so any line naming a missing permission or an unset service agent is a stop. The service agent's binding, under whichever of the two roles was recorded, is the one PAM binding the sweep of PA-9 excepts (04 §5.2).
+- **ROLLBACK:** Remove the binding with `gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="serviceAccount:service-org-${ORG_ID}@gcp-sa-pam.iam.gserviceaccount.com" --role="<the role recorded in the VERIFY>"`, only while no entitlement exists (every entitlement stops working without it).
 - **EVIDENCE:** the policy JSON and the three outputs. `evidence_add PA-1.2 pam-service-agent E-05 4.1.3 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-1.2-org-policy.json"`.
 
 ### PA-1.3 PAM Admin to `platform-owners@`, standing
@@ -639,13 +640,16 @@ Every create below has the same shape: `need`, the gate check, `gcloud pam entit
 
 ```bash
 checkpoint PA-3.1 START
-awk -F'\t' '$2=="PA-2.3" && $3=="DONE"{ok=1} END{exit ok?0:1}' "$BUILD_LOG_DIR/checkpoints.tsv" || echo "STOP: PA-2.3 not DONE - run the parser probe before any organisation-scoped create"
+gate_pa23() { awk -F'\t' '$2=="PA-2.3" && $3=="DONE"{ok=1} END{exit ok?0:1}' "$BUILD_LOG_DIR/checkpoints.tsv"; }
+gate_pa23 && echo "GATE OK: PA-2.3 DONE" || echo "STOP: PA-2.3 not DONE - run the parser probe before any organisation-scoped create; nothing below runs"
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" SD-18
-gcloud pam entitlements create ent-platform-policy --organization="$ORG_ID" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-platform-policy.json" --billing-project="$CICD_PROJECT"
+gate_pa23 && {
+gcloud pam entitlements create ent-platform-policy --organization="$ORG_ID" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-platform-policy.json" --billing-project="$CICD_PROJECT" &&
 penv_set ENT_PLATFORM_POLICY "$(gcloud pam entitlements describe ent-platform-policy --organization="$ORG_ID" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"
+}
 ```
 
-- **VERIFY:** `gcloud pam entitlements describe "$ENT_PLATFORM_POLICY" --billing-project="$CICD_PROJECT" --format="yaml(state,maxRequestDuration,approvalWorkflow,eligibleUsers,privilegedAccess)"` shows `state: AVAILABLE`, `3600s`, one step with `approvalsNeeded: 1` and approver `user:sa-2-admin@…`, requester `group:platform-owners@…`, the three roles on `//cloudresourcemanager.googleapis.com/organizations/<ORG_ID>`. The `awk` gate prints no `STOP:` line. A parse refusal here after PA-2.3 passed would mean the organisation scope rejects what the folder scope accepted, which no page read documents: stop, convert nothing by hand, record the error and take it back to PA-2.3's recovery (regenerate as YAML by the same generator, one reviewed pull request as in PA-2.2).
+- **VERIFY:** `gcloud pam entitlements describe "$ENT_PLATFORM_POLICY" --billing-project="$CICD_PROJECT" --format="yaml(state,maxRequestDuration,approvalWorkflow,eligibleUsers,privilegedAccess)"` shows `state: AVAILABLE`, `3600s`, one step with `approvalsNeeded: 1` and approver `user:sa-2-admin@…`, requester `group:platform-owners@…`, the three roles on `//cloudresourcemanager.googleapis.com/organizations/<ORG_ID>`. The gate printed `GATE OK: PA-2.3 DONE` and no `STOP:` line; on `STOP:` the create did not run. A parse refusal here after PA-2.3 passed would mean the organisation scope rejects what the folder scope accepted, which no page read documents: stop, convert nothing by hand, record the error and take it back to PA-2.3's recovery (regenerate as YAML by the same generator, one reviewed pull request as in PA-2.2).
 - **ROLLBACK:** `gcloud pam entitlements delete ent-platform-policy --organization="$ORG_ID" --location=global --billing-project="$CICD_PROJECT"` (revoke any active grant first).
 - **EVIDENCE:** the describe output. `evidence_add PA-3.1 ent-platform-policy E-05 4.1.3 "build-log:evidence/12"`.
 
@@ -809,14 +813,17 @@ g="$(pam_request "$ENT_FOLDER_ADMIN" "setup-12 PA-4.1 one-grant test")"; echo "$
 
 ```bash
 checkpoint PA-4.2 START
-awk -F'\t' '$2=="PA-4.0" && $3=="DONE"{ok=1} END{exit ok?0:1}' "$BUILD_LOG_DIR/checkpoints.tsv" || echo "STOP: PA-4.0 not DONE - check the 19 role stages and grant levels before creating this entitlement"
-gcloud pam entitlements create ent-project-repair-core --folder="$FLD_PLATFORM_CORE" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-project-repair-core.json" --billing-project="$CICD_PROJECT"
-penv_set ENT_PROJECT_REPAIR_CORE "$(gcloud pam entitlements describe ent-project-repair-core --folder="$FLD_PLATFORM_CORE" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"
-g="$(pam_request "$ENT_PROJECT_REPAIR_CORE" "setup-12 PA-4.2 one-grant test" 1800)"; echo "$g"
+gate_pa40() { awk -F'\t' '$2=="PA-4.0" && $3=="DONE"{ok=1} END{exit ok?0:1}' "$BUILD_LOG_DIR/checkpoints.tsv"; }
+gate_pa40 && echo "GATE OK: PA-4.0 DONE" || echo "STOP: PA-4.0 not DONE - check the 19 role stages and grant levels before creating this entitlement; nothing below runs"
+gate_pa40 && {
+gcloud pam entitlements create ent-project-repair-core --folder="$FLD_PLATFORM_CORE" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-project-repair-core.json" --billing-project="$CICD_PROJECT" &&
+penv_set ENT_PROJECT_REPAIR_CORE "$(gcloud pam entitlements describe ent-project-repair-core --folder="$FLD_PLATFORM_CORE" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')" &&
+g="$(pam_request "$ENT_PROJECT_REPAIR_CORE" "setup-12 PA-4.2 one-grant test" 1800)" && echo "$g"
+}
 ```
 
   T2; T3 on `folders "$FLD_PLATFORM_CORE"`, looping the check over the roles: `for r in $(jq -r '.privilegedAccess.gcpIamAccess.roleBindings[].role' "$PLATFORM_REPO_DIR/pam/entitlements/ent-project-repair-core.json"); do printf '%s ' "$r"; pam_binding "$BUILD_LOG_DIR/evidence/12/PA-4.2-policy.json" "user:$SA_1_ADMIN" "$r"; done`; T4 with the same loop; T5.
-- **VERIFY:** The `awk` gate prints no `STOP:` line. `describe` shows `7200s` and exactly the number of roles PA-4.0's `wc -l` printed (19 unless PA-4.0 moved or removed one). T3 prints a condition for each of them; T4 prints `NO-BINDING` the same number of times; T5 `approved`. A role refused at create after PA-4.0 passed is a contradiction between the role's published metadata and the PAM create: stop, do not edit anything in the sitting, record the exact error with the role's `PA-4.0-role-stages.tsv` row, and take it back to PA-4.0's decision table with the second human. The pull request that follows re-runs PA-2.1, PA-2.2, PA-4.0 and then this step.
+- **VERIFY:** The gate printed `GATE OK: PA-4.0 DONE` and no `STOP:` line; on `STOP:` nothing was created. `describe` shows `7200s` and exactly the number of roles PA-4.0's `wc -l` printed (19 unless PA-4.0 moved or removed one). T3 prints a condition for each of them; T4 prints `NO-BINDING` the same number of times; T5 `approved`. A role refused at create after PA-4.0 passed is a contradiction between the role's published metadata and the PAM create: stop, do not edit anything in the sitting, record the exact error with the role's `PA-4.0-role-stages.tsv` row, and take it back to PA-4.0's decision table with the second human. The pull request that follows re-runs PA-2.1, PA-2.2, PA-4.0 and then this step.
 - **ROLLBACK:** `pam_revoke "$g"`; delete the entitlement only before PA-9.2.
 - **EVIDENCE:** `PA-4.2-grant.json`. `evidence_add PA-4.2 ent-project-repair-core E-08 4.1.3 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-4.2-grant.json"`. TISAX 4.2.1.
 
@@ -914,14 +921,17 @@ g1="$(pam_request "$ENT_FACTORY_SINGLETON_CTL_PROD" "setup-12 PA-4.6 one-grant t
 checkpoint PA-4.7 START
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" PPL-SR SD-42
 need SECURITY_REVIEWER_EMAIL SCC_TIER
-test "$SCC_TIER" = "PREMIUM/eu" || echo "STOP: SCC tier is not Premium"
-gcloud alpha pam entitlements create ent-factory-singleton-psa-prod --folder="$FLD_AGENTS_P_SA_PROD" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-factory-singleton-psa-prod.json" --billing-project="$CICD_PROJECT"
-penv_set ENT_FACTORY_SINGLETON_PSA_PROD "$(gcloud pam entitlements describe ent-factory-singleton-psa-prod --folder="$FLD_AGENTS_P_SA_PROD" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"
-g="$(pam_request "$ENT_FACTORY_SINGLETON_PSA_PROD" "setup-12 PA-4.7 one-grant test")"; echo "$g"
+gate_scc() { test "$SCC_TIER" = "PREMIUM/eu"; }
+gate_scc && echo "GATE OK: SCC_TIER PREMIUM/eu" || echo "STOP: SCC tier is not Premium; nothing below runs"
+gate_scc && {
+gcloud alpha pam entitlements create ent-factory-singleton-psa-prod --folder="$FLD_AGENTS_P_SA_PROD" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-factory-singleton-psa-prod.json" --billing-project="$CICD_PROJECT" &&
+penv_set ENT_FACTORY_SINGLETON_PSA_PROD "$(gcloud pam entitlements describe ent-factory-singleton-psa-prod --folder="$FLD_AGENTS_P_SA_PROD" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')" &&
+g="$(pam_request "$ENT_FACTORY_SINGLETON_PSA_PROD" "setup-12 PA-4.7 one-grant test")" && echo "$g"
+}
 ```
 
   The second human approves first; then `pam_state "$g"` must still print `APPROVAL_AWAITED`; then the security reviewer approves; then T3, T4, T5.
-- **VERIFY:** `gcloud pam entitlements describe "$ENT_FACTORY_SINGLETON_PSA_PROD" --billing-project="$CICD_PROJECT" --format="value(approvalWorkflow.manualApprovals.steps[0].approvalsNeeded)"` prints `2`. After one approval the grant is `APPROVAL_AWAITED`; after the second it becomes `ACTIVE`; T5 shows two `approved` events. If the create is refused or the read-back prints `1`, stop: the two-person rule on this folder cannot be expressed by PAM on the day. Record the error and take it to the owner and the security reviewer as an amendment to SD-42 (for example two sequential steps, which the how-to also shows); do not create a one-approver variant.
+- **VERIFY:** The gate printed `GATE OK: SCC_TIER PREMIUM/eu`; on `STOP:` nothing was created. `gcloud pam entitlements describe "$ENT_FACTORY_SINGLETON_PSA_PROD" --billing-project="$CICD_PROJECT" --format="value(approvalWorkflow.manualApprovals.steps[0].approvalsNeeded)"` prints `2`. After one approval the grant is `APPROVAL_AWAITED`; after the second it becomes `ACTIVE`; T5 shows two `approved` events. If the create is refused or the read-back prints `1`, stop: the two-person rule on this folder cannot be expressed by PAM on the day. Record the error and take it to the owner and the security reviewer as an amendment to SD-42 (for example two sequential steps, which the how-to also shows); do not create a one-approver variant.
 - **ROLLBACK:** `pam_revoke "$g"`; delete the entitlement.
 - **EVIDENCE:** describe, `PA-4.7-grant.json`. `evidence_add PA-4.7 ent-factory-singleton-psa-prod E-08 4.2.1 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-4.7-grant.json"`. Closes S011's production half.
 
@@ -1319,7 +1329,9 @@ SWEEP_GRANT_MEMBER="user:$SA_1_ADMIN" SWEEP_GRANT_ROLE="roles/resourcemanager.or
 gcloud organizations get-iam-policy "$ORG_ID" --format=json > "$BUILD_LOG_DIR/evidence/12/PA-9.3-after.json"
 jq -r --arg m "user:$SA_1_ADMIN" '.bindings[] | select(.members|index($m)) | "\(.role) \(.condition.title // "no-condition")"' "$BUILD_LOG_DIR/evidence/12/PA-9.3-after.json"
 pam_revoke "$g"; pam_record "$g" "$BUILD_LOG_DIR/evidence/12/PA-9.3-grant.json"
-python3 - "$ROSTER_FILE" "$SA_1_ADMIN" <<'PY'
+git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
+git -C "$PLATFORM_REPO_DIR" checkout -b setup-12-exception-withdrawn
+python3 - "$PLATFORM_REPO_DIR/$ROSTER_FILE" "$SA_1_ADMIN" <<'PY'
 import json, sys
 p = sys.argv[1]; d = json.load(open(p))
 for a in d["accounts"]:
@@ -1327,7 +1339,6 @@ for a in d["accounts"]:
         a["gcp_org_roles"] = []
 json.dump(d, open(p, "w"), indent=2); open(p, "a").write("\n"); print("roster: exception rows removed for", sys.argv[2])
 PY
-git -C "$PLATFORM_REPO_DIR" checkout -b setup-12-exception-withdrawn
 git -C "$PLATFORM_REPO_DIR" add "$ROSTER_FILE"
 git -C "$PLATFORM_REPO_DIR" commit -m "setup 12 PA-9.3: SD-01 organisation exception withdrawn; roster updated"
 git -C "$PLATFORM_REPO_DIR" push -u origin setup-12-exception-withdrawn
@@ -1345,8 +1356,8 @@ checkpoint PA-9.3 DONE "$SA_2_ADMIN" "build-log:evidence/12/PA-9.3-sweep.txt" "o
   0. The gate printed `GATE OK: PA-9.2 DONE`. A `STOP:` line means no binding was removed and the step did not start.
   1. The sweep's last line is `SWEEP CLEAN`. What that sentence is now worth, exactly: `role-columns.txt` carries every entitlement and template role **plus** `roles/owner`, `roles/editor`, `roles/resourcemanager.folderCreator`, `roles/privilegedaccessmanager.admin` and `roles/iam.serviceAccountTokenCreator`, and `sweep.py` checks every one of them at every scope — so `SWEEP CLEAN` means no role from any Role column, and no basic role, Folder Creator or PAM Admin, is bound — conditioned or not — to any `user:`, `group:` or `domain:` member on the organisation, the 22 folders, the five core projects or `GEMINI_PROJECT`. The exceptions are those written down and no others: `group:gcp-organization-admins@…` at the organisation (break-glass, 04 §7.1, each of its bindings printed as `ALLOWED-BREAKGLASS`), the two `ALLOWED` PAM Admin rows of `role-allow.tsv`, this sweep's own PAM grant (`SWEEP_GRANT_MEMBER`/`SWEEP_GRANT_ROLE`), and `OWNER-TOLERATED` lines on `GEMINI_PROJECT` only (19's removal). Read those lines before accepting `SWEEP CLEAN`, with the second human: exactly two `ALLOWED` lines, both PAM Admin at the organisation. A third `ALLOWED` line means someone widened `role-allow.tsv`, and that is a standing privilege granted by a file edit — stop, and take it to the second human as a catalogue change. The `ALLOWED-BREAKGLASS` lines must match the roles 06 OB-7.1 gave `gcp-organization-admins@` and no others.
   2. The `jq` line prints only `roles/resourcemanager.organizationAdmin` with a PAM condition (this grant). After `pam_revoke`, re-reading is impossible without another grant, which is the proof that nothing standing remains; the `PA-9.3-after.json` taken during the grant shows no `bootstrap-exception-sd-01` title anywhere.
-  3. `PA-9.3-after.json` shows `roles/privilegedaccessmanager.admin` held by `group:platform-owners@…` and `group:gcp-organization-admins@…` only, and the PAM service agent's role.
-  4. The roster pull request is merged with the second human's approval, and `jq -r --arg e "$SA_1_ADMIN" '.accounts[] | select(.email==$e) | .gcp_org_roles | length' "$ROSTER_FILE"` prints `0`.
+  3. `PA-9.3-after.json` shows `roles/privilegedaccessmanager.admin` held by `group:platform-owners@…` and `group:gcp-organization-admins@…` only, and the PAM service agent's role as recorded in PA-1.2 (`serviceAgent` or `organizationServiceAgent`).
+  4. The roster pull request is merged with the second human's approval, and `jq -r --arg e "$SA_1_ADMIN" '.accounts[] | select(.email==$e) | .gcp_org_roles | length' "$PLATFORM_REPO_DIR/$ROSTER_FILE"` prints `0` (on an updated `main`).
   5. A negative: as `sa-1-admin@` with no active grant, `gcloud resource-manager folders create --display-name=pa-negative-test --folder="$FLD_AGENTS_R_NONPROD"` is refused with a permission error (nothing is created).
 - **ROLLBACK:** **IRREVERSIBLE** for the platform owner alone. If a needed right turns out to have no entitlement, the path is: add the entitlement to `catalogue.py` by a reviewed pull request and create it under `ent-pam-catalogue-org` or `ent-folder-admin` approved by the second human. Break-glass is opened only if PAM itself fails (04 §7.1), with its custody record.
 - **EVIDENCE:** before and after policies, the sweep, the grant record, the negative test output, the roster merge, the closure line. `evidence_add PA-9.3 exception-withdrawn E-05 4.2.1 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-9.3-sweep.txt"`; TISAX 1.4.1 (exception closed), 4.2.1 (least privilege, access review). EU AI Act E-05 (the platform's access architecture in the technical documentation). SD-12 item 7: Eve-H counts as live only after this step (28 reads this checkpoint).

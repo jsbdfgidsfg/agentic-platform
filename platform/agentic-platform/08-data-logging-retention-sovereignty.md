@@ -2,7 +2,11 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: §3.2's identity and evidence filters take setup 14's `identity.txt` (OAuth-token
+  entries are `oauth2.googleapis.com`); §3.3's view filters use `SOURCE()` and `LOG_ID()` only,
+  with actor filtering in the BigQuery views, and the `logging.views.access` holders are
+  corrected; §6.1 adds `roles/dlp.admin` for the discovery configuration.
 - Maturity: detailed design, written 2026-09-13 under [01-hld.md](01-hld.md). Nothing is built.
   This page details the HLD's §3.1 `LOGGING_PROJECT`, §7.1 "Central logging" and "Data Access
   audit config" rows, §7.5 "Retention", §8.2 "Sovereignty", the data-at-rest lines of §8.3, the
@@ -179,10 +183,10 @@ flowchart LR
     S1 --> LP["LOGGING_PROJECT Log Router<br/>(project destination: its own sinks reroute)"]
     S2 --> LP
     LP --> F1["to-evidence-bucket<br/>→ platform-evidence-logs (locked, CMEK, europe-west1)"]
-    LP --> F2["to-identity-bucket<br/>→ platform-identity-logs (login · token · SAML; own retention)"]
+    LP --> F2["to-identity-bucket<br/>→ platform-identity-logs (login · oauth2 · SAML; own retention)"]
     LP --> F3["to-bigquery<br/>→ platform_logs (EU, partitioned, 400 d)"]
     LP --> F4["to-triggers-<agent><br/>→ Pub/Sub topic in the agent project<br/>(T2 trigger family; robot actor excluded)"]
-    F1 --> V["log views per agent · one view for the SIEM reader · one view for login/token/SAML"]
+    F1 --> V["log views per agent · one view for the SIEM reader · one view for login/oauth2/SAML"]
     F1 -. "direct ingestion" .-> SIEM["Google SecOps (EU) or the organisation's SIEM"]
     F3 --> AV["platform_logs_views<br/>authorised views per agent (replace walle_workspace_logs)"]
 ```
@@ -193,9 +197,9 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | `S-org` | organisation; **no** `--include-children` (organisation-level entries only, so no other folder of the organisation is swept into the platform's store) | `logName:"organizations/ORG_ID/logs/"` — all six Workspace streams (Admin, Enterprise Groups, Login, OAuth Token, SAML, Access Transparency) and the organisation's own Cloud Audit Logs | `logging.googleapis.com/projects/LOGGING_PROJECT` | `roles/logging.logWriter` on `LOGGING_PROJECT` for the sink's writer identity | the daily drift job compares the sink's `filter`, `destination` and `disabled` against Terraform; the SIEM rule on any `logging.sinks.*` change (SG-02, [07 §6.3](07-monitoring-detection-incident-response.md#63-the-super-admin-set-gcp-organisation-side--the-reach-into-the-organisation)) | Workspace rows stop arriving → the absence alarm on `eve_workspace_logs` (60 min in business hours, H-1 of [07 §7](07-monitoring-detection-incident-response.md#7-pipeline-heartbeats-and-the-log_pipeline_silent-halt)) fires from Eve's **independent** sink, which is the reason Eve's sink is kept rather than merged; halt reason `log_pipeline_silent` |
 | `S-folder` | `fld-agentic-platform`; `--include-children`; **`--intercept-children`** | `LOG_ID("cloudaudit.googleapis.com/activity") OR LOG_ID("cloudaudit.googleapis.com/data_access") OR LOG_ID("cloudaudit.googleapis.com/system_event") OR LOG_ID("cloudaudit.googleapis.com/policy") OR LOG_ID("cloudaudit.googleapis.com/access_transparency")` — audit families only, so content logs, sanitize logs, telemetry and `_Default` operational logs stay in the agent project's own buckets and are **not** intercepted | `logging.googleapis.com/projects/LOGGING_PROJECT` | as above | drift job; a **Data Access canary** (§4.3) proves the path end to end daily | an agent project stops appearing → the canary and the per-agent absence policy of the monitoring baseline (HLD §7.2) |
-| `to-evidence-bucket` | `LOGGING_PROJECT`, project sink | the `S-folder` families **plus** `S-org` entries **minus** `LOG_ID("cloudaudit.googleapis.com/data_access") AND protoPayload.serviceName=("login.googleapis.com" OR "token.googleapis.com" OR "saml.googleapis.com")` | log bucket `platform-evidence-logs` | the project's own bucket: `logging.bucketWriter` by the Log Router | drift job; bucket `locked=true` and `retentionDays` read daily (§5.2) | the bucket refuses writes only if its CMEK key is disabled (§9) → severity 1, the key state alert |
-| `to-identity-bucket` | project sink | exactly the three services excluded above (Login, OAuth-token Data Access, SAML) | log bucket `platform-identity-logs` | as above | as above | as above |
-| `to-bigquery` | project sink, `--use-partitioned-tables` | the `S-folder` families plus `S-org` entries, **excluding** the three identity services (BigQuery holds no copy of every employee's sign-ins; the SIEM and the identity bucket do) | BigQuery dataset `platform_logs` in `EU` — created first, `default_partition_expiration = 400 days` set **before** the sink writes (Eve's runbook proved the order matters; [../eve/07-build-runbook.md](../eve/07-build-runbook.md) Phase 7) | `roles/bigquery.dataEditor` **dataset-level** on `platform_logs` for the sink's writer identity, nothing at project level | drift job; a daily row-count reconciliation between `platform_logs` and the evidence bucket's Observability Analytics view | rows missing in one copy → finding; the bucket copy is the anchor |
+| `to-evidence-bucket` | `LOGGING_PROJECT`, project sink | the `S-folder` families **plus** `S-org` entries **minus** exactly the identity filter below (setup 14's `evidence.txt`: `AND NOT (` the identity filter `)`) — Login and SAML entries carry `login.googleapis.com` and OAuth-token entries `oauth2.googleapis.com` (Workspace audit-logging page, updated 2026-09-30, read 2026-10-01) | log bucket `platform-evidence-logs` | the project's own bucket: `logging.bucketWriter` by the Log Router | drift job; bucket `locked=true` and `retentionDays` read daily (§5.2) | the bucket refuses writes only if its CMEK key is disabled (§9) → severity 1, the key state alert |
+| `to-identity-bucket` | project sink | `logName:"organizations/ORG_ID/logs/" AND (protoPayload.serviceName="login.googleapis.com" OR (protoPayload.serviceName="oauth2.googleapis.com" AND LOG_ID("cloudaudit.googleapis.com/data_access")))` — Login, SAML and OAuth-token Data Access, as [setup 14](setup/14-central-logging-and-billing-export.md)'s `identity.txt` | log bucket `platform-identity-logs` | as above | as above | as above |
+| `to-bigquery` | project sink, `--use-partitioned-tables` | the `S-folder` families plus `S-org` entries, **excluding** the identity filter above (BigQuery holds no copy of every employee's sign-ins; the SIEM and the identity bucket do) | BigQuery dataset `platform_logs` in `EU` — created first, `default_partition_expiration = 400 days` set **before** the sink writes (Eve's runbook proved the order matters; [../eve/07-build-runbook.md](../eve/07-build-runbook.md) Phase 7) | `roles/bigquery.dataEditor` **dataset-level** on `platform_logs` for the sink's writer identity, nothing at project level | drift job; a daily row-count reconciliation between `platform_logs` and the evidence bucket's Observability Analytics view | rows missing in one copy → finding; the bucket copy is the anchor |
 | `to-triggers-<agent>` | project sink, one per Tier W+ agent whose manifest declares a T2 trigger family | `protoPayload.serviceName="admin.googleapis.com" AND NOT protoPayload.authenticationInfo.principalEmail="<robot>@<domain>" AND (<the family's event filter from the manifest>)` | Pub/Sub topic `<agent>-triggers` in the agent project | `roles/pubsub.publisher` on that topic for the writer identity — made by the factory's `agent-project` module, which replaces topology row 23 | drift job; the agent's own absence policy on the trigger topic | the trigger stream dies → the agent's "missing two consecutive windows" alert ([../wall-e/ARCHITECTURE.md](../wall-e/ARCHITECTURE.md) §11 weakness 9); no evidence is lost, only a trigger |
 
 **The actor exclusion is on the trigger sinks only.** The same Workspace admin-activity entries
@@ -227,8 +231,8 @@ views" line):
 
 Cloud Logging has no bucket-level IAM; access is by **log view**, at most 30 per bucket, with
 `roles/logging.viewAccessor` bound on the view (verified, §12). Any principal holding
-`logging.views.access` at project level (`roles/logging.viewer`, `logging.privateLogViewer`,
-`logging.admin`, basic `owner`/`editor`/`viewer`) reads every view regardless — which is why
+`logging.views.access` at project level (`roles/logging.admin`, `roles/logging.privateLogViewer`,
+`roles/logging.viewAccessor` — Logging access-control page, read 2026-10-01) reads every view regardless — which is why
 `LOGGING_PROJECT` carries **no standing project-level logging reader**: the factory removes
 `roles/owner` after its run (HLD §3.2), humans get project-level roles back only through PAM
 (HLD §4.4), and the drift job lists every project-level binding in `LOGGING_PROJECT` daily and
@@ -236,12 +240,12 @@ expects exactly the sink writer identities and the Terraform CI identity.
 
 | View (bucket) | Filter | Readers | Grade |
 |---|---|---|---|
-| `agent-<agent>` (`platform-evidence-logs`) | `source("projects/<agent project>")` OR `protoPayload.authenticationInfo.principalEmail` in the agent's principal set (engine identity, action-service SA, robot account) | `<agent>-owners@`, `<agent>-operators@` | enforcement (view filter), 30-view cap → **a bucket per tier folder when an agents folder passes ~25 agents** (`platform-evidence-logs-w`, `-p`, …), which the factory handles by tier variable |
-| `verifier-<agent>` | as above plus the `S-org` Workspace entries where the actor or a target is the agent's robot | the agent's verifier identities (Eve's for Wall-E) | enforcement |
+| `agent-<agent>` (`platform-evidence-logs`) | `SOURCE("projects/<agent project>")` — a view filter takes only `SOURCE()`, `LOG_ID()`, `resource.type`, resource labels and labels (setup 14), so actor filtering on `protoPayload.authenticationInfo.principalEmail` (engine identity, action-service SA, robot account) lives in the BigQuery views of [setup 17](setup/17-factory-module-equivalents-and-tier-r-gate.md) | `<agent>-owners@`, `<agent>-operators@` | enforcement (view filter), 30-view cap → **a bucket per tier folder when an agents folder passes ~25 agents** (`platform-evidence-logs-w`, `-p`, …), which the factory handles by tier variable |
+| `verifier-<agent>` | by `SOURCE()` as above; the `S-org` Workspace entries where the actor or a target is the agent's robot are selected in the BigQuery views (17), not in the view filter | the agent's verifier identities (Eve's for Wall-E) | enforcement |
 | `siem` | everything | the SIEM's ingestion identity (P10) | enforcement |
 | `security` | everything | `platform-security@` (the security reviewer, IT security) | enforcement |
-| `ge-requests` (`platform-evidence-logs`) | `protoPayload.serviceName="discoveryengine.googleapis.com"` AND `methodName` in (`StreamAssist`, `AnswerQuery`, `Search`, `GetAgentCard`) — the human's requests, the source of the `sub` in the correlation contract; the view [03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) §13 names | the Gemini Enterprise admin, the security reviewer, the SIEM | enforcement |
-| `identity` (`platform-identity-logs`) | everything in that bucket | the security reviewer, `eve-verifier@` (reconciliation of `login`/`token` events for the robots), the SIEM — **no agent owner, no operator** | enforcement |
+| `ge-requests` (`platform-evidence-logs`) | `SOURCE("projects/GEMINI_PROJECT") AND LOG_ID("cloudaudit.googleapis.com/data_access")` ([setup 14](setup/14-central-logging-and-billing-export.md) CL-3.1); `StreamAssist`, `AnswerQuery`, `Search`, `GetAgentCard` are selected in the query — the human's requests, the source of the `sub` in the correlation contract; the view [03-gemini-enterprise-environment.md](03-gemini-enterprise-environment.md) §13 names | the Gemini Enterprise admin, the security reviewer, the SIEM | enforcement |
+| `identity` (`platform-identity-logs`) | everything in that bucket | the security reviewer, `eve-verifier@` (reconciliation of `login`/`oauth2` events for the robots), the SIEM — **no agent owner, no operator** | enforcement |
 | `_AllLogs` | Google's default view | nobody bound | — |
 
 Log scope: one log scope and one observability scope across the folder and the organisation's
@@ -456,7 +460,7 @@ profile Cloud Logging buckets or Firestore (verified, §12). Two scan configurat
 | Item | Decision |
 |---|---|
 | Configurations | one BigQuery discovery config and one Cloud Storage discovery config at `fld-agentic-platform`, location `europe-west1` (`Assumption:` on the location list; "all scan configurations are stored in the same location" — verified) |
-| Service agent container | `LOGGING_PROJECT` — the project already trusted to hold every log; the discovery service agent's read grants (made by the platform owner through PAM, `roles/iam.securityAdmin` or organisation admin is what Google requires to create the config — verified) are the one identity outside Eve's carve-out list that reads Eve's datasets, so it is **added to Eve's drift job's expected foreign-principal set** ([../project-topology.md](../project-topology.md) §3 row 44) |
+| Service agent container | `LOGGING_PROJECT` — the project already trusted to hold every log; the discovery configuration and the service agent's read grants (made by the platform owner through PAM: `roles/dlp.admin` to create the scan configuration, plus Organization Administrator or `roles/iam.securityAdmin` to grant the service agent discovery access — data-profiles page, read 2026-10-01) are the one identity outside Eve's carve-out list that reads Eve's datasets, so it is **added to Eve's drift job's expected foreign-principal set** ([../project-topology.md](../project-topology.md) §3 row 44) |
 | Filters | include every dataset and bucket in the folder **except** class `secret` stores (`walle_metrics_private`; the `keys/` prefix of Eve's bucket; Terraform state) and `_Required`-fed buckets; the exclusion list is generated from the register's `data_class` labels, so a new `secret` store is excluded by construction |
 | Publish | to SCC (organisation-level activation, HLD §7.1); profiles to `LOGGING_PROJECT.sensitive_data_protection_discovery` (Google's default dataset name); Pub/Sub on profile change → a Cloud Run job `platform-class-reconcile@CORE_PROJECT` |
 | The control that reads it: **declared versus discovered** | daily, the reconcile job joins each profile's sensitivity and infoTypes to the register row's `data_class` of the store's owner project. A store declared `ops` whose profile shows `EMAIL_ADDRESS` or `PERSON_NAME` at HIGH sensitivity is a finding against the register, not against SDP; a `content` store whose profile is empty is a finding that the de-identify job (§6.3) or the sink is broken. Findings are `eve`-shaped rows in `platform_logs.classification_findings` and page at severity 3 (severity 2 when the store is class `evidence` and the infoType is a credential pattern) |

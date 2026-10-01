@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
 - Last executed: never
 - Stage: review §2 stages 8 and 9 ([../13-setup-procedure-review.md](../13-setup-procedure-review.md)). Runs after [07](07-billing-account.md) and before [10](10-core-projects-and-ci-identities.md). Nothing in the platform exists before this file, and no project may exist under `fld-agentic-platform` until FS-2.1 has a checkpoint line.
 - Step prefix: FS. Steps: 33. BLOCKED steps: none (no code is needed). One step, FS-7.8, is a re-run point that runs in [14](14-central-logging-and-billing-export.md) once the billing export exists.
@@ -10,6 +10,7 @@
 - Decisions applied: SD-01 (bootstrap deviation from the factory), SD-15 (SCC payer and activation before any location policy), SD-17 (observability location, no Cloud Logging folder default), SD-38 (evidence home during the build); P11, P37, P38, P40, P94 of [../12-open-decisions.md](../12-open-decisions.md).
 - Closes: S001 for the folder tree and SCC activation; S003 for SCC Premium activation; X-RQB-03 for the folder-level half; X-RQB-04 for activation order, payer and residency. The table in "Findings this file answers" gives the parts other files close.
 - Commands verified against Google's documentation on 2026-09-15. The pages are cited at each step. Anything not confirmed on a Google page is marked `Assumption:`.
+- 2026-10-01: observability settings moved to the GA `gcloud observability settings` track and the beta-component precondition dropped; the folder's time-bound logging role narrowed to `roles/logging.configWriter` (the access-control page now lists `logging.settings.*` under it); folder undelete uses the GA command and FS-1.1's VERIFY reads `lifecycleState` or `state`; FS-5.1 creates `agp-env` only when FS-0.2's record lists it; FS-7.2 gains the Standard-legacy and auto-activated Standard rows.
 
 ## What this part builds
 
@@ -58,7 +59,7 @@ flowchart TD
 - [ ] [06](06-organisation-bootstrap-and-roster.md) is done: `SA_1_ADMIN` holds Organization Administrator, Folder Creator, Project Creator and PAM Admin under the dated exception, and today is before `BOOTSTRAP_EXCEPTION_EXPIRY`. `GRP_PLATFORM_SECURITY` and `GRP_PLATFORM_OWNERS` exist.
 - [ ] [07](07-billing-account.md) is done. This file creates no project, but 10 follows it directly.
 - [ ] For FS-7 only: the IT security person who signed P11 is available for a 1 to 2 hour sitting and holds, or can witness a time-bound grant of, Security Center Admin and Organization Administrator at the organisation. **Under path A that person must hold Security Center Admin themselves, because they also run the FS-7.5 and FS-7.7 reads**; under path B the platform owner's `fs-bootstrap-sccadmin` grant of FS-7.3 must still be live when those reads run. `SA_1_ADMIN` holds no SCC role from 06. If `SCC_BILLING_MODEL=subscription`, the contract from [04](04-purchases-and-lead-times.md) is in hand. If `payg-org`, 03's record shows that finance signed and that cost-centre owners were notified. Google charges organisation-level pay-as-you-go usage "to the billing accounts associated with the projects in your organization" ([activate Premium](https://docs.cloud.google.com/security-command-center/docs/activate-scc-for-an-organization), checked 2026-09-15).
-- [ ] Workstation: gcloud with the `beta` component (FS-2.1 uses `gcloud beta observability`), `curl`, `python3`, `git`. Two browser profiles: `SA_1_ADMIN`, and the IT security person's own account for FS-7.
+- [ ] Workstation: gcloud (the observability settings commands are GA), `curl`, `python3`, `git`. Two browser profiles: `SA_1_ADMIN`, and the IT security person's own account for FS-7.
 
 ## People
 
@@ -138,7 +139,7 @@ test "$REGION" = "europe-west1" && echo "region: ok" || echo "FAIL: REGION is no
 ```bash
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" SD-01 SD-15 SD-17 SD-38 P11 NAMES
 rec=$(awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="NAMES") {r=$4; gsub(/ /,"",r); print r}}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | head -n 1)
-grep -o "agp-[a-z-]*" "$PLATFORM_REPO_DIR/decisions/$rec" | sort -u
+grep -o "agp-[a-z-]*" "$PLATFORM_REPO_DIR/decisions/$rec" | sort -u | tee "$BUILD_LOG_DIR/records/$(date +%F)-FS-0.2-names-tag-keys-v1.txt"
 ```
 
 - **VERIFY:** Six `SIGNED` lines. The names register lists `agp-tier` and `agp-tisax-scope`. If it does not list `agp-env`, FS-5.1 creates only the two signed keys, and FS-5.4 is recorded `checkpoint FS-5.4 PENDING` with a line in the re-run index, until a superseding NAMES record adds `agp-env` (a tag key's short name cannot be changed, so it is created only once signed). Folder display names are not in the names register: they come from [02 §2.1](../02-landing-zone-and-tiers.md), which NAMES and SD-01 adopt, and a folder can be renamed. Any `UNSIGNED`, `MISMATCH` or `INVALID` line stops the file. SD-15 and P11 gate FS-7, SD-17 gates FS-2, and NAMES gates FS-5.1.
@@ -155,13 +156,13 @@ grep -o "agp-[a-z-]*" "$PLATFORM_REPO_DIR/decisions/$rec" | sort -u
 gcloud resource-manager folders list --organization="$ORG_ID" --format="table(displayName,name.basename())"
 gcloud resource-manager tags keys list --parent="organizations/$ORG_ID" --format="table(shortName,name)"
 gcloud logging settings describe --organization="$ORG_ID"
-gcloud beta observability settings describe --organization="$ORG_ID" --location=global
+gcloud observability settings describe --organization="$ORG_ID" --location=global
 gcloud org-policies describe gcp.resourceLocations --organization="$ORG_ID" --effective
 gcloud org-policies describe iam.allowedPolicyMemberDomains --organization="$ORG_ID" --effective
 gcloud org-policies describe essentialcontacts.managed.allowedContactDomains --organization="$ORG_ID" --effective
 ```
 
-- **VERIFY:** Record each output in the build log. A permission error on one of the organisation-level describes (logging or observability settings) is **expected**, recorded, and not a stop: `gcloud logging settings describe --organization=` needs `logging.settings.get`, which sits in `roles/logging.admin` and not in Organization Administrator or `roles/logging.viewer` ([access control with IAM](https://docs.cloud.google.com/logging/docs/access-control), [default resource settings](https://docs.cloud.google.com/logging/docs/default-settings), checked 2026-09-15), and no step grants it at the organisation. This file never sets an organisation-level logging value, so the read is informational: ask the organisation's owner of that setting for the value and its date, record the answer with its date, and treat the folder-level read of FS-2.2 (under FS-1.2's time-bound `roles/logging.admin` on `fld-agentic-platform`) as the binding one. Then check these conditions:
+- **VERIFY:** Record each output in the build log. A permission error on one of the organisation-level describes (logging or observability settings) is **expected**, recorded, and not a stop: `gcloud logging settings describe --organization=` needs `logging.settings.get`, which sits in `roles/logging.admin` and `roles/logging.configWriter` and not in Organization Administrator or `roles/logging.viewer` ([access control with IAM](https://docs.cloud.google.com/logging/docs/access-control), updated 2026-09-30, read 2026-10-01; [default resource settings](https://docs.cloud.google.com/logging/docs/default-settings), checked 2026-09-15), and no step grants it at the organisation. This file never sets an organisation-level logging value, so the read is informational: ask the organisation's owner of that setting for the value and its date, record the answer with its date, and treat the folder-level read of FS-2.2 (under FS-1.2's time-bound `roles/logging.configWriter` on `fld-agentic-platform`) as the binding one. Then check these conditions:
 
 | Output | Expected | If not |
 |---|---|---|
@@ -169,7 +170,7 @@ gcloud org-policies describe essentialcontacts.managed.allowedContactDomains --o
 | Tag keys | No `agp-tier`, `agp-env` or `agp-tisax-scope` | If one exists, compare its values with the expected table. Reuse it only if identical, recorded as a deviation. Otherwise stop. |
 | Logging settings | No `storageLocation`, or `global` | Stop. An organisation default outside `global` already blinds Sensitive Actions for new projects ([Sensitive Actions overview](https://docs.cloud.google.com/security-command-center/docs/concepts-sensitive-actions-overview), updated 2026-09-14). Raise a decision with the organisation's Cloud Logging owner. Setting `global` explicitly on `fld-agentic-platform` is one option for that decision. It is not taken here. |
 | Observability settings | No `defaultStorageLocation`, or one in the EU | A non-EU organisation default is still overridden at the folder by FS-2.1. Record it. |
-| `gcp.resourceLocations` | No policy at the organisation | If one exists, record it: Google warns that a location policy deployed after an automatic Standard activation "might" deactivate SCC ([data residency](https://docs.cloud.google.com/security-command-center/docs/data-residency-support), updated 2026-09-14). Tell IT security before FS-7. |
+| `gcp.resourceLocations` | No policy at the organisation | If one exists, record it: Google warns that a location policy deployed after an automatic Standard activation "might" deactivate SCC ([data residency](https://docs.cloud.google.com/security-command-center/docs/data-residency-support), updated 2026-09-14; [migrate from Standard-legacy](https://docs.cloud.google.com/security-command-center/docs/migrate-standard-legacy), read 2026-10-01: deactivation within seven days after the policy is deployed). SCC tiers are now Standard-legacy, Standard, Premium and Enterprise (deprecated) ([service tiers](https://docs.cloud.google.com/security-command-center/docs/service-tiers), read 2026-10-01). Tell IT security before FS-7. |
 | `iam.allowedPolicyMemberDomains` | Record the allowed customer ids | SCC's activation grants roles to Google service agents. Under domain restriction, "service accounts must be in allowed domains" ([activate Premium](https://docs.cloud.google.com/security-command-center/docs/activate-premium-tier)). Tell IT security before FS-7. |
 | `essentialcontacts.managed.allowedContactDomains` | Absent, or includes `DOMAIN` | Stop FS-6 until the organisation's owner of that policy confirms. |
 
@@ -241,10 +242,10 @@ mkfld() {
 mkfld FLD_AGENTIC_PLATFORM fld-agentic-platform organization "$ORG_ID"
 ```
 
-- **VERIFY:** One `FLD_AGENTIC_PLATFORM=<digits>` line is printed, and the next command prints `fld-agentic-platform organizations/<ORG_ID> ACTIVE`. `Assumption:` the v3 field is `state`; if it prints empty, use `--format=yaml` and read the `state` or `lifecycleState` field.
+- **VERIFY:** One `FLD_AGENTIC_PLATFORM=<digits>` line is printed, and the next command prints `fld-agentic-platform organizations/<ORG_ID> ACTIVE`. The describe may return the field as `lifecycleState` or `state`, so both are read; one of them prints `ACTIVE`.
 
 ```bash
-gcloud resource-manager folders describe "$FLD_AGENTIC_PLATFORM" --format="value(displayName,parent,state)"
+gcloud resource-manager folders describe "$FLD_AGENTIC_PLATFORM" --format="value(displayName,parent,lifecycleState,state)"
 ```
 
 - **ROLLBACK:** A folder can be deleted only when empty. It is soft-deleted (`DELETE_REQUESTED`) for about 30 days and can be restored in that time. Deletion needs Folder Admin or Folder Editor, which Folder Creator does not include ([manage folders](https://docs.cloud.google.com/resource-manager/docs/manage-folders)). Grant Folder Admin time-bound as in FS-0.5, then:
@@ -253,7 +254,7 @@ gcloud resource-manager folders describe "$FLD_AGENTIC_PLATFORM" --format="value
 gcloud resource-manager folders delete "$FLD_AGENTIC_PLATFORM"
 ```
 
-  Remove the variable with `penv_set --force FLD_AGENTIC_PLATFORM ""` and add a build-log line. `Assumption:` a soft-deleted folder may still reserve its display name among siblings, so a re-create may need `gcloud alpha resource-manager folders undelete` instead.
+  Remove the variable with `penv_set --force FLD_AGENTIC_PLATFORM ""` and add a build-log line. `Assumption:` a soft-deleted folder may still reserve its display name among siblings, so a re-create may need `gcloud resource-manager folders undelete "$FLD_AGENTIC_PLATFORM"` instead (GA; [folders undelete](https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/folders/undelete), read 2026-10-01).
 - **EVIDENCE:** The describe line in the build log under `FS-1.1`. Input to deviation row `BD-09-1` (kind MOD), written in FS-8.2. TISAX 1.3.1. EU AI Act E-05.
 
 ### FS-1.2 Time-bound grants on `fld-agentic-platform`
@@ -266,15 +267,15 @@ gcloud resource-manager folders delete "$FLD_AGENTIC_PLATFORM"
 curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -d '{"permissions":["observability.settings.get","observability.settings.update","logging.settings.get","essentialcontacts.contacts.create","essentialcontacts.contacts.list","resourcemanager.hierarchyNodes.createTagBinding"]}' "https://cloudresourcemanager.googleapis.com/v3/folders/${FLD_AGENTIC_PLATFORM}:testIamPermissions"
 gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="roles/observability.editor" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-obs,description=09 FS-1.2 SD-01 bootstrap"
 gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="roles/essentialcontacts.admin" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-contacts,description=09 FS-1.2 SD-01 bootstrap"
-gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="roles/logging.admin" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-logadmin,description=09 FS-1.2 SD-01 bootstrap describe only"
+gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTIC_PLATFORM" --member="user:$SA_1_ADMIN" --role="roles/logging.configWriter" --condition="expression=request.time < timestamp(\"$GRANT_UNTIL\"),title=fs-bootstrap-logconfig,description=09 FS-1.2 SD-01 bootstrap describe only"
 ```
 
   Skip any `add-iam-policy-binding` line whose permissions the probe already echoed. Observability Editor carries `observability.settings.update` ([observability bucket defaults](https://docs.cloud.google.com/stackdriver/docs/observability/set-defaults-for-observability-buckets)). Essential Contacts Admin manages contacts ([manage Essential Contacts](https://docs.cloud.google.com/resource-manager/docs/manage-essential-contacts)).
-  **Logs Viewer is not the right role here.** `roles/logging.viewer` covers buckets, views, sinks, exclusions and log entries, and carries no `logging.settings.*` permission; `logging.settings.get` and `logging.settings.update` are in `roles/logging.admin` ([access control with IAM](https://docs.cloud.google.com/logging/docs/access-control), checked 2026-09-15). [Default resource settings](https://docs.cloud.google.com/logging/docs/default-settings) requires "your IAM role on the organization or folder includes `logging.settings.get`" for the read that FS-2.2 runs. Logging Admin is granted here **for describe only**: no step in this file or any later file runs `gcloud logging settings update` on this folder or any folder under it (FS-2.2). `Assumption:` `roles/logging.configWriter` was considered as the narrower option, but Google's access-control page does not list `logging.settings.*` under it, so the confirmed role is used. FS-8.1 removes it. The same substitution applies to FS-0.3's organisation-level `gcloud logging settings describe`: that read needs `logging.settings.get` at the organisation, which `SA_1_ADMIN` does not hold, so FS-0.3's permission-error clause is the expected path there and the value is asked of the organisation's Cloud Logging owner.
+  **Logs Viewer is not the right role here.** `roles/logging.viewer` covers buckets, views, sinks, exclusions and log entries, and carries no `logging.settings.*` permission; `logging.settings.get` and `logging.settings.update` are in `roles/logging.admin` and in `roles/logging.configWriter` ([access control with IAM](https://docs.cloud.google.com/logging/docs/access-control), updated 2026-09-30, read 2026-10-01). [Default resource settings](https://docs.cloud.google.com/logging/docs/default-settings) requires "your IAM role on the organization or folder includes `logging.settings.get`" for the read that FS-2.2 runs. Logs Configuration Writer, the narrower of the two, is granted here **for describe only**: no step in this file or any later file runs `gcloud logging settings update` on this folder or any folder under it (FS-2.2). FS-8.1 removes it. The same substitution applies to FS-0.3's organisation-level `gcloud logging settings describe`: that read needs `logging.settings.get` at the organisation, which `SA_1_ADMIN` does not hold, so FS-0.3's permission-error clause is the expected path there and the value is asked of the organisation's Cloud Logging owner.
 - **VERIFY:** After propagation (`Assumption:` usually under 7 minutes), re-run the curl line. All six permissions are echoed. If Resource Manager answers `400 INVALID_ARGUMENT` naming a permission as not valid for a folder, drop that permission from the list, re-run, and record which one was dropped, exactly as FS-0.4 does at the organisation. `Assumption:` v3 `folders:testIamPermissions` validates the supplied permissions against the resource; the method's reference page states only that wildcards are rejected ([folders.testIamPermissions](https://docs.cloud.google.com/resource-manager/reference/rest/v3/folders/testIamPermissions)). Prove each dropped permission directly instead, and record the output under `FS-1.2`:
 
 ```bash
-gcloud beta observability settings describe --location=global --folder="$FLD_AGENTIC_PLATFORM"
+gcloud observability settings describe --location=global --folder="$FLD_AGENTIC_PLATFORM"
 gcloud essential-contacts list --folder="$FLD_AGENTIC_PLATFORM"
 gcloud logging settings describe --folder="$FLD_AGENTIC_PLATFORM"
 ```
@@ -291,14 +292,14 @@ gcloud logging settings describe --folder="$FLD_AGENTIC_PLATFORM"
 
 ```bash
 gcloud projects list --filter="parent.type=folder AND parent.id=$FLD_AGENTIC_PLATFORM" --format="value(projectId)"
-gcloud beta observability settings update --default-storage-location="$REGION" --update-mask=defaultStorageLocation --location=global --folder="$FLD_AGENTIC_PLATFORM"
+gcloud observability settings update --default-storage-location="$REGION" --update-mask=defaultStorageLocation --location=global --folder="$FLD_AGENTIC_PLATFORM"
 ```
 
   If the first line prints any project, stop: that project keeps its system-chosen location, and 03 must record it as a dated exception in 08 R9. If gcloud refuses the update with a message about a quota project or a disabled service on a project, stop and do not pass `--billing-project` with a project picked on the spot. `Assumption:` the gcloud shared project serves this call. Google says it is used "sometimes" ([set the quota project](https://docs.cloud.google.com/docs/quotas/set-quota-project)). Raise a decision in 03 naming an existing project outside `fld-agentic-platform` as quota project for bootstrap calls.
 - **VERIFY:** The next command prints `europe-west1`. `Assumption:` the output field is `defaultStorageLocation`, as the update mask names it; if the value prints empty, read the full YAML.
 
 ```bash
-gcloud beta observability settings describe --location=global --folder="$FLD_AGENTIC_PLATFORM" --format="value(defaultStorageLocation)"
+gcloud observability settings describe --location=global --folder="$FLD_AGENTIC_PLATFORM" --format="value(defaultStorageLocation)"
 ```
 
   The final proof comes in 10: the first core project's `_Trace` bucket describes in `europe-west1`.
@@ -307,12 +308,12 @@ gcloud beta observability settings describe --location=global --folder="$FLD_AGE
 
 ### FS-2.2 Leave the Cloud Logging folder default unset, and prove it
 
-- **WHO:** Platform owner, holding the time-bound `roles/logging.admin` on `fld-agentic-platform` from **FS-1.2** (Logs Viewer does not carry `logging.settings.get`).
+- **WHO:** Platform owner, holding the time-bound `roles/logging.configWriter` on `fld-agentic-platform` from **FS-1.2** (Logs Viewer does not carry `logging.settings.get`).
 - **WHERE:** The shell.
-- **PRECONDITION:** FS-1.2's `fs-bootstrap-logadmin` binding is present and its condition has not expired. Check before running, and re-grant as in FS-1.2 with a fresh `GRANT_UNTIL` if it has:
+- **PRECONDITION:** FS-1.2's `fs-bootstrap-logconfig` binding is present and its condition has not expired. Check before running, and re-grant as in FS-1.2 with a fresh `GRANT_UNTIL` if it has:
 
 ```bash
-gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN AND bindings.condition.title:fs-bootstrap-logadmin" --format="value(bindings.role,bindings.condition.expression)"
+gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN AND bindings.condition.title:fs-bootstrap-logconfig" --format="value(bindings.role,bindings.condition.expression)"
 ```
 
 - **ACTION:** **Do not run `gcloud logging settings update --folder=... --storage-location=...` on this folder or any folder under it, in this file or later.** That setting decides where new projects' `_Required` and `_Default` buckets go ([default resource settings](https://docs.cloud.google.com/logging/docs/default-settings), updated 2026-09-09). Google states that "if you have specified a storage location for the `_Required` logs bucket in a certain project, folder, or organization, logs from that project, folder, or organization cannot be scanned for sensitive actions" ([Sensitive Actions overview](https://docs.cloud.google.com/security-command-center/docs/concepts-sensitive-actions-overview), updated 2026-09-14). 07 §3 relies on Sensitive Actions. Regional `_Default` logs come from each project's own bucket and sink redirect in 10 and 17. Only a read is run:
@@ -497,16 +498,20 @@ git -C "$PLATFORM_REPO_DIR" push -u origin HEAD
 
 ```bash
 gcloud resource-manager tags keys create agp-tier --parent="organizations/$ORG_ID" --description="Platform tier of the folder (02 3.6, P38): c r w p p-sa x ctl imp core ge"
-gcloud resource-manager tags keys create agp-env --parent="organizations/$ORG_ID" --description="Environment of the folder (02 3.6, P38): prod nonprod"
+if cat "$BUILD_LOG_DIR"/records/*-FS-0.2-names-tag-keys-v1.txt | grep -qx agp-env; then
+  gcloud resource-manager tags keys create agp-env --parent="organizations/$ORG_ID" --description="Environment of the folder (02 3.6, P38): prod nonprod"
+fi
 gcloud resource-manager tags keys create agp-tisax-scope --parent="organizations/$ORG_ID" --description="TISAX scope (02 3.6, P38): in out"
 penv_set TAG_KEY_TIER "$(gcloud resource-manager tags keys describe "$ORG_ID/agp-tier" --format='value(name)')"
-penv_set TAG_KEY_ENV "$(gcloud resource-manager tags keys describe "$ORG_ID/agp-env" --format='value(name)')"   # only if agp-env was created
+if cat "$BUILD_LOG_DIR"/records/*-FS-0.2-names-tag-keys-v1.txt | grep -qx agp-env; then
+  penv_set TAG_KEY_ENV "$(gcloud resource-manager tags keys describe "$ORG_ID/agp-env" --format='value(name)')"
+fi
 penv_set TAG_KEY_TISAX "$(gcloud resource-manager tags keys describe "$ORG_ID/agp-tisax-scope" --format='value(name)')"
 . "$PLATFORM_ENV_FILE"
 ```
 
 - **VERIFY:** `echo "$TAG_KEY_TIER $TAG_KEY_ENV $TAG_KEY_TISAX"` prints three `tagKeys/<digits>` values, and `gcloud resource-manager tags keys list --parent="organizations/$ORG_ID" --format="value(shortName)" | grep -c '^agp-'` prints `3`.
-  Skip the `agp-env` lines if FS-0.2 found `agp-env` missing from NAMES.
+  The `agp-env` lines run only if FS-0.2's record `<date>-FS-0.2-names-tag-keys-v1.txt` lists `agp-env`; otherwise the step prints two `tagKeys/<digits>` values and a count of `2`, and FS-5.4 stays PENDING (FS-0.2).
 - **ROLLBACK:** **IRREVERSIBLE as a name** (03 DC-5.1): a tag key's short name cannot be changed. The key itself can be deleted: before any value exists, `gcloud resource-manager tags keys delete "$TAG_KEY_TIER"` (and the same for the others). After values exist, run FS-5.2's rollback first. **Confirm before running:** FS-0.2 printed `SIGNED NAMES`, and the three short names above match the names register character for character.
 - **EVIDENCE:** Build-log line `FS-5.1` with the three key names. Input to `BD-09-1` and `BD-09-2` (keys made under a time-bound self-grant instead of PAM `roles/resourcemanager.tagAdmin`). TISAX 1.3.1. EU AI Act E-05.
 
@@ -668,6 +673,8 @@ gcloud essential-contacts compute --notification-categories=security --folder="$
 |---|---|
 | SCC not activated for the organisation (the welcome page appears) | FS-7.3 |
 | Standard, no data residency | FS-7.4 (modify residency to `eu` first, then upgrade to Premium) |
+| Standard-legacy, no data residency | FS-7.4 (modify residency to `eu` first, then upgrade to Premium), before any location policy |
+| Standard activated automatically at organisation level in the `global` region | FS-7.4 (modify residency to `eu` first, then upgrade to Premium), before any location policy: a location policy deployed later may deactivate SCC within seven days ([migrate from Standard-legacy](https://docs.cloud.google.com/security-command-center/docs/migrate-standard-legacy), read 2026-10-01) |
 | Standard or Premium with residency `eu` | FS-7.4 upgrade only, or straight to FS-7.5 if already Premium |
 | Premium with residency `us` or `sa`, or none | FS-7.4 modify residency. This changes the whole organisation's SCC, so it needs IT security's written approval of the migration window |
 | Enterprise | Stop. Enterprise is deprecated since 2026-05-21 and shuts down 2027-05-21 (07 §3). Open a decision in 03 with IT security; 13 waits |
@@ -820,7 +827,7 @@ member = "user:" + os.environ["SA_1_ADMIN"]
 targets = [("org", os.environ["ORG_ID"],
             ["roles/resourcemanager.tagAdmin","roles/resourcemanager.tagUser","roles/securitycenter.admin"]),
            ("folder", os.environ["FLD_AGENTIC_PLATFORM"],
-            ["roles/observability.editor","roles/essentialcontacts.admin","roles/logging.admin"])]
+            ["roles/observability.editor","roles/essentialcontacts.admin","roles/logging.configWriter"])]
 def get(kind, rid):
     cmd = ["gcloud","organizations","get-iam-policy",rid] if kind=="org" else ["gcloud","resource-manager","folders","get-iam-policy",rid]
     return json.loads(subprocess.run(cmd+["--format=json"],check=True,capture_output=True,text=True).stdout)
@@ -857,7 +864,7 @@ gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten
 ```
 
   Also record, for 12, the full list of what `SA_1_ADMIN` still holds on the folder: `gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten="bindings[].members" --filter="bindings.members:user:$SA_1_ADMIN" --format="value(bindings.role,bindings.condition.title)"`.
-- **ROLLBACK:** If a step of this file must be repeated, re-grant the time-bound role exactly as FS-0.5 (organisation: `roles/resourcemanager.tagAdmin`, `roles/resourcemanager.tagUser`), FS-1.2 (folder: `roles/observability.editor`, `roles/essentialcontacts.admin`, `roles/logging.admin`) or FS-7.3 (organisation: `roles/securitycenter.admin`) created it, with a fresh `GRANT_UNTIL` and the same `fs-bootstrap-*` condition title, and add a line to `BD-09-2`.
+- **ROLLBACK:** If a step of this file must be repeated, re-grant the time-bound role exactly as FS-0.5 (organisation: `roles/resourcemanager.tagAdmin`, `roles/resourcemanager.tagUser`), FS-1.2 (folder: `roles/observability.editor`, `roles/essentialcontacts.admin`, `roles/logging.configWriter`) or FS-7.3 (organisation: `roles/securitycenter.admin`) created it, with a fresh `GRANT_UNTIL` and the same `fs-bootstrap-*` condition title, and add a line to `BD-09-2`.
   If a **standing** binding was nevertheless removed by mistake, it is restored from the step in [06](06-organisation-bootstrap-and-roster.md) that created it, not from this file: Organization Administrator, Folder Creator, Project Creator and PAM Admin on `SA_1_ADMIN` come from 06's organisation-roles step under the dated exception (`BOOTSTRAP_EXCEPTION_EXPIRY`), and any other standing role on `SA_1_ADMIN` is listed in 06's produced-principals record. Restore it with the same role, member and expiry as 06 recorded, record the loss and the restore in the build log under `FS-8.1`, and tell the second human, because an unexplained organisation-IAM change is exactly what Eve reports from [25](25-eve-human-super-admin-detections.md).
 - **EVIDENCE:** Both empty outputs in the build log under `FS-8.1`. The removal date goes into `BD-09-2`, written in FS-8.2 (the register is append-only). TISAX 4.1.3, 4.2.1.
 
@@ -871,7 +878,7 @@ gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten
 need DEVIATION_REGISTER FLD_AGENTIC_PLATFORM BOOTSTRAP_EXCEPTION_EXPIRY
 d=$(date -u +%Y-%m-%d)
 printf '| BD-09-1 | %s | 09 FS-1.1 to FS-6.1 | MOD | platform-core: folder tree, tags, Essential Contacts, observability default (02 2.1, 3.6, 3.7; SD-17) | organisation %s; folder %s and descendants | 02 2.1 tree; P38 vocabulary; NAMES record; folders.yaml commit <commit> | 22 folders; tag keys agp-tier, agp-tisax-scope, agp-env <or PENDING>; 14 values; 23 bindings; 2 contacts; observability default europe-west1; Logging folder default unset; labels, APIs, policies and grants none (folders carry no labels; policies 13; grants 10 and 12) | BUILD_LOG_DIR/records/<date>-FS-3.4-tree-diff-v1.txt; <date>-FS-5.6-effective-tags-v1.txt; FS-2.1 and FS-2.2 describes | n/a (no project) | none: SD-01 one-person bootstrap, reviewed at 42 | superseded by terraform import and an empty plan when the factory exists (B-01); Tier W gate at the latest | open |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM" >> "$DEVIATION_REGISTER"
-printf '| BD-09-2 | %s | 09 FS-0.5, FS-1.2, FS-7.3 | DEV | time-bound self-grants through Organization Administrator instead of PAM (no entitlement before 12) | organisation %s; folder %s | FS-0.4 and FS-1.2 probes | tagAdmin, tagUser (organisation); observability.editor, essentialcontacts.admin, logging.admin for describe only (folder); securitycenter.admin (organisation, path B only, 12 hours to cover FS-7.3 to FS-7.7, re-granted under the same condition title if the window lapsed); each with an fs-bootstrap-* condition of at most 12 hours | FS-8.1 removal by condition title, with no unconditional binding touched, and the two empty get-iam-policy outputs | n/a | none: SD-01; FS-7.3 witnessed by IT security | removed <date of FS-8.1>; within BOOTSTRAP_EXCEPTION_EXPIRY %s | closed |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM" "$BOOTSTRAP_EXCEPTION_EXPIRY" >> "$DEVIATION_REGISTER"
+printf '| BD-09-2 | %s | 09 FS-0.5, FS-1.2, FS-7.3 | DEV | time-bound self-grants through Organization Administrator instead of PAM (no entitlement before 12) | organisation %s; folder %s | FS-0.4 and FS-1.2 probes | tagAdmin, tagUser (organisation); observability.editor, essentialcontacts.admin, logging.configWriter for describe only (folder); securitycenter.admin (organisation, path B only, 12 hours to cover FS-7.3 to FS-7.7, re-granted under the same condition title if the window lapsed); each with an fs-bootstrap-* condition of at most 12 hours | FS-8.1 removal by condition title, with no unconditional binding touched, and the two empty get-iam-policy outputs | n/a | none: SD-01; FS-7.3 witnessed by IT security | removed <date of FS-8.1>; within BOOTSTRAP_EXCEPTION_EXPIRY %s | closed |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM" "$BOOTSTRAP_EXCEPTION_EXPIRY" >> "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
 git -C "$BUILD_LOG_DIR" commit -m "registers: BD-09-1, BD-09-2 (setup 09)"
 ```
@@ -912,7 +919,7 @@ sitting_end
 - [ ] FS-0.1 to FS-0.4: gates signed, organisation read, permissions probed. The build log has each output.
 - [ ] FS-3.4 prints `zero diff: 22 folders, 0 projects`, and every `FLD_*` variable is in `~/.platform-env`.
 - [ ] `register/folders.yaml` is merged under review, or committed locally with a signed review record (FS-4.2).
-- [ ] FS-2.1: `gcloud beta observability settings describe --location=global --folder="$FLD_AGENTIC_PLATFORM"` shows `europe-west1`.
+- [ ] FS-2.1: `gcloud observability settings describe --location=global --folder="$FLD_AGENTIC_PLATFORM"` shows `europe-west1`.
 - [ ] FS-2.2: `gcloud logging settings describe --folder="$FLD_AGENTIC_PLATFORM"` shows no `storageLocation` other than `global`, and no `kmsKeyName`.
 - [ ] FS-5.6 prints `tags: 22 folders match`. `TAG_KEY_TIER`, `TAG_KEY_ENV` and `TAG_KEY_TISAX` are set.
 - [ ] FS-6.1: `gcloud essential-contacts compute --notification-categories=security --folder="$FLD_AGENTS_P_SA_PROD"` lists both groups.
@@ -944,8 +951,8 @@ Google pages, all checked 2026-09-15:
 - https://docs.cloud.google.com/resource-manager/docs/tags/tags-creating-and-managing — keys, values, bindings, `--effective`, roles
 - https://docs.cloud.google.com/resource-manager/docs/tags/tags-overview — inheritance and override
 - https://docs.cloud.google.com/resource-manager/docs/manage-essential-contacts — create, list, compute, categories, roles
-- https://docs.cloud.google.com/stackdriver/docs/observability/set-defaults-for-observability-buckets — `gcloud beta observability settings update` and `describe`, Observability Editor
-- https://docs.cloud.google.com/sdk/gcloud/reference/beta/observability/settings/describe — `--organization`, `--folder`, `--location`
+- https://docs.cloud.google.com/stackdriver/docs/observability/set-defaults-for-observability-buckets — `gcloud observability settings update` and `describe`, Observability Editor
+- https://docs.cloud.google.com/sdk/gcloud/reference/observability/settings/describe — GA; `--organization`, `--folder`, `--location` (read 2026-10-01)
 - https://docs.cloud.google.com/stackdriver/docs/observability/observability-bucket-locations — supported locations, inheritance
 - https://docs.cloud.google.com/logging/docs/default-settings and https://docs.cloud.google.com/sdk/gcloud/reference/logging/settings/describe — the setting that is not set, and its read
 - https://docs.cloud.google.com/security-command-center/docs/concepts-sensitive-actions-overview — the `global` and CMEK limitations
@@ -958,7 +965,9 @@ Google pages, all checked 2026-09-15:
 - https://docs.cloud.google.com/sdk/gcloud/reference/scc/manage/services/list — `--organization=organizations/ID` in Google's example; no `--location` flag
 - https://docs.cloud.google.com/sdk/gcloud/reference/scc/findings/list — `PARENT` with `--location=eu`
 - https://docs.cloud.google.com/iam/docs/roles-permissions/resourcemanager — `roles/resourcemanager.organizationAdmin` carries only `resourcemanager.*` permissions, so it grants no SCC access
-- https://docs.cloud.google.com/logging/docs/access-control — `roles/logging.viewer` has no `logging.settings.*`; `logging.settings.get` and `.update` are in `roles/logging.admin`
+- https://docs.cloud.google.com/logging/docs/access-control — `roles/logging.viewer` has no `logging.settings.*`; `logging.settings.get` and `.update` are in `roles/logging.admin` and `roles/logging.configWriter` (updated 2026-09-30, read 2026-10-01)
+- https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/folders/undelete — GA folder undelete (read 2026-10-01)
+- https://docs.cloud.google.com/security-command-center/docs/service-tiers and https://docs.cloud.google.com/security-command-center/docs/migrate-standard-legacy — Standard-legacy and Standard tiers, automatic activation in `global`, deactivation after a later location policy (read 2026-10-01)
 - https://docs.cloud.google.com/sdk/gcloud/reference/organizations/remove-iam-policy-binding and https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/folders/remove-iam-policy-binding — `--all` removes bindings "irrespective of any conditions"; `--condition-from-file` takes a JSON or YAML file with `title`, `description` and `expression`
 - https://docs.cloud.google.com/resource-manager/reference/rest/v3/folders/testIamPermissions — the probe method of FS-1.2
 - https://docs.cloud.google.com/docs/quotas/set-quota-project — the quota-project caveat of FS-2.1

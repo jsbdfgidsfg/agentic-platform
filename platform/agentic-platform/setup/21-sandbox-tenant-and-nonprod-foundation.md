@@ -2,8 +2,9 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
 - Last executed: never
+- Changed 2026-10-01: they/them throughout for the sandbox super admins, the platform owner and the second human; SB-8.2 writes the second human's `@login` from `identity/git-humans.yaml` into CODEOWNERS (16 RG-1.1: an email address cannot name a managed user account) and checks `codeowners/errors`.
 - Stage: review §2 stage 32, tenant half only, pulled before Eve so that nonprod Eve (24, 25, 28) and the Wall-E twin (37) have a tenant to act on. Runs after 17 (Tier R open), in parallel with 19, 20 and 22, and before 24. Decision 29 now reads "before the super-admin grant" (03 DC-4.7); in this set the sandbox also precedes Eve's identity file.
 - Step prefix: SB. Steps: 44. BLOCKED: SB-7.6 (the drift job does not exist, README B-02), SB-8.5 (the register CI rules R-02 and R-04 have no code, README B-03; the signed manual parse of SB-8.4 stands in). Gated **IRREVERSIBLE** steps: SB-4.3 (the security label on the sandbox `walle-operators@`), SB-6.1 (acceptance of the Google Cloud terms, which creates the sandbox Cloud organisation).
 - Replaces: `wall-e/SETUP.md` Phase 2's "how that copy is built is *tbd* with the factory's `-nonprod` run", `wall-e/PREREQUISITES.md` D3's "the sandbox tenant before the Phase 2 grant" (no procedure), and the Workspace half of what the review calls M6. Salvaged, with corrected paths: SETUP Phase 1 (OU and synthetic-account pattern, group creation), Phase 3 (the key-before-enforcement order and the hygiene rows that apply to admin accounts), Phase 5 (the sharing check, the organisation-scope verify); 02 §3.5 rows 4 and 5; PREREQUISITES D3.
@@ -79,7 +80,7 @@ flowchart TD
 - [ ] File 17: `TIER_R_RECORD` exists (the sandbox is not needed before Tier R, and 23's twin run needs FM-VERIFIER).
 - [ ] File 09: every `FLD_*` variable set. File 10: `CICD_PROJECT` and `CORE_PROJECT` set (quota projects for PAM and the policy script).
 - [ ] File 08: W-2 done, so custody records go straight to the witness through WO-3.3; otherwise paper plus a same-day scan to `EVIDENCE_INTERIM_LOCATION` (SD-27) and a line in the WO-3.1 backlog.
-- [ ] Each sandbox super admin has a workstation (or, if the platform owner is one of them, a **separate macOS user account** on his workstation) with `gcloud`, `jq`, `yq`, `git`, `dig`, `whois`, file 01's helpers, and a clean browser profile per sandbox account. `yq` is the jq wrapper for YAML that transcodes to JSON, prints JSON by default and forwards every other argument to jq; it is the single YAML tool of this set (19 §2, 20 GG-0.3, *Assumption:* 01's tool list gains it). **No step here uses Ruby**: current macOS no longer ships a Ruby runtime, so nothing load-bearing may depend on one. The platform owner's own workstation needs `yq` as well, for SB-8.2 and SB-8.4.
+- [ ] Each sandbox super admin has a workstation (or, if the platform owner is one of them, a **separate macOS user account** on their workstation) with `gcloud`, `jq`, `yq`, `git`, `dig`, `whois`, file 01's helpers, and a clean browser profile per sandbox account. `yq` is the jq wrapper for YAML that transcodes to JSON, prints JSON by default and forwards every other argument to jq; it is the single YAML tool of this set (19 §2, 20 GG-0.3, *Assumption:* 01's tool list gains it). **No step here uses Ruby**: current macOS no longer ships a Ruby runtime, so nothing load-bearing may depend on one. The platform owner's own workstation needs `yq` as well, for SB-8.2 and SB-8.4.
 - [ ] No sandbox credential ever enters the platform owner's `GCLOUD_CONFIG_NAME` configuration. The separation is the one 01 PR-2.2 and PR-3.1 build, not a habit: `~/.platform-env` exports `CLOUDSDK_ACTIVE_CONFIG_NAME="$GCLOUD_CONFIG_NAME"` (which selects the active configuration for every gcloud invocation of that shell, ahead of whatever configuration is activated on the machine) and `CLOUDSDK_CONFIG="$HOME/.config/gcloud-$GCLOUD_CONFIG_NAME"` (which is where that configuration's credentials are written) whenever `GCLOUD_CONFIG_NAME` is set. The sandbox copy's value `sandbox` therefore both selects the configuration and gives it its own credential directory. SB-1.3 proves both, and no sandbox step may run in a shell that did not source the sandbox copy.
 - [ ] A corporate safe with its sign-out log; four tamper-evident envelopes and two spares.
 
@@ -88,9 +89,9 @@ flowchart TD
 | Role | Does | Present at |
 |---|---|---|
 | Sandbox super admin 1 (PPL-SB1, `SANDBOX_SA_1_EMAIL`) | Performs sign-up, domain, OUs, users, groups, organisation and sharing steps; requester in the multi-party approval test; custodian of super admin 2's spare key and codes | sittings 1 to 4 |
-| Sandbox super admin 2 (PPL-SB2, `SANDBOX_SA_2_EMAIL`) | Enrols his own keys; second Organization Administrator; approver (and denier) in the multi-party approval test; custodian of super admin 1's spare key and codes; re-reads every sandbox VERIFY on his own workstation | sittings 2 to 4 |
+| Sandbox super admin 2 (PPL-SB2, `SANDBOX_SA_2_EMAIL`) | Enrols their own keys; second Organization Administrator; approver (and denier) in the multi-party approval test; custodian of super admin 1's spare key and codes; re-reads every sandbox VERIFY on their own workstation | sittings 2 to 4 |
 | Second human (`SECOND_HUMAN_EMAIL`) | Witness from the other line for every key enrolment and envelope; approves the `ENT_PLATFORM_POLICY` and `ENT_FOLDER_ADMIN` grants; required reviewer of the policy and `sandbox/` pull requests; co-signs the manual parse | sittings 1 and 2 (keys), sitting 5 (grants), reviews |
-| Platform owner (`sa-1-admin@` for PAM, daily account for git) | Performs Parts 7 and 8 and the handover of identifiers into the tenant copy; never approves his own grants | sitting 5; SB-6.8 |
+| Platform owner (`sa-1-admin@` for PAM, daily account for git) | Performs Parts 7 and 8 and the handover of identifiers into the tenant copy; never approves their own grants | sitting 5; SB-6.8 |
 | Security reviewer (`SECURITY_REVIEWER_EMAIL`, if appointed) | Co-signs the manual parse of SB-8.4 (P-SA rows); second approver on `ENT_PLATFORM_POLICY` once appointed | SB-8.4 |
 | IT security (SIEM owner) | Decides whether live sandbox fixtures are wanted (SB-6.7) | SB-6.7 |
 | Witness administrator | Uploads custody and test records to the witness the same day (WO-3.3) | same day as SB-2.6, SB-3.1, SB-3.3, SB-5.3 |
@@ -109,7 +110,7 @@ DC-2.6 allows the platform owner and the second operator to be the two sandbox s
 
 ## The sandbox copy of the variables file
 
-Each sandbox super admin keeps, on his own workstation (or separate macOS user), a `~/.platform-env` installed from the committed template of 01 PR-2.2, holding **only** the sandbox section below and a read-only clone of the platform repository. It holds no secret and is never copied to the platform owner's configuration. A dedicated gcloud configuration named `sandbox` (set as `GCLOUD_CONFIG_NAME` in this copy) with no project is used for every sandbox command. `GCLOUD_CONFIG_NAME` is not a gcloud variable: 01's template turns that one value into the two gcloud does read, `CLOUDSDK_ACTIVE_CONFIG_NAME=sandbox` (the active configuration of every gcloud invocation in the shell) and `CLOUDSDK_CONFIG=$HOME/.config/gcloud-sandbox` (the directory that holds its credentials). So `penv_guard` works unchanged, and a sandbox sign-in cannot land in another configuration — including the platform owner's, when he is one of the two sandbox super admins under DC-2.6.
+Each sandbox super admin keeps, on their own workstation (or separate macOS user), a `~/.platform-env` installed from the committed template of 01 PR-2.2, holding **only** the sandbox section below and a read-only clone of the platform repository. It holds no secret and is never copied to the platform owner's configuration. A dedicated gcloud configuration named `sandbox` (set as `GCLOUD_CONFIG_NAME` in this copy) with no project is used for every sandbox command. `GCLOUD_CONFIG_NAME` is not a gcloud variable: 01's template turns that one value into the two gcloud does read, `CLOUDSDK_ACTIVE_CONFIG_NAME=sandbox` (the active configuration of every gcloud invocation in the shell) and `CLOUDSDK_CONFIG=$HOME/.config/gcloud-sandbox` (the directory that holds its credentials). So `penv_guard` works unchanged, and a sandbox sign-in cannot land in another configuration — including the platform owner's, when they are one of the two sandbox super admins under DC-2.6.
 
 | Variable | Set in | Sandbox copy | Tenant copy |
 |---|---|---|---|
@@ -183,7 +184,7 @@ case "$SANDBOX_DOMAIN" in "$DOMAIN"|*".$DOMAIN") echo "STOP: sandbox domain is a
 mkdir -p "$BUILD_LOG_DIR/evidence/21"
 ```
 
-- **VERIFY:** `decision-need.sh` prints `SIGNED` for every id; the `grep -il` prints the sandbox-tenant record (the X-ORG-14 wording; "before Stage 1" alone is a stop); the three `DONE` lines print (13's OP-6.5, 16's RG-2.6, 17's Tier R record step); the count of addresses outside `SANDBOX_DOMAIN` is `0`; `uniq -d` prints nothing; `domain distinct`. The second human confirms, from 03's people records, that he holds neither sandbox role.
+- **VERIFY:** `decision-need.sh` prints `SIGNED` for every id; the `grep -il` prints the sandbox-tenant record (the X-ORG-14 wording; "before Stage 1" alone is a stop); the three `DONE` lines print (13's OP-6.5, 16's RG-2.6, 17's Tier R record step); the count of addresses outside `SANDBOX_DOMAIN` is `0`; `uniq -d` prints nothing; `domain distinct`. The second human confirms, from 03's people records, that they hold neither sandbox role.
 - **ROLLBACK:** Read only. A failed check stops the file.
 - **EVIDENCE:** Checkpoint line with the decision commit ids. `evidence_add SB-1.1 gates E-03 1.4.1 "build-log:evidence/21"`.
 
@@ -198,7 +199,7 @@ mkdir -p "$BUILD_LOG_DIR/evidence/21"
 
 ### SB-1.3 Prepare each sandbox workstation copy
 
-- **WHO:** Each sandbox super admin on his own workstation; the other watches.
+- **WHO:** Each sandbox super admin on their own workstation; the other watches.
 - **WHERE:** Sandbox workstation shell.
 - **ACTION:**
 
@@ -217,7 +218,7 @@ env -u CLOUDSDK_ACTIVE_CONFIG_NAME gcloud config configurations create sandbox -
 gcloud config unset project
 ```
 
-  The create runs with `CLOUDSDK_ACTIVE_CONFIG_NAME` removed from its environment because the second `source` already set it to `sandbox`, a configuration that does not exist until this line (01 PR-3.1 runs the same way). `--no-activate` is correct and must stay: the sourced file selects the configuration per shell through `CLOUDSDK_ACTIVE_CONFIG_NAME`, which takes precedence over whatever configuration is activated on the machine, so the machine-wide default is left untouched — on the platform owner's workstation that default is his production configuration, and it must not change. The VERIFY below proves the selection took effect; do not treat sourcing the file as proof on its own.
+  The create runs with `CLOUDSDK_ACTIVE_CONFIG_NAME` removed from its environment because the second `source` already set it to `sandbox`, a configuration that does not exist until this line (01 PR-3.1 runs the same way). `--no-activate` is correct and must stay: the sourced file selects the configuration per shell through `CLOUDSDK_ACTIVE_CONFIG_NAME`, which takes precedence over whatever configuration is activated on the machine, so the machine-wide default is left untouched — on the platform owner's workstation that default is their production configuration, and it must not change. The VERIFY below proves the selection took effect; do not treat sourcing the file as proof on its own.
 - **VERIFY:** In a **new** shell with the sandbox copy sourced:
 
 ```bash
@@ -260,7 +261,7 @@ dig +short MX "$SANDBOX_DOMAIN"
 - **WHERE:** A clean browser profile named `sandbox-sa-1`; the provisioning route in the signed order (PU-2.5).
 - **ACTION:**
   1. Follow the route the order names (*Assumption:* either the reseller or account team creates the customer and sends the first administrator's sign-in invitation, or Google's sign-up flow is used and the order is applied to it; the order states which). The first administrator's address is `SANDBOX_SA_1_EMAIL`; business name and country as the order.
-  2. The password is typed by sandbox super admin 1 from his own password vault into the page only; it is never spoken, written or pasted into a file, chat or ticket. If a recovery email or phone is requested at sign-up, use the sandbox super admin's organisation address; SB-2.6 removes it.
+  2. The password is typed by sandbox super admin 1 from their own password vault into the page only; it is never spoken, written or pasted into a file, chat or ticket. If a recovery email or phone is requested at sign-up, use the sandbox super admin's organisation address; SB-2.6 removes it.
   3. Do not add users, apps or Marketplace items during the setup tool's prompts; skip them.
 - **VERIFY:** Signed in as `SANDBOX_SA_1_EMAIL` at `admin.google.com`, Menu > Billing > Subscriptions shows the ordered edition and seat count. Menu > Account > Admin roles > Super Admin > View admins lists only `SANDBOX_SA_1_EMAIL`.
 - **ROLLBACK:** Before SB-6.1: cancel the subscription under the order's terms and remove the domain from the account (04 records the reseller's cancellation route). After SB-6.1 the Cloud organisation exists: not reversible in this file.
@@ -302,7 +303,7 @@ dig +short MX "$SANDBOX_DOMAIN"
 
 ### SB-2.4 Read the edition and the customer id
 
-- **WHO:** Sandbox super admin 1; sandbox super admin 2 re-reads on his own profile after SB-3.1.
+- **WHO:** Sandbox super admin 1; sandbox super admin 2 re-reads on their own profile after SB-3.1.
 - **WHERE:** Admin console: Menu > Account > Account settings > Profile (Customer ID); Menu > Billing > Subscriptions; sandbox shell.
 - **ACTION:**
 
@@ -341,13 +342,13 @@ printf '%s\n' "$SANDBOX_CUSTOMER_ID" | grep -Eq '^C[0-9A-Za-z]+$' && echo "form 
 
 ### Part 3 — The second super admin and custody
 
-### SB-3.1 Create the second sandbox super admin and enrol his keys
+### SB-3.1 Create the second sandbox super admin and enrol their keys
 
-- **WHO:** Sandbox super admin 1 creates and assigns; sandbox super admin 2 sets his password and enrols; the second human witnesses.
+- **WHO:** Sandbox super admin 1 creates and assigns; sandbox super admin 2 sets their password and enrols; the second human witnesses.
 - **WHERE:** Admin console: Menu > Directory > Users > Add new user; Menu > Account > Admin roles > Super Admin > Assign admin; sandbox super admin 2's clean profile `sandbox-sa-2`.
 - **ACTION:**
-  1. Add new user `SANDBOX_SA_2_EMAIL`, organisational unit `/Admins`, "Automatically generate password", "Ask for a password change at the next sign-in". Do not send the details by email. Sandbox super admin 2 reads the initial password from administrator 1's screen, signs in in his own profile, and sets his password from his own vault.
-  2. Within the enrolment period, sandbox super admin 2 registers his two labelled keys at the 2-Step Verification page.
+  1. Add new user `SANDBOX_SA_2_EMAIL`, organisational unit `/Admins`, "Automatically generate password", "Ask for a password change at the next sign-in". Do not send the details by email. Sandbox super admin 2 reads the initial password from administrator 1's screen, signs in in their own profile, and sets their password from their own vault.
+  2. Within the enrolment period, sandbox super admin 2 registers their two labelled keys at the 2-Step Verification page.
   3. Assign Super Admin to `SANDBOX_SA_2_EMAIL` (multi-party approval is still off here: it is turned on only in SB-5.2, once two proven super admins exist).
   4. Remove any recovery email and phone on the user's Security page.
 - **VERIFY:** Super Admin > View admins lists exactly `SANDBOX_SA_1_EMAIL` and `SANDBOX_SA_2_EMAIL`. The user page shows `/Admins`, two security keys, no recovery information. A sign-in as `SANDBOX_SA_2_EMAIL` after the key wait asks for a key and accepts each.
@@ -374,22 +375,22 @@ printf '%s\n' "$SANDBOX_CUSTOMER_ID" | grep -Eq '^C[0-9A-Za-z]+$' && echo "form 
   2. Put the inner sheet and the account's spare key in a tamper-evident envelope; seal; write account, envelope serial and date on it.
   3. Custodian: the other sandbox super admin. The custodian and the second human sign the outer custody record ("backup codes generated by <admin>, handwritten, sealed").
   4. Envelope into the safe; safe log entry.
-- **VERIFY:** The safe log lists two new envelopes; each outer record carries two signatures; each holder keeps only his primary key.
+- **VERIFY:** The safe log lists two new envelopes; each outer record carries two signatures; each holder keeps only their primary key.
 - **ROLLBACK:** Generating new codes voids the old set; an opened or mislabelled envelope is resealed as `v2`, never overwriting `v1`.
 - **EVIDENCE:** Outer custody records only (never the contents) as `<date>-custody-sandbox-sa-<n>-spare-v1`, to the witness same day. E-08. TISAX 3.1, 4.1.2.
 
 ### SB-3.4 Prove both sandbox super admin accounts
 
-- **WHO:** Each sandbox super admin on his own profile; the other watches.
+- **WHO:** Each sandbox super admin on their own profile; the other watches.
 - **WHERE:** `admin.google.com` sign-in.
-- **ACTION:** Each signs out, signs in with his primary key, opens Menu > Account > Admin roles, signs out. Each then signs in once with the spare key under the custodian's supervision (the envelope is opened, used and resealed as `v2` under SB-3.3's rollback). No code from any backup sheet is used.
+- **ACTION:** Each signs out, signs in with their primary key, opens Menu > Account > Admin roles, signs out. Each then signs in once with the spare key under the custodian's supervision (the envelope is opened, used and resealed as `v2` under SB-3.3's rollback). No code from any backup sheet is used.
 - **VERIFY:** Four successful sign-ins recorded on the sitting form (two accounts, two keys each), each with a security-key prompt and no code offered.
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** Sitting form `<date>-SB-3.4-admins-proven-v1`; resealed custody records `v2`. E-08. TISAX 3.1.
 
 ### SB-3.5 Read the sandbox super-admin roster
 
-- **WHO:** Sandbox super admin 2, on his own profile.
+- **WHO:** Sandbox super admin 2, on their own profile.
 - **WHERE:** Admin console: Menu > Account > Admin roles (each role > Admins); Menu > Directory > Users.
 - **ACTION:** Export or screenshot every role's admins list; list all users.
 - **VERIFY:** Super Admin holds exactly the two sandbox super admins; no other role has any admin; the users are exactly the two admins (no synthetic user or robot yet).
@@ -466,9 +467,9 @@ penv_set SANDBOX_OPERATORS_GROUP "walle-operators@${SANDBOX_DOMAIN}"
 ### SB-5.3 Exercise multi-party approval once (the 04 §8.4 test)
 
 - **WHO:** Sandbox super admin 1 requests; sandbox super admin 2 approves or denies; each times and records. SD-35 permits these mutating tests because this is the sandbox.
-- **WHERE:** Admin console as each admin in his own profile: the page of the covered action; Menu > Security > Authentication > Multi-party approval requests; Admin log events.
+- **WHERE:** Admin console as each admin in their own profile: the page of the covered action; Menu > Security > Authentication > Multi-party approval requests; Admin log events.
 - **ACTION:** Each item writes one row on the test form: action, requester, time requested, whether a request was created, what the requester saw on the requests page, approver action, time effective, Admin log event names shown.
-  1. **Role assignment approved.** Admin 1: Menu > Account > Admin roles > Help Desk Admin > Assign members: `synthetic-01@`. Admin 1 opens Multi-party approval requests and confirms he cannot approve his own request. Admin 2 approves.
+  1. **Role assignment approved.** Admin 1: Menu > Account > Admin roles > Help Desk Admin > Assign members: `synthetic-01@`. Admin 1 opens Multi-party approval requests and confirms they cannot approve their own request. Admin 2 approves.
   2. **Role removal (the K6 shape).** Admin 1 unassigns Help Desk Admin from `synthetic-01@`. Record whether a request is created and the minutes until the role is gone. This answers SETUP §5's "confirm that a removal is not blocked for hours waiting for approval".
   3. **Super Admin denied.** Admin 1 assigns Super Admin to `synthetic-02@`. Admin 2 **denies**. Confirm `synthetic-02@` holds no role (Super Admin > View admins still lists two).
   4. **Turning multi-party approval off.** Admin 1 unticks the box and saves. If a request is created, admin 2 denies it. If the change applies at once, admin 1 ticks it again immediately and saves; record the minutes it was off. This answers 04 §8.4's assumption.
@@ -476,7 +477,7 @@ penv_set SANDBOX_OPERATORS_GROUP "walle-operators@${SANDBOX_DOMAIN}"
   6. Read Admin log events for the window and record the event names for request, approval, denial and each change.
 
   Not tested here, and where they are: `users.makeAdmin` through the Directory API and whether a robot super admin counts toward "two or more super admins" need the twin robot's credential (37); an approval attempt by a robot account needs the twin robot (37, SD-48).
-- **VERIFY:** The form has six rows. Items 1, 3 and 5 created requests; the requester could not approve his own; item 3 left `synthetic-02@` without a role; multi-party approval is On at the end (SB-5.2's page re-read). Any "no request created" for items 1, 3 or 5 is a stop: the production gate (38) relies on it, so it goes to the security reviewer and the second human as a finding against 04 §8.4.
+- **VERIFY:** The form has six rows. Items 1, 3 and 5 created requests; the requester could not approve their own; item 3 left `synthetic-02@` without a role; multi-party approval is On at the end (SB-5.2's page re-read). Any "no request created" for items 1, 3 or 5 is a stop: the production gate (38) relies on it, so it goes to the security reviewer and the second human as a finding against 04 §8.4.
 - **ROLLBACK:** Unassign any role left on a synthetic user; re-tick multi-party approval if off.
 - **EVIDENCE:** The form and screenshots as `<date>-SB-5.3-mpa-test-v1`, to the witness `drills/` the same day; the answers for items 2 and 4 are copied into 03 as a superseding note to P66's assumptions. E-08. TISAX 4.2.1, 5.2.6.
 
@@ -484,7 +485,7 @@ penv_set SANDBOX_OPERATORS_GROUP "walle-operators@${SANDBOX_DOMAIN}"
 
 - **WHO:** Sandbox super admin 1; sandbox super admin 2 receives the test mail.
 - **WHERE:** Admin console: Home > Rules > Create rule > Activity (06 OB-2.6; email recipients must be internal users of the tenant).
-- **ACTION:** Name `sandbox-admin-change`. Data source Admin log events. Filter: the role-assignment, security-setting and multi-party approval events recorded in SB-5.3 item 6. Actions: send to alert center, severity High; email to `SANDBOX_SA_1_EMAIL` and `SANDBOX_SA_2_EMAIL`. The second human cannot be a recipient (external); his view of the sandbox is nonprod Eve (25) and the drill (28).
+- **ACTION:** Name `sandbox-admin-change`. Data source Admin log events. Filter: the role-assignment, security-setting and multi-party approval events recorded in SB-5.3 item 6. Actions: send to alert center, severity High; email to `SANDBOX_SA_1_EMAIL` and `SANDBOX_SA_2_EMAIL`. The second human cannot be a recipient (external); their view of the sandbox is nonprod Eve (25) and the drill (28).
 - **VERIFY:** Admin 2 assigns and then unassigns Help Desk Admin to `synthetic-03@` (admin 1 approves the request); both sandbox super admins receive the mail; the delay is recorded.
 - **ROLLBACK:** Delete the rule (record that the sandbox has no Google-hosted change alert).
 - **EVIDENCE:** Rule screenshot and received mail as `<date>-SB-5.4-activity-rule-v1`. E-08. TISAX 4.1.2.
@@ -553,7 +554,7 @@ gcloud projects list --filter="parent.id=${SANDBOX_ORG_ID}" --format="value(proj
 
 ### SB-6.5 See Admin and login events at sandbox organisation scope
 
-- **WHO:** Sandbox super admin 2 on his own workstation and in his own browser profile (a second reader of the first).
+- **WHO:** Sandbox super admin 2 on their own workstation and in their own browser profile (a second reader of the first).
 - **WHERE:** **Primary:** Google Cloud console > Logging > Logs Explorer (`https://console.cloud.google.com/logs/query`) with the sandbox **organisation** selected in the resource picker. **Optional confirmation only:** the sandbox shell.
 - **ACTION:** Up to 24 hours after SB-6.4, and after sandbox super admin 1 has made one harmless Admin console change (for example editing the description of `/Synthetic`) and signed in once.
 
@@ -563,7 +564,7 @@ gcloud projects list --filter="parent.id=${SANDBOX_ORG_ID}" --format="value(proj
      - `protoPayload.serviceName="login.googleapis.com"`
 
      Screenshot each result showing timestamp, `protoPayload.methodName` and `protoPayload.authenticationInfo.principalEmail`. This path needs no project and no quota project, which is why it is the primary one: the sandbox organisation will never hold a project (SB-6.3).
-  2. **Optional shell confirmation.** A Logging API call made with a user credential is billed to a quota project, which must exist and have the API enabled. A sandbox super admin has none — the sandbox organisation holds no project, and `--billing-project` cannot name a platform project he has no access to — so this is a confirmation attempt whose refusal is an expected, recorded outcome, never a reason to grant anything in the sandbox organisation and never a reason to create a project there:
+  2. **Optional shell confirmation.** A Logging API call made with a user credential is billed to a quota project, which must exist and have the API enabled. A sandbox super admin has none — the sandbox organisation holds no project, and `--billing-project` cannot name a platform project they have no access to — so this is a confirmation attempt whose refusal is an expected, recorded outcome, never a reason to grant anything in the sandbox organisation and never a reason to create a project there:
 
 ```bash
 need SANDBOX_ORG_ID SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL BUILD_LOG_DIR
@@ -610,7 +611,7 @@ gcloud logging read 'protoPayload.serviceName="login.googleapis.com"' --organiza
 
 ### SB-6.8 Hand the identifiers over to the tenant copy
 
-- **WHO:** Sandbox super admin 1 reads them out from his screen; the platform owner writes them; the second human compares with SB-2.4's and SB-6.2's evidence.
+- **WHO:** Sandbox super admin 1 reads them out from their screen; the platform owner writes them; the second human compares with SB-2.4's and SB-6.2's evidence.
 - **WHERE:** Platform owner's shell, `~/.platform-env` sourced.
 - **ACTION:**
 
@@ -716,7 +717,7 @@ done
 
 ### SB-7.5 Prove admission on the nonprod folders and refusal on their production siblings
 
-- **WHO:** Platform owner requests `ENT_FOLDER_ADMIN`; the second human approves; sandbox super admin 1 is told his account is used as the test member (it receives no usable access: Browser on an empty folder, removed at once).
+- **WHO:** Platform owner requests `ENT_FOLDER_ADMIN`; the second human approves; sandbox super admin 1 is told their account is used as the test member (it receives no usable access: Browser on an empty folder, removed at once).
 - **WHERE:** Shell.
 - **ACTION:** A sandbox identity is bound, read back and removed on each target nonprod folder; the same binding is attempted on the production sibling and must be refused. The group form is tested on `fld-agents-p-sa-nonprod`, because the twin uses `walle-operators@SANDBOX_DOMAIN` as invoker and IAP audience (37).
 
@@ -816,12 +817,14 @@ p40_notes:
   - "No platform principal is granted in the sandbox organisation (its baseline admits only its own customer). The drift inventory of the sandbox sinks is read monthly by a sandbox super admin and committed, until P40 decides otherwise."
   - "Mutating tests run only here (SD-35)."
 YAML
-grep -q '^/sandbox/' .github/CODEOWNERS || printf '/sandbox/          %s\n' "$SECOND_HUMAN_EMAIL" >> .github/CODEOWNERS
+SH_LOGIN="$(yq -r '.humans[] | select(.role=="second_human") | .login' identity/git-humans.yaml)"   # 16 RG-1.4's list; CODEOWNERS takes @login, never an email (16 RG-1.1)
+test -n "$SH_LOGIN" || { echo "STOP: the second human's login is not in identity/git-humans.yaml (16 RG-1.4)"; false; }
+grep -q '^/sandbox/' .github/CODEOWNERS || printf '/sandbox/          @%s\n' "${SH_LOGIN#@}" >> .github/CODEOWNERS
 grep -n '<' sandbox/sandbox.yaml
 ```
 
   Replace every `<…>` placeholder from the records named in it; the last `grep` must then print nothing. Commit, push and open the pull request.
-- **VERIFY:** `grep -n '<' sandbox/sandbox.yaml` prints nothing; `yq -e . sandbox/sandbox.yaml > /dev/null && echo yaml-ok` prints `yaml-ok` (`yq` transcodes the file to JSON and hands it to jq, so a parse failure is a non-zero exit; it is the one YAML tool of this set, see the preconditions — python 3.12 of 01 has no YAML module by default, and no step here may depend on a Ruby runtime that current macOS does not ship); the pull request is merged with the second human's approval; sandbox super admin 2 comments "tenant facts confirmed" on it.
+- **VERIFY:** `grep -n '<' sandbox/sandbox.yaml` prints nothing; `yq -e . sandbox/sandbox.yaml > /dev/null && echo yaml-ok` prints `yaml-ok` (`yq` transcodes the file to JSON and hands it to jq, so a parse failure is a non-zero exit; it is the one YAML tool of this set, see the preconditions — python 3.12 of 01 has no YAML module by default, and no step here may depend on a Ruby runtime that current macOS does not ship); `gh api "repos/$PLATFORM_REPO_SLUG/codeowners/errors?ref=sb-8-2-sandbox" --jq '.errors'` prints `[]` on the branch (an email entry for a managed user account fails silently, and the second human would then not be a required reviewer on `sandbox/`); the pull request is merged with the second human's approval; sandbox super admin 2 comments "tenant facts confirmed" on it.
 - **ROLLBACK:** Revert pull request.
 - **EVIDENCE:** Merge commit. E-05. TISAX 5.2.2, 1.3.1.
 

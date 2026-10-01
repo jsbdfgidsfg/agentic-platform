@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-05
+- Last reviewed: 2026-10-01
+- 2026-10-01: the platform owner's session is referred to as "their own" (gender-neutral wording).
 
 This is the core of the design. Read it before anything else.
 
@@ -70,7 +71,7 @@ alternatives (DWD, a Marketplace app installed domain-wide) are the thing you ru
 Practical shape of that one event:
 
 1. The platform owner sets a password on `agent-edge@domain`, in a password manager.
-2. Signs in **in a clean browser profile** (not his own session) and completes consent.
+2. Signs in **in a clean browser profile** (not their own session) and completes consent.
 3. Immediately afterwards, the account is locked down (below) and never signed into again.
 
 Budget one 15-minute window for this, and repeat it only on credential rotation.

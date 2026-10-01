@@ -2,11 +2,12 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
 - Last executed: never
 - Stage: review §2 stage 15, "Tier R open", opened here **under the bootstrap deviation** (SD-01). Runs after files 09 to 16 and before 18. Its FM procedures are then called with parameters by 18 (canary-r), 19 (the Gemini Enterprise import), 22 (Mo), 23 (Eve), 31 and 37 (Wall-E and its twin), and by any later agent until the factory exists.
-- Step prefix: FM. Steps: 76 (FM-0.4 and FM-2.12a added 2026-09-16; FM-2.12a is lettered rather than renumbered so that the FM-2.x ids 18, 19, 22, 23, 31 and 37 already cite stay stable). BLOCKED steps: FM-0.2 (the factory's automation), FM-6.5 (row 38, the factory CI's standing editor grant), FM-7.3 (`halt_all` for a Tier W+ agent whose code is not committed), FM-8.6 (the factory's deferred folder roles), FM-11.1, FM-11.2 and FM-11.3 (supersession by `terraform import` and an empty plan). Steps that run once per call: FM-2.1 to FM-2.22 including FM-2.12a, plus the module section of the module being called.
+- Step prefix: FM. Steps: 77 (FM-0.4 and FM-2.12a added 2026-09-16; FM-2.12a is lettered rather than renumbered so that the FM-2.x ids 18, 19, 22, 23, 31 and 37 already cite stay stable). BLOCKED steps: FM-0.2 (the factory's automation), FM-6.5 (row 38, the factory CI's standing editor grant), FM-7.3 (`halt_all` for a Tier W+ agent whose code is not committed), FM-8.6 (the factory's deferred folder roles), FM-11.1, FM-11.2 and FM-11.3 (supersession by `terraform import` and an empty plan). Steps that run once per call: FM-2.1 to FM-2.22 including FM-2.12a, plus the module section of the module being called.
 - Replaces: the Phase 6 "factory call" and "manual fallback" of `wall-e/SETUP.md`, Eve's Phase 1 project creation (`eve/07-build-runbook.md`) and Mo-1 step 0 (`mo/07-build-runbook.md`). Salvaged: the verify reads of those three (project parent, enabled API list, service-account list, the `aiplatform` absence check on Eve, the IAM read for standing roles), now inside the zero-diff checker of §1. Not copied: project creation under `FOLDER_ID` (S019, S027, S042), a standing creator Owner nobody removes (S018), `gcloud config set project` (S071), a budget filtered by project number (S158), the "Absent = stop" verify that expected a factory nobody ran (S027).
+- Changed 2026-10-01: step count 77; Fabric v59.0.0 noted at FM-0.2; `gcloud observability buckets` on the GA track (FM-1.2, FM-2.9); FM-2.12a reads `floors.json`'s accepted spelling block (18 KS-2.5, KS-2.9); FM-3.1 reads the register with PyYAML; FM-3.2 builds the agent principal from `DENY_AGENT_FORM` (18 KS-3.2); FM-5.1 computes the project number and lists R3b; the tenant-app repair entitlement is `ent-project-repair-tenant-app` / `ENT_PROJECT_REPAIR_TENANT_APP` as 19 GE-2.3 creates it; every grant followed by a privileged command waits for `ACTIVE` with 12's `pam_wait`; FM-4.4 no longer uses `grep -P`; FM-10.4's VERIFY no longer expects §12 lines.
 - Applies decisions (pending signature in 03): SD-01 (bootstrap deviation), SD-12 (the second human approves every elevation on `EVE_PROJECT`), SD-17 (regional `_Default`, global `_Required`, explicit `_Trace`), SD-18 (platform-core rows), SD-22 (deny-policy principal form; see the conflict recorded in FM-3.2), SD-40 (no agent organisation sink), SD-41 (floors), SD-42 (singleton approvers), SD-44 (`exists_or_pending`), SD-46 (`ent-bootstrap-module`).
 - Closes: S001 (module-equivalent, negative-test and Tier R half), S018 (every module project), S019, S027, S042, S048, S085 (Tier R half), S102, S156, S158, X-RQB-03 (module-project half), X-RQB-08 (the project floor on every module project, FM-2.12a). Defers nothing without an owner; see §13.
 
@@ -32,7 +33,7 @@ Who is called with what:
 | FM-AGENT | `agent-project` | 18 (`CANARY_R_PROJECT` in `fld-agents-r-nonprod`); 31 (`WALLE_PROJECT` in `fld-agents-p-sa-prod`); 37 (`WALLE_TWIN_PROJECT` in `fld-agents-p-sa-nonprod`); later agents | `ENT_BOOTSTRAP_MODULE_R_NONPROD` (canary-r); `ENT_FACTORY_SINGLETON_PSA_PROD` (Wall-E); `ENT_FACTORY_SINGLETON_PSA_NONPROD` (twin, dated no-approval variant); a new `ent-bootstrap-module` per other folder, added to 12 before the run | second human (bootstrap-module); **two named approvers**, the security reviewer and the second human (P-SA prod); none with mandatory justification (P-SA nonprod) |
 | FM-VERIFIER | `verifier-project` | 23 (`EVE_PROJECT` in `fld-controllers-prod`, `EVE_TWIN_PROJECT` in `fld-controllers-nonprod`) | `ENT_FACTORY_SINGLETON_CTL_PROD`, `ENT_FACTORY_SINGLETON_CTL_NONPROD` | **the second human**, never the platform owner (SD-12) |
 | FM-IMPROVER | `improver-project` | 22 (`MO_PROJECT` in `fld-improvers-prod`; `MO_TWIN_PROJECT` if P40 requires it) | `ENT_BOOTSTRAP_MODULE_IMPROVERS_PROD`, `ENT_BOOTSTRAP_MODULE_IMPROVERS_NONPROD` | second human |
-| FM-TENANT-APP | `tenant-app` | 19 GE-2 (spec, repair entitlement, labels and contacts) and GE-3 (move, then log routing) | `ENT_PROJECT_MOVE_SRC` and `ENT_PROJECT_MOVE_DST` for the move; `ENT_PROJECT_REPAIR_GEMINI` for the reconciliation | as 12 created them (security reviewer, or the recorded Tier C variant) |
+| FM-TENANT-APP | `tenant-app` | 19 GE-2 (spec, repair entitlement, labels and contacts) and GE-3 (move, then log routing) | `ENT_PROJECT_MOVE_SRC` and `ENT_PROJECT_MOVE_DST` for the move; `ENT_PROJECT_REPAIR_TENANT_APP` for the reconciliation | as 12 created them (security reviewer, or the recorded Tier C variant) |
 | FM-REVOKE | `revoke` | any file retiring a project (first expected use: canary-r after its last K7 drill) | the project's `ENT_PROJECT_REPAIR_<AGENT>`; `ENT_PLATFORM_POLICY` for deny and PAB removal | as those entitlements name |
 | FM-CORE | the undefined `platform-core` (S048) | this file only (§8) | `ENT_PROJECT_REPAIR_CORE`, `ENT_FOLDER_ADMIN` for any repair | as 12 created them |
 
@@ -134,7 +135,7 @@ grep -E '^\| BD-10-6 \|' "$DEVIATION_REGISTER" >/dev/null && grep -A200 '^## Clo
 
 - **WHO:** Platform owner.
 - **WHERE:** Shell; README BLOCKED index.
-- **ACTION:** **BLOCKED**: Needs: the factory repository with the five modules of HLD §3.2 plus a platform-core module (§8), each wrapping Fabric `project-factory` pinned at v58.0.0 (P35); the Cloud Build pipeline in `CICD_PROJECT` running `terraform plan` and the routine apply as `factory-apply@` through `wif-factory`, and the privileged apply under PAM; the schema, singleton and `tier_mismatch` checks of 02 §3.4; the factory's own negative test at every release (§9 is its hand form). One design point the code must settle, handed on by 13 OP-9.2: R6 denies `factory-apply@` `iam.serviceAccounts.getAccessToken`, so 02 §3.4's "first engine and action-service revision as the project deployer" cannot be done by impersonation from the routine phase; it moves to the privileged phase or needs a recorded decision. Commit it in: the platform repository (`PLATFORM_REPO_REMOTE`), path `factory/`. Unblocked by: a commit with green CI and a nonprod run on canary-r whose `terraform plan` after import is empty (FM-11). Gate waiting: none of Tier R (the hand equivalents run instead); the deviation register's expiry at the Tier W gate. Until then:
+- **ACTION:** **BLOCKED**: Needs: the factory repository with the five modules of HLD §3.2 plus a platform-core module (§8), each wrapping Fabric `project-factory` pinned at v58.0.0 (P35; v59.0.0 released 2026-09-25 per the GitHub releases page read 2026-10-01; the pin is re-decided when B-01 starts, after reading the changelog); the Cloud Build pipeline in `CICD_PROJECT` running `terraform plan` and the routine apply as `factory-apply@` through `wif-factory`, and the privileged apply under PAM; the schema, singleton and `tier_mismatch` checks of 02 §3.4; the factory's own negative test at every release (§9 is its hand form). One design point the code must settle, handed on by 13 OP-9.2: R6 denies `factory-apply@` `iam.serviceAccounts.getAccessToken`, so 02 §3.4's "first engine and action-service revision as the project deployer" cannot be done by impersonation from the routine phase; it moves to the privileged phase or needs a recorded decision. Commit it in: the platform repository (`PLATFORM_REPO_REMOTE`), path `factory/`. Unblocked by: a commit with green CI and a nonprod run on canary-r whose `terraform plan` after import is empty (FM-11). Gate waiting: none of Tier R (the hand equivalents run instead); the deviation register's expiry at the Tier W gate. Until then:
 
 ```bash
 checkpoint FM-0.2 BLOCKED - - "B-01 factory code: automation of every FM procedure; hand equivalents run under SD-01"
@@ -422,7 +423,7 @@ def check_live(s):
     rq, err = gc("logging", "sinks", "describe", "_Required", f"--project={pid}")
     rec("logging.required_global", str((rq or {}).get("destination", "")).endswith("/locations/global/buckets/_Required"), "global _Required", (rq or {}).get("destination") or err, s)
     if lr["trace_bucket"]:
-        tb, err = gc("beta", "observability", "buckets", "list", f"--location={reg}", f"--project={pid}")
+        tb, err = gc("observability", "buckets", "list", f"--location={reg}", f"--project={pid}")
         rec("trace.bucket", any(str(x.get("name", "")).endswith(f"/locations/{reg}/buckets/_Trace") for x in tb or []), f"_Trace in {reg}", tb if tb is not None else err, s)
     bu, err = gc("billing", "budgets", "list", f"--billing-account={ENV['BILLING_ACCOUNT_ID']}", f"--billing-project={ENV['CICD_PROJECT']}")
     mine = [x for x in bu or [] if x.get("displayName") == s["budget"]["display_name"]]
@@ -573,7 +574,7 @@ git -C "$PLATFORM_REPO_DIR" commit -m "tools: fm-zero-diff checker for hand modu
 git -C "$PLATFORM_REPO_DIR" push -u origin HEAD
 ```
 
-  Commands the checker calls, each already used by 10, 13 or 14 or verified for this file on 2026-09-15: `gcloud projects describe`, `gcloud resource-manager tags bindings list --effective`, `gcloud billing projects describe`, `gcloud services list --enabled`, `gcloud logging sinks describe`, `gcloud logging buckets describe`, `gcloud beta observability buckets list`, `gcloud billing budgets list`, `gcloud essential-contacts list`, `gcloud iam service-accounts list` and `keys list`, `gcloud projects get-iam-policy`, `gcloud alpha resource-manager liens list`, `gcloud beta monitoring channels list` (no GA track exists for `monitoring channels`; beta reference read 2026-09-15), `gcloud pubsub topics get-iam-policy`, `gcloud iam policies get --kind=denypolicies` (the `update` reference read 2026-09-15 documents `--attachment-point`, `--kind`, `--policy-file`, `--etag`), `gcloud iam policy-bindings describe` (binding create reference and the PAB pages read 2026-09-15), `gcloud org-policies describe [--effective]`, `gcloud pam entitlements list --location=global --billing-project="$CICD_PROJECT"` (GA track; create reference read 2026-09-15), `gcloud model-armor floorsettings describe --full-uri=projects/<id>/locations/global/floorSetting` with the `CLOUDSDK_API_ENDPOINT_OVERRIDES_MODELARMOR` global endpoint (describe reference read 2026-09-15: `--full-uri` is the only argument; the same form 18 KS-2.9 writes with). The register file is read with the PyYAML interpreter of 16 RG-2.1 (`~/platform/venv-register/bin/python`, overridable with `REGISTER_VENV_PYTHON`), never by regex: 16 RG-2.2's schema is one document with `agent_id` and a `rows[]` array, whose per-row keys are indented list members that no line-anchored pattern can see. *Assumption:* the JSON field names the checker reads (`namespacedTagValue`, `notificationCategorySubscriptions`, `specifiedAmount.units`, `target.principalSet`, `denyRule.deniedPrincipals`) are those of the underlying REST resources; FM-1.3 runs every branch against a real project and a wrong field name shows as a `FAIL` with the actual value printed, which is corrected by pull request before the checker is trusted.
+  Commands the checker calls, each already used by 10, 13 or 14 or verified for this file on 2026-09-15: `gcloud projects describe`, `gcloud resource-manager tags bindings list --effective`, `gcloud billing projects describe`, `gcloud services list --enabled`, `gcloud logging sinks describe`, `gcloud logging buckets describe`, `gcloud observability buckets list` (GA track; the beta reference, updated 2026-09-22 and read 2026-10-01, names it as the GA variant), `gcloud billing budgets list`, `gcloud essential-contacts list`, `gcloud iam service-accounts list` and `keys list`, `gcloud projects get-iam-policy`, `gcloud alpha resource-manager liens list`, `gcloud beta monitoring channels list` (no GA track exists for `monitoring channels`; beta reference read 2026-09-15), `gcloud pubsub topics get-iam-policy`, `gcloud iam policies get --kind=denypolicies` (the `update` reference read 2026-09-15 documents `--attachment-point`, `--kind`, `--policy-file`, `--etag`), `gcloud iam policy-bindings describe` (binding create reference and the PAB pages read 2026-09-15), `gcloud org-policies describe [--effective]`, `gcloud pam entitlements list --location=global --billing-project="$CICD_PROJECT"` (GA track; create reference read 2026-09-15), `gcloud model-armor floorsettings describe --full-uri=projects/<id>/locations/global/floorSetting` with the `CLOUDSDK_API_ENDPOINT_OVERRIDES_MODELARMOR` global endpoint (describe reference read 2026-09-15: `--full-uri` is the only argument; the same form 18 KS-2.9 writes with). The register file is read with the PyYAML interpreter of 16 RG-2.1 (`~/platform/venv-register/bin/python`, overridable with `REGISTER_VENV_PYTHON`), never by regex: 16 RG-2.2's schema is one document with `agent_id` and a `rows[]` array, whose per-row keys are indented list members that no line-anchored pattern can see. *Assumption:* the JSON field names the checker reads (`namespacedTagValue`, `notificationCategorySubscriptions`, `specifiedAmount.units`, `target.principalSet`, `denyRule.deniedPrincipals`) are those of the underlying REST resources; FM-1.3 runs every branch against a real project and a wrong field name shows as a `FAIL` with the actual value printed, which is corrected by pull request before the checker is trusted.
 - **VERIFY:** `py_compile` prints nothing; `python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py"` with no arguments prints the usage and exits 2; the register interpreter exists — `"${REGISTER_VENV_PYTHON:-$HOME/platform/venv-register/bin/python}" -c 'import yaml; print(yaml.__version__)'` prints `6.0.3` (created by [16](16-register-and-shared-registry.md) RG-2.1; if it is missing, re-run RG-2.1 before FM-1.4, do not edit the checker to parse YAML by hand); the pull request is merged with two human approvals.
 - **ROLLBACK:** Revert by pull request. The checker writes nothing to Google Cloud.
 - **EVIDENCE:** Merge commit id as `<date>-FM-1.2-checker-v1`. E-05 (the verification method of the technical documentation). TISAX 5.2.1, 5.2.4.
@@ -809,11 +810,11 @@ gcloud logging sinks update _Default "logging.googleapis.com/projects/${P_ID}/lo
 
 ```bash
 jq -e '.services | index("observability.googleapis.com")' "$RUN_SPEC" >/dev/null || { echo "STOP: observability API not in spec"; false; }
-gcloud beta observability buckets create _Trace --location="$REGION" --project="$P_ID"
+gcloud observability buckets create _Trace --location="$REGION" --project="$P_ID"
 ```
 
   Required before any traffic: Cloud Run spans do not cause the bucket to be created (X-RQB-03 verdict). `observability.googleapis.com` must be on the parent folder's allow-list (it is on R, W, P lists of 02 §4.2; for controllers and improvers 13 added it, or the spec records `trace_bucket: false` with a `pending` line owned by 13).
-- **VERIFY:** `gcloud beta observability buckets list --location="$REGION" --project="$P_ID"` lists `_Trace` in `europe-west1`.
+- **VERIFY:** `gcloud observability buckets list --location="$REGION" --project="$P_ID"` lists `_Trace` in `europe-west1`.
 - **ROLLBACK:** None documented for a location; a wrong location is a dated residency exception (10 CP-1.8).
 - **EVIDENCE:** Output as `${R}-FM-2.9-trace-v1`. TISAX 7.1.
 
@@ -881,21 +882,29 @@ Inserted between FM-2.12 and FM-2.13 rather than renumbering, so that the step i
 
 ```bash
 need ENT_FOLDER_ADMIN CICD_PROJECT PLATFORM_REPO_DIR
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
 test "$(jq -r .project_floor.applies "$RUN_SPEC")" = true || { echo "project_floor.applies=false: N/A, reason $(jq -r .project_floor.reason "$RUN_SPEC")"; false; }
 F="$PLATFORM_REPO_DIR/$(jq -r .project_floor.floors_file "$RUN_SPEC")"
 test -s "$F" || { echo "PENDING: model-armor/floors.json not merged yet (18 KS-2.3); record the pending line and stop this step"; false; }
 export CLOUDSDK_API_ENDPOINT_OVERRIDES_MODELARMOR="https://modelarmor.googleapis.com/"
 P_NUM="$(gcloud projects describe "$P_ID" --format='value(projectNumber)')"
 ET="$(jq -r .project_floor.vertex_enforcement "$RUN_SPEC")"
-RAI="$(jq -c '.floors[] | select(.level=="platform") | .rai' "$F")"
+PIC="$(jq -r .project_floor.pi_confidence "$RUN_SPEC")"
+SPELLING="$(jq -r '.spellings.accepted' "$F")"   # the pair 18 KS-2.5 proved and KS-2.10 committed
+case "$SPELLING" in
+  gcloud)       PIE=enable;  MU=enabled; PI="$(printf '%s' "$PIC" | tr 'A-Z_' 'a-z-')"; RAI="$(jq -c '.floors[] | select(.level=="platform") | .gcloud.rai' "$F")";;
+  gcloud-lower) PIE=enable;  MU=enabled; PI="$(printf '%s' "$PIC" | tr 'A-Z_' 'a-z-')"; RAI="$(jq -c '.floors[] | select(.level=="platform") | .gcloud.rai | map(.confidenceLevel |= (ascii_downcase | gsub("_"; "-")))' "$F")";;
+  rest)         PIE=ENABLED; MU=ENABLED; PI="$(printf '%s' "$PIC" | tr 'a-z-' 'A-Z_')"; RAI="$(jq -c '.floors[] | select(.level=="platform") | .rest.rai' "$F")";;
+  *) echo "STOP: floors.json .spellings.accepted is not set (18 KS-2.5 records it, KS-2.10 commits it)"; false;;
+esac
 gcloud model-armor floorsettings describe --full-uri="projects/${P_ID}/locations/global/floorSetting" --billing-project="$P_ID" --format=json > "${R}-FM-2.12a-floor-before-v1.json"
-gcloud pam grants create --entitlement="$ENT_FOLDER_ADMIN" --requested-duration=3600s --justification="${RUN_ID}: Model Armor project floor per model-armor/floors.json (SD-41, X-RQB-08)" --location=global --billing-project="$CICD_PROJECT"
+g="$(gcloud pam grants create --entitlement="$ENT_FOLDER_ADMIN" --requested-duration=3600s --justification="${RUN_ID}: Model Armor project floor per model-armor/floors.json (SD-41, X-RQB-08)" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"; pam_wait "$g" ACTIVE
 if [ "$(jq -r .project_floor.vertex_ai "$RUN_SPEC")" = true ]; then
   gcloud beta services identity create --service=aiplatform.googleapis.com --project="$P_ID"
   gcloud projects add-iam-policy-binding "$P_ID" --member="serviceAccount:service-${P_NUM}@gcp-sa-aiplatform.iam.gserviceaccount.com" --role=roles/modelarmor.user --condition=None
-  gcloud model-armor floorsettings update --full-uri="projects/${P_ID}/locations/global/floorSetting" --pi-and-jailbreak-filter-settings-enforcement=ENABLED --pi-and-jailbreak-filter-settings-confidence-level="$(jq -r .project_floor.pi_confidence "$RUN_SPEC")" --malicious-uri-filter-settings-enforcement=ENABLED --rai-settings-filters="$RAI" --enable-multi-language-detection --enable-floor-setting-enforcement=TRUE --add-integrated-services=VERTEX_AI --vertex-ai-enforcement-type="$ET" --enable-vertex-ai-cloud-logging --billing-project="$P_ID"
+  gcloud model-armor floorsettings update --full-uri="projects/${P_ID}/locations/global/floorSetting" --pi-and-jailbreak-filter-settings-enforcement="$PIE" --pi-and-jailbreak-filter-settings-confidence-level="$PI" --malicious-uri-filter-settings-enforcement="$MU" --rai-settings-filters="$RAI" --enable-multi-language-detection --enable-floor-setting-enforcement=TRUE --add-integrated-services=VERTEX_AI --vertex-ai-enforcement-type="$ET" --enable-vertex-ai-cloud-logging --billing-project="$P_ID"
 else
-  gcloud model-armor floorsettings update --full-uri="projects/${P_ID}/locations/global/floorSetting" --pi-and-jailbreak-filter-settings-enforcement=ENABLED --pi-and-jailbreak-filter-settings-confidence-level="$(jq -r .project_floor.pi_confidence "$RUN_SPEC")" --malicious-uri-filter-settings-enforcement=ENABLED --rai-settings-filters="$RAI" --enable-multi-language-detection --enable-floor-setting-enforcement=TRUE --billing-project="$P_ID"
+  gcloud model-armor floorsettings update --full-uri="projects/${P_ID}/locations/global/floorSetting" --pi-and-jailbreak-filter-settings-enforcement="$PIE" --pi-and-jailbreak-filter-settings-confidence-level="$PI" --malicious-uri-filter-settings-enforcement="$MU" --rai-settings-filters="$RAI" --enable-multi-language-detection --enable-floor-setting-enforcement=TRUE --billing-project="$P_ID"
 fi
 ```
 
@@ -908,7 +917,7 @@ fi
 | `EVE_PROJECT`, `EVE_TWIN_PROJECT` (23) | `applies: true`, `tier: controllers`, **`vertex_ai: false`** with the reason "`aiplatform` is denied on this project by FM-4.2; no Vertex AI service agent can exist, so the `VERTEX_AI` integration and the `modelarmor.user` grant have no subject" | the filter half is still written and enforced, so a future re-enablement cannot land on an unfloored project. The reporting path that keeps `aiplatform` is `EVE_ADVISOR_PROJECT`, deferred with the advisor path (file 41, Eve owner), recorded in `made_elsewhere` |
 | `MO_PROJECT` (22) | `applies: false`, reason "`modelarmor` and `aiplatform` are off 13's `fld-improvers` allow-list until S4 (02 §4.2); the floor cannot be written before the dated pull request that adds them" | with the `made_elsewhere` line "Model Armor project floor, file 40 Mo-11 at S4, owner Mo owner, using PF (18 KS-2.9)" — which is 18 KS-2.10's re-run row for 40 |
 
-  A project floor overrides a conflicting folder floor (18 KS-2.3's precedence rule), so this step never reads or writes a folder floor. The `--full-uri` form and every flag are `gcloud model-armor floorsettings update`/`describe` (read 2026-09-15) and identical to 18 KS-2.9's, so the two files write the same thing.
+  A project floor overrides a conflicting folder floor (18 KS-2.3's precedence rule), so this step never reads or writes a folder floor. The `--full-uri` form and every flag are `gcloud model-armor floorsettings update`/`describe` (read 2026-09-15) and identical to 18 KS-2.9's, so the two files write the same thing. The enum spelling is never chosen here: it is `floors.json`'s `.spellings.accepted`, the pair 18 KS-2.5 proved, and the RAI list comes from the matching block (`.gcloud.rai`, or `.rest.rai` for `rest`), never from a `.floors[].rai` key, which the file does not have.
 - **VERIFY:**
 
 ```bash
@@ -944,12 +953,13 @@ gcloud beta monitoring channels describe "$NOTIF_CH_PAGER_CORE" --project="$CORE
 - **ACTION:** 08 §3.2: a project sink in `LOGGING_PROJECT` (which receives every child's audit logs through `S-folder` and the organisation's through `S-org`) to the topic `<agent>-triggers` in the agent project, filter `protoPayload.serviceName="admin.googleapis.com" AND NOT protoPayload.authenticationInfo.principalEmail="<robot>@<domain>" AND (<the family's event filter from the manifest>)`. No agent procedure creates an organisation sink (SD-40).
 
 ```bash
-need LOGGING_PROJECT ENT_FOLDER_ADMIN
+need LOGGING_PROJECT ENT_FOLDER_ADMIN CICD_PROJECT PLATFORM_REPO_DIR
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
 TS_NAME="$(jq -r .trigger_sink.name "$RUN_SPEC")"; TS_TOPIC="$(jq -r .trigger_sink.topic "$RUN_SPEC")"
 jq -r .trigger_sink.filter "$RUN_SPEC" > "${R}-FM-2.14-filter.txt"
 test "$(shasum -a 256 "${R}-FM-2.14-filter.txt" | cut -d' ' -f1)" = "$(jq -r .trigger_sink.filter_sha256 "$RUN_SPEC")" || { echo "filter hash differs from spec: stop"; false; }
 gcloud pubsub topics create "$TS_TOPIC" --project="$P_ID"
-gcloud pam grants create --entitlement="$ENT_FOLDER_ADMIN" --requested-duration=3600s --justification="${RUN_ID}: to-triggers sink (08 §3.2, row 39)" --location=global --billing-project="$CICD_PROJECT"
+g="$(gcloud pam grants create --entitlement="$ENT_FOLDER_ADMIN" --requested-duration=3600s --justification="${RUN_ID}: to-triggers sink (08 §3.2, row 39)" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"; pam_wait "$g" ACTIVE
 gcloud logging sinks create "$TS_NAME" "pubsub.googleapis.com/projects/${P_ID}/topics/${TS_TOPIC}" --log-filter="$(cat "${R}-FM-2.14-filter.txt")" --description="Trigger stream of ${RUN_ID} (08 §3.2, topology row 39)" --project="$LOGGING_PROJECT"
 WRITER="$(gcloud logging sinks describe "$TS_NAME" --project="$LOGGING_PROJECT" --format='value(writerIdentity)')"
 gcloud pubsub topics add-iam-policy-binding "$TS_TOPIC" --member="$WRITER" --role=roles/pubsub.publisher --project="$P_ID"
@@ -967,8 +977,9 @@ gcloud pubsub topics add-iam-policy-binding "$TS_TOPIC" --member="$WRITER" --rol
 - **ACTION:** Read-modify-write with the etag, one policy at a time; the module section says which entries. Each entry adds `principal` to `deniedPrincipals` of the named rules and, where the spec says, to `exceptionPrincipals`. Rules are matched by the rule id at the start of their `description`. **First run only:** if `deny-agents-platform` has no rule described `R1 `, the run first merges `policies/deny/deny-agents-platform-agent-rules.json` into the policy: rules `R1 secrets`, `R2 signing`, `R3 impersonation and keys`, `R3b actAs`, `R4 self-modification` and `R5 governance and evidence`, each with the verified permission list of 04 §3 (13 OP-2.5's `R1`, `R2`, `R3` strings; R3b `iam.googleapis.com/serviceAccounts.actAs`; R4 and R5 exactly as 04 §3's table), empty `deniedPrincipals` replaced by this run's principal, and R6 given the description `R6 factory credential fence` without any other change. That file is committed before the run with the second human's review and re-checked by 13's permission-name `grep` (OP-2.6); the first run's diff shows six added rules and one description added. The same first-run rule applies to `deny-core-agents`: a rule described `CA agent identities` denying 13's `R1`, `R2`, `R3` and `CORE_GOV` permissions to agent principal sets, added by the first FM-AGENT run (13 OP-9.2).
 
 ```bash
-need ENT_PLATFORM_POLICY
-gcloud pam grants create --entitlement="$ENT_PLATFORM_POLICY" --requested-duration=3600s --justification="${RUN_ID}: deny and PAB entries (04 §3, §4)" --location=global --billing-project="$CICD_PROJECT"
+need ENT_PLATFORM_POLICY CICD_PROJECT PLATFORM_REPO_DIR
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
+g="$(gcloud pam grants create --entitlement="$ENT_PLATFORM_POLICY" --requested-duration=3600s --justification="${RUN_ID}: deny and PAB entries (04 §3, §4)" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"; pam_wait "$g" ACTIVE
 jq -c '.deny_entries[]' "$RUN_SPEC" | while read -r DE; do
   PID_="$(echo "$DE" | jq -r .policy_id)"; AP="$(echo "$DE" | jq -r .attachment_point)"
   T="$(mktemp)"
@@ -1170,11 +1181,21 @@ Parameters the calling file puts in the run spec:
 
 ```bash
 need REGISTER_PATH SECURITY_REVIEWER_EMAIL SECOND_HUMAN_EMAIL ENT_FACTORY_SINGLETON_PSA_PROD
-grep -l -E '^tier:\s*P-SA\s*$' "$PLATFORM_REPO_DIR/$REGISTER_PATH"/*.yaml | while read -r f; do awk '/^---/{d++} /^env:/{e[d]=$2} /^status:/{s[d]=$2} /^tier:/{t[d]=$2} END{for(i in t) if(t[i]=="P-SA") print FILENAME, e[i], s[i]}' "$f"; done
+PY="${REGISTER_VENV_PYTHON:-$HOME/platform/venv-register/bin/python}"   # 16 RG-2.1's PyYAML interpreter, as 16 RG-3.6 reads the register
+"$PY" - "$PLATFORM_REPO_DIR/$REGISTER_PATH" <<'EOF'
+import glob, os, sys, yaml
+for f in sorted(glob.glob(os.path.join(sys.argv[1], "*.yaml"))):
+    d = yaml.safe_load(open(f, encoding="utf-8"))
+    if not isinstance(d, dict):
+        continue
+    for r in d.get("rows") or []:
+        if r.get("tier") == "P-SA" and r.get("env") == "prod" and r.get("status") != "retired":
+            print(os.path.basename(f), d.get("agent_id"), r.get("env"), r.get("status"))
+EOF
 gcloud pam entitlements describe "$ENT_FACTORY_SINGLETON_PSA_PROD" --location=global --billing-project="$CICD_PROJECT" --format="yaml(approvalWorkflow)"
 ```
 
-- **VERIFY:** Exactly one line with `prod` and a status other than `retired` (PSA1 counts only `env=prod` rows, SD-02; the twin's `nonprod` row is expected beside it). The approval workflow lists both `SECURITY_REVIEWER_EMAIL` and `SECOND_HUMAN_EMAIL` (or a group whose only members are those two, as 12 recorded) and not the platform owner. `SECURITY_REVIEWER_EMAIL` is not `*tbd*`: if it is, the production run does not start (31 is ordered after the appointment, SD-42).
+- **VERIFY:** Exactly one line (file, `agent_id`, `prod`, a status other than `retired`): PSA1 counts only `env=prod` rows (SD-02), so the twin's `nonprod` row is not printed. The register is read with PyYAML, never by regex: 16 RG-2.2's schema keeps `tier`, `env` and `status` inside the `rows[]` list, where no line-anchored pattern can see them. The approval workflow lists both `SECURITY_REVIEWER_EMAIL` and `SECOND_HUMAN_EMAIL` (or a group whose only members are those two, as 12 recorded) and not the platform owner. `SECURITY_REVIEWER_EMAIL` is not `*tbd*`: if it is, the production run does not start (31 is ordered after the appointment, SD-42).
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** Output as `${R}-FM-3.1-singleton-v1`. TISAX 4.1.3. EU AI Act E-08.
 
@@ -1188,17 +1209,24 @@ gcloud pam entitlements describe "$ENT_FACTORY_SINGLETON_PSA_PROD" --location=gl
 AG="$(jq -r .agent_id "$RUN_SPEC")"
 P_NUM="$(gcloud projects describe "$P_ID" --format='value(projectNumber)')"
 case "$P_NUM" in ''|*[!0-9]*) echo "STOP: no project number; FM-2.3 and FM-2.4 must have run"; false;; esac
-jq --arg ap "cloudresourcemanager.googleapis.com/folders/${FLD_AGENTIC_PLATFORM}" --arg apc "cloudresourcemanager.googleapis.com/folders/${FLD_PLATFORM_CORE}" --arg org "$ORG_ID" --arg num "$P_NUM" --arg ag "$AG" --arg pid "$P_ID" '.deny_entries = [
+# the agent-principal form 18 KS-3.2 proved on canary-r (penv DENY_AGENT_FORM): set | principal
+case "${DENY_AGENT_FORM:-}" in
+  set)       AGP="principalSet://agents.global.org-${ORG_ID}.system.id.goog/attribute.platformContainer/aiplatform/projects/${P_NUM}";;
+  principal) AGP="principal://agents.global.org-${ORG_ID}.system.id.goog/resources/aiplatform/projects/${P_NUM}";;
+  *) test "$(jq -r .register_tier "$RUN_SPEC")" = R || { echo "STOP: DENY_AGENT_FORM unset (18 KS-3.2); a Tier W+ run does not reach FM-2.15 without it"; false; }
+     AGP="principalSet://agents.global.org-${ORG_ID}.system.id.goog/attribute.platformContainer/aiplatform/projects/${P_NUM}";;
+esac
+jq --arg ap "cloudresourcemanager.googleapis.com/folders/${FLD_AGENTIC_PLATFORM}" --arg apc "cloudresourcemanager.googleapis.com/folders/${FLD_PLATFORM_CORE}" --arg agp "$AGP" --arg num "$P_NUM" --arg ag "$AG" --arg pid "$P_ID" '.deny_entries = [
   {"policy_id":"deny-agents-platform","attachment_point":$ap,"rules":["R1","R2","R3","R3b","R4","R5"],
    "principal":("principalSet://cloudresourcemanager.googleapis.com/projects/" + $num + "/type/ServiceAccount"),
    "exceptions":{"R1":["principal://iam.googleapis.com/projects/-/serviceAccounts/" + $ag + "-actions@" + $pid + ".iam.gserviceaccount.com"],
                  "R3b":["principal://iam.googleapis.com/projects/-/serviceAccounts/" + $ag + "-deployer@" + $pid + ".iam.gserviceaccount.com"],
                  "R4":["principal://iam.googleapis.com/projects/-/serviceAccounts/" + $ag + "-deployer@" + $pid + ".iam.gserviceaccount.com"]}},
   {"policy_id":"deny-agents-platform","attachment_point":$ap,"rules":["R1","R2","R3","R3b","R4","R5"],
-   "principal":("principalSet://agents.global.org-" + $org + ".system.id.goog/attribute.platformContainer/aiplatform/projects/" + $num),
+   "principal":$agp,
    "exceptions":{}},
   {"policy_id":"deny-core-agents","attachment_point":$apc,"rules":["CA"],
-   "principal":("principalSet://agents.global.org-" + $org + ".system.id.goog/attribute.platformContainer/aiplatform/projects/" + $num),
+   "principal":$agp,
    "exceptions":{}}
 ]' "$RUN_SPEC" > "$RUN_SPEC.tmp" && mv "$RUN_SPEC.tmp" "$RUN_SPEC"
 jq -r '.deny_entries[] | "\(.policy_id) rules=\(.rules | join(",")) exceptions=\(.exceptions | keys | join(","))"' "$RUN_SPEC"
@@ -1207,7 +1235,7 @@ jq -r '.deny_entries[] | "\(.policy_id) rules=\(.rules | join(",")) exceptions=\
   **`R3b` is in `rules[]`, not only in `exceptions`.** FM-2.15 visits a rule only when its id appears in `rules[]`, and applies that rule's exceptions while it is there; an exception keyed on a rule outside the list is silently never written, which is how `<agent>-deployer@` lost its `actAs` exception. A Tier R project has no action service and no deployer of its own: the run drops the `R1`, `R3b` and `R4` keys (`.exceptions = {}`) rather than listing accounts that do not exist, and the `inputs` check then has nothing to reconcile. A project whose deployer lives in `CICD_PROJECT` (Wall-E, SD-34) names `walle-deployer@<CICD_PROJECT>.iam.gserviceaccount.com` in `R3b` and `R4`, from 31's list, not a local account.
 
   A third entry puts the same agent-identity set on `deny-core-agents` (attachment `cloudresourcemanager.googleapis.com/folders/${FLD_PLATFORM_CORE}`, rule `CA`), as 13 OP-9.2 hands on. Principal forms: Google's principal-identifiers page, deny-policy table (read 2026-09-15), lists "All service accounts in a project" as `principalSet://cloudresourcemanager.googleapis.com/projects/PROJECT_NUMBER/type/ServiceAccount` and "All agent identities in a project" as `principalSet://TRUST_DOMAIN/attribute.platformContainer/aiplatform/projects/PROJECT_NUMBER`, and a single service account as `principal://iam.googleapis.com/projects/-/serviceAccounts/EMAIL`.
-  **Conflict recorded.** SD-22, and 13 OP-2.5's hand-over after it, say deny policies do not support agent identity sets and prescribes `principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N`; the page as read on 2026-09-15 lists the `principalSet ... attribute.platformContainer` form in the deny table, and its single-identity form continues to `/locations/L/reasoningEngines/ID`, so the project-only `principal://` form of SD-22 is not on the page. The spec uses the documented set form; 18's P8 spike proves it on canary-r with a denied call and Policy Troubleshooter; if FM-2.15's update refuses it, the entry becomes `pending` (owner platform owner, re-run in 18 or 35) and the per-engine `principal://.../reasoningEngines/ID` is added when the engine exists. SD-22's text is corrected in 03 by the §12 pass once 18 records the result.
+  **Conflict recorded.** SD-22, and 13 OP-2.5's hand-over after it, say deny policies do not support agent identity sets and prescribes `principal://agents.global.org-ORG_ID.system.id.goog/resources/aiplatform/projects/N`; the page as read on 2026-09-15 lists the `principalSet ... attribute.platformContainer` form in the deny table, and its single-identity form continues to `/locations/L/reasoningEngines/ID`, so the project-only `principal://` form of SD-22 is not on the page. The spec uses the documented set form; 18's P8 spike proves it on canary-r with a denied call and Policy Troubleshooter; if FM-2.15's update refuses it, the entry becomes `pending` (owner platform owner, re-run in 18 or 35) and the per-engine `principal://.../reasoningEngines/ID` is added when the engine exists. SD-22's text is corrected in 03 by the §12 pass once 18 records the result. From then on the form is a variable, not a choice made here: 18 KS-3.2 sets `DENY_AGENT_FORM` (`set` or `principal`) from the form the deny update accepted, and this step and 18 KS-6.3 build the agent principal from it, so the two forms never sit side by side in the same rules. A Tier R run (`canary-r` in 18 KS-1.3, before KS-3.2) uses the documented set form; a Tier W+ run stops here until the variable is set.
   Exceptions: R1 lifts only for the action service's attached account(s) (`<agent>-actions@`, `<agent>-actions-super@`); R3b is a separate rule denying `iam.googleapis.com/serviceAccounts.actAs` whose exception is `<agent>-deployer@` (13 made R3b); R4 lifts for the deployer. A Tier R project has no action service, no deployer and no secrets: its exceptions object is empty.
 - **VERIFY:** `jq '.deny_entries | length' "$RUN_SPEC"` prints `3`; the `jq -r` line above prints `R3b` inside every `deny-agents-platform` entry's `rules` and, for a Tier W+ run, `R1,R3b,R4` as its exception keys — an exception key that is not in `rules` is the defect this step exists to prevent; `jq -r '.deny_entries[].principal' "$RUN_SPEC"` prints the two forms with the real project number and no angle bracket; `python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" inputs "$RUN_SPEC"` prints `PASS` on `deny_entry.0.principal_form`, `deny_entry.0.project_number` and `deny_entry.0.exception_rules_visited`; the second spec commit is merged.
 - **ROLLBACK:** Revert the spec commit.
@@ -1327,7 +1355,7 @@ gcloud iam policies create deny-eve-project-foreign --attachment-point="cloudres
 
 ```bash
 need EVE_PROJECT FLD_CONTROLLERS_PROD CICD_PROJECT
-grep -P "\tPA-4.9\t" "$BUILD_LOG_DIR/rerun-index.tsv"
+awk -F'\t' '$2=="PA-4.9"' "$BUILD_LOG_DIR/rerun-index.tsv"
 gcloud pam entitlements list --project="$EVE_PROJECT" --location=global --billing-project="$CICD_PROJECT" --format="value(name)" | grep ent-witness-export-repair
 gcloud pam entitlements list --folder="$FLD_CONTROLLERS_PROD" --location=global --billing-project="$CICD_PROJECT" --format="value(name)" | grep ent-witness-export-repair || echo "folder-scoped copy gone"
 ```
@@ -1368,13 +1396,15 @@ Called by 22 for `MO_PROJECT` (`FLD_IMPROVERS_PROD`) and, if P40 requires it, `M
 - **ACTION:** `deny-improvers` needs no per-project entry: 13 OP-2.5 attached it at `fld-agentic-platform` with the folder set `principalSet://cloudresourcemanager.googleapis.com/folders/<FLD_IMPROVERS>/type/ServiceAccount`, which covers every project in the folder (principal-identifiers page), and `deny-core-agents` already names the same folder set. What remains is `MO_PROJECT`'s service accounts on the shared `deny-agents-platform` rules R1 to R5 (so "no Mo identity signs", 04 R2, is enforcement), and a checker entry that proves the folder-set coverage.
 
 ```bash
-jq --arg ap "cloudresourcemanager.googleapis.com/folders/${FLD_AGENTIC_PLATFORM}" --arg set "principalSet://cloudresourcemanager.googleapis.com/folders/${FLD_IMPROVERS}/type/ServiceAccount" --arg num "<PROJECT_NUMBER>" '.deny_entries = [
-  {"policy_id":"deny-agents-platform","attachment_point":$ap,"rules":["R1","R2","R3","R4","R5"],"principal":("principalSet://cloudresourcemanager.googleapis.com/projects/" + $num + "/type/ServiceAccount"),"exceptions":{}}
+P_NUM="$(gcloud projects describe "$P_ID" --format='value(projectNumber)')"
+case "$P_NUM" in ''|*[!0-9]*) echo "STOP: no project number; FM-2.3 and FM-2.4 must have run"; false;; esac
+jq --arg ap "cloudresourcemanager.googleapis.com/folders/${FLD_AGENTIC_PLATFORM}" --arg set "principalSet://cloudresourcemanager.googleapis.com/folders/${FLD_IMPROVERS}/type/ServiceAccount" --arg num "$P_NUM" '.deny_entries = [
+  {"policy_id":"deny-agents-platform","attachment_point":$ap,"rules":["R1","R2","R3","R3b","R4","R5"],"principal":("principalSet://cloudresourcemanager.googleapis.com/projects/" + $num + "/type/ServiceAccount"),"exceptions":{}}
 ] | .made_elsewhere += [{"item":"deny-improvers and deny-core-agents cover MO_PROJECT through the fld-improvers service-account set","file":"13","step":"OP-7.5, OP-7.6"}]' "$RUN_SPEC" > "$RUN_SPEC.tmp" && mv "$RUN_SPEC.tmp" "$RUN_SPEC"
 gcloud iam policies get deny-improvers --attachment-point="cloudresourcemanager.googleapis.com/folders/${FLD_AGENTIC_PLATFORM}" --kind=denypolicies --format=json | jq -r --arg set "principalSet://cloudresourcemanager.googleapis.com/folders/${FLD_IMPROVERS}/type/ServiceAccount" '[.rules[].denyRule.deniedPrincipals[] | select(. == $set)] | length'
 ```
 
-  This also answers README's re-run note for `mo-analyst@`: a folder set covers accounts created later; a list would not.
+  The project number is computed as in FM-3.2, so `check_inputs` never meets a placeholder. `R3b` (the `actAs` deny) is listed as in FM-3.2: no Mo service account deploys anything; if Mo's spec ever names a project deployer account, R3b and R4 carry it as an exception exactly as FM-3.2 does. This also answers README's re-run note for `mo-analyst@`: a folder set covers accounts created later; a list would not.
 - **VERIFY:** The spec has one entry with the real project number and the `made_elsewhere` line; the `deny-improvers` read prints `5` (the folder set in each of its five rules); merged.
 - **ROLLBACK:** Revert.
 - **EVIDENCE:** The merged spec and the read. TISAX 4.2.1. EU AI Act E-08.
@@ -1396,7 +1426,7 @@ Called by 19: GE-2 runs FM-6.1 to FM-6.3 and records FM-6.5; GE-3 runs FM-6.6 in
 
 - **WHO:** Platform owner.
 - **WHERE:** `PLATFORM_REPO_DIR`; `GE_INVENTORY_DIR` (05).
-- **ACTION:** Copy the template to `factory/runs/gemini-prod.json` with `"module": "tenant-app"`, `"create": false`, `project_variable: GEMINI_PROJECT`, `parent_folder_variable: FLD_GEMINI_ENTERPRISE` (the state after the move), labels per 02 §3.6 with `tier=ge`, `created_by=bootstrap-hand` (the label describes who made the platform's record, not the project), `factory_run=dev-19-tenant-gemini-prod`; `services` equal to the inventory's enabled services (05), each marked in the spec either inside the `fld-gemini-enterprise` allow-list or listed in `pending` with 19 GE-3's allow-list decision as owner; `budget` `amount` 0 with `reason_if_not_tier_default: "licence-driven, *tbd* (02 §2.2)"` and a `pending` line for the budget check; `allowed_human_members` equal to the human members the inventory recorded (GE-5 in 19 reduces them and revises the spec); `lien: false` unless 19 adds one; `entitlements: ["ent-project-repair-gemini-prod"]`; `pab_bindings: []`; `deny_entries: []`; `project_floor` `{"applies": false, "reason": "the tenant app is a live service; its Model Armor posture is the template pair and app-level settings of 19 GE-7, not a floor written by an import", "vertex_ai": false}` with a `made_elsewhere` line `{"item": "Model Armor for the tenant app (template pair ge-console-standard, FAIL_CLOSED)", "file": "19", "step": "GE-7"}` — FM-2.12a is therefore `N/A` for this module, and the check has an owner.
+- **ACTION:** Copy the template to `factory/runs/gemini-prod.json` with `"module": "tenant-app"`, `"create": false`, `project_variable: GEMINI_PROJECT`, `parent_folder_variable: FLD_GEMINI_ENTERPRISE` (the state after the move), labels per 02 §3.6 with `tier=ge`, `created_by=bootstrap-hand` (the label describes who made the platform's record, not the project), `factory_run=dev-19-tenant-gemini-prod`; `services` equal to the inventory's enabled services (05), each marked in the spec either inside the `fld-gemini-enterprise` allow-list or listed in `pending` with 19 GE-3's allow-list decision as owner; `budget` `amount` 0 with `reason_if_not_tier_default: "licence-driven, *tbd* (02 §2.2)"` and a `pending` line for the budget check; `allowed_human_members` equal to the human members the inventory recorded (GE-5 in 19 reduces them and revises the spec); `lien: false` unless 19 adds one; `entitlements: ["ent-project-repair-tenant-app"]`; `pab_bindings: []`; `deny_entries: []`; `project_floor` `{"applies": false, "reason": "the tenant app is a live service; its Model Armor posture is the template pair and app-level settings of 19 GE-7, not a floor written by an import", "vertex_ai": false}` with a `made_elsewhere` line `{"item": "Model Armor for the tenant app (template pair ge-console-standard, FAIL_CLOSED)", "file": "19", "step": "GE-7"}` — FM-2.12a is therefore `N/A` for this module, and the check has an owner.
 
 ```bash
 need GEMINI_PROJECT GE_INVENTORY_DIR FLD_GEMINI_ENTERPRISE
@@ -1408,18 +1438,18 @@ gcloud projects describe "$GEMINI_PROJECT" --format="yaml(parent,labels)"
 - **ROLLBACK:** Close the pull request.
 - **EVIDENCE:** The report and merge as `${R}-FM-6.1-tenant-spec-v1`. TISAX 1.3.1. EU AI Act E-05.
 
-### FM-6.2 Instantiate `ENT_PROJECT_REPAIR_GEMINI` before any standing role is touched
+### FM-6.2 Instantiate `ENT_PROJECT_REPAIR_TENANT_APP` before any standing role is touched
 
 - **WHO:** Platform owner; the approver 12's template names for a Tier C project.
 - **WHERE:** Shell.
 - **ACTION:** FM-2.17 and FM-2.18 with `resource` = `GEMINI_PROJECT`, requesters `platform-owners@` and `ge-admins@`, and only the repair entitlement (no deploy entitlement: nothing is deployed in the app project). The entitlement exists before 19's GE-5 removes standing project roles, so no access gap opens.
-- **VERIFY:** As FM-2.17 and FM-2.18; `penv_set ENT_PROJECT_REPAIR_GEMINI` written.
+- **VERIFY:** As FM-2.17 and FM-2.18; `penv_set ENT_PROJECT_REPAIR_TENANT_APP` written.
 - **ROLLBACK:** As FM-2.17.
 - **EVIDENCE:** As FM-2.17. TISAX 4.1.3.
 
 ### FM-6.3 Reconcile labels and Essential Contacts
 
-- **WHO:** Platform owner through `ENT_PROJECT_REPAIR_GEMINI` if standing rights do not cover `resourcemanager.projects.update`.
+- **WHO:** Platform owner through `ENT_PROJECT_REPAIR_TENANT_APP` if standing rights do not cover `resourcemanager.projects.update`.
 - **WHERE:** Shell.
 - **ACTION:**
 
@@ -1434,7 +1464,7 @@ gcloud projects update "$GEMINI_PROJECT" --update-labels="$(jq -r '.labels | to_
 
 ### FM-6.4 Regional `_Default` route and `_Trace` on the app project
 
-- **WHO:** Platform owner through `ENT_PROJECT_REPAIR_GEMINI` (whose bundle lacks `logging.configWriter`: use `ENT_FOLDER_ADMIN`, which holds it at `fld-agentic-platform`, **after** the move in FM-6.5; before the move the project is outside that folder, so this step runs after FM-6.5).
+- **WHO:** Platform owner through `ENT_PROJECT_REPAIR_TENANT_APP` (whose bundle lacks `logging.configWriter`: use `ENT_FOLDER_ADMIN`, which holds it at `fld-agentic-platform`, **after** the move in FM-6.5; before the move the project is outside that folder, so this step runs after FM-6.5).
 - **WHERE:** Shell.
 - **ACTION:** FM-2.8 and FM-2.9 on `GEMINI_PROJECT`. Only entries written after the redirect go to the regional bucket; existing `_Default` entries stay in the global bucket until they age out (a bucket's location cannot change), which 19 records.
 - **VERIFY:** As FM-2.8 and FM-2.9.
@@ -1457,9 +1487,10 @@ gcloud projects update "$GEMINI_PROJECT" --update-labels="$(jq -r '.labels | to_
 - **ACTION:** Preconditions are 19's (allow-list union dry-run with zero denials, roles re-granted on the destination). Then:
 
 ```bash
-need GEMINI_PROJECT FLD_GEMINI_ENTERPRISE GE_CURRENT_PARENT ENT_PROJECT_MOVE_SRC ENT_PROJECT_MOVE_DST
-gcloud pam grants create --entitlement="$ENT_PROJECT_MOVE_SRC" --requested-duration=3600s --justification="19 GE-3 change window: move GEMINI_PROJECT (FM-6.6)" --location=global --billing-project="$CICD_PROJECT"
-gcloud pam grants create --entitlement="$ENT_PROJECT_MOVE_DST" --requested-duration=3600s --justification="19 GE-3 change window: move GEMINI_PROJECT (FM-6.6)" --location=global --billing-project="$CICD_PROJECT"
+need GEMINI_PROJECT FLD_GEMINI_ENTERPRISE GE_CURRENT_PARENT ENT_PROJECT_MOVE_SRC ENT_PROJECT_MOVE_DST CICD_PROJECT PLATFORM_REPO_DIR
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
+g1="$(gcloud pam grants create --entitlement="$ENT_PROJECT_MOVE_SRC" --requested-duration=3600s --justification="19 GE-3 change window: move GEMINI_PROJECT (FM-6.6)" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g1"; pam_wait "$g1" ACTIVE
+g2="$(gcloud pam grants create --entitlement="$ENT_PROJECT_MOVE_DST" --requested-duration=3600s --justification="19 GE-3 change window: move GEMINI_PROJECT (FM-6.6)" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g2"; pam_wait "$g2" ACTIVE
 gcloud beta projects move "$GEMINI_PROJECT" --folder="$FLD_GEMINI_ENTERPRISE"
 ```
 
@@ -1706,8 +1737,9 @@ git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER" && git -C "$BUILD_LOG_DIR" com
 - **ACTION:** `CORE_PROJECT` is the one core project where 02 §4.2 allows `secretmanager` (its `platform-pager-key` exception); 15 may already have enabled it. The canary's value is random bytes that protect nothing; it is still piped straight into Secret Manager and never printed.
 
 ```bash
-need CORE_PROJECT ENT_PROJECT_REPAIR_CORE REGION
-gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-duration=3600s --justification="17 FM-9: negative test canary (02 §3.4, R6)" --location=global --billing-project="$CICD_PROJECT"
+need CORE_PROJECT ENT_PROJECT_REPAIR_CORE REGION CICD_PROJECT PLATFORM_REPO_DIR
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
+g="$(gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-duration=3600s --justification="17 FM-9: negative test canary (02 §3.4, R6)" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"; pam_wait "$g" ACTIVE
 gcloud services list --enabled --project="$CORE_PROJECT" --format="value(config.name)" | grep -x secretmanager.googleapis.com || gcloud services enable secretmanager.googleapis.com --project="$CORE_PROJECT"
 gcloud secrets create fm-negative-canary --location="$REGION" --labels=purpose=negative-test,owner=platform-owners --project="$CORE_PROJECT"
 openssl rand -base64 32 | gcloud secrets versions add fm-negative-canary --location="$REGION" --data-file=- --project="$CORE_PROJECT"
@@ -1814,8 +1846,9 @@ gcloud secrets versions disable 1 --secret=fm-negative-canary --location="$REGIO
 - **ACTION:** 13 OP-9.2 asks the factory negative test to include a refused second WIF provider (B19) and a live out-of-boundary denial for `factory-apply@` (`pab-core-ci`). The first is a human attempt, refused by the constraint; the second re-runs 13 OP-7.10's recorded probe.
 
 ```bash
-need CICD_PROJECT ENT_PROJECT_REPAIR_CORE
-gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-duration=1800s --justification="17 FM-9.6: B19 negative test" --location=global --billing-project="$CICD_PROJECT"
+need CICD_PROJECT ENT_PROJECT_REPAIR_CORE PLATFORM_REPO_DIR
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
+g="$(gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-duration=1800s --justification="17 FM-9.6: B19 negative test" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"; pam_wait "$g" ACTIVE
 gcloud iam workload-identity-pools providers create-oidc fm-b19-probe --workload-identity-pool=wif-factory --location=global --issuer-uri="https://accounts.google.com" --attribute-mapping="google.subject=assertion.sub" --project="$CICD_PROJECT"; echo "exit=$?"
 gcloud iam workload-identity-pools providers list --workload-identity-pool=wif-factory --location=global --project="$CICD_PROJECT" --format="value(name)"
 ```
@@ -1915,7 +1948,7 @@ checkpoint FM-10.4 DONE - "repo:${TIER_R_RECORD}" "file 17 own sittings complete
 sitting_end
 ```
 
-- **VERIFY:** `SITTING-END OK`; `checkpoints.tsv` holds `DONE` for FM-0.1, FM-0.3, FM-0.4, FM-1.1 to FM-1.4, FM-8.1 to FM-8.5, FM-8.7, FM-9.1 to FM-9.6, FM-10.1 to FM-10.4, FM-12.1 and FM-12.2, and `BLOCKED` for FM-0.2, FM-8.6 and FM-11.1 to FM-11.3. The per-run steps (§2 to §7) have no lines yet; they are written by the calling files.
+- **VERIFY:** `SITTING-END OK`; `checkpoints.tsv` holds `DONE` for FM-0.1, FM-0.3, FM-0.4, FM-1.1 to FM-1.4, FM-8.1 to FM-8.5, FM-8.7, FM-9.1 to FM-9.6 and FM-10.1 to FM-10.4 (FM-12.1 and FM-12.2 come after this step and are checked when they run), and `BLOCKED` for FM-0.2, FM-8.6 and FM-11.1 to FM-11.3. The per-run steps (§2 to §7) have no lines yet; they are written by the calling files.
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** The final checkpoint. TISAX 4.1.2.
 
@@ -2031,7 +2064,7 @@ Nothing assigned to this file is deferred without an owner. Six design items are
 | File | Needs | From |
 |---|---|---|
 | 18 | FM-AGENT for `CANARY_R_PROJECT` under `ENT_BOOTSTRAP_MODULE_R_NONPROD`; the FM-3.2 principal-form conflict to settle with the P8 spike; the checker to re-run after the engine and floor are added to the spec; FM-2.12a recording the floor `pending` for the KS-1.3 run (KS-2.9 applies it) and the two corrections FM-12.2 hands over | §2, §3, FM-1.2, FM-2.12a, FM-12.2 |
-| 19 | FM-TENANT-APP (FM-6.1 to FM-6.4 at GE-2, FM-6.6 at GE-3); `ENT_PROJECT_REPAIR_GEMINI` before GE-5 | §6 |
+| 19 | FM-TENANT-APP (FM-6.1 to FM-6.4 at GE-2, FM-6.6 at GE-3); `ENT_PROJECT_REPAIR_TENANT_APP` before GE-5 | §6 |
 | 20 | nothing new; `TIER_R_RECORD` for its precondition line | FM-10.3 |
 | 21 | `TIER_R_RECORD`; env=nonprod specs for the twins are written in 23 and 37 | FM-10.3 |
 | 22 | FM-IMPROVER; `ENT_PROJECT_REPAIR_MO`, `ENT_DEPLOY_CREDENTIAL_HOLDER_MO` set by FM-2.17; row 40 re-run procedure for `mo-metrics@`; `project_floor.applies: false` with 40 Mo-11 as the owner of Mo's floor at S4 (FM-2.12a) | §5, FM-2.17, FM-2.12a, FM-8.3 |

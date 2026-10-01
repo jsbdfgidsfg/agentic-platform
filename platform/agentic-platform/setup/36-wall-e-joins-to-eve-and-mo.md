@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Stage: review §2 stage 24 (Eve S0 over `walle_audit`), stage 25 (the Wall-E half of the superseded Mo-4 and Mo-5), stage 31 (Mo-6), and **every cross-file re-run point** that was recorded PENDING while Wall-E's data plane and services did not exist. It is the seam file: nothing new of Wall-E's is built here, and nothing of Eve's or Mo's is designed here. What is done here is the joining, in the one order that works.
 - Step prefix: `WJ`. Steps: 54. BLOCKED steps: WJ-3.2 (Wall-E's nine `walle_audit` table schemas, **B-22**, the row [31](31-wall-e-project-and-data-plane.md) WD-4.5 opened and WD-11.2 asks README to carry; B-16 is the service code, a different artefact and a different commit, and it blocks §5's deploy re-run instead); WJ-4.1, WJ-4.2, WJ-4.3, WJ-4.4 (Eve's twelve v0 SQL files and `thresholds.yaml`, README B-09); WJ-5.3 and WJ-5.4 (Eve's reconciler image and catalogue, README B-08 and B-09); WJ-7.2, WJ-7.4, WJ-8.1, WJ-8.2 (Mo's Wall-E-pack SQL and assertion files, README B-14); WJ-9.2 (Mo's view definitions, B-14). Steps that record `PENDING` rather than `BLOCKED`: WJ-3.6 (row 18, `mo-metrics@` on the mirror, at S4); WJ-4.6 (metric 7, empty until Eve's S3 harness); WJ-9.4 (the deny-improvers confirmation, if the policy at `fld-agentic-platform` names principals one by one).
@@ -178,7 +179,7 @@ awk -F'\t' '$2=="BLOCKED"{n++} END{print (n+0) " blocked inputs to copy into the
 
 ### WJ-0.3 Open the Eve-side grant, approved by the second human
 
-- **WHO:** Platform owner requests; **the second human approves**. The platform owner may not approve his own request and PAM refuses it in any case.
+- **WHO:** Platform owner requests; **the second human approves**. The platform owner may not approve their own request and PAM refuses it in any case.
 - **WHERE:** Shell.
 - **ACTION:** Every Eve-side write in this file happens inside a time-boxed grant. The standing `actAs` on Eve's accounts was removed in 25 (S143) and is not restored here: the right to attach `eve-v0@` to a transfer config comes from `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE`'s `roles/iam.serviceAccountUser` for the length of the grant, and goes when the grant ends.
 

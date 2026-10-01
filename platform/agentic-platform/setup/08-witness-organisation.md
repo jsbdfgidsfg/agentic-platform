@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Changed on 2026-10-01: they/them for the witness administrators and the second human.
 - Last executed: never
 - Stage: review §2 stage 7 (W-1, W-2 and the records step). W-3 (the member constraint and the two grants to `eve-export@`) and W-4 (the absence alarms) are [27-witness-grants-and-alarms.md](27-witness-grants-and-alarms.md). This file can start as soon as P14 is signed (03) and the witness domain is registered (04); it runs in parallel with 06 to 18 and waits on no platform file.
 - Step prefix: WO. Steps: 38 (W-1: 15, W-2: 18, records: 5). **Run order exception:** WO-2.13 (Cloud Storage `DATA_WRITE` audit logs) is printed and performed **before** WO-2.12 (the records convention, the bucket's first object), so that no write to the witness bucket is ever outside the audit log; its id is kept because file 27 cites `08 WO-2.13`. BLOCKED steps: WO-2.10 (the mirror tables, until Eve's schema files are committed at `EVE_SCHEMAS_COMMIT` by file 23). Gated but not BLOCKED: WO-2.16 and WO-2.17 (the two retention locks, until P13 is signed), WO-2.15 (Access Approval, until the Customer Care subscription of WO-1.13 is active or recorded as unavailable).
@@ -73,7 +74,7 @@ flowchart TD
 |---|---|---|
 | Witness administrator 1 (IT security, PPL-WA1; tenant contact `WITNESS_ADMIN_1_EMAIL`; witness account `WITNESS_SA_1`) | Performs sign-up and most W-1 and W-2 steps; custodian of `WITNESS_SA_2`'s recovery (resets it if needed) | every sitting |
 | Witness administrator 2 (IT security, PPL-WA2; `WITNESS_ADMIN_2_EMAIL`; `WITNESS_SA_2`) | Reviews and witnesses every step of administrator 1; performs WO-1.6 and the second half of every two-person check; custodian of `WITNESS_SA_1`'s recovery | every sitting |
-| Second human (`SECOND_HUMAN_EMAIL`; witness account `SECOND_HUMAN_WITNESS_ACCOUNT`) | Present for all of W-1; enrols his own witness account; confirms receipt of every test alert without help; present for both locks; carries the four tenant-side identifiers to the platform owner | W-1; WO-2.7, WO-2.14, WO-2.16, WO-2.17, WO-2.18 |
+| Second human (`SECOND_HUMAN_EMAIL`; witness account `SECOND_HUMAN_WITNESS_ACCOUNT`) | Present for all of W-1; enrols their own witness account; confirms receipt of every test alert without help; present for both locks; carries the four tenant-side identifiers to the platform owner | W-1; WO-2.7, WO-2.14, WO-2.16, WO-2.17, WO-2.18 |
 | Key custodian and other-line witness of each earlier record (06, 04) | Stand at the safe inspection and sign the re-witness record | WO-3.2 |
 | Platform owner | **Performs nothing in this file** and holds no witness account. Receives four identifiers in WO-2.18 | never |
 
@@ -120,13 +121,13 @@ The witness exists because a tenant super admin can reach everything inside the 
 
 ## Evidence and the build log
 
-- **Checkpoint lines** (README §4 format) are written by the performing witness administrator to a local `witness-build-log.txt` on his workstation during the sitting, counter-signed by the other, and delivered at the end of each sitting as a pull request to `BUILD_LOG_DIR` under `witness/`, reviewed by the second human. Values held only in the witness copy (`WITNESS_BILLING_ACCOUNT_ID`, `WITNESS_SA_1`, `WITNESS_SA_2`, `SECOND_HUMAN_WITNESS_ACCOUNT`, payment details) are written as `set (witness copy)`, never as values.
+- **Checkpoint lines** (README §4 format) are written by the performing witness administrator to a local `witness-build-log.txt` on their workstation during the sitting, counter-signed by the other, and delivered at the end of each sitting as a pull request to `BUILD_LOG_DIR` under `witness/`, reviewed by the second human. Values held only in the witness copy (`WITNESS_BILLING_ACCOUNT_ID`, `WITNESS_SA_1`, `WITNESS_SA_2`, `SECOND_HUMAN_WITNESS_ACCOUNT`, payment details) are written as `set (witness copy)`, never as values.
 - **Records** (screenshots, signed forms) made before WO-2.11 stay with the witness administrators and are uploaded in WO-3.3 under `custody/`: the setup of the witness organisation is custody of the witness itself. From WO-2.11 on, records go straight to the witness bucket.
 - **Register lines**: each EVIDENCE line below becomes one line in `EVIDENCE_REGISTER` (01) in the same pull request, with the E-xx id of [../10-eu-ai-act.md](../10-eu-ai-act.md) §5 and the control group of [../11-tisax.md](../11-tisax.md) §13.
 
 ## The witness copy of the variables file
 
-Each witness administrator keeps, on his own workstation, a `~/.platform-env` holding **only** the witness section, file 01's helpers (`penv_set`, `need`) and the read-only clone path. It never holds a secret, and it is never copied to a tenant workstation.
+Each witness administrator keeps, on their own workstation, a `~/.platform-env` holding **only** the witness section, file 01's helpers (`penv_set`, `need`) and the read-only clone path. It never holds a secret, and it is never copied to a tenant workstation.
 
 | Variable | Set in | Witness copy | Tenant copy (WO-2.18) |
 |---|---|---|---|
@@ -162,7 +163,7 @@ git -C "$PLATFORM_REPO_DIR" pull --ff-only
 "$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES WITNESS_BUCKET
 ```
 
-  Then the second human, signed in to the tenant Admin console as `sa-2-admin@`, opens Menu > Account > Admin roles, points to Super Admin, clicks View admins, and confirms that neither `WITNESS_ADMIN_1_EMAIL` nor `WITNESS_ADMIN_2_EMAIL` is listed. He also confirms from 03's separation record (DC-2.8) that neither is the platform owner, the second human or the second operator. Witness administrator 1 reads the P14 record's **Edition** line aloud and both confirm it states grounds other than multi-party approval (for example: Free, because three accounts, security-key 2SV, Admin log events and sharing to Cloud Logging are in Free; or Premium, for the 24x7 support and 99.9 % SLA of the editions page).
+  Then the second human, signed in to the tenant Admin console as `sa-2-admin@`, opens Menu > Account > Admin roles, points to Super Admin, clicks View admins, and confirms that neither `WITNESS_ADMIN_1_EMAIL` nor `WITNESS_ADMIN_2_EMAIL` is listed. They also confirm from 03's separation record (DC-2.8) that neither is the platform owner, the second human or the second operator. Witness administrator 1 reads the P14 record's **Edition** line aloud and both confirm it states grounds other than multi-party approval (for example: Free, because three accounts, security-key 2SV, Admin log events and sharing to Cloud Logging are in Free; or Premium, for the 24x7 support and 99.9 % SLA of the editions page).
 - **VERIFY:** `decision-need.sh` prints `SIGNED` for every id; both `decision-value.sh` lines print a value, not `*tbd*`; the second human's statement "neither witness administrator holds Super Admin in the tenant on <date>" is written on the sitting form and signed by all three.
 - **ROLLBACK:** None needed; the step only reads. A failed check stops the file.
 - **EVIDENCE:** Sitting form `<date>-WO-1.1-gates-and-separation-v1` (uploaded in WO-3.3 under `custody/`). Build log WO-1.1. EU AI Act E-08 (oversight roster). TISAX 1.1-1.2, 4.2.1.
@@ -189,7 +190,7 @@ dig +short SOA "$WITNESS_DOMAIN"
 
 ### WO-1.3 Prepare the witness workstation copy
 
-- **WHO:** Each witness administrator on his own workstation; the other watches.
+- **WHO:** Each witness administrator on their own workstation; the other watches.
 - **WHERE:** Witness workstation shell.
 - **ACTION:**
 
@@ -215,7 +216,7 @@ printf 'export CLOUDSDK_ACTIVE_CONFIG_NAME=witness\n' >> "$HOME/.platform-env"
 - **ACTION:**
   1. Business name: the witness organisation's name from the P14 record. Country: as the P14 record.
   2. Current email (the sign-up contact and initial recovery address, which Google requires to differ from the new admin address): `WITNESS_ADMIN_1_EMAIL`. WO-1.7 removes it from the account's recovery information.
-  3. Domain: `WITNESS_DOMAIN`. Admin username: *Assumption:* `wadmin-1@<WITNESS_DOMAIN>`, unless the P14 record names another. The password is typed by witness administrator 1 directly into the page from his own password manager; it is never spoken, written or pasted into any file.
+  3. Domain: `WITNESS_DOMAIN`. Admin username: *Assumption:* `wadmin-1@<WITNESS_DOMAIN>`, unless the P14 record names another. The password is typed by witness administrator 1 directly into the page from their own password manager; it is never spoken, written or pasted into any file.
   4. Verify the domain with the DNS record the setup wizard shows, added in the DNS provider console of WO-1.2 by witness administrator 2.
   5. Record the address:
 
@@ -232,7 +233,7 @@ penv_set WITNESS_SA_1 "wadmin-1@${WITNESS_DOMAIN}"
 - **WHO:** Witness administrator 1; witness administrator 2 witnesses each key serial.
 - **WHERE:** `https://myaccount.google.com/signinoptions/two-step-verification` as `WITNESS_SA_1`, then the witness Admin console.
 - **ACTION:**
-  1. As `WITNESS_SA_1`, turn on 2-Step Verification and add both of his security keys (label each with the key label from the 04 inventory, never the serial).
+  1. As `WITNESS_SA_1`, turn on 2-Step Verification and add both of their security keys (label each with the key label from the 04 inventory, never the serial).
   2. Menu > Security > Authentication > 2-step verification (`https://admin.google.com/ac/security/2sv`), top organisational unit: tick "Allow users to turn on 2-Step Verification"; Enforcement "On"; New user enrollment period "2 weeks" (*Assumption:* long enough for the key-availability wait file 06 records); Methods "Only security key". Save.
   3. Menu > Security > Authentication > Account recovery > Super admin account recovery: Off. Save.
   4. Menu > Security > Authentication > Account recovery > User account recovery: Off. Save.
@@ -242,12 +243,12 @@ penv_set WITNESS_SA_1 "wadmin-1@${WITNESS_DOMAIN}"
 
 ### WO-1.6 Create the second witness super admin
 
-- **WHO:** Witness administrator 1 creates and assigns; witness administrator 2 enrols his own keys; the second human watches.
+- **WHO:** Witness administrator 1 creates and assigns; witness administrator 2 enrols their own keys; the second human watches.
 - **WHERE:** Witness Admin console as `WITNESS_SA_1`; then a clean profile on witness administrator 2's workstation.
 - **ACTION:**
   1. Menu > Directory > Users > Add new user: *Assumption:* `wadmin-2@<WITNESS_DOMAIN>`. Let the console generate the first password and hand it over on screen only (witness administrator 2 reads it from administrator 1's screen and changes it at first sign-in); never write, send or paste it.
   2. Menu > Account > Admin roles > Super Admin > Admins > Assign users: `wadmin-2@`.
-  3. Witness administrator 2 signs in, sets his own password, turns on 2SV with his two keys within the enrolment period.
+  3. Witness administrator 2 signs in, sets their own password, turns on 2SV with their two keys within the enrolment period.
   4. Record:
 
 ```bash
@@ -272,11 +273,11 @@ penv_set WITNESS_SA_2 "wadmin-2@${WITNESS_DOMAIN}"
 
 ### WO-1.8 Create the second human's owner-of-record account
 
-- **WHO:** Witness administrator 1 creates; the second human enrols his keys; witness administrator 2 watches.
+- **WHO:** Witness administrator 1 creates; the second human enrols their keys; witness administrator 2 watches.
 - **WHERE:** Witness Admin console; a clean browser profile on the second human's workstation.
 - **ACTION:**
   1. Menu > Directory > Users > Add new user: *Assumption:* `owner-of-record@<WITNESS_DOMAIN>`, first name and last name of the second human. No admin role is assigned.
-  2. The second human signs in, sets his own password and registers the two security keys he holds (or two spares, see Preconditions), within the enrolment period.
+  2. The second human signs in, sets their own password and registers the two security keys they hold (or two spares, see Preconditions), within the enrolment period.
   3. Remove any recovery email or phone the sign-in prompts added (Security > Recovery information).
   4. Record:
 
@@ -322,7 +323,7 @@ gcloud org-policies describe iam.allowedPolicyMemberDomains --organization="$WIT
 ```
 
   (*Assumption:* the customer id is the `C` + eight characters form Google shows in the Admin console, as the plan's variable table records; if a tenant's id is longer, widen the pattern and record it, never drop the check.)
-- **VERIFY:** `gcloud organizations list --format=yaml` shows exactly one organisation, display name `WITNESS_DOMAIN`, and its lifecycle field — `state: ACTIVE` in the v3 shape, `lifecycleState: ACTIVE` in the v1 shape — is `ACTIVE`; which field appeared is written in the build log beside `SHAPE`. `WITNESS_ORG_ID` and `WITNESS_CUSTOMER_ID` are both non-empty and well formed (the two pattern tests above ran without stopping the block). `WITNESS_CUSTOMER_ID` is not `DIRECTORY_CUSTOMER_ID` of the tenant (the second human compares it with his own copy, and confirms it is a real id, not a blank). `gcloud organizations get-iam-policy "$WITNESS_ORG_ID" --format=json | jq -r '.bindings[] | select(.role=="roles/resourcemanager.organizationAdmin") | .members[]'` prints exactly `user:WITNESS_SA_1` and `user:WITNESS_SA_2`. The effective `iam.allowedPolicyMemberDomains` output is saved: for an organisation created after 2024-05-03 it is enforced by the security baseline with the witness's own customer id, which 27 depends on (W-3).
+- **VERIFY:** `gcloud organizations list --format=yaml` shows exactly one organisation, display name `WITNESS_DOMAIN`, and its lifecycle field — `state: ACTIVE` in the v3 shape, `lifecycleState: ACTIVE` in the v1 shape — is `ACTIVE`; which field appeared is written in the build log beside `SHAPE`. `WITNESS_ORG_ID` and `WITNESS_CUSTOMER_ID` are both non-empty and well formed (the two pattern tests above ran without stopping the block). `WITNESS_CUSTOMER_ID` is not `DIRECTORY_CUSTOMER_ID` of the tenant (the second human compares it with their own copy, and confirms it is a real id, not a blank). `gcloud organizations get-iam-policy "$WITNESS_ORG_ID" --format=json | jq -r '.bindings[] | select(.role=="roles/resourcemanager.organizationAdmin") | .members[]'` prints exactly `user:WITNESS_SA_1` and `user:WITNESS_SA_2`. The effective `iam.allowedPolicyMemberDomains` output is saved: for an organisation created after 2024-05-03 it is enforced by the security baseline with the witness's own customer id, which 27 depends on (W-3).
 - **ROLLBACK:** `gcloud organizations remove-iam-policy-binding "$WITNESS_ORG_ID" --member="user:${WITNESS_SA_2}" --role=roles/resourcemanager.organizationAdmin`.
 - **EVIDENCE:** The command output as `<date>-WO-1.10-organisation-v1` (uploaded in WO-3.3; the org id and customer id are identifiers, not secrets). EU AI Act E-06. TISAX 4.1-4.2.
 
@@ -504,7 +505,7 @@ gcloud projects get-iam-policy "$EVE_WITNESS_PROJECT" --format=json | jq -r '.bi
 
 ### WO-2.4 Create the witness email channels
 
-- **WHO:** Witness administrator 1; the second human confirms his address.
+- **WHO:** Witness administrator 1; the second human confirms their address.
 - **WHERE:** Witness workstation shell.
 - **ACTION:** Email channels need no verification. The addresses are the three people's tenant mailboxes: the witness accounts have no mailbox. Residual recorded in the evidence: a tenant super admin can interfere with mail delivered into the tenant, which is why 27 adds SMS channels and the second human reads incidents in the witness console directly.
 
@@ -581,7 +582,7 @@ gcloud projects update "$EVE_WITNESS_PROJECT" --update-labels=agp-alert-test=wo-
 gcloud projects update "$EVE_WITNESS_PROJECT" --remove-labels=agp-alert-test
 ```
 
-- **VERIFY:** `gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --format="table(displayName,enabled,notificationChannels.len())"` shows `witness-admin-activity`, enabled, 3. Within 30 minutes (*Assumption:* metric and alert latency) Monitoring > Alerting > Incidents shows an incident, and each of the three people confirms the email in writing with its timestamp; the second human confirms from his own mailbox before anyone tells him it was sent. A second test by witness administrator 1 on the Cloud Identity side (Menu > Security > Authentication > 2-step verification: open and Save with no change is not logged, so instead change the New user enrollment period to 1 week and back) also produces an incident; if it does not, record that Cloud Identity Admin log events do not reach the alert and keep WO-1.15's review as a monthly standing check in `DRILL_CALENDAR`.
+- **VERIFY:** `gcloud monitoring policies list --project="$EVE_WITNESS_PROJECT" --format="table(displayName,enabled,notificationChannels.len())"` shows `witness-admin-activity`, enabled, 3. Within 30 minutes (*Assumption:* metric and alert latency) Monitoring > Alerting > Incidents shows an incident, and each of the three people confirms the email in writing with its timestamp; the second human confirms from their own mailbox before anyone tells them it was sent. A second test by witness administrator 1 on the Cloud Identity side (Menu > Security > Authentication > 2-step verification: open and Save with no change is not logged, so instead change the New user enrollment period to 1 week and back) also produces an incident; if it does not, record that Cloud Identity Admin log events do not reach the alert and keep WO-1.15's review as a monthly standing check in `DRILL_CALENDAR`.
 - **ROLLBACK:** `gcloud monitoring policies delete <policy name> --project="$EVE_WITNESS_PROJECT"`; `gcloud logging metrics delete witness-admin-activity --project="$EVE_WITNESS_PROJECT"`. Each deletion notifies the three recipients while the policy exists.
 - **EVIDENCE:** Policy JSON, the incident screenshots and the three receipt lines as `<date>-WO-2.7-admin-activity-alert-v1` (uploaded in WO-3.3). EU AI Act E-08, E-10. TISAX 4.2.1, 1.5.
 
@@ -655,7 +656,7 @@ shasum -a 256 "$S"
 ### WO-2.10 Create the mirror tables from Eve's committed schemas (BLOCKED)
 
 - **BLOCKED** until file 23 sets `EVE_SCHEMAS_COMMIT` (Eve's nine schema files committed in the Eve repository with green CI; README BLOCKED index, Eve schemas row). The gate that waits: 27's first push of rows (the heartbeat of WO-2.9 does not wait). Run this step as soon as the commit exists; it is a re-run point in README §9.
-- **WHO:** Witness administrator 1; the second human confirms the commit id from Eve's repository himself.
+- **WHO:** Witness administrator 1; the second human confirms the commit id from Eve's repository themselves.
 - **WHERE:** Witness workstation shell with a read-only clone of the Eve repository at `EVE_SCHEMAS_COMMIT` (path *tbd* by 23).
 - **ACTION:** For each of `findings`, `verdicts`, `incidents` and `pages` whose schema file exists at that commit (in Eve-H, `verdicts` may not exist until Eve-W; then it is created when it appears), with the partitioning the schema file names:
 
@@ -905,7 +906,7 @@ printf '%s  %s  %s\n' "${P}/$(basename "$F")" "$SHA" "$MD5" >> "<local path>/$(d
 ### WO-3.4 Verify the full set in the witness
 
 - **WHO:** The second human, alone, from `SECOND_HUMAN_WITNESS_ACCOUNT`; then a witness administrator counter-signs.
-- **WHERE:** The Cloud console signed in as `SECOND_HUMAN_WITNESS_ACCOUNT` (Cloud Storage > Buckets > the witness bucket), or his own workstation shell under a separate gcloud configuration signed in as that account.
+- **WHERE:** The Cloud console signed in as `SECOND_HUMAN_WITNESS_ACCOUNT` (Cloud Storage > Buckets > the witness bucket), or their own workstation shell under a separate gcloud configuration signed in as that account.
 - **ACTION:**
 
 ```bash
@@ -913,7 +914,7 @@ gcloud storage ls -l "${WITNESS_BUCKET}/custody/**" "${WITNESS_BUCKET}/rota/**" 
 gcloud storage cat "${WITNESS_BUCKET}/custody/<upload date>-upload-manifest-v<n>.txt"
 ```
 
-  He compares the listing with the signed backlog table of WO-3.1 and the manifest, opens a sample of at least three records (every custody record of `sa-1-admin@`'s spare and `brk-gcp-1@`, whose custodian or password holder is the platform owner) and compares them with the paper he saw in WO-3.2.
+  They compare the listing with the signed backlog table of WO-3.1 and the manifest, open a sample of at least three records (every custody record of `sa-1-admin@`'s spare and `brk-gcp-1@`, whose custodian or password holder is the platform owner) and compare them with the paper they saw in WO-3.2.
 - **VERIFY:** Every backlog row has exactly one object at `v1` (or a documented later version); no object is outside the three prefixes; every object's retention shows the record date plus 10 years. The second human signs "full set present in the witness on <date>".
 - **ROLLBACK:** None; the step only reads. A missing object goes back to WO-3.3.
 - **EVIDENCE:** `custody/<date>-records-full-set-verified-v1`. This is G18's evidence for records made up to this date. EU AI Act E-08. TISAX 3.1, 1.5.

@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Stage: review §2 stage 30 (Eve Phase 9's grants and Phase 10), re-cut to Eve-H part 3 (SD-10). Runs after 23 and 24, before 26. Gate lines G-4 and G-5 get their production half here; both are closed by the second human's proof in 28, never by this file.
 - Step prefix: `EH`. Steps: 52. BLOCKED steps: EH-3.1, EH-3.2, EH-3.4, EH-4.1, EH-4.2, EH-4.3, EH-4.4, EH-4.5, EH-5.2, EH-5.3, EH-5.4, EH-5.5, EH-6.1, EH-6.4, EH-7.3, EH-7.4, EH-7.5, EH-8.2, EH-8.3, EH-9.1, EH-9.2, EH-9.3, EH-9.4 — every step that needs Eve's code (README B-08) or Eve's committed configuration (B-09). EH-9.0 (the twin's own `eve-verifier@` and its grants) is not blocked: it needs no code. EH-0.2 is BLOCKED while the DPO record of SD-11 does not exist (B-11), and it blocks the whole file: **no Eve job is deployed, and no poll by actor is scheduled, before that record exists.** Rules `SI-02`…`SI-07`, `SI-10` and `SI-11` are committed **BLOCKED inside EH-2.3** while the Cloud Audit Log view they read does not exist (B-12, owed by 14 CL-7.1/CL-7.2; see the precondition below). Steps that record `PENDING` rather than `BLOCKED`: EH-1.4 (the re-run of 14 CL-7.3), EH-4.6 (`halt_target_pending`, wired in 36), EH-6.2 (notification channels, made in 26), EH-4.0 (an Admin SDK quota increase, if the read shows one is needed).
@@ -66,7 +67,7 @@ and is not needed by anything here (SD-10).
    scheduler states, `eve@`'s role privileges, the roster hash, the **notification channels**,
    the two secrets' version states and the project's lien list, hashed each run by a **committed
    script** and carried in the witness heartbeat (26), so that a quiet edit by the monitored
-   administrator shows up outside the organisation he administers. The baseline is recomputed
+   administrator shows up outside the organisation they administer. The baseline is recomputed
    independently by the second human (EH-8.3) before it is recorded.
 9. **Nonprod Eve** (§9) in `EVE_TWIN_PROJECT`, from the same digest, in a `twin_shell`, with
    nonprod channels and no witness contact.
@@ -136,7 +137,7 @@ flowchart TD
 
 | Role | Does | Present at |
 |---|---|---|
-| Platform owner (`sa-1-admin@`) | Performs every shell step, under `ENT_PROJECT_REPAIR_EVE` or `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` where the step says so. He is a **subject** of what he builds; that is why every elevation is approved by another person and ends inside the sitting | every step |
+| Platform owner (`sa-1-admin@`) | Performs every shell step, under `ENT_PROJECT_REPAIR_EVE` or `ENT_DEPLOY_CREDENTIAL_HOLDER_EVE` where the step says so. They are a **subject** of what they build; that is why every elevation is approved by another person and ends inside the sitting | every step |
 | Second human (`SECOND_HUMAN_EMAIL`, `sa-2-admin@`) | Approves every PAM grant on `EVE_PROJECT` and on the twin; is the required reviewer on **every** `eve/config` merge, including `tools/fingerprint.sh`; owns `eve-owners@` and therefore `eve-console-readers@`; confirms that EH-5.5's and EH-9.3's removals happened; **recomputes the fingerprint baseline from their own session** (EH-8.3) | EH-0.1, EH-2.1, EH-2.5, EH-3.1, EH-4.x, EH-5.1, EH-5.5, EH-7.1, EH-8.3, EH-9.0, EH-9.3, EH-10.1 |
 | DPO (`DPO_CONTACT`) | Holds the SD-11 record; confirms the purpose, the data classes, the retention and the recipients before any poll by actor is scheduled | EH-0.2 |
 | Eve owner (the platform owner until 03 names another person) | Writes `thresholds.yaml`, the detection catalogue, the roster reference and the code; owns B-08 and B-09 | EH-2.2 to EH-2.4, §3 |
@@ -1478,7 +1479,7 @@ gcloud logging metrics create eve_reports_quota_exceeded --project="$EVE_PROJECT
   missed passes: long enough not to page on one transient error, short enough that a wedged pass
   is found the same working hour. `notificationChannels` is empty here **on purpose**: Eve's
   channels are made in 26, in `EVE_PROJECT` and not in `CORE_PROJECT`, so that the person Eve
-  watches does not administer the channel that reports him.
+  watches does not administer the channel that reports them.
 
 ```bash
 need EVE_PROJECT
@@ -1752,7 +1753,7 @@ bq --project_id="$EVE_PROJECT" show --format=prettyjson "${EVE_PROJECT}:${EVE_DS
 The monitored administrator's cheapest attack is not deleting Eve; it is editing Eve quietly —
 narrowing the sink filter, swapping an image, pausing one schedule, trimming `eve@`'s
 privileges — while every heartbeat keeps beating. The fingerprint is what makes such an edit
-visible **outside** the organisation he administers: it travels in the witness heartbeat (26),
+visible **outside** the organisation they administer: it travels in the witness heartbeat (26),
 and the witness alarms on any change (27, `WITNESS_ALERT_FINGERPRINT`).
 
 ### EH-8.1 Commit what the fingerprint covers
@@ -1763,7 +1764,7 @@ and the witness alarms on any change (27, `WITNESS_ALERT_FINGERPRINT`).
   quietly narrowed and so the value is reproducible by anyone with read access to
   `EVE_PROJECT` — the second human in particular (EH-8.3). An earlier draft committed the
   component list and computed the value with an ad-hoc inline block run by the monitored
-  subject; the second human was asked to keep a 64-character string she could not recompute.
+  subject; the second human was asked to keep a 64-character string they could not recompute.
 
 | Component | Read from | Why it is in the hash |
 |---|---|---|
@@ -1856,7 +1857,7 @@ git add fingerprint.yaml tools/fingerprint.sh CODEOWNERS && git commit -m "eve/c
   **The baseline attests to continuity, not correctness**: a configuration that is already
   wrong when the baseline is taken is not detected by any later comparison (27 WG-3.8 compares
   each heartbeat with the one before). Correctness is what the second human's reads in 28
-  (EV-3.3, EV-3.4) establish; this step makes sure that what she read is what stays.
+  (EV-3.3, EV-3.4) establish; this step makes sure that what they read is what stays.
 
 ```bash
 need EVE_PROJECT ORG_ID EVE_SINK REGION ROSTER_FILE PLATFORM_REPO_DIR EVE_DS EVE_WS_LOGS_DS EVE_WS_REPORTS_DS EVE_QUALITY_DS EVE_OAUTH_CLIENT_SECRET_NAME EVE_REFRESH_TOKEN_SECRET_NAME EVE_ROBOT EVE_ROLE_NAME DIRECTORY_CUSTOMER_ID EVE_CONFIG_COMMIT

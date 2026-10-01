@@ -3,7 +3,10 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Reviewed on 2026-10-01: §2 and Sources cite setup/README §1 by its wording rather than by line
+  numbers that moved; "What this part builds" no longer says everything long in the full build
+  sits at Tier P-SA, and quotes the full build's own Tier R and Tier C milestones.
 - Reviewed on 2026-09-18: the three-day hand-over bullet now names what that set leaves
   running (`eve-reader@`'s token and the poller, stopped before 06 PE-0.2 under PV-D-07) and
   what happens to its four projects, and says "suspended", not "unwound", of the synthetic
@@ -73,8 +76,11 @@ super admin, a bought detection desk and a signed deviation. The tier gate
 ([../01-hld.md](../01-hld.md) §0.4) says Tiers C and R hire nobody new, and Tier W hires a second
 operator, a part-time security reviewer and a blind grader. **The POV therefore lives at Tiers C,
 R and W, with one optional Tier P row, and grants Super Admin to no agent on the production
-tenant.** Everything that makes the full build take six to seven months to Stage 0
-([../setup/README.md](../setup/README.md) §3.4) sits at Tier P-SA.
+tenant.** The long-lead items of the full build (the SIEM and MDR contract, the witness, the
+sandbox twin, the penetration test, the five named humans) sit at Tier P-SA; the platform, Tier R
+and Tier C take up to about four of the six to seven months to Stage 0 by the full build's own
+milestones ([../setup/README.md](../setup/README.md) §3.4: Tier R open 2026-11-10 to 2026-12-08,
+Tier C open 2026-12-08 to 2027-01-19), which the POV compresses by taking no long-lead purchase.
 
 "Scales" means one thing here: every artefact the POV creates is the artefact the full build uses,
 with the same name, schema, folder and convention, so the full build continues from the POV. A POV
@@ -127,8 +133,8 @@ procured, the key wait, and a billing account in 2 to 5 days (file 02, file 03).
 
 ## 2. The absolutes, binding on every POV file
 
-The full set's standing constraints, quoted from [../setup/README.md](../setup/README.md) lines
-60 to 66, apply to the POV unchanged:
+The full set's standing constraints, quoted from [../setup/README.md](../setup/README.md) §1,
+"Standing constraints ... which every file keeps", apply to the POV unchanged:
 
 - no domain-wide delegation, ever (checked in 01, 06, 25, 32, 38);
 - the model holds no credential and cannot approve, and no service identity is ever the second
@@ -802,7 +808,7 @@ BLOCKED lines.
 
 ## Sources
 
-- [../setup/README.md](../setup/README.md) §1 (lines 60 to 66), §3.2, §3.4, §4, §5, §5.1, §5.2, §7,
+- [../setup/README.md](../setup/README.md) §1 ("Standing constraints ... which every file keeps"), §3.2, §3.4, §4, §5, §5.1, §5.2, §7,
   §8, §9, §10: the full set's order, formats, variables, BLOCKED rows, gates and decisions.
 - [../setup/01-prerequisites-and-conventions.md](../setup/01-prerequisites-and-conventions.md) line
   69 (ids never change) and the helper definitions.

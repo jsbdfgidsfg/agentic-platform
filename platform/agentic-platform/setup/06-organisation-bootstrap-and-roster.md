@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Changed on 2026-10-01: Security Admin added to the SD-01 exception (five roles, OB-3.7, OB-5.1) with 01 §3.3's checks; decisions checked with `decision-need.sh`; the expiry read with `decision-value.sh`; deviation ids are `BD-06-1` to `BD-06-5`, inserted into the register's first table; OB-3.1 and OB-8.3 use 01's sitting blocks; OB-3.4 never overwrites its before-policy; steps write `checkpoint` lines; they/them for roles.
 - Last executed: never
 - Stage: review §2 stage 6 (organisation bootstrap) and the roster hygiene that gate line G3 reads. It runs after files 01 to 04 and before file 07, because 07 grants billing roles to `sa-1-admin@`, which this file creates.
 - Step prefix: OB. Steps: 50 (OB-2.0, OB-2.10a and OB-3.5a were added on 2026-09-15 to keep Part 1 read-only, to let the second human hold both factors of their own account, and to preview the removal of the domain-wide defaults; no step was renumbered). BLOCKED steps: none. Every step is Admin console, Cloud console, gcloud or git work; no platform code is needed.
@@ -15,7 +16,7 @@
 The first privileged principals of the platform, and the committed roster that Eve checks from its first run.
 
 1. **The human super-admin roster.** An inventory of every current super admin and admin-role holder; an admin organisational unit (`ADMIN_OU`) with 2-Step Verification in "Only security key" mode and an enrolment period; `sa-1-admin@` (platform owner) and `sa-2-admin@` (second human) as separate admin accounts, two keys each, admin-generated backup codes sealed with the spare key, each envelope in the custody of someone from the other administration line (and, for `sa-2-admin@`, codes the holder regenerates themselves as soon as they hold Super Admin, OB-2.10a, so that the monitored administrator is not left holding both of that account's factors); Super Admin on both; Super Admin removed from the daily accounts once the admin accounts are proven; the G3 reduction of every other super admin, executed under file 03's signed decision.
-2. **The organisation exception.** Organization Administrator, Folder Creator, Project Creator and Privileged Access Manager Admin granted at the organisation to `sa-1-admin@` only, each binding carrying an IAM condition that expires on `BOOTSTRAP_EXCEPTION_EXPIRY` (SD-01), recorded in the deviation register and withdrawn explicitly at the end of file 12. Before that: an inventory of the organisation's IAM policy, the removal of the organisation-creation defaults (Project Creator and Billing Account Creator granted to the whole domain) after a dependency check, and a record of every domain-wide delegation client.
+2. **The organisation exception.** Organization Administrator, Folder Creator, Project Creator, Privileged Access Manager Admin and Security Admin granted at the organisation to `sa-1-admin@` only, each binding carrying an IAM condition that expires on `BOOTSTRAP_EXCEPTION_EXPIRY` (SD-01), recorded in the deviation register and withdrawn explicitly at the end of file 12. Before that: an inventory of the organisation's IAM policy, the removal of the organisation-creation defaults (Project Creator and Billing Account Creator granted to the whole domain) after a dependency check, and a record of every domain-wide delegation client.
 3. **Cloud break-glass.** `/Automation/Break-Glass`, `brk-gcp-1@` and `brk-gcp-2@` without Workspace licences or recovery options, one sealed key each with cross-line custodians, and `gcp-organization-admins@` holding standing Organization Administrator and Privileged Access Manager Admin. Custody records on paper with a same-day scan (SD-27).
 4. **The control groups.** `gcp-organization-admins@`, `platform-owners@`, `platform-security@`, `platform-approvers@`, `platform-readers@`, `ge-admins@`, `eve-owners@` (owned by the second human) and `ge-users@` (with its membership source), created as security groups only after the control-group list is merged with the second human as required reviewer. The label is permanent, so that creation is the one **IRREVERSIBLE** step of this file.
 5. **The interim detector.** Admin console activity rules that mail the second human on any sign-in by `sa-1-admin@`, `brk-gcp-1@` or `brk-gcp-2@` and on any admin-role change, and mail the incident commander (or the security reviewer) on any sign-in by `sa-2-admin@`. They stay until the second human retires them, never before `EVE_H_LIVE_RECORD` (file 28).
@@ -28,7 +29,7 @@ What the old text got wrong, and must not come back:
 | Phase 3 row "Less secure app access, Off" (S180) | Google retired the setting and switched off less secure app access for all accounts on 2025-05-01; the row cannot be performed | Row deleted (settings table below) |
 | Phase 3 paths "Account → Account settings → super administrator account recovery", "Security → Google session control", "Security → multi-party approval settings" (S180) | The paths do not exist | Security > Authentication > Account recovery > Super admin account recovery; Security > Access and data control > Google session control; Security > Authentication > Multi-party approval settings |
 | SETUP Phase 2 step 1 "Commit the roster … File name tbd" (S079) | Eve's roster check and SA-06 diff against a file nobody made | `ROSTER_FILE=identity/super-admin-roster.json`, merged in OB-5.4 |
-| PREREQUISITES §4.1 standing `orgpolicy.policyAdmin`, `iam.denyAdmin`, organisation `logging.configWriter` for the builder (S059) | Standing levers of K7 and evidence silencing, no approval, no expiry | None of these roles is granted. The four roles the bootstrap cannot avoid expire by condition and are withdrawn in file 12 |
+| PREREQUISITES §4.1 standing `orgpolicy.policyAdmin`, `iam.denyAdmin`, organisation `logging.configWriter` for the builder (S059) | Standing levers of K7 and evidence silencing, no approval, no expiry | None of these roles is granted. The five roles the bootstrap cannot avoid expire by condition and are withdrawn in file 12 |
 | 03 §16 GE-5 "`ge-admins@` created by the factory" (S049) | `factory-groups@` refuses control groups in code | `ge-admins@` made by hand in OB-6.2 |
 | "Custody record copied to the witness bucket same day" (04 §8.3) for keys enrolled before the witness exists (X-ORG-11) | The witness does not exist yet and no tenant identity may write to it | Paper record in the safe, scan the same day to `EVIDENCE_INTERIM_LOCATION`, uploaded by the witness administrators at W-2 (file 08) |
 
@@ -50,12 +51,12 @@ flowchart TD
 - [ ] File 01 is complete: `~/.platform-env` exists with `DOMAIN`, `DIRECTORY_CUSTOMER_ID`, `ORG_ID`, `WORKSPACE_EDITION`, `OWNER_DAILY_ACCOUNT`, `PLATFORM_REPO_DIR`, `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER`, `GCLOUD_CONFIG_NAME` and the helpers `penv_set` and `need`. The gcloud configuration named `GCLOUD_CONFIG_NAME` has no default project.
 - [ ] File 03 has recorded signed decision files for SD-01 (with the exception's expiry date), SD-12, SD-18, SD-27 and SD-30, and the **G3 reduction decision** (every current super admin other than the two admin accounts, each with the delegated role they move to, signed by IT security). `SECOND_HUMAN_EMAIL` is set. `PLATFORM_REPO_REMOTE` exists with branch protection (two human approvals, approvals by service accounts or bot users not counted, admin bypass audited) and CODEOWNERS making the second human a required reviewer on `identity/`.
 - [ ] File 03 has named `INCIDENT_COMMANDER_EMAIL` or `SECURITY_REVIEWER_EMAIL`. Without either, OB-2.6 rule B cannot be created and OB-2.8 waits (reports about the second human have no recipient).
-- [ ] The **envelope witness** of [01 §2.1](01-prerequisites-and-conventions.md) ("anyone from the other administration line than the custodian") is appointed by name, for both envelope classes of the People table below, in a dated ISMS record written under file 03's appointment pattern ([03 DC-2.1 to DC-2.8](03-decisions-and-people.md)) as `PPL-EW`. *Assumption:* file 03's tracker carries no `PPL-EW` row today (its rows run `PPL-SH` to `PPL-MO`); until it does, the platform owner asks ISMS for the record before the first sitting and enters a dated deviation line (`DEV-06-04`, owner: the second human) naming the two people who signed in its place. No envelope is sealed without a named witness: OB-2.9, OB-2.10a, OB-2.11 and OB-7.3 all stop at `WAITING envelope witness`.
+- [ ] The **envelope witness** of [01 §2.1](01-prerequisites-and-conventions.md) ("anyone from the other administration line than the custodian") is appointed by name, for both envelope classes of the People table below, in a dated ISMS record written under file 03's appointment pattern ([03 DC-2.1 to DC-2.8](03-decisions-and-people.md)) as `PPL-EW`. *Assumption:* file 03's tracker carries no `PPL-EW` row today (its rows run `PPL-SH` to `PPL-MO`); until it does, the platform owner asks ISMS for the record before the first sitting and enters a dated deviation line (`BD-06-4`, owner: the second human) naming the two people who signed in its place. No envelope is sealed without a named witness: OB-2.9, OB-2.10a, OB-2.11 and OB-7.3 all stop at `WAITING envelope witness`.
 - [ ] The owners of the organisation-level roles that OB-3.4 will find cannot be listed before the sitting. OB-1.6 action 3 warns them, OB-3.4 names them inside the first sitting, and **OB-3.5 runs between the two sittings**: the first sitting closes without their written confirmations, and OB-3.6 does not start until they are in.
 - [ ] File 04 has delivered at least **six** hardware security keys for this file: two for `sa-1-admin@`, two for `sa-2-admin@`, one each for `brk-gcp-1@` and `brk-gcp-2@`. Their serials are in the key inventory of file 04, never in the variables file.
 - [ ] Tamper-evident envelopes: one per human admin account (spare key and backup codes) and one per break-glass account, four in total, plus at least four spares for re-sealing (`v2` records). A corporate safe with a sign-out log. Paper custody forms (file 01 template).
 - [ ] The corporate password vault is available to both humans, with an entry type that neither human can read for the other's break-glass password (vault administrator confirms).
-- [ ] Two clean browser profiles on the platform owner's workstation (one per admin account he uses: `OWNER_DAILY_ACCOUNT` until OB-2.12, then `sa-1-admin@`; one for break-glass sign-ins) and one on the second human's workstation for `sa-2-admin@`, as file 01 prescribes.
+- [ ] Two clean browser profiles on the platform owner's workstation (one per admin account they use: `OWNER_DAILY_ACCOUNT` until OB-2.12, then `sa-1-admin@`; one for break-glass sign-ins) and one on the second human's workstation for `sa-2-admin@`, as file 01 prescribes.
 - [ ] `OWNER_DAILY_ACCOUNT` is a super admin today. If it is not, the super admin who is performs OB-2.1 to OB-2.10 with the platform owner present, and that is recorded under OB-1.1.
 
 ## People
@@ -71,6 +72,8 @@ flowchart TD
 | Vault administrator | Confirms the break-glass password entries' custodians | OB-4.3 |
 
 Nobody performs a step alone if WHO names a second person. A missing person is a checkpoint line reading `WAITING <role>`; the platform owner never stands in.
+
+Every step writes `checkpoint OB-x.y START` before its ACTION and `checkpoint OB-x.y DONE - <evidence> "<result>"` when its VERIFY passes ([01](01-prerequisites-and-conventions.md) §5), so a resumed run reads `checkpoints.tsv`. A "build-log line under OB-x.y" below is the note of that `DONE` line, not a separate file. A missing person is written `checkpoint OB-x.y PENDING - - "WAITING <role>"`.
 
 ## Settings applied to the human admin and break-glass OUs
 
@@ -108,12 +111,12 @@ gcloud config configurations activate "$GCLOUD_CONFIG_NAME"
 test -z "$(gcloud config get project 2>/dev/null)" && echo "OK no default project" || echo "FAIL default project set"
 test -z "${CLOUDSDK_CORE_PROJECT:-}" && echo "OK CLOUDSDK_CORE_PROJECT unset" || echo "FAIL CLOUDSDK_CORE_PROJECT set"
 mkdir -p "$BUILD_LOG_DIR/evidence/06"
-ls "$PLATFORM_REPO_DIR"/decisions/ | grep -Ei 'sd-01|sd-12|sd-18|sd-27|sd-30|g3'
+"$PLATFORM_REPO_DIR/tools/decision-need.sh" SD-01 SD-12 SD-18 SD-27 SD-30 G3-ROSTER
 git -C "$PLATFORM_REPO_DIR" remote get-url origin
 ```
 
   Then open each decision file listed and read: SD-01's expiry date for the organisation exception; the G3 decision's table of accounts and target delegated roles; SD-27's custody rule. Confirm with the second human the two sitting dates, at least eight days apart.
-- **VERIFY:** Both guard lines print `OK`. The `grep` lists six decision files, each carrying signatures (open them). `git remote get-url origin` prints `PLATFORM_REPO_REMOTE`. If a decision is missing or unsigned, stop: nothing below may run.
+- **VERIFY:** Both guard lines print `OK`. `decision-need.sh` prints six `SIGNED` lines (03 names its records by slug, so the decision ids, not the file names, are checked). `git remote get-url origin` prints `PLATFORM_REPO_REMOTE`. If a decision is missing or unsigned, stop: nothing below may run.
 - **ROLLBACK:** None needed; the step only reads.
 - **EVIDENCE:** A build-log line under OB-1.1 in `BUILD_LOG_DIR` naming the decision files, their commit ids and the two sitting dates. TISAX 1.1–1.2 (decision files). EU AI Act E-05.
 
@@ -375,7 +378,7 @@ printf '%s\n' "rule A actor=$SA_1_ADMIN to=$SECOND_HUMAN_EMAIL" "rule B actor=$S
 ### OB-2.9 Admin-generated backup codes, sealed with each spare key
 
 - **WHO:** Platform owner as super admin (`OWNER_DAILY_ACCOUNT`; Super Admin is not yet on the admin accounts) generates both sets. For `sa-1-admin@`: in front of the second human (custodian) and the envelope witness. For `sa-2-admin@`: in front of the second human (holder) and the envelope witness.
-- **CUSTODY, AND THE EXPOSURE IT LEAVES:** the codes generated here for `sa-2-admin@` are read by the platform owner — the administrator Eve is built to monitor — and he can also reset that account's password as a super admin, so for as long as this set is the live one he can reach both factors of the account that approves his own PAM elevations, co-signs the roster, owns `eve-owners@` and is the sole approver of the super-admin grant in file 38. This set is therefore **interim**: OB-2.10a replaces it as soon as the second human holds Super Admin, which is the first moment they can generate their own. Until OB-2.10a is done: the custodian of the `sa-2-admin@` envelope is **not** the platform owner but a person outside the Wall-E administration line — the security reviewer (`SECURITY_REVIEWER_EMAIL`), or, until one is appointed, the envelope witness from IT security named in `PPL-EW`; the platform owner never holds that envelope. Open `DEV-06-03` in `DEVIATION_REGISTER` at this step: what (the monitored administrator generated and read `sa-2-admin@`'s first backup codes), why (only `OWNER_DAILY_ACCOUNT` holds Super Admin at this point), compensating controls (interim rule B of OB-2.6, the sealed envelope held outside the administration line, the safe log), expiry (the day OB-2.10a runs, at the latest the end of the second sitting), owner and approver (the second human).
+- **CUSTODY, AND THE EXPOSURE IT LEAVES:** the codes generated here for `sa-2-admin@` are read by the platform owner — the administrator Eve is built to monitor — and they can also reset that account's password as a super admin, so for as long as this set is the live one they can reach both factors of the account that approves their own PAM elevations, co-signs the roster, owns `eve-owners@` and is the sole approver of the super-admin grant in file 38. This set is therefore **interim**: OB-2.10a replaces it as soon as the second human holds Super Admin, which is the first moment they can generate their own. Until OB-2.10a is done: the custodian of the `sa-2-admin@` envelope is **not** the platform owner but a person outside the Wall-E administration line — the security reviewer (`SECURITY_REVIEWER_EMAIL`), or, until one is appointed, the envelope witness from IT security named in `PPL-EW`; the platform owner never holds that envelope. Open `BD-06-3` in `DEVIATION_REGISTER` at this step: what (the monitored administrator generated and read `sa-2-admin@`'s first backup codes), why (only `OWNER_DAILY_ACCOUNT` holds Super Admin at this point), compensating controls (interim rule B of OB-2.6, the sealed envelope held outside the administration line, the safe log), expiry (the day OB-2.10a runs, at the latest the end of the second sitting), owner and approver (the second human).
 - **WHERE:** Admin console: Menu > Directory > Users > the user > Security > 2-Step Verification > Get backup verification codes ([manage a user's security settings](https://knowledge.workspace.google.com/admin/security/manage-a-users-security-settings), updated 2026-09-10). In "Only security key" mode users cannot generate their own codes; an admin must provide them.
 - **ACTION:** For each admin account:
   1. Generate the codes. Copy them **by hand** onto the inner sheet of the custody form. Never print them from the workstation, photograph, scan, type or paste them anywhere.
@@ -383,9 +386,9 @@ printf '%s\n' "rule A actor=$SA_1_ADMIN to=$SECOND_HUMAN_EMAIL" "rule B actor=$S
   3. The custodian (second human for `sa-1-admin@`; for `sa-2-admin@` the out-of-line custodian named in WHO, never the platform owner) and the envelope witness sign the outer custody record: account, key labels and serials, envelope serial, date and time, "backup codes generated by <admin>, handwritten, sealed", signatures.
   4. The envelope goes into the corporate safe; the safe log records it.
   5. The same day, scan **the outer custody record only** (never the envelope contents) to `EVIDENCE_INTERIM_LOCATION` as `<date>-custody-<account>-spare-v1` (SD-27). The paper record stays in the safe with the envelope.
-- **VERIFY:** The safe log lists two envelopes with their serials, and names no custodian who is both the generator and the custodian of the same envelope. The scans are in `EVIDENCE_INTERIM_LOCATION` with the same date as the records. The primary key is on each holder's person. `DEV-06-03` is open with its expiry.
+- **VERIFY:** The safe log lists two envelopes with their serials, and names no custodian who is both the generator and the custodian of the same envelope. The scans are in `EVIDENCE_INTERIM_LOCATION` with the same date as the records. The primary key is on each holder's person. `BD-06-3` is open with its expiry.
 - **ROLLBACK:** Generating new codes makes the previous set inactive. If an envelope is opened or mislabelled: generate new codes, reseal in a new envelope, record version `v2`, never overwrite `v1`. The same property is what OB-2.10a uses on purpose: the second human's own generation retires this set.
-- **EVIDENCE:** The two scans; the safe-log entries; the `DEV-06-03` line. They are uploaded to the witness by the witness administrators at W-2 (file 08's records step), which closes X-ORG-11 for these records. TISAX 3.1 (hardware-key custody record), 4.1.2. EU AI Act E-08.
+- **EVIDENCE:** The two scans; the safe-log entries; the `BD-06-3` line. They are uploaded to the witness by the witness administrators at W-2 (file 08's records step), which closes X-ORG-11 for these records. TISAX 3.1 (hardware-key custody record), 4.1.2. EU AI Act E-08.
 
 ### OB-2.10 Assign Super Admin to sa-1-admin@ and sa-2-admin@
 
@@ -402,17 +405,17 @@ printf '%s\n' "rule A actor=$SA_1_ADMIN to=$SECOND_HUMAN_EMAIL" "rule B actor=$S
 ### OB-2.10a The second human regenerates their own backup codes and reseals as v2
 
 - **WHO:** **Second human alone**, from their own super-admin session as `sa-2-admin@`, with the envelope witness present and **the platform owner absent from the room and off the screen share**. The platform owner's part is only to confirm afterwards that the step happened, from the safe log and the rule-C mail.
-- **WHERE:** The second human's own workstation, their clean `sa-2-admin@` browser profile: Admin console Menu > Directory > Users > `sa-2-admin@` > Security > 2-Step Verification > Get backup verification codes ([manage a user's security settings](https://knowledge.workspace.google.com/admin/security/manage-a-users-security-settings), updated 2026-09-10). *Assumption:* a super admin may generate codes for their own account on this page; if Google's page refuses it for the signed-in user, the fallback is that the generation is done by the security reviewer or the incident commander once they hold a super-admin account, and `DEV-06-03` stays open with a new expiry recorded at this step.
+- **WHERE:** The second human's own workstation, their clean `sa-2-admin@` browser profile: Admin console Menu > Directory > Users > `sa-2-admin@` > Security > 2-Step Verification > Get backup verification codes ([manage a user's security settings](https://knowledge.workspace.google.com/admin/security/manage-a-users-security-settings), updated 2026-09-10). *Assumption:* a super admin may generate codes for their own account on this page; if Google's page refuses it for the signed-in user, the fallback is that the generation is done by the security reviewer or the incident commander once they hold a super-admin account, and `BD-06-3` stays open with a new expiry recorded at this step.
 - **ACTION:** Gate: OB-2.10 has assigned Super Admin to `sa-2-admin@`, so the second human can now generate codes for their own account for the first time. Run it in the same sitting as OB-2.10, before anyone leaves the room.
   1. The second human generates a fresh set of codes for `sa-2-admin@`. Generating them makes the set the platform owner handled in OB-2.9 **inactive** (OB-2.9's rollback note).
   2. Copy them by hand onto a new inner sheet. Never print, photograph, scan, type or paste them.
   3. Open the OB-2.9 `sa-2-admin@` envelope in front of the envelope witness, take out the spare key, and seal key and new sheet in a new tamper-evident envelope. Write account, new envelope serial, date and **`v2`**; the `v1` record is never overwritten.
   4. Custody record (paper): account, key serial, `v1` and `v2` envelope serials, "codes regenerated by the account holder; the OB-2.9 set is inactive", custodian (the out-of-line custodian of OB-2.9 keeps custody), the envelope witness, date and time, both signatures. Into the safe; safe log updated.
   5. Same day, scan the outer custody record only to `EVIDENCE_INTERIM_LOCATION` as `<date>-custody-sa-2-admin-spare-v2` (SD-27).
-  6. Close `DEV-06-03` in `DEVIATION_REGISTER` with the date of this step and the `v2` envelope serial. If the fallback of WHERE was used, do not close it: record the new expiry and the named person who will generate the codes.
-- **VERIFY:** The safe log shows the `sa-2-admin@` envelope as `v2` with a new serial and the `v1` envelope destroyed or marked opened-and-superseded; the scan exists with the same date; `DEV-06-03` is closed or carries a new dated expiry. The second human states in the record that the platform owner was not present and did not see the codes. The platform owner confirms only that the safe log balances — he never sees the sheet. Rule C does not fire for this step (no role changed): the evidence is the custody record, not a mail.
+  6. Close `BD-06-3` in `DEVIATION_REGISTER` with the date of this step and the `v2` envelope serial. If the fallback of WHERE was used, do not close it: record the new expiry and the named person who will generate the codes.
+- **VERIFY:** The safe log shows the `sa-2-admin@` envelope as `v2` with a new serial and the `v1` envelope destroyed or marked opened-and-superseded; the scan exists with the same date; `BD-06-3` is closed or carries a new dated expiry. The second human states in the record that the platform owner was not present and did not see the codes. The platform owner confirms only that the safe log balances — they never see the sheet. Rule C does not fire for this step (no role changed): the evidence is the custody record, not a mail.
 - **ROLLBACK:** None, and none is wanted: the previous set is inactive by design. A mis-copied sheet is corrected by generating codes once more and resealing as `v3` under the same rule; if the account is locked out before a correct sheet exists, the "enrolment period ends before a key is enrolled" row of the table below applies, with a super admin other than the platform owner generating the codes.
-- **EVIDENCE:** The `v2` scan, the safe-log entries, the closed `DEV-06-03` line, as `<date>-OB-2.10a-sa-2-codes-regenerated-v1`. TISAX 3.1 (custody record), 1.4 (deviation closed), 4.1.2. EU AI Act E-08.
+- **EVIDENCE:** The `v2` scan, the safe-log entries, the closed `BD-06-3` line, as `<date>-OB-2.10a-sa-2-codes-regenerated-v1`. TISAX 3.1 (custody record), 1.4 (deviation closed), 4.1.2. EU AI Act E-08.
 
 ### OB-2.11 Prove both admin accounts before any daily account loses Super Admin
 
@@ -527,28 +530,34 @@ PY
 - **ACTION:**
 
 ```bash
+source "$HOME/.platform-env"
+penv_guard && echo "guard clean"
+gcloud auth list --format='value(account)'
+SITTING_ID="SITTING-$(date -u +%Y%m%d%H%M)"; export SITTING_ID
+checkpoint "$SITTING_ID" START "$SECOND_HUMAN_EMAIL" - "present: platform owner, second human"
 gcloud config configurations activate "$GCLOUD_CONFIG_NAME"
-gcloud auth login "$SA_1_ADMIN"
+gcloud auth login "$SA_1_ADMIN" --no-launch-browser
 gcloud config set account "$SA_1_ADMIN"
 gcloud config get account
 test -z "$(gcloud config get project 2>/dev/null)" && echo "OK no default project" || echo "FAIL default project set"
 gcloud organizations list --format="table(displayName,name)"
 ```
 
-- **VERIFY:** The browser sign-in demands the security key. `gcloud config get account` prints `SA_1_ADMIN`. The guard prints `OK`. `organizations list` shows `organizations/ORG_ID` for `DOMAIN` (it may be empty until OB-3.3 grants a role; if empty, re-run it after OB-3.3). *Assumption:* Google Cloud session control (OB-2.3) makes gcloud ask for reauthentication with the key after one hour; record when it first does.
-- **ROLLBACK:** `gcloud auth revoke "$SA_1_ADMIN"`.
-- **EVIDENCE:** Build-log line under OB-3.1. TISAX 4.1.2.
+  This is 01 PR-3.2's start-of-sitting block followed by the sign-in 01 §6.1 prescribes; the URL is opened in the clean `sa-1-admin@` browser profile. The second sitting opens with the same block (a new `SITTING_ID`); the first closes after OB-3.4 with OB-8.3's block.
+- **VERIFY:** `guard clean`, and the first `gcloud auth list` prints nothing. The browser sign-in demands the security key. `gcloud config get account` prints `SA_1_ADMIN`. The guard prints `OK`. `organizations list` shows `organizations/ORG_ID` for `DOMAIN` (it may be empty until OB-3.3 grants a role; if empty, re-run it after OB-3.3). *Assumption:* Google Cloud session control (OB-2.3) makes gcloud ask for reauthentication with the key after one hour; record when it first does.
+- **ROLLBACK:** `sitting_end`, then `checkpoint "$SITTING_ID" DONE - - "credentials revoked"`.
+- **EVIDENCE:** The sitting's `START` line and the OB-3.1 checkpoint line. TISAX 4.1.2.
 
 ### OB-3.2 Fix the exception expiry and open the deviation entry
 
 - **WHO:** Platform owner; the second human reads the entry.
 - **WHERE:** Shell, `~/.platform-env` sourced; `PLATFORM_REPO_DIR`.
 - **ACTION:**
-  1. Take the expiry date from the signed SD-01 record (file 03). *Assumption:* SD-01 sets it about eight weeks after this sitting, the time files 07 to 12 need; if the record carries no date, stop.
+  1. Read the expiry date from the Values table of the signed SD-01 record (03 DC-4.1, `BOOTSTRAP_EXCEPTION_EXPIRY`). *Assumption:* SD-01 sets it about eight weeks after this sitting, the time files 07 to 12 need. If the record carries no such row, `decision-value.sh` exits non-zero, nothing is written, and the file stops.
   2. Record it and write the IAM condition file that every exception binding uses, so that a removal matches exactly:
 
 ```bash
-penv_set BOOTSTRAP_EXCEPTION_EXPIRY "<YYYY-MM-DD from SD-01>"
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" SD-01 BOOTSTRAP_EXCEPTION_EXPIRY) && penv_set BOOTSTRAP_EXCEPTION_EXPIRY "$v"
 need BOOTSTRAP_EXCEPTION_EXPIRY SA_1_ADMIN ORG_ID
 mkdir -p "$PLATFORM_REPO_DIR/identity"
 cat > "$PLATFORM_REPO_DIR/identity/bootstrap-exception-condition.yaml" <<EOF
@@ -559,8 +568,23 @@ EOF
 cat "$PLATFORM_REPO_DIR/identity/bootstrap-exception-condition.yaml"
 ```
 
-  3. Append the entry to `DEVIATION_REGISTER` in file 01's format: id `DEV-06-01`, what (Organization Administrator, Folder Creator, Project Creator, Privileged Access Manager Admin at `organizations/ORG_ID` to `SA_1_ADMIN`, conditioned), why (PAM cannot bootstrap itself; folder-scoped entitlements need their folder; SD-01), expiry, withdrawal step (file 12, last steps), approver (the second human).
-- **VERIFY:** The condition file prints a timestamp equal to `BOOTSTRAP_EXCEPTION_EXPIRY`. The register holds `DEV-06-01`.
+  3. Insert the entry into the **first** table of `DEVIATION_REGISTER` in file 01 PR-4.1's thirteen-column form, with 03 DC-9.1's insertion block (never appended to the file end, which would land inside the Closures table that 17 and 42 read). Ids follow 01's `BD-<file>-<n>` rule; every deviation row of this file (`BD-06-1` to `BD-06-5`) is inserted the same way, with its what, why, expiry and approver in the matching columns, and is closed by a line in the Closures table, never by an edit:
+
+```bash
+need DEVIATION_REGISTER BUILD_LOG_DIR SECOND_HUMAN_EMAIL
+row="| BD-06-1 | $(date -u +%F) | 06 OB-3.2 | EXC | SD-01 dated organisation exception: Organization Administrator, Folder Creator, Project Creator, Privileged Access Manager Admin and Security Admin to $SA_1_ADMIN, conditioned (PAM cannot bootstrap itself; folder-scoped entitlements need their folder) | organizations/$ORG_ID | SD-01; identity/bootstrap-exception-condition.yaml | five conditioned organisation grants (OB-3.3, OB-3.7) | BLOCKED: no factory | - | $SECOND_HUMAN_EMAIL | $BOOTSTRAP_EXCEPTION_EXPIRY; withdrawn in file 12, last steps | open |"
+tmp=$(mktemp)
+awk -v row="$row" '
+  /^\|---\|/ && !seen { seen=1; print; next }
+  seen && !done && $0 !~ /^\|/ { print row; done=1 }
+  { print }
+  END { if (seen && !done) print row }' "$DEVIATION_REGISTER" > "$tmp" && mv "$tmp" "$DEVIATION_REGISTER"
+git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
+git -C "$BUILD_LOG_DIR" commit -m "BD-06-1 SD-01 organisation exception"
+```
+
+  4. Before OB-3.3, run the role-definition read of [01 §3.3](01-prerequisites-and-conventions.md) (its second block) and keep `P26_PROBE` in this shell for OB-3.7's VERIFY. It only reads Google's published roles.
+- **VERIFY:** The condition file prints a timestamp equal to `BOOTSTRAP_EXCEPTION_EXPIRY`. `grep -c '^| BD-06-1 |' "$DEVIATION_REGISTER"` prints `1`, and its line number is smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"`. 01 §3.3's second block printed `P-26 probe:` and a permission.
 - **ROLLBACK:** Before OB-3.3, `penv_set --force` a corrected date with a build-log line and a superseding register line.
 - **EVIDENCE:** The register line and the condition file (committed in OB-5.4). TISAX 1.4 (deviation), 4.2.1. EU AI Act E-05.
 
@@ -601,6 +625,8 @@ gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_AD
 
 ```bash
 f="$BUILD_LOG_DIR/evidence/06/OB-3.4-org-policy-before.json"
+# OB-3.6's rollback reads this file: never overwrite it. A re-run writes the next free -v<n> file.
+if [ -e "$f" ]; then n=2; while [ -e "${f%.json}-v$n.json" ]; do n=$((n+1)); done; f="${f%.json}-v$n.json"; echo "OB-3.4 already captured; writing $f"; fi
 gcloud organizations get-iam-policy "$ORG_ID" --format=json > "$f"
 python3 - "$f" <<'PY'
 import json, sys
@@ -639,7 +665,7 @@ gcloud resource-manager folders list --organization="$ORG_ID" --format="table(di
 - **WHO:** Platform owner as `sa-1-admin@`; the second human present and reading the result. The second human's reading of this output is the checked prerequisite of OB-3.6.
 - **WHERE:** Shell, `~/.platform-env` sourced; then Cloud console, IAM & Admin > IAM with the resource selector on the organisation, for the console route.
 - **ACTION:** OB-3.5 asks people what they think depends on the domain-wide defaults; this step asks the logs. Policy Simulator replays the last 90 days of access logs against a proposed policy and reports, per principal, access `revoked`, `potentially revoked`, `gained`, `potentially gained` or `unknown` ([test role changes with Policy Simulator](https://docs.cloud.google.com/policy-intelligence/docs/simulate-iam-policies), checked 2026-09-15). Groups do not appear as groups — their members appear individually — which is what is wanted here, since `domain:` covers every account in the tenant.
-  1. Grant the two simulator roles to `sa-1-admin@` **for this sitting only**, under their own short condition file, and open `DEV-06-05` in `DEVIATION_REGISTER` (what: `roles/policysimulator.admin` and `roles/cloudasset.viewer` at the organisation to `SA_1_ADMIN`; why: preview of the OB-3.6 removal; expiry: the end of this sitting; closed by action 5's verify; approver: the second human). The two roles are required on the target resource and on the resource that runs the simulation.
+  1. Grant the two simulator roles to `sa-1-admin@` **for this sitting only**, under their own short condition file, and open `BD-06-5` in `DEVIATION_REGISTER` (what: `roles/policysimulator.admin` and `roles/cloudasset.viewer` at the organisation to `SA_1_ADMIN`; why: preview of the OB-3.6 removal; expiry: the end of this sitting; closed by action 5's verify; approver: the second human). The two roles are required on the target resource and on the resource that runs the simulation.
 
 ```bash
 need ORG_ID SA_1_ADMIN PLATFORM_REPO_DIR BUILD_LOG_DIR
@@ -647,7 +673,7 @@ sim_expiry="$(date -u -v+1d +%Y-%m-%d)"
 cat > "$BUILD_LOG_DIR/evidence/06/OB-3.5a-simulator-condition.yaml" <<EOF
 expression: request.time < timestamp("${sim_expiry}T00:00:00Z")
 title: ob-3-5a-simulator-preview
-description: Policy Simulator preview of the OB-3.6 removal; removed in this step, DEV-06-05
+description: Policy Simulator preview of the OB-3.6 removal; removed in this step, BD-06-5
 EOF
 c="$BUILD_LOG_DIR/evidence/06/OB-3.5a-simulator-condition.yaml"
 gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/policysimulator.admin" --condition-from-file="$c"
@@ -699,7 +725,7 @@ PY
 
   *Assumption:* the replay result's field names; the printed record is the file itself, so a different shape is read by eye from `OB-3.5a-replay.json` and the states are copied into the record by hand.
   4. Console route, as the cross-check the second human watches: IAM & Admin > IAM with the organisation selected, Edit the `domain:` principal, revoke the two roles, and click **Test changes** instead of Save. Wait for the simulation, read "Access changes over the past 90 days", screenshot it, then **leave the page without saving**.
-  5. Remove the two simulator roles again, in this sitting, and close `DEV-06-05`:
+  5. Remove the two simulator roles again, in this sitting, and close `BD-06-5`:
 
 ```bash
 c="$BUILD_LOG_DIR/evidence/06/OB-3.5a-simulator-condition.yaml"
@@ -715,9 +741,9 @@ gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_AD
 gcloud organizations get-iam-policy "$ORG_ID" --format=json | python3 -c 'import json,sys; p=json.load(sys.stdin); who=sys.argv[1]; bad=[b["role"] for b in p.get("bindings",[]) if who in b["members"] and b["role"] in ("roles/policysimulator.admin","roles/cloudasset.viewer")]; print("SIMULATOR ROLES REMOVED" if not bad else f"FAIL {bad}")' "user:$SA_1_ADMIN"
 ```
 
-  3. If the replay is refused (the simulator API is not enabled on any resource the account may use, or the roles are insufficient), record it, do **not** grant more roles, and fall back to the console route of action 4; if that too is refused, record a dated deviation line under `DEV-06-05` stating that OB-3.6 proceeds on OB-3.5's written confirmations alone, signed by the second human. The step is never skipped silently.
+  3. If the replay is refused (the simulator API is not enabled on any resource the account may use, or the roles are insufficient), record it, do **not** grant more roles, and fall back to the console route of action 4; if that too is refused, record a dated deviation line under `BD-06-5` stating that OB-3.6 proceeds on OB-3.5's written confirmations alone, signed by the second human. The step is never skipped silently.
 - **ROLLBACK:** The step changes nothing except the two temporary bindings, which action 5 removes; the console route is left unsaved. If action 5 was missed, run its two commands before OB-3.7.
-- **EVIDENCE:** `OB-3.5a-policy-current.json`, `OB-3.5a-policy-proposed.json`, `OB-3.5a-replay.json`, the printed summary, the console screenshot and the `DEV-06-05` open and close lines, as `<date>-OB-3.5a-removal-preview-v1`. TISAX 4.2.1 (change preview), 1.4. EU AI Act E-05.
+- **EVIDENCE:** `OB-3.5a-policy-current.json`, `OB-3.5a-policy-proposed.json`, `OB-3.5a-replay.json`, the printed summary, the console screenshot and the `BD-06-5` open and close lines, as `<date>-OB-3.5a-removal-preview-v1`. TISAX 4.2.1 (change preview), 1.4. EU AI Act E-05.
 
 ### OB-3.6 Remove Project Creator and Billing Account Creator from the whole domain
 
@@ -805,20 +831,21 @@ bash "$res"
   Only under a new signed change record, and only in the same shape the file records. If the file is lost, the source is OB-3.4's before-policy in `EVIDENCE_INTERIM_LOCATION`; without either, the rollback is not run and the restoration is decided by its own record.
 - **EVIDENCE:** Before and after policy JSON, `OB-3.6-removed-domain-bindings.json`, the generated `OB-3.6-remove-commands.sh` and its output, and the OB-3.5a preview it was gated on, as `<date>-OB-3.6-defaults-removed-v1`. TISAX 4.2.1 (least privilege). EU AI Act E-05.
 
-### OB-3.7 Grant Folder Creator, Project Creator and PAM Admin to sa-1-admin@ under the same condition
+### OB-3.7 Grant Folder Creator, Project Creator, PAM Admin and Security Admin to sa-1-admin@ under the same condition
 
 - **WHO:** Platform owner as `sa-1-admin@`; the second human present.
 - **WHERE:** Shell, `~/.platform-env` sourced.
-- **ACTION:** Organization Administrator "does not include the permission to perform other actions, such as creating folders or projects" ([set up an organisation resource](https://docs.cloud.google.com/resource-manager/docs/creating-managing-organization)), so the exception adds the three roles files 09 to 12 need. `gcloud organizations add-iam-policy-binding` accepts `--condition-from-file` ([reference](https://docs.cloud.google.com/sdk/gcloud/reference/organizations/add-iam-policy-binding)).
+- **ACTION:** Organization Administrator "does not include the permission to perform other actions, such as creating folders or projects" ([set up an organisation resource](https://docs.cloud.google.com/resource-manager/docs/creating-managing-organization)), so the exception adds the four roles files 09 to 12 need. Google requires Privileged Access Manager Admin **and** Security Admin to create, update or delete an entitlement at organisation level ([PAM permissions and setup](https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup), updated 2026-09-24, read 2026-10-01), and 01 P-26 lists all five roles. `gcloud organizations add-iam-policy-binding` accepts `--condition-from-file` ([reference](https://docs.cloud.google.com/sdk/gcloud/reference/organizations/add-iam-policy-binding)).
 
 ```bash
 c="$PLATFORM_REPO_DIR/identity/bootstrap-exception-condition.yaml"
 gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/resourcemanager.folderCreator" --condition-from-file="$c"
 gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/resourcemanager.projectCreator" --condition-from-file="$c"
 gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/privilegedaccessmanager.admin" --condition-from-file="$c"
+gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/iam.securityAdmin" --condition-from-file="$c"
 ```
 
-  No other role is granted. In particular not `roles/orgpolicy.policyAdmin`, `roles/iam.denyAdmin`, `roles/iam.principalAccessBoundaryAdmin` or `roles/logging.configWriter`: those are PAM entitlements from file 12 (S059). *Assumption:* Organization Administrator's IAM permissions cover the PAM setup grant that Google's setup page attributes to Security Admin at the organisation; file 12 checks it at its first step.
+  No other role is granted. In particular not `roles/orgpolicy.policyAdmin`, `roles/iam.denyAdmin`, `roles/iam.principalAccessBoundaryAdmin` or `roles/logging.configWriter`: those are PAM entitlements from file 12 (S059).
 - **VERIFY:**
 
 ```bash
@@ -826,7 +853,7 @@ gcloud organizations get-iam-policy "$ORG_ID" --format=json > "$BUILD_LOG_DIR/ev
 python3 - "$BUILD_LOG_DIR/evidence/06/OB-3.7-org-policy.json" "user:$SA_1_ADMIN" "$BOOTSTRAP_EXCEPTION_EXPIRY" <<'PY'
 import json, sys
 p = json.load(open(sys.argv[1])); who = sys.argv[2]; exp = sys.argv[3]
-want = {"roles/resourcemanager.organizationAdmin", "roles/resourcemanager.folderCreator", "roles/resourcemanager.projectCreator", "roles/privilegedaccessmanager.admin"}
+want = {"roles/resourcemanager.organizationAdmin", "roles/resourcemanager.folderCreator", "roles/resourcemanager.projectCreator", "roles/privilegedaccessmanager.admin", "roles/iam.securityAdmin"}
 got = {}
 for b in p.get("bindings", []):
     if who in b["members"]:
@@ -838,7 +865,16 @@ print("EXCEPTION EXACT" if ok else "FAIL")
 PY
 ```
 
-  Prints `EXCEPTION EXACT`: four roles, each once, each conditioned, nothing else on `sa-1-admin@`.
+  Prints `EXCEPTION EXACT`: five roles, each once, each conditioned, nothing else on `sa-1-admin@`. Then run [01 §3.3](01-prerequisites-and-conventions.md)'s binding read (its first block), which must print exactly its five lines, and test the probe permission kept from OB-3.2:
+
+```bash
+need ORG_ID P26_PROBE 2>/dev/null || echo "P26_PROBE is a shell value from OB-3.2 action 4; re-run 01 §3.3's second block first"
+curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" \
+  "https://cloudresourcemanager.googleapis.com/v3/organizations/$ORG_ID:testIamPermissions" \
+  -d "{\"permissions\":[\"$P26_PROBE\"]}"
+```
+
+  The response lists `P26_PROBE`. If the API refuses the permission as not valid for an organisation, record that, keep the binding read as the only gate and add a deviation row, as 01 §3.3 says. 07 does not start until both checks pass.
 - **ROLLBACK:**
 
 ```bash
@@ -846,10 +882,11 @@ c="$PLATFORM_REPO_DIR/identity/bootstrap-exception-condition.yaml"
 gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/resourcemanager.folderCreator" --condition-from-file="$c"
 gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/resourcemanager.projectCreator" --condition-from-file="$c"
 gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/privilegedaccessmanager.admin" --condition-from-file="$c"
+gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role="roles/iam.securityAdmin" --condition-from-file="$c"
 ```
 
-  File 12 runs the same removals, plus Organization Administrator's, as its last steps. If files 07 to 12 run past `BOOTSTRAP_EXCEPTION_EXPIRY`, the bindings stop granting on that date: do not edit the condition by hand; write a signed SD-01 extension record, then remove and re-add the bindings with a new condition file version, and a `DEV-06-01` superseding line.
-- **EVIDENCE:** Policy JSON and output as `<date>-OB-3.7-org-exception-v1`; the `DEV-06-01` line. TISAX 4.2.1, 1.4. EU AI Act E-05.
+  File 12 runs the same removals, plus Organization Administrator's, as its last steps. If files 07 to 12 run past `BOOTSTRAP_EXCEPTION_EXPIRY`, the bindings stop granting on that date: do not edit the condition by hand; write a signed SD-01 extension record, then remove and re-add the bindings with a new condition file version, and a `BD-06-1` superseding line.
+- **EVIDENCE:** Policy JSON and output as `<date>-OB-3.7-org-exception-v1`; the `BD-06-1` line. TISAX 4.2.1, 1.4. EU AI Act E-05.
 
 ### Part 4 — Break-glass OU and accounts
 
@@ -958,7 +995,7 @@ roster = {
   "tenant": {"domain": E["DOMAIN"], "directory_customer_id": E["DIRECTORY_CUSTOMER_ID"], "org_id": E["ORG_ID"]},
   "rules": "04-identity-and-privileged-access.md section 8.1 (P68); exactly two human super admins; any other super admin or admin-role holder is role_assignment_added; a listed role missing is role_assignment_missing",
   "accounts": [
-    {"email": E["SA_1_ADMIN"], "kind": "human_super_admin", "holder": "platform owner", "workspace_roles": ["Super Admin"], "org_unit": E["ADMIN_OU"], "two_sv": "only_security_key", "keys": 2, "spare_key_custodian": "second human", "gcp_org_roles": [{"role": r, "until": E["BOOTSTRAP_EXCEPTION_EXPIRY"], "decision": "SD-01", "withdrawn_in": "file 12"} for r in ["roles/resourcemanager.organizationAdmin", "roles/resourcemanager.folderCreator", "roles/resourcemanager.projectCreator", "roles/privilegedaccessmanager.admin"]], "eve_reports_poll": True},
+    {"email": E["SA_1_ADMIN"], "kind": "human_super_admin", "holder": "platform owner", "workspace_roles": ["Super Admin"], "org_unit": E["ADMIN_OU"], "two_sv": "only_security_key", "keys": 2, "spare_key_custodian": "second human", "gcp_org_roles": [{"role": r, "until": E["BOOTSTRAP_EXCEPTION_EXPIRY"], "decision": "SD-01", "withdrawn_in": "file 12"} for r in ["roles/resourcemanager.organizationAdmin", "roles/resourcemanager.folderCreator", "roles/resourcemanager.projectCreator", "roles/privilegedaccessmanager.admin", "roles/iam.securityAdmin"]], "eve_reports_poll": True},
     {"email": E["SA_2_ADMIN"], "kind": "human_super_admin", "holder": "second human", "workspace_roles": ["Super Admin"], "org_unit": E["ADMIN_OU"], "two_sv": "only_security_key", "keys": 2, "spare_key_custodian": "platform owner", "gcp_org_roles": [], "eve_reports_poll": True},
     {"email": E["BRK_GCP_1"], "kind": "break_glass_cloud", "workspace_roles": [], "org_unit": E["BREAK_GLASS_OU"], "two_sv": "only_security_key", "keys": 1, "key_custodian": "platform owner", "password_custodian": "second human", "gcp_org_roles_via_group": "gcp-organization-admins@" + E["DOMAIN"], "eve_reports_poll": True},
     {"email": E["BRK_GCP_2"], "kind": "break_glass_cloud", "workspace_roles": [], "org_unit": E["BREAK_GLASS_OU"], "two_sv": "only_security_key", "keys": 1, "key_custodian": "second human", "password_custodian": "platform owner", "gcp_org_roles_via_group": "gcp-organization-admins@" + E["DOMAIN"], "eve_reports_poll": True},
@@ -1312,7 +1349,7 @@ grep -Ei 'password|secret|backup|token' ~/.platform-env || echo "no secret-like 
 - **WHERE:** Shell; `EVIDENCE_REGISTER`, `DEVIATION_REGISTER`, `DRILL_CALENDAR` (file 01's formats).
 - **ACTION:**
   1. One `EVIDENCE_REGISTER` line per EVIDENCE record of this file, with its path, E-xx and TISAX id.
-  2. Confirm every deviation line this file can open, each with its state on the day: `DEV-06-01` (OB-3.2, the SD-01 organisation exception, open until file 12); `DEV-06-02` (OB-2.6's fallback daily manual login review, if it was used); `DEV-06-03` (OB-2.9's interim backup codes for `sa-2-admin@`, **closed by OB-2.10a** or carrying a new dated expiry); `DEV-06-04` (no `PPL-EW` envelope-witness record at the preconditions, if that was the case, closed when file 03 carries the row); `DEV-06-05` (OB-3.5a's temporary simulator roles, closed the same sitting by `SIMULATOR ROLES REMOVED`, or carrying the "preview refused" note). A line that is still open at the end of the file names its owner and its expiry.
+  2. Confirm every deviation line this file can open, each with its state on the day: `BD-06-1` (OB-3.2, the SD-01 organisation exception, open until file 12); `BD-06-2` (OB-2.6's fallback daily manual login review, if it was used); `BD-06-3` (OB-2.9's interim backup codes for `sa-2-admin@`, **closed by OB-2.10a** or carrying a new dated expiry); `BD-06-4` (no `PPL-EW` envelope-witness record at the preconditions, if that was the case, closed when file 03 carries the row); `BD-06-5` (OB-3.5a's temporary simulator roles, closed the same sitting by `SIMULATOR ROLES REMOVED`, or carrying the "preview refused" note). A line that is still open at the end of the file names its owner and its expiry.
   3. `DRILL_CALENDAR`: quarterly break-glass drill starting with `brk-gcp-2@`; the weekly interim-rule check of OB-8.4.
   4. Confirm README's re-run index already holds: `ROSTER_FILE` updates in 10 (`factory-groups@`), 24 (`eve@`), 30 (`walle@`), 38 (`walle@` Super Admin); retirement of the interim rules only by the second human after 28; `BOOTSTRAP_EXCEPTION_EXPIRY` withdrawn in 12. Add a line if the rule-B recipient was `WAITING`.
 - **VERIFY:** The register line count for OB-* equals the count of EVIDENCE records produced; the second human initials the build-log line.
@@ -1326,12 +1363,12 @@ grep -Ei 'password|secret|backup|token' ~/.platform-env || echo "no secret-like 
 - **ACTION:**
 
 ```bash
-gcloud auth revoke "$SA_1_ADMIN"
-gcloud auth list
+sitting_end
+checkpoint "$SITTING_ID" DONE - - "credentials revoked"
 ```
 
-  Sign out of every admin and break-glass browser profile. Confirm every key is on its holder or in the safe.
-- **VERIFY:** `gcloud auth list` shows no `sa-1-admin@` credential. The safe log balances.
+  This is 01 PR-3.2's end-of-sitting block, run in the shell that opened the sitting (if it was lost, read `SITTING_ID` back as 01 PR-3.2 says). Sign out of every admin and break-glass browser profile. Confirm every key is on its holder or in the safe.
+- **VERIFY:** `sitting_end` prints `SITTING-END OK` (no account, no ADC file). The last two `SITTING-` lines in `checkpoints.tsv` carry the same id, `START` then `DONE`. The safe log balances.
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** Build-log line under OB-8.3 with the safe-log balance.
 
@@ -1382,22 +1419,22 @@ Later files change these files only by pull request with the second human as req
 | A security key is not accepted at sign-in within 7 days of enrolment | Wait: Google says a new key may take up to 7 days to become available. Keep the daily account's Super Admin until OB-2.11 passes | run OB-2.12 before `ADMIN ACCOUNTS PROVEN` |
 | Both admin accounts fail after OB-2.12 | A remaining super admin under a G3 hand-over exception restores the platform owner's access; if none remains, Google's support-assisted super-admin recovery through domain verification ([super administrator best practices](https://docs.cloud.google.com/resource-manager/docs/super-admin-best-practices)). This is why self-recovery is left as found (SD-30) | turn on super-admin self-recovery as a shortcut |
 | A reduced admin under G3 cannot work with the delegated role | Re-assign nothing on the spot; IT security writes a superseding G3 record, then OB-2.13 is repeated for that account | leave Super Admin without a dated exception |
-| `BOOTSTRAP_EXCEPTION_EXPIRY` is reached before file 12 finishes | The four bindings stop granting on that date. Stop; the platform owner writes an SD-01 extension signed by the second human; OB-3.2 writes a new condition file version; OB-3.7's rollback removes and re-adds the bindings; `DEV-06-01` gets a superseding line | edit the expression in the console; grant an unconditioned role |
-| An activity rule does not fire | Correct its filter the same day and re-test; until it fires, the second human reads User log events daily (DEV-06-02) | continue to Part 3 without either the rule or the daily read |
+| `BOOTSTRAP_EXCEPTION_EXPIRY` is reached before file 12 finishes | The five bindings stop granting on that date. Stop; the platform owner writes an SD-01 extension signed by the second human; OB-3.2 writes a new condition file version; OB-3.7's rollback removes and re-adds the bindings; `BD-06-1` gets a superseding line | edit the expression in the console; grant an unconditioned role |
+| An activity rule does not fire | Correct its filter the same day and re-test; until it fires, the second human reads User log events daily (BD-06-2) | continue to Part 3 without either the rule or the daily read |
 | A group was created with the wrong address or without the Security label | Without the label: add it only once the address is right, as a new merged change. With a wrong address: delete the group and re-create it under OB-6.2's gate; record both | keep a mislabelled control group |
 | A domain-wide delegation client serving a platform identity is found | Stop the file (OB-1.4). Severity 1 record to the second human; the client's owner removes it under a decision in file 03 | use the client |
 | An envelope is found opened | Treat it as an incident to the second human; re-enrol the key, generate new backup codes or rotate the password, reseal as the next version | reseal without recording |
 | A break-glass account cannot sign in after its password was rotated (OB-7.2 action 4) | Both people return to OB-7.2 action 4 in the same sitting and reset from a freshly generated vault value, then repeat action 5. Found later: the password custodian resets from the vault entry under the two-person rule; if the entry is lost, a super admin resets and the custodian enters a new value, other person present and looking away; record every reset against OB-7.2 and re-run OB-7.4 | leave the rotation unproven until the next quarterly drill; let one person hold both the password and the key |
-| No envelope witness is available for a sealing step | Write the checkpoint line `WAITING envelope witness`, leave the key on its holder's person or the codes ungenerated, and continue with no envelope; sealing resumes when the `PPL-EW` person is there | seal with the custodian signing twice; let the platform owner witness an envelope he is custodian of |
+| No envelope witness is available for a sealing step | Write the checkpoint line `WAITING envelope witness`, leave the key on its holder's person or the codes ungenerated, and continue with no envelope; sealing resumes when the `PPL-EW` person is there | seal with the custodian signing twice; let the platform owner witness an envelope they are custodian of |
 
 ## Findings this file closes
 
 | Finding | Severity | What this file does | Steps | The half closed elsewhere |
 |---|---|---|---|---|
-| S002 | blocking | Performs the first privileged acts that no procedure performed: Organization Administrator and Folder Creator (plus Project Creator and PAM Admin, SD-01) to `sa-1-admin@` under a dated, conditioned exception; break-glass accounts and `gcp-organization-admins@`; the control groups PAM entitlements name, as security groups | OB-3.2 to OB-3.7, Part 4, Parts 5 to 7 | PAM Admin to `platform-owners@`, the PAM service agent, the entitlements and the withdrawal of the exception: file 12 |
+| S002 | blocking | Performs the first privileged acts that no procedure performed: Organization Administrator and Folder Creator (plus Project Creator, PAM Admin and Security Admin, SD-01) to `sa-1-admin@` under a dated, conditioned exception; break-glass accounts and `gcp-organization-admins@`; the control groups PAM entitlements name, as security groups | OB-3.2 to OB-3.7, Part 4, Parts 5 to 7 | PAM Admin to `platform-owners@`, the PAM service agent, the entitlements and the withdrawal of the exception: file 12 |
 | S012 | major | Tenant-wide super-admin self-recovery and multi-party approval are read and deliberately not changed; the roster-ready state (two admin accounts, two keys each, sealed backup codes, the second human present) is built so that file 38 can set both on gate day | OB-1.2, Part 2 | the gate-day settings and the recovery rehearsal: file 38; Wall-E's robot OU without them: file 30 |
 | S049 | major | `ge-admins@` is created by hand by a super admin as a security group on the two-human-merged control-group list, with `sa-1-admin@` as member, so `ent-ge-admin` has its requester | OB-5.2, OB-6.2 to OB-6.4 | `factory-groups@` with Groups Admin: file 10 |
-| S059 | major | No standing organisation policy, deny, principal access boundary or sink role is granted to any human. The four roles the bootstrap cannot avoid carry an IAM condition that ends on `BOOTSTRAP_EXCEPTION_EXPIRY`, are in the deviation register and are verified exact | OB-3.2, OB-3.7 | the PAM entitlements that replace them and the verified removal: file 12 |
+| S059 | major | No standing organisation policy, deny, principal access boundary or sink role is granted to any human. The five roles the bootstrap cannot avoid carry an IAM condition that ends on `BOOTSTRAP_EXCEPTION_EXPIRY`, are in the deviation register and are verified exact | OB-3.2, OB-3.7 | the PAM entitlements that replace them and the verified removal: file 12 |
 | S079 | major | Creates `sa-1-admin@` and `sa-2-admin@` in a hardened admin OU with two keys each, seals the spares, assigns Super Admin, removes it from the daily accounts and every other super admin (G3), names and commits the roster | Part 2, OB-5.1 to OB-5.4 | roster updates for later accounts: files 10, 24, 30, 38 |
 | X-ORG-11 | major | Every custody record made here (spare keys and backup codes, break-glass keys, re-seals) stays on paper in the safe with a same-day scan to `EVIDENCE_INTERIM_LOCATION`, versioned and never overwritten (SD-27) | OB-2.9, OB-2.10a, OB-2.11, OB-7.3 | the upload of these records to the witness bucket and its alert: file 08 |
 | S180 | minor (salvage) | Deletes the retired less-secure-apps row and uses the corrected console paths | settings table, OB-1.2, OB-2.3 | — |
@@ -1409,11 +1446,11 @@ Later files change these files only by pull request with the second human as req
 - [ ] `/Admins` has 2SV "Only security key", no trusted devices, no security codes, 1-hour Google Cloud reauthentication with a key, shortest web session.
 - [ ] Cloud Identity Free present: found in OB-1.5's read, and added in OB-2.0 with both humans present and before/after screenshots if it was absent (no Part 1 step wrote anything).
 - [ ] `sa-1-admin@` and `sa-2-admin@`: Super Admin, enrolled and enforced, two keys each proven (primary and spare), backup codes sealed with the spare, custodian from the other administration line, custody records scanned the same day.
-- [ ] `sa-2-admin@`'s codes regenerated by the second human alone after OB-2.10, resealed as `v2`, `DEV-06-03` closed (OB-2.10a); no envelope names the same person as generator and custodian.
+- [ ] `sa-2-admin@`'s codes regenerated by the second human alone after OB-2.10, resealed as `v2`, `BD-06-3` closed (OB-2.10a); no envelope names the same person as generator and custodian.
 - [ ] Neither daily account holds Super Admin; every other super admin reduced under G3 or on a signed, unexpired hand-over exception (`G3 STATE OK`).
 - [ ] The removal of the domain-wide defaults was previewed (OB-3.5a: `NO ACCESS LOST`, or every revoked principal answered in the change record) and the temporary simulator roles were removed again (`SIMULATOR ROLES REMOVED`).
 - [ ] `domain:` Project Creator and Billing Account Creator absent from the organisation policy (`DEFAULTS REMOVED`), for **every** domain listed in `OB-3.6-removed-domain-bindings.json`, under a signed change record, with that file kept as the rollback's source.
-- [ ] `sa-1-admin@` holds exactly Organization Administrator, Folder Creator, Project Creator and PAM Admin at the organisation, each conditioned to `BOOTSTRAP_EXCEPTION_EXPIRY` (`EXCEPTION EXACT`), recorded as `DEV-06-01`, to be withdrawn in file 12.
+- [ ] `sa-1-admin@` holds exactly Organization Administrator, Folder Creator, Project Creator, PAM Admin and Security Admin at the organisation, each conditioned to `BOOTSTRAP_EXCEPTION_EXPIRY` (`EXCEPTION EXACT`), recorded as `BD-06-1`, to be withdrawn in file 12.
 - [ ] `brk-gcp-1@` and `brk-gcp-2@` in `/Automation/Break-Glass`, no licence, no recovery options, no admin role, one sealed key each, key and password custodians crossed, `gcp-organization-admins@` their only group, holding exactly the two standing roles (`BREAK-GLASS ROLES EXACT`), granted only after `BREAK-GLASS KEYS PROVEN` (OB-4.4, read with `viewType=admin_view`).
 - [ ] `brk-gcp-1@`'s rotated password proven by a second sign-in in the same sitting (OB-7.2 action 5), with two rule-A mails recorded.
 - [ ] `ROSTER_FILE` and `CONTROL_GROUPS_FILE` merged on the default branch with the second human's approval; `ROSTER MATCHES LIVE TENANT` printed at merge from **fresh** `isAdmin` and `isDelegatedAdmin` reads (OB-5.3), on both workstations, with the paste guards clean.
@@ -1472,9 +1509,8 @@ Later files change these files only by pull request with the second human as req
 | Whether the tenant's edition offers User log events as an activity-rule data source | Rule A and B; the fallback is a daily manual review | OB-2.6 |
 | The APIs Explorer panel on the roles and roleAssignments pages | OB-1.3, OB-2.14, OB-7.4 reads; the fallback is the Admin roles pages | OB-1.3 |
 | That `gcloud identity groups` reads work with a user credential and no quota project; `search-transitive-groups` with the label filter | OB-6.1, OB-6.4, OB-7.4; fallback by eye in the console | OB-6.1 |
-| That Organization Administrator covers the organisation-level IAM grant PAM setup needs (Google's page names Security Admin) | File 12's first step | file 12 |
 | The exact label of "Who can post" and "Who can view members" in the group access settings | OB-6.2 | OB-6.2 on the day |
 | The shortest web session duration offered by Google session control | OB-2.3, OB-4.2 | read on the page on the day |
 | The field names of `gcloud iam simulator replay-recent-access --format=json` output | OB-3.5a's summary script; the fallback is reading `OB-3.5a-replay.json` and the console's "Access changes over the past 90 days" by eye | OB-3.5a, on the day |
-| Whether a super admin may generate backup verification codes for their **own** account on the user Security page | OB-2.10a, which is how the second human stops the platform owner holding both factors of `sa-2-admin@` | OB-2.10a, on the day; if refused, `DEV-06-03` stays open with a named person and a new expiry |
-| Whether file 03's tracker carries a `PPL-EW` row for the envelope witness | Every sealing step (OB-2.9, OB-2.10a, OB-2.11, OB-7.3) | the preconditions, before the first sitting; otherwise `DEV-06-04` |
+| Whether a super admin may generate backup verification codes for their **own** account on the user Security page | OB-2.10a, which is how the second human stops the platform owner holding both factors of `sa-2-admin@` | OB-2.10a, on the day; if refused, `BD-06-3` stays open with a named person and a new expiry |
+| Whether file 03's tracker carries a `PPL-EW` row for the envelope witness | Every sealing step (OB-2.9, OB-2.10a, OB-2.11, OB-7.3) | the preconditions, before the first sitting; otherwise `BD-06-4` |

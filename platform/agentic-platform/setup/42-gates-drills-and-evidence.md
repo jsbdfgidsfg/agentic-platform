@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: GD-3.1 requests its `ENT_PROJECT_REPAIR_CORE` grant and encrypts the bucket with its own Autokey key handle instead of binding the Cloud Storage service agent on `KEY_PLATFORM_LOGS` (whose sole Encrypter/Decrypter stays the Logging service account, 11 KV-2.3); the `LOGGING_PROJECT` placement is recorded as a `BD-42` departure from 08 §5.4 and 02 §5; GD-1.1 and GD-1.2 branch, push and open a pull request; GD-1.4 files pointer records and `gate-index.sh` prints `MALFORMED` for a missing or bad `date:`; GD-3.4 resolves each file from the register's location column and skips record ids already copied; gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Part 42 of the setup set. Entry point: [README.md](README.md). Conventions, helpers and the
   step format: [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md).
 - What this part is: the **standing** half of the set. Files 01 to 41 each produce gate lines,
@@ -127,10 +128,10 @@ Sitting A:
       `"$PLATFORM_REPO_DIR/tools/decision-need.sh" P13` prints `SIGNED` **and**
       `"$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 RECORD_RETENTION_DAYS` prints digits.
 - [ ] [10](10-core-projects-and-ci-identities.md): `LOGGING_PROJECT` exists and is billed.
-- [ ] [11](11-keys-and-validator-custodian.md) KV-2.2: `KEY_PLATFORM_LOGS` exists in
-      `KR_LOGGING` and is the **full resource name**
-      `projects/<KMS_PROJECT>/locations/europe-west1/keyRings/logging/cryptoKeys/platform-logs-europe-west1`
-      (KV-2.2 sets it that way; GD-3.1 asserts the shape before using it unscoped).
+- [ ] [11](11-keys-and-validator-custodian.md) KV-6.3: Autokey is configured on
+      `fld-platform-core` with `KMS_PROJECT` as key project, so GD-3.1's key handle for the
+      bucket returns a key. `KEY_PLATFORM_LOGS` is **not** used here: it keeps the Logging service
+      account as its sole Encrypter/Decrypter (11 KV-2.3).
 - [ ] [12](12-privileged-access-catalogue.md): `ENT_PROJECT_REPAIR_CORE` exists, because every
       IAM change in `LOGGING_PROJECT` from here on is made through it, not standing.
 - [ ] [14](14-central-logging-and-billing-export.md) complete through CL-10.3, so the log
@@ -162,11 +163,11 @@ later sitting for the records made since.
 
 | Role | What they do here | Steps |
 |---|---|---|
-| Platform owner | Keeps the file. Creates the bucket and the index, consolidates the registers, chairs nothing — he is a participant in the review, not its chair. **Can add a record to the evidence bucket and cannot read one back, list the store or overwrite anything** (GD-3.3), which is the control that makes his own copies checkable by someone else | GD-1 to GD-7 |
+| Platform owner | Keeps the file. Creates the bucket and the index, consolidates the registers, chairs nothing — they are a participant in the review, not its chair. **Can add a record to the evidence bucket and cannot read one back, list the store or overwrite anything** (GD-3.3), which is the control that makes their own copies checkable by someone else | GD-1 to GD-7 |
 | Security reviewer (`SECURITY_REVIEWER_EMAIL`) | **Chairs the quarterly review.** Signs `TIER_W_RECORD`, the deviation closures and the quarterly record. Owns the judgement on whether a stale line is a finding or an acceptance. **Runs every check on the evidence bucket that needs a read**, because the platform owner's binding cannot list or get an object (GD-3.3) | GD-2.3, GD-3.4 (VERIFY), GD-7.3, GD-8.2 |
-| Second human (`SECOND_HUMAN_EMAIL`) | **Owns the Eve proof rows** (DR-28-1 to DR-28-3). Countersigns the evidence bucket's lock. Copies the scans and signed documents into the evidence bucket, and the custody, rota and drill scans a witness administrator hands her, under `GRP_PLATFORM_SECURITY`'s objectCreator binding. Is the only person who may record a blind-proof result | GD-3.2, GD-3.4, GD-3.5, GD-5.6, GD-5.7 |
-| Witness administrators | Own the witness records: the `drills/`, `custody/` and `rota/` prefixes, the quarterly separation re-check and the recovery-design review. **Hold no role in the tenant, including none on the platform evidence bucket**; the evidence-bucket copy of a custody record is made by the second human from the scan they hand her | GD-3.3 (by absence), GD-4.5, GD-5.7, GD-8.3 |
-| Incident commander (`INCIDENT_COMMANDER_EMAIL`) | Runs the tabletop and signs its record; owns the SIEM fixture replay row jointly with IT security. Holds the only **individual** binding on the evidence bucket, because the records he writes are his and he is in neither platform group | GD-3.3, GD-5.10, GD-5.11 |
+| Second human (`SECOND_HUMAN_EMAIL`) | **Owns the Eve proof rows** (DR-28-1 to DR-28-3). Countersigns the evidence bucket's lock. Copies the scans and signed documents into the evidence bucket, and the custody, rota and drill scans a witness administrator hands them, under `GRP_PLATFORM_SECURITY`'s objectCreator binding. Is the only person who may record a blind-proof result | GD-3.2, GD-3.4, GD-3.5, GD-5.6, GD-5.7 |
+| Witness administrators | Own the witness records: the `drills/`, `custody/` and `rota/` prefixes, the quarterly separation re-check and the recovery-design review. **Hold no role in the tenant, including none on the platform evidence bucket**; the evidence-bucket copy of a custody record is made by the second human from the scan they hand them | GD-3.3 (by absence), GD-4.5, GD-5.7, GD-8.3 |
+| Incident commander (`INCIDENT_COMMANDER_EMAIL`) | Runs the tabletop and signs its record; owns the SIEM fixture replay row jointly with IT security. Holds the only **individual** binding on the evidence bucket, because the records they write are theirs and they are in neither platform group | GD-3.3, GD-5.10, GD-5.11 |
 | ISMS | Receives the TISAX §13 evidence pack; holds training and competence records the register points at | GD-4.4 |
 | Billing administrator | Nothing here. Named only so that the quarterly review's cost line has an owner | — |
 
@@ -193,7 +194,9 @@ two-reviewer branch protection as the register, and this page is its description
 - **ACTION:**
 
 ```bash
-need PLATFORM_REPO_DIR BUILD_LOG_DIR
+need PLATFORM_REPO_DIR BUILD_LOG_DIR PLATFORM_REPO_SLUG
+git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
+git -C "$PLATFORM_REPO_DIR" switch -c gd-1-1-gates
 mkdir -p "$PLATFORM_REPO_DIR/gates"
 penv_set GATES_DIR "gates"
 cat > "$PLATFORM_REPO_DIR/gates/README.md" <<'GATES'
@@ -240,6 +243,8 @@ actions:
 TPL
 git -C "$PLATFORM_REPO_DIR" add gates
 git -C "$PLATFORM_REPO_DIR" commit -m "gates: directory, index README and record template (setup 42 GD-1.1)"
+git -C "$PLATFORM_REPO_DIR" push -u origin gd-1-1-gates
+gh pr create --repo "$PLATFORM_REPO_SLUG" --head gd-1-1-gates --title "GD-1.1 gates directory, index README and record template" --body "Setup 42 GD-1.1. Required reviewers: the security reviewer (CODEOWNERS) and a second human reviewer."
 checkpoint GD-1.1 DONE - "repo:gates/README.md"
 ```
 
@@ -268,7 +273,10 @@ checkpoint GD-1.1 DONE - "repo:gates/README.md"
   on age alone — the defect that let a record citing a superseded commit read green.
 
 ```bash
-need PLATFORM_REPO_DIR GATES_DIR
+need PLATFORM_REPO_DIR GATES_DIR PLATFORM_REPO_SLUG
+git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
+[ -f "$PLATFORM_REPO_DIR/$GATES_DIR/README.md" ] || { echo "STOP: GD-1.1's pull request is not merged" >&2; false; }
+git -C "$PLATFORM_REPO_DIR" switch -c gd-1-2-freshness
 cat > "$PLATFORM_REPO_DIR/$GATES_DIR/freshness.tsv" <<'FRESH'
 gate	freshness_days	why	source
 TIER-R	none	Structural: the factory, folder baseline, central logging and shared registry either exist or do not	01-hld §0.4 R line
@@ -294,6 +302,8 @@ STAGE-0	none	A stage record is a point in time; a later stage supersedes it
 FRESH
 git -C "$PLATFORM_REPO_DIR" add "$GATES_DIR/freshness.tsv"
 git -C "$PLATFORM_REPO_DIR" commit -m "gates: freshness windows (setup 42 GD-1.2)"
+git -C "$PLATFORM_REPO_DIR" push -u origin gd-1-2-freshness
+gh pr create --repo "$PLATFORM_REPO_SLUG" --head gd-1-2-freshness --title "GD-1.2 gate freshness windows" --body "Setup 42 GD-1.2. The security reviewer signs by approving."
 checkpoint GD-1.2 DONE "$SECURITY_REVIEWER_EMAIL" "repo:gates/freshness.tsv"
 ```
 
@@ -330,7 +340,8 @@ awk -F'\t' 'NR>1 {print $1"\t"$2}' "$G/freshness.tsv" | while IFS="$(printf '\t'
   d=$(awk -F': *' '/^date:/{print $2; exit}' "$newest")
   r=$(awk -F': *' '/^result:/{print $2; exit}' "$newest")
   c=$(awk -F': *' '/^commit:/{print $2; exit}' "$newest")
-  s=$(date -u -j -f %Y-%m-%d "$d" +%s 2>/dev/null || date -u -d "$d" +%s)
+  s=$(date -u -j -f %Y-%m-%d "$d" +%s 2>/dev/null || date -u -d "$d" +%s 2>/dev/null || true)
+  if [ -z "$d" ] || [ -z "$s" ]; then printf '%s\t%s\t-\t-\t-\tMALFORMED\tno-or-bad-date-field\n' "$gate" "$(basename "$newest")"; continue; fi
   age=$(( (today - s) / 86400 ))
   note=-
   case "$window" in
@@ -376,9 +387,14 @@ chmod +x "$PLATFORM_REPO_DIR/tools/gate-index.sh"
 
 - **WHO:** Platform owner; the security reviewer checks each one against its producing step.
 - **WHERE:** `PLATFORM_REPO_DIR/gates`.
-- **ACTION:** Copy each existing gate record into `gates/` **under its gate id**, keeping the
-  original where its producing file put it. A gate record is a pointer to evidence, never a copy
-  of it.
+- **ACTION:** For each existing gate record, write a **pointer record** into `gates/` **under
+  its gate id**, from `gates/record.template.md`: the front matter filled (`gate`, `date` = the
+  original record's date, `verified_by`, `result`, `freshness_days`, `commit`) and one `evidence`
+  entry whose `location` cites the original's path. The original stays where its producing file
+  put it and is **never** copied into `gates/`: 17 FM-10.2 writes a signed decision-format record
+  and 20 GG-8.2 a table, and neither carries the `date:`, `result:` and `commit:` lines that
+  `gate-index.sh` reads. A gate record is a pointer to evidence, never a copy of it. The pointer
+  records go in on a branch `gd-1-4-filing`, pushed and opened with `gh pr create` as in GD-1.1.
 
 | Gate | Record | Produced by | Filed as |
 |---|---|---|---|
@@ -394,8 +410,9 @@ chmod +x "$PLATFORM_REPO_DIR/tools/gate-index.sh"
   once, but the lines expire at different rates (GD-1.2), and a single file cannot be half stale.
   The split files carry `supersedes: -` and cite the checklist record as their evidence row.
 
-- **VERIFY:** `tools/gate-index.sh` prints no `MISSING` for any gate whose producing file has a
-  `DONE` checkpoint. Any gate still `MISSING` is listed in the sitting's note with the file it
+- **VERIFY:** `tools/gate-index.sh` prints no `MISSING` and no `MALFORMED` for any gate whose
+  producing file has a `DONE` checkpoint; a `MALFORMED` line means a pointer record lacks a
+  parseable `date:` and is corrected before the merge. Any gate still `MISSING` is listed in the sitting's note with the file it
   waits on.
 - **ROLLBACK:** Revert the merge; the original records are untouched.
 - **EVIDENCE:** The merge commit; `evidence_add GD-1.4 gate-index-first-fill E-05 6.3 "repo:gates@<commit>"`.
@@ -575,25 +592,34 @@ discovered later.
 - **ACTION:**
 
 ```bash
+need ENT_PROJECT_REPAIR_CORE SECOND_HUMAN_EMAIL CICD_PROJECT PLATFORM_REPO_DIR
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
+g="$(gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-duration=3600s --justification="setup 42 GD-3.1 and GD-3.3: platform evidence bucket, its key handle and its IAM in LOGGING_PROJECT" --additional-email-recipients="$SECOND_HUMAN_EMAIL" --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"
+pam_wait "$g" ACTIVE
 checkpoint GD-3.1 START "$SECOND_HUMAN_EMAIL" - "create the platform evidence bucket"
-need LOGGING_PROJECT REGION KEY_PLATFORM_LOGS PLATFORM_REPO_DIR
+need LOGGING_PROJECT REGION PLATFORM_REPO_DIR
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES P13
-case "$KEY_PLATFORM_LOGS" in projects/*/locations/*/keyRings/*/cryptoKeys/*) ;; *) echo "STOP: KEY_PLATFORM_LOGS is not a full resource name (11 KV-2.2)" >&2; false;; esac
 RECORD_RETENTION_DAYS_READ=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 RECORD_RETENTION_DAYS)
 case "$RECORD_RETENTION_DAYS_READ" in ''|*[!0-9]*) echo "STOP: P13 has no integer RECORD_RETENTION_DAYS; amend the record (03 DC-4.8) before this sitting" >&2; false;; esac
 [ "$RECORD_RETENTION_DAYS_READ" -ge 400 ] && [ "$RECORD_RETENTION_DAYS_READ" -le 3650 ] || { echo "STOP: record value outside 400..3650" >&2; false; }
 penv_set PLATFORM_EVIDENCE_BUCKET "gs://${LOGGING_PROJECT}-platform-evidence"
 penv_set RECORD_RETENTION_DAYS "$RECORD_RETENTION_DAYS_READ"
-SA_GCS=$(gcloud storage service-agent --project="$LOGGING_PROJECT")
-gcloud kms keys add-iam-policy-binding "$KEY_PLATFORM_LOGS" --member="serviceAccount:${SA_GCS}" --role=roles/cloudkms.cryptoKeyEncrypterDecrypter
-gcloud storage buckets create "$PLATFORM_EVIDENCE_BUCKET" --project="$LOGGING_PROJECT" --location="$REGION" --default-storage-class=STANDARD --uniform-bucket-level-access --public-access-prevention --default-encryption-key="$KEY_PLATFORM_LOGS" --soft-delete-duration=30d
+gcloud kms key-handles create --key-handle-id=kh-platform-evidence --location="$REGION" --resource-type=storage.googleapis.com/Bucket --project="$LOGGING_PROJECT" >/dev/null 2>&1 || echo "key-handle create returned non-zero (already exists, or still provisioning); polling"
+KMS_KEY_EVIDENCE_BUCKET=""; for _i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+  KMS_KEY_EVIDENCE_BUCKET="$(gcloud kms key-handles describe kh-platform-evidence --location="$REGION" --project="$LOGGING_PROJECT" --format='value(kmsKey)' 2>/dev/null)"
+  [ -n "$KMS_KEY_EVIDENCE_BUCKET" ] && break; sleep 10; done
+case "$KMS_KEY_EVIDENCE_BUCKET" in projects/*/locations/europe-west1/keyRings/*/cryptoKeys/*) ;; *) echo "STOP: no Autokey key for the evidence bucket (11 KV-6 on fld-platform-core)" >&2; false;; esac
+gcloud storage buckets create "$PLATFORM_EVIDENCE_BUCKET" --project="$LOGGING_PROJECT" --location="$REGION" --default-storage-class=STANDARD --uniform-bucket-level-access --public-access-prevention --default-encryption-key="$KMS_KEY_EVIDENCE_BUCKET" --soft-delete-duration=30d
 gcloud storage buckets update "$PLATFORM_EVIDENCE_BUCKET" --versioning
 checkpoint GD-3.1 DONE "$SECOND_HUMAN_EMAIL" - "$PLATFORM_EVIDENCE_BUCKET"
 ```
 
   Four things about that fence, each of which was wrong or missing in the first draft.
-  **`checkpoint … START` is its first line**, so the two acts that precede the create — the
-  variables and the KMS binding — are inside the checkpointed window rather than outside it.
+  **The grant comes first, then `checkpoint … START`**: WHO says the step runs under
+  `ENT_PROJECT_REPAIR_CORE`, so the fence requests it with the second human as approver and
+  `pam_wait`s for `ACTIVE`, as [15](15-pager-siem-and-detections.md) PS-4.1 does; the grant's hour
+  also covers GD-3.3. The checkpoint follows, so the acts that precede the create — the
+  variables and the key handle — are inside the checkpointed window rather than outside it.
   **`RECORD_RETENTION_DAYS` is read, never typed.** A literal placeholder assigned inside a
   runnable fence would be pasted straight through to GD-3.2's `--retention-period`, which is a
   value that cannot be reduced once locked; the `case` assertion refuses anything but digits and
@@ -602,16 +628,30 @@ checkpoint GD-3.1 DONE "$SECOND_HUMAN_EMAIL" - "$PLATFORM_EVIDENCE_BUCKET"
   sitting.** As everywhere in this set (compare [14](14-central-logging-and-billing-export.md)
   CL-10.1), an assertion prints and returns non-zero rather than exiting the operator's shell,
   so the operator reads each line's output before pasting the next; the two steps of §3 are the
-  two where that habit is the difference between a mistake and a permanent one. **The KMS call carries no
-  `--keyring`, `--location` or `--project` on purpose, and the `case` above is what makes that
-  safe.** [11](11-keys-and-validator-custodian.md) KV-2.2 sets `KEY_PLATFORM_LOGS` to the full
-  resource name `projects/<KMS_PROJECT>/locations/europe-west1/keyRings/logging/cryptoKeys/platform-logs-europe-west1`,
-  and the reference says the positional `KEY` may be "a fully qualified identifier", with
-  `--keyring` and `--location` needed only when it is not — so the scope is in the value, and
-  adding the flags as well risks a conflict rather than removing one. The `case` refuses any
-  value that is not that shape, which is the only way this call can go to the wrong key. This is
-  the one gcloud call in the file whose scope is carried by its argument instead of its flags,
-  and it says so here so that the set's convention is not quietly broken.
+  two where that habit is the difference between a mistake and a permanent one. **The bucket
+  takes its own Autokey key, not `KEY_PLATFORM_LOGS`.** [11](11-keys-and-validator-custodian.md)
+  KV-2.3 and [09](../09-supply-chain-secrets-recovery.md) §2.4 give `KEY_PLATFORM_LOGS` the
+  Logging service account as its **sole** Encrypter/Decrypter, and
+  [14](14-central-logging-and-billing-export.md) CL-2.2's VERIFY fails when any other member can
+  encrypt or decrypt; binding the Cloud Storage service agent there, as an earlier revision of this
+  step did, broke both. [09](../09-supply-chain-secrets-recovery.md) §2.2 puts `platform-evidence`
+  on Autokey, `LOGGING_PROJECT` sits under `fld-platform-core`, which 11 KV-6.3 gives Autokey, and
+  Autokey lists Cloud Storage buckets with "one key per bucket" and grants the service's own
+  service account encrypt and decrypt on that key itself (Autokey overview,
+  https://docs.cloud.google.com/kms/docs/autokey-overview, read 2026-10-01). The handle is created
+  with an explicit id, never `--generate-key-handle-id`, so a re-run is idempotent, and polled
+  until `kmsKey` is set, the same pattern as 14 CL-4.2 branch (a)
+  (`gcloud kms key-handles create --location --resource-type --key-handle-id`,
+  https://docs.cloud.google.com/sdk/gcloud/reference/kms/key-handles/create, read 2026-10-01). A
+  key handle cannot be deleted, so the step is run only when the create follows the same day.
+  The `case` refuses any key outside `europe-west1`, because the key's region must match the
+  bucket's.
+
+  **The project is a recorded departure.** [08](../08-data-logging-retention-sovereignty.md) §2.2
+  S15 and §5.4 and [02](../02-landing-zone-and-tiers.md) §5 place the platform evidence lake in
+  `CORE_PROJECT`; this step places it in `LOGGING_PROJECT` for the reason §3.1 gives. The
+  departure is a `BD-42-<n>` row in `DEVIATION_REGISTER`, written in this sitting, naming 08 §5.4
+  and 02 §5 as the pages that must cite it as an amendment; GD-7.1 reviews it with the others.
 
   Flags read on 2026-09-16 from the `gcloud storage buckets create` reference: `--location`,
   `--default-storage-class`, `--uniform-bucket-level-access`, `--public-access-prevention`,
@@ -647,8 +687,11 @@ gcloud storage buckets describe "$PLATFORM_EVIDENCE_BUCKET" --format="value(loca
   documentation confirms.
 
   The second line prints `EUROPE-WEST1 STANDARD True enforced`. Read from the YAML dump, by eye
-  and into the record: versioning is enabled, the default encryption key is `KEY_PLATFORM_LOGS`,
-  and the soft-delete policy is 30 days. Their exact key names are read **from the dump** rather
+  and into the record: versioning is enabled, the default encryption key is the Autokey key the
+  handle `kh-platform-evidence` returned (in `KMS_PROJECT`, `europe-west1`), and the soft-delete
+  policy is 30 days. Then `gcloud kms keys get-iam-policy "$KEY_PLATFORM_LOGS"` still shows the
+  Logging service account as its only Encrypter/Decrypter, so 14 CL-2.2's VERIFY still passes
+  on a re-run. Their exact key names are read **from the dump** rather
   than asserted blind, because this file has not verified them against a documented example;
   write the three key names as they appear into the record, so the next sitting can assert them.
   Any location but `EUROPE-WEST1`: stop; a bucket's location cannot be changed, so it is deleted
@@ -710,7 +753,7 @@ gcloud storage buckets update "$PLATFORM_EVIDENCE_BUCKET" --lock-retention-perio
   The four checks, each written into the record before the lock: (1) the value equals the signed
   P13 value for the `record` class; (2) no test object is in the bucket that would be held for
   ten years for nothing; (3) the project's deletion lien consequence is accepted in writing by
-  the security reviewer; (4) the key `KEY_PLATFORM_LOGS` has no destroy scheduled — a destroyed
+  the security reviewer; (4) the bucket's Autokey key (GD-3.1) has no destroy scheduled — a destroyed
   key over a locked bucket makes objects that cannot be deleted and cannot be read, the failure
   [23](23-eve-project-and-evidence-stores.md) §3 names for Eve's bucket.
 
@@ -747,9 +790,9 @@ gcloud storage buckets update "$PLATFORM_EVIDENCE_BUCKET" --retention-period=P1D
 |---|---|---|
 | `GRP_PLATFORM_OWNERS` | `roles/storage.objectCreator` | May add a record; **cannot** overwrite, delete or read back, which is what makes "never overwritten" a control and not a habit. The role "does not give permission to view, delete, or overwrite objects" (IAM roles for Cloud Storage, read 2026-09-16) |
 | `GRP_PLATFORM_SECURITY` | `roles/storage.objectViewer` | The security reviewer and the ISMS read the pack, and run every VERIFY in this file that needs `storage.objects.list` or `storage.objects.get` — which `objectCreator` does not carry |
-| `GRP_PLATFORM_SECURITY` | `roles/storage.objectCreator` | The **second human** is in this group and writes the scans and signed documents of GD-3.5's second row. Reading and writing together is not a weakening: neither role carries `storage.objects.delete`, so she can no more remove or overwrite a record than the owner can |
-| `user:${INCIDENT_COMMANDER_EMAIL}` | `roles/storage.objectCreator` | Writes the tabletop and incident records of GD-3.5's last row (GD-5.10). He is in neither group, so without this binding the row he owns cannot be performed |
-| Witness administrators | **none, deliberately** | They write to `WITNESS_BUCKET` in the witness organisation and to nothing in the tenant. GD-3.5's third row is therefore performed by the **second human** from the scan a witness administrator hands her, which keeps `DR-42-1`'s separation ("no tenant principal holds a role in the witness organisation") symmetrical and keeps the witness copy the one the tenant cannot touch |
+| `GRP_PLATFORM_SECURITY` | `roles/storage.objectCreator` | The **second human** is in this group and writes the scans and signed documents of GD-3.5's second row. Reading and writing together is not a weakening: neither role carries `storage.objects.delete`, so they can no more remove or overwrite a record than the owner can |
+| `user:${INCIDENT_COMMANDER_EMAIL}` | `roles/storage.objectCreator` | Writes the tabletop and incident records of GD-3.5's last row (GD-5.10). They are in neither group, so without this binding the row they own cannot be performed |
+| Witness administrators | **none, deliberately** | They write to `WITNESS_BUCKET` in the witness organisation and to nothing in the tenant. GD-3.5's third row is therefore performed by the **second human** from the scan a witness administrator hands them, which keeps `DR-42-1`'s separation ("no tenant principal holds a role in the witness organisation") symmetrical and keeps the witness copy the one the tenant cannot touch |
 | `SA_EVE_EXPORT` | none | Eve exports to **its own** locked bucket and to the witness; it holds nothing here, so a compromised Eve cannot write the platform's record of itself |
 
 ```bash
@@ -762,9 +805,9 @@ gcloud storage buckets get-iam-policy "$PLATFORM_EVIDENCE_BUCKET" --format=json 
 ```
 
   Confirm before running that `SECOND_HUMAN_EMAIL` really is a member of `GRP_PLATFORM_SECURITY`
-  ([06](06-organisation-bootstrap-and-roster.md) OB-5.2 puts her there as a control-group
+  ([06](06-organisation-bootstrap-and-roster.md) OB-5.2 puts them there as a control-group
   member): `gcloud identity groups memberships list --group-email="$GRP_PLATFORM_SECURITY"`
-  lists her. If she is not, the third binding goes to `user:${SECOND_HUMAN_EMAIL}` instead and
+  lists them. If they are not, the third binding goes to `user:${SECOND_HUMAN_EMAIL}` instead and
   the reason is written into the record.
 
 - **VERIFY:** The policy has exactly four bindings besides inherited project roles. No principal
@@ -782,7 +825,7 @@ gcloud storage buckets get-iam-policy "$PLATFORM_EVIDENCE_BUCKET" --format=json 
 ### GD-3.4 Copy the backlog
 
 - **WHO:** Platform owner copies text records; the **second human** copies the scans, because
-  `EVIDENCE_INTERIM_LOCATION` is hers ([01](01-prerequisites-and-conventions.md) PR-4.4). **The
+  `EVIDENCE_INTERIM_LOCATION` is theirs ([01](01-prerequisites-and-conventions.md) PR-4.4). **The
   VERIFY is run by a member of `GRP_PLATFORM_SECURITY`** — usually the security reviewer —
   because it lists and describes objects and the platform owner's `objectCreator` binding
   carries neither `storage.objects.list` nor `storage.objects.get` (GD-3.3).
@@ -799,11 +842,12 @@ gcloud storage buckets get-iam-policy "$PLATFORM_EVIDENCE_BUCKET" --format=json 
 need PLATFORM_EVIDENCE_BUCKET BUILD_LOG_DIR EVIDENCE_REGISTER
 cd "$BUILD_LOG_DIR"
 L="$BUILD_LOG_DIR/records/$(date -u +%F)-GD-3.4-backlog-copy-v1.txt"
-awk -F' *\\| *' '/^\| 20/ && $2 != "" {print $2"\t"$8"\t"$10}' "$EVIDENCE_REGISTER" | while IFS="$(printf '\t')" read -r rid sha copied; do
-  case "$copied" in ''|'-') ;; *) echo "ALREADY COPIED $rid $copied"; continue;; esac
-  f=$(ls -1 records/"$rid"* 2>/dev/null | head -n 1); [ -n "$f" ] || { echo "NO FILE $rid"; continue; }
+awk -F' *\\| *' '/^\| 20/ && $2 != "" { if ($10 != "-" && $10 != "") done[$2]=1; if (!($2 in seen)) { seen[$2]=1; row[++n]=$2"\t"$7"\t"$8 } } END { for (i=1; i<=n; i++) { split(row[i], a, "\t"); if (a[1] in done) print "ALREADY COPIED " a[1] > "/dev/stderr"; else print row[i] } }' "$EVIDENCE_REGISTER" | while IFS="$(printf '\t')" read -r rid loc sha; do
+  case "$loc" in build-log:*) f="${loc#build-log:}";; *) echo "SKIP $rid $loc (not a build-log record; GD-3.5's table names its copier)"; continue;; esac
+  [ -f "$f" ] || { echo "NO FILE $rid $f"; continue; }
   [ "$sha" = "-" ] || [ "$sha" = "$(shasum -a 256 "$f" | cut -d' ' -f1)" ] || { echo "SHA MISMATCH $rid"; continue; }
-  obj="${PLATFORM_EVIDENCE_BUCKET}/records/${rid}$(echo "$f" | sed 's/.*\(\.[a-z]*\)$/\1/')"
+  b=$(basename "$f"); case "$b" in *.*) ext=".${b##*.}";; *) ext="";; esac
+  obj="${PLATFORM_EVIDENCE_BUCKET}/records/${rid}${ext}"
   gcloud storage cp --custom-metadata="sha256=${sha},record_id=${rid}" "$f" "$obj" && printf 'COPIED\t%s\t%s\n' "$rid" "$obj"
 done | tee "$L"
 ```
@@ -817,6 +861,17 @@ done | tee "$L"
   column `$10`. The draft read `$7` into `sha`, which compared a location string with a hash and
   would have printed `SHA MISMATCH` for every row. The row filter is `/^\| 20/`, the same one
   GD-4.1 uses, rather than `NR>2`, so a header or a note line cannot become a record id.
+
+  **The file is resolved from the location column, not guessed from the record id.** Records
+  live under `records/`, `evidence/15/`, `ge-baseline/`, `ge-gateway/` and other paths, with file
+  names unlike their record ids (15 PS-4.7 writes `<date>-PS-4.7-channels.txt` for the id
+  `<date>-PS-4.7-channel-inventory-v1`), so an earlier `ls records/"$rid"*` found almost nothing
+  and printed `NO FILE` for most rows. The fence strips the `build-log:` prefix from `$7`, reads
+  that path relative to `BUILD_LOG_DIR`, and checks it against the hash in `$8`. A row whose
+  location is another form (`interim:`, `repo:`, `paper:`) is printed as `SKIP`: its copy belongs
+  to the writer GD-3.5 names, not to this loop. The awk also reads the whole register before the
+  loop starts and drops every record id that already has a copy row, because the original row
+  keeps `-` in its copy column for ever and would otherwise be copied again on every re-run.
 
   **`--no-clobber` is gone.** It has to know whether the destination object exists, which is
   `storage.objects.get`, and the platform owner holds `objectCreator` alone — the role that
@@ -848,7 +903,7 @@ gcloud storage objects describe "${PLATFORM_EVIDENCE_BUCKET}/records/<one record
   whose copy column is filled. The log contains no `SHA MISMATCH` and no `NO FILE`. Spot-check
   three objects: the `sha256` custom metadata equals the register's column for the same record
   id. The platform owner does **not** run these three commands and must not be given a role that
-  would let him — if he can list the store he can tell which record is missing from it, which is
+  would let them — if they can list the store they can tell which record is missing from it, which is
   the first move of quietly not copying one.
 - **ROLLBACK:** None after the lock of GD-3.2 — an object cannot be deleted before its retention
   period. This is why the SHA check runs **before** the copy and not after.
@@ -873,7 +928,7 @@ gcloud storage objects describe "${PLATFORM_EVIDENCE_BUCKET}/records/<one record
 |---|---|---|---|---|
 | Text records, exports, command outputs | build log `records/` | `${PLATFORM_EVIDENCE_BUCKET}/records/` same day | the step's operator | `GRP_PLATFORM_OWNERS` objectCreator |
 | Scans, signed documents | `EVIDENCE_INTERIM_LOCATION` | `${PLATFORM_EVIDENCE_BUCKET}/records/` same day, PDF | the second human | `GRP_PLATFORM_SECURITY` objectCreator |
-| Custody, rota, drill records | paper in the safe plus a same-day scan | `WITNESS_BUCKET` `custody/`, `rota/`, `drills/` by a witness administrator ([08](08-witness-organisation.md) WO-3.3); **and** the evidence bucket, from the scan she is handed | witness administrator for the witness copy; **the second human** for the evidence-bucket copy | `GRP_PLATFORM_SECURITY` objectCreator; the witness administrators deliberately hold none |
+| Custody, rota, drill records | paper in the safe plus a same-day scan | `WITNESS_BUCKET` `custody/`, `rota/`, `drills/` by a witness administrator ([08](08-witness-organisation.md) WO-3.3); **and** the evidence bucket, from the scan they are handed | witness administrator for the witness copy; **the second human** for the evidence-bucket copy | `GRP_PLATFORM_SECURITY` objectCreator; the witness administrators deliberately hold none |
 | Decision records | `decisions/` in the platform repository | `${PLATFORM_EVIDENCE_BUCKET}/decisions/` at each quarterly review | platform owner | `GRP_PLATFORM_OWNERS` objectCreator |
 | Gate records | `gates/` in the platform repository | `${PLATFORM_EVIDENCE_BUCKET}/gates/` by the platform owner; the witness copy by a witness administrator (GD-4.5) | platform owner; witness administrator | `GRP_PLATFORM_OWNERS` objectCreator |
 | Tabletop and incident records | the case system | `${PLATFORM_EVIDENCE_BUCKET}/evidence/incidents/`, `…/evidence/tabletops/<date>/` | incident commander | `user:${INCIDENT_COMMANDER_EMAIL}` objectCreator |
@@ -1087,7 +1142,7 @@ git -C "$PLATFORM_REPO_DIR" push origin "$STAGE_TAG"
 - **WHERE:** The witness organisation ([08](08-witness-organisation.md) WO-3.3, repeatable).
 - **ACTION:** Gate records, drill records, custody and rota records go to `WITNESS_BUCKET` under
   `drills/`, `custody/`, `rota/` and a new `gates/` prefix, the same day they are made. The
-  platform owner **cannot** write there, by design: it is the copy he cannot quietly amend.
+  platform owner **cannot** write there, by design: it is the copy they cannot quietly amend.
 - **VERIFY:** `gcloud storage ls "${WITNESS_BUCKET}/gates/"` (run by a witness administrator)
   lists one object per file in `gates/`; the manifest's SHA-256 values match
   `EVIDENCE_REGISTER`'s column for the same record ids.
@@ -1300,7 +1355,7 @@ gcloud run services update walle-actions-super --region="$REGION" --project="$WA
   it is the one that matters — the person Eve monitors is the person who can change Eve's
   configuration, so a configuration change with no fresh blind proof is a silent hole.
   Rows `DR-28-2` (the anti-silencing drill: a declared change by the platform owner is reported
-  without his help) and `DR-28-3` (the withheld witness push, GD-5.7) run beside it.
+  without their help) and `DR-28-3` (the withheld witness push, GD-5.7) run beside it.
 - **VERIFY:** The proof record names the seeded action, the time Eve reported it, the route it
   took, and the recipient — and the recipient is **not** the person the report is about. The
   platform owner's name appears once, as the performer of the seeded action. `tools/gate-index.sh`
@@ -1661,7 +1716,8 @@ Sitting A:
       proven with the four throwaway readings** — `GREEN` on a match, `RED` on a mismatch,
       `AMBER` with no deployed commit given, `MISSING` with no `commit:` field (GD-1.3).
 - [ ] `PLATFORM_EVIDENCE_BUCKET` exists in `LOGGING_PROJECT`, `europe-west1`, uniform access,
-      public access prevented, CMEK `KEY_PLATFORM_LOGS`, versioning on, soft delete 30 days
+      public access prevented, CMEK from its Autokey handle `kh-platform-evidence` (not
+      `KEY_PLATFORM_LOGS`), versioning on, soft delete 30 days
       (GD-3.1) — each read from a **snake_case** projection (`location`,
       `default_storage_class`, `uniform_bucket_level_access`, `public_access_prevention`) or
       from the recorded YAML dump, never from a camelCase projection that renders empty.
@@ -1819,10 +1875,13 @@ Read on 2026-09-16 for this file:
   `delete`); `roles/storage.objectViewer` carries `storage.objects.get` and
   `storage.objects.list`. This is why GD-3.4's VERIFY is run by `GRP_PLATFORM_SECURITY` and why
   `--no-clobber` was removed from its copy.
-- [gcloud kms keys add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/add-iam-policy-binding) —
-  the positional `KEY` is the "ID of the key or fully qualified identifier"; `--keyring` and
-  `--location` are needed only when it is not fully qualified. `KEY_PLATFORM_LOGS` is fully
-  qualified ([11](11-keys-and-validator-custodian.md) KV-2.2), which GD-3.1 asserts.
+- [gcloud kms key-handles create](https://docs.cloud.google.com/sdk/gcloud/reference/kms/key-handles/create) —
+  `--location`, `--resource-type` (`storage.googleapis.com/Bucket` among its listed values) and
+  either `--key-handle-id` or `--generate-key-handle-id`; read 2026-10-01. GD-3.1 uses it in
+  place of the earlier `kms keys add-iam-policy-binding` on `KEY_PLATFORM_LOGS`.
+- [Autokey overview](https://docs.cloud.google.com/kms/docs/autokey-overview) — Cloud Storage
+  buckets are supported with "one key per bucket", and the service's service account "is
+  automatically granted encrypt and decrypt permissions on the key"; read 2026-10-01.
 - [Bucket Lock](https://docs.cloud.google.com/storage/docs/bucket-lock) — locking applies a lien
   on the containing project, blocking `resourcemanager.projects.delete`.
 - [Detach subscriptions](https://docs.cloud.google.com/pubsub/docs/detach-subscriptions) —

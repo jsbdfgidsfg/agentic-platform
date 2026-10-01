@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Changed on 2026-10-01: account id and expiry read from SD-16 with `decision-value.sh`; BA-2.3 expects the Security Admin inheritance while `BD-06-1` is open; BA-3.1's `exists_or_pending` calls corrected; BA-5.1 lists Google's nine billing roles incl. `roles/billing.linkAdmin`; deviation rows `BD-07-1` and `BD-07-2` inserted into the first table; `checkpoint` lines; they/them for roles.
 - Last executed: never
 - Stage: review §2 stage 5, moved after file 06 (decision SD-45) so that the billing roles go to `sa-1-admin@`, never to a daily account.
 - Step prefix: BA. Steps: 18 (BA-6.2 is three: 6.2a grant, 6.2b submit, 6.2c remove). BLOCKED steps: none, because no code is needed. One step is PENDING by design: BA-3.1 waits for `factory-apply@` (file 10) and is a re-run point.
@@ -11,7 +12,7 @@
 
 ## What this part builds
 
-One dedicated, standard Cloud Billing account that pays only for the platform's projects, whose identity, currency and closers are recorded; the two billing roles a hand-run factory module needs, granted on that account only, to `sa-1-admin@` with a recorded expiry and later to `factory-apply@`; a detection for the one way the platform owner could give himself more (an organisation-level billing role granted through Organization Administrator) and for any administrative change on the account; and a project-quota increase filed early enough that files 10 to 37 never stop on it. No project, budget or export is created here: the first project link is the linking test of file 10, the export is file 14, and every budget command follows the contract of §8.
+One dedicated, standard Cloud Billing account that pays only for the platform's projects, whose identity, currency and closers are recorded; the two billing roles a hand-run factory module needs, granted on that account only, to `sa-1-admin@` with a recorded expiry and later to `factory-apply@`; a detection for the one way the platform owner could give themselves more (an organisation-level billing role granted through Organization Administrator) and for any administrative change on the account; and a project-quota increase filed early enough that files 10 to 37 never stop on it. No project, budget or export is created here: the first project link is the linking test of file 10, the export is file 14, and every budget command follows the contract of §8.
 
 What the old text got wrong, and must not come back:
 
@@ -40,7 +41,7 @@ flowchart LR
 - [ ] File 06 is complete: `SA_1_ADMIN` is set, the account is in the admin OU with security-key 2SV, and the organisation-creation default Billing Account Creator for the whole domain has been removed (06).
 - [ ] File 03 has signed SD-16 (P31's billing line): the account to use, `BILLING_ADMIN_EMAIL` (finance), and the expiry date of the bootstrap roles. `need` refuses to run BA-2 without it.
 - [ ] File 03 has named `SECOND_HUMAN_EMAIL` (a recipient of the detection in BA-4) and created `PLATFORM_REPO_REMOTE` with branch protection (BA-4.1 commits to it).
-- [ ] File 01's `~/.platform-env` holds `ORG_ID`, `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER`, `OWNER_DAILY_ACCOUNT` and the helpers `penv_set`, `need` and `exists_or_pending`.
+- [ ] File 01's `~/.platform-env` holds `ORG_ID`, `PLATFORM_REPO_DIR` (for 03's `tools/decision-value.sh`), `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER`, `OWNER_DAILY_ACCOUNT` and the helpers `penv_set`, `need` and `exists_or_pending`.
 - [ ] File 04 has raised the billing-account purchase row, if the account did not already exist.
 - [ ] The platform owner's shell uses file 01's gcloud configuration with no default project, signed in as `sa-1-admin@`.
 - [ ] The billing administrator can sign in to the Google Cloud console with `BILLING_ADMIN_EMAIL` and holds Billing Account Administrator (`roles/billing.admin`) on the account.
@@ -55,7 +56,7 @@ flowchart LR
 
 No witness is needed: nothing here creates a credential or custody record. Separation rule checked in BA-2.1: the billing administrator is neither `SA_1_ADMIN`, `SA_2_ADMIN` nor `OWNER_DAILY_ACCOUNT`, and the platform owner never holds Billing Account Administrator.
 
-Each step ends with a checkpoint line in the build log (file 01's resume rule): `<UTC timestamp> BA-x.y done <one-line result>`. A sitting that is cut resumes at the first step without one.
+Each step writes `checkpoint BA-x.y START` before its ACTION and `checkpoint BA-x.y DONE - <evidence> "<result>"` when its VERIFY passes (01 §5), so a resumed run reads `checkpoints.tsv` and restarts at the first step without a `DONE` line. A waiting step writes `checkpoint BA-x.y PENDING - - "<what it waits for>"`.
 
 ## 1. The account
 
@@ -63,11 +64,11 @@ Each step ends with a checkpoint line in the build log (file 01's resume rule): 
 
 - **WHO:** Billing administrator; the platform owner records.
 - **WHERE:** Google Cloud console, **Billing > Manage billing accounts**, row of the account, **Show info panel**; then the platform owner's shell with `~/.platform-env` sourced. The billing administrator reads the id to the platform owner (an id is not a secret).
-- **ACTION:** The billing administrator confirms the account named in SD-16 is listed under the organisation. The platform owner runs the read below. `sa-1-admin@` holds no billing role yet, so the billing administrator runs the `describe` from their own session if the platform owner's call returns permission denied, and sends the output.
+- **ACTION:** The billing administrator confirms the account named in SD-16 is listed under the organisation. The platform owner reads the id from the Values table of the signed SD-16 record (03 DC-4.5; if the row is missing, `decision-value.sh` exits non-zero and the step stops) and runs the read below. `sa-1-admin@` holds no billing role yet, so the billing administrator runs the `describe` from their own session if the platform owner's call returns permission denied, and sends the output.
 
 ```bash
-need ORG_ID
-BA_ID="<the account id from the SD-16 record, form XXXXXX-XXXXXX-XXXXXX>"
+need ORG_ID PLATFORM_REPO_DIR
+BA_ID=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" SD-16 BILLING_ACCOUNT_ID) && echo "account $BA_ID"
 gcloud billing accounts describe "$BA_ID" --format="yaml(name,displayName,open,masterBillingAccount,parent,currencyCode)"
 ```
 
@@ -143,17 +144,30 @@ penv_set BILLING_CURRENCY "$BA_CUR"
 - **ACTION:**
 
 ```bash
-need SA_1_ADMIN SA_2_ADMIN OWNER_DAILY_ACCOUNT BILLING_ADMIN_EMAIL
-penv_set BOOTSTRAP_BILLING_EXPIRY "<YYYY-MM-DD from the signed SD-16 record>"
+need SA_1_ADMIN SA_2_ADMIN OWNER_DAILY_ACCOUNT BILLING_ADMIN_EMAIL PLATFORM_REPO_DIR
+v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" SD-16 BOOTSTRAP_BILLING_EXPIRY) && penv_set BOOTSTRAP_BILLING_EXPIRY "$v"
 ```
 
 - **VERIFY:** `BOOTSTRAP_BILLING_EXPIRY` is an absolute date after today and no later than the Tier W gate target in 03's tracker, since the factory supersedes hand runs by then (SD-01). `BILLING_ADMIN_EMAIL` differs from `SA_1_ADMIN`, `SA_2_ADMIN` and `OWNER_DAILY_ACCOUNT`. *Assumption:* SD-16 sets a date no more than 90 days out, re-signed by the billing administrator to extend; the procedure takes the signed value, whatever it is. Billing accounts take no dated IAM condition here (`gcloud billing accounts add-iam-policy-binding` documents no `--condition` flag, read 2026-09-15), so the expiry is enforced by BA-7.1 and not by Google.
 - **ROLLBACK:** `penv_set --force` with a build-log line before BA-2.2.
-- **EVIDENCE:** One line in `DEVIATION_REGISTER`: "billing roles to sa-1-admin@ on BILLING_ACCOUNT_ID, grantor billing administrator, expiry BOOTSTRAP_BILLING_EXPIRY, superseded by factory-apply@ (BA-3.1)". TISAX 4.1.3 (approval and revocation), 4.2.1.
+- **EVIDENCE:** Row `BD-07-1` (01's `BD-<file>-<n>` ids) inserted into the **first** table of `DEVIATION_REGISTER` in 01 PR-4.1's thirteen-column form with 03 DC-9.1's block, never appended to the file end (which would land inside the Closures table that 17 and 42 read); BA-7.1 closes it with a Closures line. TISAX 4.1.3 (approval and revocation), 4.2.1.
+
+```bash
+need DEVIATION_REGISTER BUILD_LOG_DIR BILLING_ACCOUNT_ID BOOTSTRAP_BILLING_EXPIRY BILLING_ADMIN_EMAIL SA_1_ADMIN
+row="| BD-07-1 | $(date -u +%F) | 07 BA-2.1 | EXC | billing roles roles/billing.user and roles/billing.costsManager to $SA_1_ADMIN, granted by the billing administrator | billingAccounts/$BILLING_ACCOUNT_ID | SD-16 | two account-level grants (BA-2.2) | BLOCKED: no factory | - | $BILLING_ADMIN_EMAIL | $BOOTSTRAP_BILLING_EXPIRY; superseded by factory-apply@ (BA-3.1), removed by BA-7.1 | open |"
+tmp=$(mktemp)
+awk -v row="$row" '
+  /^\|---\|/ && !seen { seen=1; print; next }
+  seen && !done && $0 !~ /^\|/ { print row; done=1 }
+  { print }
+  END { if (seen && !done) print row }' "$DEVIATION_REGISTER" > "$tmp" && mv "$tmp" "$DEVIATION_REGISTER"
+git -C "$BUILD_LOG_DIR" add "$DEVIATION_REGISTER"
+git -C "$BUILD_LOG_DIR" commit -m "BD-07-1 bootstrap billing roles"
+```
 
 ### BA-2.2 Grant Billing Account User and Billing Account Costs Manager on the account only
 
-- **WHO:** Billing administrator. The platform owner does not grant these to himself.
+- **WHO:** Billing administrator. The platform owner does not grant these to themselves.
 - **WHERE:** Console **Billing > Account management**, choose the account, **Permissions** panel in the Info panel, **Add principal**. Or the billing administrator's shell with `BILLING_ACCOUNT_ID` and `SA_1_ADMIN` exported by hand.
 - **ACTION:** Console: principal `sa-1-admin@<DOMAIN>`; **Select a role** "Billing Account User"; **Add another role** "Billing Account Costs Manager"; **Save**. Shell equivalent:
 
@@ -184,7 +198,13 @@ need BILLING_ACCOUNT_ID
 curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -d '{"permissions":["billing.resourceAssociations.create","billing.budgets.create","billing.accounts.close","billing.accounts.setIamPolicy"]}' "https://cloudbilling.googleapis.com/v1/billingAccounts/${BILLING_ACCOUNT_ID}:testIamPermissions"
 ```
 
-- **VERIFY:** The response lists exactly `billing.resourceAssociations.create` and `billing.budgets.create`. `billing.accounts.close` or `billing.accounts.setIamPolicy` in the response means the platform owner already holds more, directly or inherited: stop, run BA-5.1 to find the source, and have it removed before continuing. *Assumption:* the call needs no quota project. If it returns an error naming a quota or user project, repeat it in file 10 with `-H "x-goog-user-project: ${CICD_PROJECT}"` once that project exists, and record this step as re-run there.
+- **VERIFY:** First read, on the day, whether Security Admin carries the account's IAM-policy permission (07 §4 states it does; the IAM role pages did not render on 2026-10-01):
+
+```bash
+gcloud iam roles describe roles/iam.securityAdmin --format=json | jq -r '.includedPermissions[]' | grep -x 'billing.accounts.setIamPolicy' || echo "not in Security Admin"
+```
+
+  The response lists `billing.resourceAssociations.create` and `billing.budgets.create`. While `BD-06-1` (06's SD-01 exception, which includes Security Admin at the organisation) is open and the read above printed the permission, `billing.accounts.setIamPolicy` is **expected** in the response too, inherited from that exception: record it in BA-5.1 as an indirect closer path covered by SG-BILL-01, and add a re-run index row "after 12 PA-9.3: re-run BA-2.3, expect `billing.accounts.setIamPolicy` absent". `billing.accounts.close` in the response, or `billing.accounts.setIamPolicy` when BD-06-1 is closed or Security Admin does not carry it, means the platform owner already holds more, directly or inherited: stop, run BA-5.1 to find the source, and have it removed before continuing. *Assumption:* the call needs no quota project. If it returns an error naming a quota or user project, repeat it in file 10 with `-H "x-goog-user-project: ${CICD_PROJECT}"` once that project exists, and record this step as re-run there.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** The response as `<date>-BA-2.3-testiampermissions-v1`. TISAX 4.2.1 (least privilege proven).
 
@@ -196,9 +216,18 @@ curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H
 - **WHERE:** Platform owner's shell for the check; console **Billing > Account management > Permissions > Add principal** for the grant, as BA-2.2.
 - **ACTION:** Run when file 10 has created `SA_FACTORY_APPLY` (file 10 lists this as its re-run of 07). Until then, `exists_or_pending` prints PENDING and appends the grant to the README re-run index.
 
+Before file 10 (the address is the one file 10 will create; the check cannot run yet, so it is recorded by hand):
+
 ```bash
 need BILLING_ACCOUNT_ID
-exists_or_pending "serviceAccount:${SA_FACTORY_APPLY}" "07/BA-3.1"
+exists_or_pending --pending "serviceAccount:factory-apply@<CICD_PROJECT>.iam.gserviceaccount.com" BA-3.1 "07 BA-3.1 roles/billing.user and roles/billing.costsManager for factory-apply@"
+```
+
+  Replace `<CICD_PROJECT>` with the signed name from the NAMES record before running. After file 10:
+
+```bash
+need BILLING_ACCOUNT_ID SA_FACTORY_APPLY
+exists_or_pending "serviceAccount:${SA_FACTORY_APPLY}" BA-3.1 "07 BA-3.1 billing roles for factory-apply@" && echo "EXISTS: billing administrator grants"
 ```
 
   If the principal exists, the billing administrator adds `serviceAccount:<SA_FACTORY_APPLY>` with the same two roles, or in their shell:
@@ -214,7 +243,7 @@ gcloud billing accounts add-iam-policy-binding "$BILLING_ACCOUNT_ID" --member="s
 
 ## 4. Detecting a self-grant and any administrative change on the account
 
-The platform owner holds Organization Administrator under file 06's dated exception. That role has `resourcemanager.organizations.setIamPolicy` and no billing permission (IAM Resource Manager roles reference, read 2026-09-15), so he can grant himself Billing Account Administrator at organisation level, and the account inherits it. Security Admin (`roles/iam.securityAdmin`) also carries `billing.accounts.setIamPolicy`. Two sources record this:
+The platform owner holds Organization Administrator under file 06's dated exception. That role has `resourcemanager.organizations.setIamPolicy` and no billing permission (IAM Resource Manager roles reference, read 2026-09-15), so they can grant themselves Billing Account Administrator at organisation level, and the account inherits it. Security Admin (`roles/iam.securityAdmin`) also carries `billing.accounts.setIamPolicy`. Two sources record this:
 
 | Source | What it records | Who can read it on the day | Where the alert is built |
 |---|---|---|---|
@@ -255,7 +284,7 @@ git -C "$PLATFORM_REPO_DIR" push -u origin ba-billing-detection
 
 ### BA-4.2 Prove filter B on the grants just made
 
-- **WHO:** Billing administrator runs both reads; the platform owner verifies the output he is sent. The platform owner cannot run them himself and is not to be granted a way to (§4 row B).
+- **WHO:** Billing administrator runs both reads; the platform owner verifies the output they are sent. The platform owner cannot run them themselves and is not to be granted a way to (§4 row B).
 - **WHERE:** The billing administrator's shell only. There is no console route: audit logs related to billing are readable only through the gcloud CLI or the Logging API (Cloud Audit Logs overview, read 2026-09-16), so **Logging > Logs Explorer** never shows this log whatever scope is selected.
 - **PRECONDITION:** BA-2.2 is done (it is the seeded event this step proves), and the billing administrator still holds `roles/billing.admin` on the account, which is what carries `logging.logEntries.list` there. Confirm it in one call before reading, so that a permission error later cannot be mistaken for an empty log:
 
@@ -281,7 +310,7 @@ gcloud logging read "logName=\"billingAccounts/${BILLING_ACCOUNT_ID}/logs/clouda
 
 ### BA-4.3 Run the interim check weekly until file 15's alert is live
 
-- **WHO:** Billing administrator (source B); platform owner (source A, recorded as weak because he is its subject). The output goes to the second human.
+- **WHO:** Billing administrator (source B); platform owner (source A, recorded as weak because they are its subject). The output goes to the second human.
 - **WHERE:** As BA-4.2 for source B (the billing administrator's shell, never the console); the platform owner's shell for source A.
 - **ACTION:** Each week from BA-2.2 until file 15 records the alert live:
 
@@ -307,7 +336,11 @@ Only Billing Account Administrator holds `billing.accounts.close` among predefin
 - **WHERE:** Both shells.
 - **ACTION:**
 
-  Account side, with no role named in the filter, so that a role this file did not anticipate cannot be missed. There is no `roles/billing.linkAdmin`: the predefined Cloud Billing roles are Billing Account Creator, Administrator, User, Viewer, Costs Manager and Project Billing Manager (billing-access page, read 2026-09-16), and a gcloud filter on a role string that does not exist matches nothing without erroring, which would have produced a clean-looking inventory.
+  Account side, with no role named in the filter, so that a role this file did not anticipate cannot be missed. Google lists nine predefined Cloud Billing roles (billing-access page, updated 2026-09-24, read 2026-10-01): Billing Account Administrator (`roles/billing.admin`), Billing Account Creator (`roles/billing.creator`), Billing Account Costs Manager (`roles/billing.costsManager`), Billing Account Viewer (`roles/billing.viewer`), Project Billing Costs Manager (`roles/billing.projectCostsManager`), Billing Account User (`roles/billing.user`), Project Billing Manager (`roles/billing.projectManager`), Carbon Footprint Viewer (`roles/billing.carbonViewer`) and Account Hierarchy Manager (`roles/billing.linkAdmin`, "authorized to manage billing account hierarchy"). The prefix filter of the second block below catches all nine and any later one; a gcloud filter on a role string that does not exist matches nothing without erroring, which is why no single role is named. Read Account Hierarchy Manager's permissions on the day and record any `billing.accounts.move` or `billing.resourceAssociations.*` it carries:
+
+```bash
+gcloud iam roles describe roles/billing.linkAdmin --format=json | jq -r '.includedPermissions[]' | grep -E '^billing\.(accounts\.move|resourceAssociations\.)' || echo "no move or association permission"
+```
 
 ```bash
 gcloud billing accounts get-iam-policy "$BILLING_ACCOUNT_ID" --flatten="bindings[].members" --filter="bindings.role:roles/billing." --format="table(bindings.role,bindings.members)"
@@ -321,7 +354,7 @@ gcloud iam roles list --organization="$ORG_ID" --format="value(name)"
 ```
 
   For each custom role listed: `gcloud iam roles describe <ROLE_ID> --organization="$ORG_ID" --format="value(includedPermissions)"`. Note any role holding `billing.accounts.close`, `billing.accounts.setIamPolicy`, `billing.accounts.move`, `billing.resourceAssociations.delete` or `resourcemanager.projects.deleteBillingAssignment`. The last two do not close the account but detach the platform's projects from it, which stops the same services just as fast.
-- **VERIFY:** A table with four columns: direct closers (Billing Account Administrator on the account, expected: finance only), inherited closers (`roles/billing.admin` at organisation level), unlinkers (`roles/billing.projectManager`, project Owner, and custom roles holding `billing.resourceAssociations.delete` or `resourcemanager.projects.deleteBillingAssignment`), and indirect paths (Organization Administrator, Security Admin, custom roles able to grant a closer role). No `domain:` or `allUsers` member holds any billing role, and `roles/billing.creator` has no `domain:` member (removed in 06). Neither `SA_1_ADMIN` nor `factory-apply@` is a direct or inherited closer.
+- **VERIFY:** A table with four columns: direct closers (Billing Account Administrator on the account, expected: finance only), inherited closers (`roles/billing.admin` at organisation level), unlinkers (`roles/billing.projectManager`, project Owner, and custom roles holding `billing.resourceAssociations.delete` or `resourcemanager.projects.deleteBillingAssignment`), and indirect paths (Organization Administrator, Security Admin — including `sa-1-admin@`'s while `BD-06-1` is open, covered by SG-BILL-01 — Account Hierarchy Manager `roles/billing.linkAdmin` where the read above shows a move or association permission, and custom roles able to grant a closer role). No `domain:` or `allUsers` member holds any billing role, and `roles/billing.creator` has no `domain:` member (removed in 06). Neither `SA_1_ADMIN` nor `factory-apply@` is a direct or inherited closer; `SA_1_ADMIN`'s Security Admin path is listed as indirect until 12 withdraws the exception.
 - **ROLLBACK:** Read only. A finding (for example a daily account holding `roles/billing.admin`) is removed by its grantor under a dated change, not in this step.
 - **EVIDENCE:** The table as `<date>-BA-5.1-closers-inventory-v1`. It is the baseline for BA-4.3's source A. TISAX 4.2.1, 5.3.3 (return and removal from external IT services).
 
@@ -365,7 +398,7 @@ Preferred path: the organisation's existing holder of `roles/servicemanagement.q
 
 ### BA-6.2a Grant Quota Administrator to `SA_1_ADMIN` for this sitting (self-grant path only)
 
-- **WHO:** Platform owner as `sa-1-admin@`, under file 06's Organization Administrator exception. The second human is told the same day that the role was taken, and is told again when BA-6.2c removes it; he is not an approver here.
+- **WHO:** Platform owner as `sa-1-admin@`, under file 06's Organization Administrator exception. The second human is told the same day that the role was taken, and is told again when BA-6.2c removes it; they are not an approver here.
 - **WHERE:** Shell with `~/.platform-env` sourced.
 - **PRECONDITION:** BA-6.1's total is written in the build log, and file 04's purchase row for the billing account is settled (a quota request can attract a payment, and BA-6.2b must not be submitted before finance can answer one).
 - **ACTION:**
@@ -383,7 +416,7 @@ curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H
 
   Both `serviceusage.quotas.update` and `cloudquotas.quotas.update` are listed in the response. If either is missing, **stop** and do not go on to BA-6.2b: the console request would fail with a permission error after the form has been filled.
 - **ROLLBACK:** BA-6.2c, which is not optional. Until it runs, the platform owner holds an organisation-level role that BA-4.3's source A read will show.
-- **EVIDENCE:** One line in `DEVIATION_REGISTER`, id `DEV-BA-06`: "roles/servicemanagement.quotaAdmin to SA_1_ADMIN at organisation level for the BA-6.2b quota request, taken <date>, to be removed same sitting by BA-6.2c, removal date recorded on that line." The `testIamPermissions` response as `<date>-BA-6.2a-quota-admin-granted-v1`. TISAX 4.1.3, 4.2.1.
+- **EVIDENCE:** Row `BD-07-2` inserted into the first table of `DEVIATION_REGISTER` as in BA-2.1 (kind `DEV`; what: `roles/servicemanagement.quotaAdmin` to `SA_1_ADMIN` at organisation level for the BA-6.2b quota request; expiry: the end of this sitting; approver: the second human, told the same day), and closed by a Closures line naming BA-6.2c and the removal date. The `testIamPermissions` response as `<date>-BA-6.2a-quota-admin-granted-v1`. TISAX 4.1.3, 4.2.1.
 
 ### BA-6.2b File the increase
 
@@ -412,7 +445,7 @@ gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --f
 
   From the next week on, BA-4.3's source A read no longer shows `roles/servicemanagement.quotaAdmin` for `SA_1_ADMIN` either.
 - **ROLLBACK:** Re-grant through BA-6.2a, only for a new quota request with its own deviation line.
-- **EVIDENCE:** The empty read as `<date>-BA-6.2c-quota-admin-removed-v1`; `DEV-BA-06` closed with the removal date. TISAX 4.1.3 (revocation).
+- **EVIDENCE:** The empty read as `<date>-BA-6.2c-quota-admin-removed-v1`; `BD-07-2` closed by a Closures line with the removal date. TISAX 4.1.3 (revocation).
 
 ### BA-6.3 Record the answer
 
@@ -436,9 +469,9 @@ gcloud billing accounts remove-iam-policy-binding "$BILLING_ACCOUNT_ID" --member
 gcloud billing accounts remove-iam-policy-binding "$BILLING_ACCOUNT_ID" --member="user:${SA_1_ADMIN}" --role="roles/billing.costsManager"
 ```
 
-- **VERIFY:** BA-2.3's `testIamPermissions`, run as `sa-1-admin@`, returns `{}`. The `get-iam-policy` table no longer lists `sa-1-admin@`, and `factory-apply@` still holds both roles. A hand module run still pending at that date needs an extension first: SD-16 is amended, the new date is set with `penv_set --force BOOTSTRAP_BILLING_EXPIRY`, and a build-log line is written. The roles are never kept past a date nobody signed.
+- **VERIFY:** BA-2.3's `testIamPermissions`, run as `sa-1-admin@`, returns `{}` (or only `billing.accounts.setIamPolicy`, while `BD-06-1` is still open and Security Admin carries it, BA-2.3). The `get-iam-policy` table no longer lists `sa-1-admin@`, and `factory-apply@` still holds both roles. A hand module run still pending at that date needs an extension first: SD-16 is amended, the new date is set with `penv_set --force BOOTSTRAP_BILLING_EXPIRY`, and a build-log line is written. The roles are never kept past a date nobody signed.
 - **ROLLBACK:** Re-grant as BA-2.2, only under a signed extension.
-- **EVIDENCE:** The table and response as `<date>-BA-7.1-bootstrap-billing-removed-v1`; `DEVIATION_REGISTER` line closed. TISAX 4.1.3 (revocation).
+- **EVIDENCE:** The table and response as `<date>-BA-7.1-bootstrap-billing-removed-v1`; `BD-07-1` closed by a Closures line. TISAX 4.1.3 (revocation).
 
 ## 8. The contract every budget command follows (S023)
 
@@ -467,7 +500,7 @@ Rules:
 - [ ] BA-3.1 listed as PENDING in the README re-run index, or done after file 10.
 - [ ] `detections/billing-account-admin.yaml` merged with the second human's review; filter B proven on BA-2.2's grant by the billing administrator through gcloud (never the console), with the exit status recorded so that an empty result and a 403 are told apart; weekly check scheduled; re-run rows for files 14 and 15 written (BA-4).
 - [ ] Closers inventory and signed closers record merged (BA-5).
-- [ ] Quota request filed with the count recorded, by the named existing Quota Administrator or after BA-6.2a's `testIamPermissions` passed; if the self-grant path was used, `DEV-BA-06` is open at BA-6.2a and closed with a removal date at BA-6.2c, and the organisation policy read returns nothing for `roles/servicemanagement.quotaAdmin`; decision recorded, or pending with the expected date (BA-6).
+- [ ] Quota request filed with the count recorded, by the named existing Quota Administrator or after BA-6.2a's `testIamPermissions` passed; if the self-grant path was used, `BD-07-2` is open at BA-6.2a and closed with a removal date at BA-6.2c, and the organisation policy read returns nothing for `roles/servicemanagement.quotaAdmin`; decision recorded, or pending with the expected date (BA-6).
 - [ ] Removal date on the re-run index (BA-7.1).
 - [ ] Every EVIDENCE record listed in `EVIDENCE_REGISTER`.
 

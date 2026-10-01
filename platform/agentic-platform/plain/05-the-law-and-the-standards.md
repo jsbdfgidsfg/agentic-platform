@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: EN 18286 recorded as published and not cited; the EU database recorded as not open; F5 under condition (a); the DPIA and works-council triggers of 2026-09-18 carried; resolved disagreements removed.
 - What this page is: a plain-words account of the three rulebooks the platform must answer to, the EU AI Act, TISAX and data-protection law, and of where the design stands against each on 2026-09-18. Nothing is built. Every legal position here is the design's position, written so that legal, the data protection officer and the security assessor can sign it or strike it.
 
 ## In one sentence
@@ -43,7 +44,7 @@ Three things bind today, before anything is built: Article 4, Article 5 and Arti
 
 The Act also offers an exemption, called the Article 6(3) **derogation**. A system that only performs a narrow procedural task, or only carries out a decision a human already took, and does not materially influence that decision, is not high risk even if its subject matter appears on the list. One thing removes the exemption outright: **profiling**, meaning any automated evaluation of a person's behaviour, performance or reliability.
 
-The exemption is not free. The provider must write down its assessment before putting the system into service (Article 6(4)) and register the system in the EU database before first use (Article 49(2)). On 2026-09-18 it was confirmed that the Digital Omnibus kept that registration duty, after a proposal to delete it was rejected. So "registered before Wall-E's first write" stands as the rule ([../10-eu-ai-act.md#313-art-64-assessment--the-document-its-content-its-owner](../10-eu-ai-act.md#313-art-64-assessment--the-document-its-content-its-owner)).
+The exemption is not free. The provider must write down its assessment before putting the system into service (Article 6(4)) and register the system in the EU database before first use (Article 49(2)). On 2026-09-18 it was confirmed that the Digital Omnibus kept that registration duty, after a proposal to delete it was rejected. So "registered before Wall-E's first write" stands as the rule. On 2026-10-01 the EU database does not exist yet; the Commission's help desk expects it in the third quarter of 2027. Until then the registration details are written, signed and dated, and legal decides whether Wall-E's first write waits for the database ([../10-eu-ai-act.md#313-art-64-assessment--the-document-its-content-its-owner](../10-eu-ai-act.md#313-art-64-assessment--the-document-its-content-its-owner)).
 
 ### Where each of our systems stands
 
@@ -58,7 +59,7 @@ The Act classifies a system by its **intended purpose**: what the provider decla
 | Gemini Enterprise and the Gemini models | Deployer duties only | Google is the provider; the organisation never trains or modifies a model | A written position with Google on shared responsibilities (P32, open) |
 | Every future agent | Its own class, per register row | Each is its own Article 6 question | A row without a class, a role and a signed purpose cannot reach production (P75) |
 
-The rejected alternative was to declare Wall-E's purpose as "any super-admin action on a human's prompt". That would have put Wall-E squarely inside Annex III point 4(b), with the full high-risk programme due by 2027-12-02 and no published standard to build against. The design rejected it because that sentence describes the account's power, not the use ([../10-eu-ai-act.md#311-the-declared-intended-purpose-the-sentence-the-assessment-rests-on](../10-eu-ai-act.md#311-the-declared-intended-purpose-the-sentence-the-assessment-rests-on)).
+The rejected alternative was to declare Wall-E's purpose as "any super-admin action on a human's prompt". That would have put Wall-E squarely inside Annex III point 4(b), with the full high-risk programme due by 2027-12-02 and with no cited standard to rely on. The design rejected it because that sentence describes the account's power, not the use ([../10-eu-ai-act.md#311-the-declared-intended-purpose-the-sentence-the-assessment-rests-on](../10-eu-ai-act.md#311-the-declared-intended-purpose-the-sentence-the-assessment-rests-on)).
 
 The one family that could amount to profiling, removing licences from accounts that look inactive, was redesigned so that no AI output ever selects a person by behaviour. The inactivity report is a document a human reads; Wall-E acts only on identities a human typed in. Whether that report is still "profiling" is an open question for the DPO (data protection officer) and legal (P18). If the answer is yes, the design recommends removing that family rather than reclassifying Wall-E as high risk ([../10-eu-ai-act.md#314-the-profiling-question-answered-by-design-p126](../10-eu-ai-act.md#314-the-profiling-question-answered-by-design-p126)).
 
@@ -70,11 +71,11 @@ Super Admin does not change the classification, because purpose is declared by t
 
 The design's answers are real, but they are evidence of behaviour, and the guidelines test purpose as stated. The answers are four. A list of operations that are always refused, in every one of Wall-E's three lanes (the fixed list, band B, and the hand-off of console-only work to a human), owned outside the agent's own code. Band B permanently limited to a human approving each action. A mandatory reference to the human decision on any band-B write touching a person. And a count, checked against Google's own records, of robot actions outside the fixed list, with a target of zero. Super Admin appears in the technical file and as risk number one in the risk register, never in the purpose paragraph.
 
-Two smaller weaknesses sit behind it, as re-verified on 2026-09-18. The suspension family currently leans on the exemption's condition (b), "improves the result of a previously completed human activity", whose worked examples are about polishing drafted text; carrying out a suspension fits condition (a), a narrow procedural task, better. And the whole claim is signed against **draft** guidelines; the final text is expected by the end of 2026.
+Two smaller weaknesses sit behind it, as re-verified on 2026-09-18. The suspension family now rests on condition (a), a narrow procedural task; (b) is kept only as a second reading. And the whole claim is signed against **draft** guidelines; the final text is expected by the end of 2026.
 
 ### Why "bulletproof" cannot be promised, and what is promised instead
 
-The owner's objective asked for a platform that is "EU AI Act bulletproof". The design declines that as a promise, because no provider can promise how a regulator will read a law whose guidelines are still draft and whose standards are not yet published.
+The owner's objective asked for a platform that is "EU AI Act bulletproof". The design declines that as a promise, because no provider can promise how a regulator will read a law whose guidelines are still draft and whose standards, one published in July 2026, are not yet cited in the Official Journal.
 
 What **can** be said: the design contains most of the engineering a high-risk programme would need, for a system that claims not to be high risk. A record of every action written before the action happens, kept 400 days, with an independent copy outside the tenant; a model-free watcher with the power to halt; an autonomy ladder on which every step up is a pre-declared change with evidence; a publication gate that makes classification a precondition of existence; and a measurement loop that doubles as the ongoing watch the Act asks a provider to keep once a system is in use ([../10-eu-ai-act.md#6-what-bulletproof-can-and-cannot-mean](../10-eu-ai-act.md#6-what-bulletproof-can-and-cannot-mean)).
 
@@ -83,7 +84,7 @@ What **cannot** be promised, the eleven residuals on the record:
 | # | What stays open | Who closes or narrows it |
 |---|---|---|
 | R1 | The exemption is claimed against draft guidelines | Legal re-runs the assessment within 90 days of the final text |
-| R2 | No **harmonised standard** (a European technical standard that, once cited in the Official Journal, lets a builder presume compliance) exists; none is cited on 2026-09-18 | Nobody's to produce; the design assesses against the articles themselves |
+| R2 | No **harmonised standard** (a European technical standard that, once cited in the Official Journal, lets a builder presume compliance) is cited on 2026-10-01; EN 18286 on quality management was published on 2026-07-30 but is not cited | Nobody's to produce; the design assesses against the articles themselves |
 | R3 | How an authority will read licence reclaim by inactivity | The DPO and legal answer P18 |
 | R4 | The Super Admin grant is the fact most likely to be held against the narrow-purpose reading | The purpose paragraph in five places, the hard-denied list in code, the reconciled count at zero |
 | R5 | Above the level where a human approves each action, oversight rests on Eve, not on a natural person | Drill records, veto statistics, per-family caps |
@@ -137,9 +138,9 @@ The record is one file, `decisions/2026-09-13-wall-e-holds-super-admin.md`, with
 | Decision | Wall-E holds Super Admin, decided by the platform owner on 2026-09-13 |
 | Deviation statement | Least privilege is not met; what carries it instead is the three lanes, the two signed lists of operations, the split of permissions across two services, the autonomy ladder, Eve, the quarterly roster review and the switch that removes the role |
 | Residual risk | A leaked token or an interactive login on the robot's account is a **tenant compromise**, a takeover of the whole Workspace, with a path into the cloud organisation including Eve's own project. Severity 1. Nothing prevents it; custody, the permission split and detection within minutes bound it |
-| Compensating controls | Thirteen conditions, every one a precondition of the grant, none deferred, plus four checklist rows: a penetration test with no open critical or high finding, the DPIA started and the works council informed, a crisis rehearsal, and witnessed custody of the hardware keys |
+| Compensating controls | Thirteen conditions, every one a precondition of the grant, none deferred, plus four checklist rows: a penetration test with no open critical or high finding, the DPIA for Eve's monitoring, the sign-in log and the Stage 0 reads complete, the works council informed or consulted, a crisis rehearsal, and witnessed custody of the hardware keys |
 | Precondition rule | The role is granted only when every row is green. After the grant, one red row is a severity-2 finding with 30 days to fix; two red rows at once, or the detection, hygiene or second-human row red at all, is severity 1 and the on-duty human super admin removes the robot's Super Admin until it is green again. "The role exists only while its compensations do" |
-| Review | Reviewed quarterly with the roster; re-signed at every Wall-E stage transition and when a compensation's grade changes; it expires with the assessment result (three years) or earlier on any severity-1 credential incident. The TISAX page words the incident case as a re-signature rather than an expiry; the record's own text is followed here |
+| Review | Reviewed quarterly with the roster; re-signed at every Wall-E stage transition and when a compensation's grade changes; it expires with the assessment result (three years) or earlier on any severity-1 credential incident. |
 | Signatures | The platform owner decides; the **security reviewer** signs, a person who is not the platform owner, because the questionnaire forbids signing off one's own exception; the ISMS enters it in the site's risk register |
 
 On 2026-09-18 the decision is made and the deviation is **not signed**: no security reviewer exists yet, and the ISMS has entered nothing. Every one of the thirteen rows is not built, not signed, not drilled, not run or not named on the day of signing ([the record's Compensating controls table](../../../decisions/2026-09-13-wall-e-holds-super-admin.md#compensating-controls)).
@@ -182,7 +183,7 @@ The fear of being watched, which can change how administrators behave, is record
 
 ### The DPIA, retention and the two gates
 
-A **DPIA** is a data protection impact assessment: the DPO's written study of what a processing activity does to people and how the risks are reduced, required before the processing starts when the risk is likely high. Systematic monitoring of employees meets that bar (`Assumption:` the competent authority's list of high-risk processing names employee monitoring, as most do). On 2026-09-18 the DPIA is not started, and it is the longest lead item in the whole plan. The pages disagree on how far it must have got by the super-admin grant: the tier gate says "the DPIA", the grant checklist says "started". The re-verification of 2026-09-18 reads the law as requiring the assessment before the processing it covers, which puts the part covering Eve's monitoring and Wall-E's Stage 0 reads before those start. The DPO and the owner decide ([../brief/26-personal-data-and-employees.md#229-still-open](../brief/26-personal-data-and-employees.md#229-still-open)).
+A **DPIA** is a data protection impact assessment: the DPO's written study of what a processing activity does to people and how the risks are reduced, required before the processing starts when the risk is likely high. Systematic monitoring of employees meets that bar (`Assumption:` the competent authority's list of high-risk processing names employee monitoring, as most do). On 2026-09-18 the DPIA is not started, and it is the longest lead item in the whole plan. Since 2026-09-18 the rule is that the assessment precedes the processing it covers: the DPIA for Eve's monitoring of administrators, the sign-in log and Wall-E's Stage 0 reads is complete and signed before Eve's first stream, and the DPIA for the write families is started with a dated completion before Stage 1 ([../11-tisax.md §6.3](../11-tisax.md#63-compensations-as-preconditions--the-checklist-the-gate-reads), the grant checklist; [../brief/26-personal-data-and-employees.md#229-still-open](../brief/26-personal-data-and-employees.md#229-still-open)).
 
 **Retention** is how long a store keeps data. The design fixes floors and ceilings by class:
 
@@ -199,13 +200,13 @@ Evidence stores are locked: nothing in them can be deleted before the retention 
 Two people hold gates:
 
 - **The DPO** (data protection officer, the organisation's independent data-protection expert) gates the retention ceiling before the first write (P13), the profiling answer with legal (P18), the graders' 90-day copy, the breach path (P101), the DPIA and records of processing, and the monitoring-of-administrators record (P154). The platform's staffing plan understates this load ([../brief/26-personal-data-and-employees.md#228-the-dpos-decisions-and-engagement-points](../brief/26-personal-data-and-employees.md#228-the-dpos-decisions-and-engagement-points)).
-- **The works council**, the employees' elected representatives, is informed, and consulted where national law requires it, before Wall-E's first write on employee accounts, and that is a precondition of the super-admin grant (P129). The AI Act's own duty to inform workers binds high-risk systems only from 2027-12-02; the design adopts it now. The re-verification of 2026-09-18 found the trigger too late by one step: Eve's monitoring of administrators and the sign-in log go live before the grant, so the works council must be told before Eve's first stream, not only before Wall-E's first write. The register row still says "before Stage 1" ([../10-eu-ai-act.md#410-art-267-2611-art-86--workers-and-the-explanation-path-p129](../10-eu-ai-act.md#410-art-267-2611-art-86--workers-and-the-explanation-path-p129)).
+- **The works council**, the employees' elected representatives, is informed, or consulted where required, before Eve's first stream about human administrators and before the sign-in log's first copy, and again before Wall-E's first write (P129, changed 2026-09-18); that is a precondition of the super-admin grant. The AI Act's own duty to inform workers binds high-risk systems only from 2027-12-02; the design adopts it now. ([../10-eu-ai-act.md#410-art-267-2611-art-86--workers-and-the-explanation-path-p129](../10-eu-ai-act.md#410-art-267-2611-art-86--workers-and-the-explanation-path-p129)).
 
 Every employee can ask for an **explanation** of an action taken on their account. No decision on the platform is solely automated, but the path exists anyway: the employee asks HR, which obtains the frozen plan's reasoning, the state before, the trigger and the decision reference, with other people's data and the raw prompt removed, and answers within a number of business days still *tbd*. One unanswered request past the deadline is a finding.
 
 ### Jurisdiction
 
-`Assumption:` the jurisdiction is unknown. Which country's labour and works-council law applies is *tbd*, because the operating site's country is not fixed, and no document names one. The design's default is "information before use", with a consultation record kept where the law asks for consultation. The re-verification of 2026-09-18 advised the stronger default, consultation, and consent where a works council has co-determination rights (a legal right to agree before a monitoring tool is introduced), with information only as the fallback if HR's written answer says so. Lead time under co-determination is months, not weeks ([../11-tisax.md#11-the-legal-and-contractual-register-p141](../11-tisax.md#11-the-legal-and-contractual-register-p141)).
+`Assumption:` the jurisdiction is unknown. Which country's labour and works-council law applies is *tbd*, because the operating site's country is not fixed, and no document names one. The design's default is consultation, and consent where co-determination applies (a works council's legal right to agree before a monitoring tool is introduced); information only where HR's written answer says so. Lead time under co-determination is months, not weeks ([../11-tisax.md#11-the-legal-and-contractual-register-p141](../11-tisax.md#11-the-legal-and-contractual-register-p141)).
 
 ## What this means for you
 
@@ -229,14 +230,13 @@ Every employee can ask for an **explanation** of an action taken on their accoun
 | P20 / P133 | Label, level and scope location | ISMS confirms |
 | P134 | Module scope and the processor-role register field | DPO, ISMS |
 | P136 | The deviation's two missing signatures | Security reviewer, ISMS |
-| P140 | The risk register and its signed acceptances, including who owns R-01 (the pages disagree: platform owner or security reviewer) | Security reviewer, ISMS |
+| P140 | The risk register and its signed acceptances, including R-01, owned and signed by the security reviewer and accepted by the platform owner | Security reviewer, ISMS |
 | P141 | The legal register, including the country whose law applies | ISMS, legal |
 | P13 | The retention ceiling per class | DPO |
-| P129 | The works-council trigger: before Stage 1, or earlier, before Eve's first stream | HR, DPO, legal |
+| P129 | The works-council trigger: set; HR's answer is the open part | HR, DPO, legal |
 | P154 / P199 | The DPO record on monitoring administrators (unsigned) | DPO, HR, the second human |
 | P202 | Classification of every register row the proof of value writes | Legal's designate, DPO |
 | P131 | Naming an AI compliance owner who is not the platform owner | ISMS, legal |
-| no row | Whether the DPIA must be complete or only started at the grant: the tier gate says "the DPIA", the grant checklist says "started" ([../brief/26-personal-data-and-employees.md#229-still-open](../brief/26-personal-data-and-employees.md#229-still-open)) | DPO and owner |
 | no row | The jurisdiction: which country's law applies is *tbd* on every page, and no document names one ([../11-tisax.md#11-the-legal-and-contractual-register-p141](../11-tisax.md#11-the-legal-and-contractual-register-p141)) | Legal |
 
 ## Where this is defined

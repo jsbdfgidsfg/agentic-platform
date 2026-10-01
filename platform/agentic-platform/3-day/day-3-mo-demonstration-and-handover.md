@@ -2,10 +2,19 @@
 
 ## Status
 
-Last reviewed: 2026-09-18. Part of the three-day build ([README](README.md), day 1, day 2, code).
+Last reviewed: 2026-10-01. Part of the three-day build ([README](README.md), day 1, day 2, code).
 Google's commands, scopes, console paths and quoted wording were checked on 2026-09-17, or on
 2026-09-18 where a step says so; the table at the foot of this page lists what was read. Re-read
 anything marked `Assumption:` on the day.
+
+Corrected on 2026-10-01: the owed rows 2, 3 and 6 of [README.md](README.md) §6.1 were carried.
+Every doer name derives from `AGENT_ID` and `DIRECTORY_CUSTOMER_ID` replaces `CUSTOMER_ID`; T3-2,
+T3-3, T3-5 to T3-8 and T3-12 use `platform_metrics_views` for the five views and
+`platform_metrics` for `toil_retrospective`, and the `sed` substitutes `AUDIT_DATASET`; T3-15 row
+9 pulls K0 from person B's own account; T3-19 d stops Eve by default (token disabled, schedule
+paused), g suspends `eve-reader@` by default, both skipped only when `RUN_LOG` cites the DPO
+record, and a reads back that no caller account keeps `serviceAccountTokenCreator`; T3-12 expects
+eighteen self-test lines.
 
 Corrected on 2026-09-18 against [README.md](README.md) §6.1: T3-1, T3-2, T3-8 and T3-15 are written
 against the one audit schema and vocabulary of [code.md](code.md) §3 (eighteen columns; `phase`
@@ -67,15 +76,16 @@ invents no variable of its own; the one value it learns, `TOIL_WINDOW_START`, is
 | Value | What it holds | Set by |
 |---|---|---|
 | `CORE_PROJECT`, `EVE_PROJECT`, `DOER_PROJECT`, `MO_PROJECT` | the four project ids | day 1, T1-1 |
-| `REGION`, `BQ_LOCATION`, `AGENT_ID`, `PILOT_OU`, `NONPROD_OU`, `STAGING_OU`, `SYNTHETIC_PREFIX`, `ORG_DOMAIN`, `CUSTOMER_ID` | `europe-west1`, `EU`, `steward`, the three organisational units, `pilot-user-`, the tenant domain, `my_customer` | day 1, T1-1 |
+| `REGION`, `BQ_LOCATION`, `AGENT_ID`, `PILOT_OU`, `NONPROD_OU`, `STAGING_OU`, `SYNTHETIC_PREFIX`, `ORG_DOMAIN`, `DIRECTORY_CUSTOMER_ID` | `europe-west1`, `EU`, `pilot-admin` (`Assumption:` until PV-07 signs `PILOT_ADMIN_AGENT_ID`), the three organisational units, `pilot-user-`, the tenant domain, `my_customer` | day 1, T1-1 |
 | `PERSON_A_EMAIL`, `PERSON_B_EMAIL`, `SPONSOR_EMAIL` | the two addresses, and the sponsor booked for 14:30 | day 1, T1-1 |
 | `EVE_READER`, `DOER_ROBOT` | the two robot addresses | day 1, T1-1 |
-| `STEWARD_OAUTH_CLIENT_ID`, `EVE_CHANNEL` | the doer's OAuth client id; person B's notification channel | day 1, T1-14a, T1-16a |
+| `DOER_OAUTH_CLIENT_ID`, `EVE_CHANNEL` | the doer's OAuth client id; person B's notification channel | day 1, T1-14a, T1-16a |
 | `PILOT_ROLE_ID` | the custom role's numeric id | day 2, T2-7 |
-| `STEWARD_ACTIONS_URL` | the action service, the only credential holder | day 2, T2-18 |
+| `DOER_ACTIONS_URL` | the action service, the only credential holder | day 2, T2-18 |
 | `RUN_LOG` | the one run log both people write to | day 1, T1-1 |
+| `AUDIT_DATASET`, `DOER_ACTIONS`, `DOER_PLAN`, `DOER_TOKEN_SECRET`, `DOER_HALT_SECRET`, `DOER_CLIENT_JSON_SECRET`, `AUDIT_WRITER_ROLE` | the doer's dataset, service, job, three secret names and custom IAM role id, each derived from `AGENT_ID` | day 1, T1-1 |
 
-`DOER_PROJECT:steward_audit.actions` is the write-ahead audit table day 1 created (T1-12a) and
+`DOER_PROJECT:${AUDIT_DATASET}.actions` is the write-ahead audit table day 1 created (T1-12a) and
 day 2 filled, and it is what every view below reads. Load the variables once per shell:
 
 ```bash
@@ -83,10 +93,11 @@ W="$HOME/agp-3day"
 set -a; . "$W/names.env"; set +a; . "$W/tools/penv.sh"
 : "${CORE_PROJECT:?}" "${EVE_PROJECT:?}" "${DOER_PROJECT:?}" "${MO_PROJECT:?}" "${REGION:?}" \
   "${PILOT_OU:?}" "${NONPROD_OU:?}" "${STAGING_OU:?}" "${SYNTHETIC_PREFIX:?}" "${AGENT_ID:?}" \
-  "${ORG_DOMAIN:?}" "${CUSTOMER_ID:?}" "${PERSON_A_EMAIL:?}" "${PERSON_B_EMAIL:?}" \
-  "${EVE_READER:?}" "${DOER_ROBOT:?}" "${STEWARD_OAUTH_CLIENT_ID:?}" "${EVE_CHANNEL:?}" \
-  "${PILOT_ROLE_ID:?}" "${STEWARD_ACTIONS_URL:?}" "${RUN_LOG:?}" \
-  && echo "names.env complete"
+  "${ORG_DOMAIN:?}" "${DIRECTORY_CUSTOMER_ID:?}" "${PERSON_A_EMAIL:?}" "${PERSON_B_EMAIL:?}" \
+  "${EVE_READER:?}" "${DOER_ROBOT:?}" "${DOER_OAUTH_CLIENT_ID:?}" "${EVE_CHANNEL:?}" \
+  "${PILOT_ROLE_ID:?}" "${DOER_ACTIONS_URL:?}" "${RUN_LOG:?}" "${AUDIT_DATASET:?}" "${DOER_ACTIONS:?}" \
+  "${DOER_PLAN:?}" "${DOER_TOKEN_SECRET:?}" "${DOER_HALT_SECRET:?}" "${DOER_CLIENT_JSON_SECRET:?}" \
+  "${AUDIT_WRITER_ROLE:?}" && echo "names.env complete"
 DTOK() { gcloud auth application-default print-access-token; }     # the T2-1a credential, for Directory reads
 ```
 
@@ -98,9 +109,9 @@ or `--project_id`.
 
 ## Preconditions, checked at 08:30 before anything else
 
-- [ ] `steward_audit.actions` holds day 2's rows: a forced dry run, a denial, and (unless the
+- [ ] `${AUDIT_DATASET}.actions` holds day 2's rows: a forced dry run, a denial, and (unless the
       fallback below applies) an approved execution and its inverse.
-- [ ] The halt secret `steward-halt` reads `off`. If it reads `on`, clear it with both present and
+- [ ] The halt secret `${DOER_HALT_SECRET}` reads `off`. If it reads `on`, clear it with both present and
       note the minute in `RUN_LOG`.
 - [ ] The robot's credential was re-consented at the end of day 2 (T2-26, to the same client).
       Without it there is no execution. **If day 2's clock beat the re-consent, it is the first
@@ -128,7 +139,7 @@ or `--project_id`.
   T2-9 read back; there is no other audit schema in these three days.
 
 ```bash
-bq show --project_id="$DOER_PROJECT" --schema --format=prettyjson steward_audit.actions \
+bq show --project_id="$DOER_PROJECT" --schema --format=prettyjson ${AUDIT_DATASET}.actions \
   | python3 -c '
 import json,sys
 want=["row_id","ts","agent_id","request_id","phase","operation","target","level","requester",
@@ -151,7 +162,7 @@ print("read contract satisfied: eighteen columns, in order")
 ```bash
 bq query --use_legacy_sql=false --project_id="$DOER_PROJECT" --format=csv '
 SELECT phase, verdict, IFNULL(denial_reason,"(none)") AS denial_reason, COUNT(*) AS n
-FROM `'"$DOER_PROJECT"'.steward_audit.actions` GROUP BY 1,2,3 ORDER BY 1,2,3'
+FROM `'"$DOER_PROJECT"'.'"$AUDIT_DATASET"'.actions` GROUP BY 1,2,3 ORDER BY 1,2,3'
 ```
 
 - **VERIFY:** every `phase` is `intent` or `outcome`. Every `intent` row has verdict `attempting`.
@@ -177,24 +188,28 @@ FROM `'"$DOER_PROJECT"'.steward_audit.actions` GROUP BY 1,2,3 ORDER BY 1,2,3'
 
 - **WHO:** A. **WHERE:** shell, in `$W/mo/`.
 - **ACTION:** paste [code.md](code.md) §5 as `$W/mo/mo.sql`, **unchanged**, exactly as day-1
-  T1-19a pastes §2. It creates the empty `mo.toil_retrospective` table (T3-6 loads it), the five
-  views in `MO_PROJECT.mo` reading `DOER_PROJECT.steward_audit` across projects, and ends with the
+  T1-19a pastes §2. It creates the empty `platform_metrics.toil_retrospective` table (T3-6 loads
+  it), the five views in `MO_PROJECT.platform_metrics_views` reading `DOER_PROJECT.AUDIT_DATASET`
+  across projects, and ends with the
   scorecard query. Every view is grouped on `agent_id`, because the whole point of the schema is
   that a second agent added later is counted separately without a new view. The file carries the
-  placeholders `MO_PROJECT` and `DOER_PROJECT`; `sed` substitutes the ids from `names.env`.
+  placeholders `MO_PROJECT`, `DOER_PROJECT` and `AUDIT_DATASET`; `sed` substitutes the values
+  from `names.env`. The two dataset names are the full build's (SD-33, P176), created at day-1
+  T1-9, so pov/08 takes the views over without recreating them.
 
 ```bash
-sed -e "s/MO_PROJECT/$MO_PROJECT/g" -e "s/DOER_PROJECT/$DOER_PROJECT/g" "$W/mo/mo.sql" \
+sed -e "s/MO_PROJECT/$MO_PROJECT/g" -e "s/DOER_PROJECT/$DOER_PROJECT/g" -e "s/AUDIT_DATASET/$AUDIT_DATASET/g" "$W/mo/mo.sql" \
   | bq query --use_legacy_sql=false --project_id="$MO_PROJECT"
-bq ls --project_id="$MO_PROJECT" mo
+bq ls --project_id="$MO_PROJECT" platform_metrics_views
+bq ls --project_id="$MO_PROJECT" platform_metrics
 ```
 
-- **VERIFY:** `bq ls` shows five entries of type `VIEW` (`mo_volume_by_verdict`,
-  `mo_denial_reasons`, `mo_dry_run_ratio`, `mo_approval_latency`, `mo_pair_completion`) and one
-  `TABLE` (`toil_retrospective`). Each view returns rows:
-  `for v in mo_volume_by_verdict mo_denial_reasons mo_dry_run_ratio mo_approval_latency mo_pair_completion; do bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --format=csv "SELECT COUNT(*) FROM \`$MO_PROJECT.mo.$v\`"; done`.
+- **VERIFY:** the first `bq ls` shows five entries of type `VIEW` (`mo_volume_by_verdict`,
+  `mo_denial_reasons`, `mo_dry_run_ratio`, `mo_approval_latency`, `mo_pair_completion`) and the
+  second one `TABLE` (`toil_retrospective`). Each view returns rows:
+  `for v in mo_volume_by_verdict mo_denial_reasons mo_dry_run_ratio mo_approval_latency mo_pair_completion; do bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --format=csv "SELECT COUNT(*) FROM \`$MO_PROJECT.platform_metrics_views.$v\`"; done`.
   If the script fails to parse, the paste is wrong, not the code: diff the file against §5.
-- **UNDO:** `for v in ...; do bq rm -f -t "$MO_PROJECT:mo.$v"; done`. Views hold no data; dropping
+- **UNDO:** `for v in ...; do bq rm -f -t "$MO_PROJECT:platform_metrics_views.$v"; done`. Views hold no data; dropping
   one loses nothing.
 - **Cited:** creating and removing views with `bq mk --view` / `bq rm -t`, and the note that
   `--use_legacy_sql=false` selects GoogleSQL (BigQuery "Manage views", read 2026-09-17).
@@ -208,7 +223,7 @@ bq ls --project_id="$MO_PROJECT" mo
 ```bash
 for v in mo_volume_by_verdict mo_denial_reasons mo_dry_run_ratio mo_approval_latency mo_pair_completion; do
   echo "== $v"; bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --format=prettyjson \
-    "SELECT * FROM \`$MO_PROJECT.mo.$v\`"
+    "SELECT * FROM \`$MO_PROJECT.platform_metrics_views.$v\`"
 done | tee "$W/records/2026-09-24-T3-3-reconciliation.json"
 ```
 
@@ -329,21 +344,21 @@ grep -ciE '@|actor|admin@' "$W/records/2026-09-24-T3-6-toil-counts.csv"   # expe
 
 ```bash
 # T3-2's mo.sql creates this table empty; A and B run in parallel, so create it here only if A has not yet.
-bq show --project_id="$MO_PROJECT" mo.toil_retrospective >/dev/null 2>&1 \
-  || bq mk --project_id="$MO_PROJECT" --table mo.toil_retrospective event_date:DATE,event_name:STRING,n:INT64
+bq show --project_id="$MO_PROJECT" platform_metrics.toil_retrospective >/dev/null 2>&1 \
+  || bq mk --project_id="$MO_PROJECT" --table platform_metrics.toil_retrospective event_date:DATE,event_name:STRING,n:INT64
 bq load --project_id="$MO_PROJECT" --source_format=CSV --skip_leading_rows=1 \
-  mo.toil_retrospective "$W/records/2026-09-24-T3-6-toil-counts.csv"
+  platform_metrics.toil_retrospective "$W/records/2026-09-24-T3-6-toil-counts.csv"
 ```
 
 - **VERIFY:** the `grep` prints `0`, so no address survived. `bq query` on
-  `SELECT event_name, SUM(n) FROM mo.toil_retrospective GROUP BY 1` returns three rows, and the
+  `SELECT event_name, SUM(n) FROM platform_metrics.toil_retrospective GROUP BY 1` returns three rows, and the
   `SUSPEND_USER` total matches the row count the console reported in T3-5.
-- **UNDO:** `bq rm -f -t "$MO_PROJECT:mo.toil_retrospective"` and delete the counts file.
+- **UNDO:** `bq rm -f -t "$MO_PROJECT:platform_metrics.toil_retrospective"` and delete the counts file.
 
 ### T3-7. Destroy the raw export, within the hour. **IRREVERSIBLE**
 
 - **WHO:** B runs it; A watches the screen and signs the line in `RUN_LOG`.
-- **CONFIRM FIRST:** `mo.toil_retrospective` holds rows (T3-6 verified), and the counts file is in
+- **CONFIRM FIRST:** `platform_metrics.toil_retrospective` holds rows (T3-6 verified), and the counts file is in
   `$W/records/`. Once the raw files are gone the per-actor detail cannot be recovered from the
   download; it can be re-exported from Google's log while the retention window still covers it, but
   only by repeating T3-5.
@@ -376,15 +391,15 @@ rm -P "$W"/toil-raw/*.csv && rmdir "$W/toil-raw"
 
 ```bash
 sed -n '/^-- The scorecard/,$p' "$W/mo/mo.sql" \
-  | sed -e "s/MO_PROJECT/$MO_PROJECT/g" -e "s/DOER_PROJECT/$DOER_PROJECT/g" \
+  | sed -e "s/MO_PROJECT/$MO_PROJECT/g" -e "s/DOER_PROJECT/$DOER_PROJECT/g" -e "s/AUDIT_DATASET/$AUDIT_DATASET/g" \
   | bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --format=prettyjson \
   | tee "$W/records/2026-09-24-T3-8-scorecard.json"
 for v in mo_volume_by_verdict mo_denial_reasons mo_dry_run_ratio mo_approval_latency mo_pair_completion; do
-  echo "== $v"; bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --format=prettyjson "SELECT * FROM \`$MO_PROJECT.mo.$v\` ORDER BY 1"
+  echo "== $v"; bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --format=prettyjson "SELECT * FROM \`$MO_PROJECT.platform_metrics_views.$v\` ORDER BY 1"
 done | tee "$W/records/2026-09-24-T3-8-views.json"
 ```
 
-- **VERIFY:** one scorecard row per agent (today: one, `agent_id` `steward`) carrying `executed`,
+- **VERIFY:** one scorecard row per agent (today: one, `agent_id` = `${AGENT_ID}`) carrying `executed`,
   `dry_runs`, `denied`, `errors`, `denial_reasons`, `dry_run_share`,
   `worst_approval_latency_seconds`, `targets_left_suspended`, `retrospective_event_volume` and
   the `minutes_saved_statement`. `targets_left_suspended` is `0`. `retrospective_event_volume`
@@ -405,7 +420,7 @@ done | tee "$W/records/2026-09-24-T3-8-views.json"
 | 3. How much never ran | dry runs over distinct requests | `mo_dry_run_ratio` |
 | 4. How long approval took | each latency in seconds from the approval's `created_at` to the executed outcome row, plus the maximum | `mo_approval_latency` |
 | 5. Was anything left broken | targets still suspended (`left_suspended <> 0`), expected `none` | `mo_pair_completion` |
-| 6. Retrospective volume | counts per event over the window, with today's quoted retention, **the window actually used (6 months, 90 days or 30 days) and why**, and the trial count | `mo.toil_retrospective`, T3-4, T3-5 |
+| 6. Retrospective volume | counts per event over the window, with today's quoted retention, **the window actually used (6 months, 90 days or 30 days) and why**, and the trial count | `platform_metrics.toil_retrospective`, T3-4, T3-5 |
 | 7. What this does not show | the paragraph below, unedited | this file |
 
 **Section 6 is volume, and never time.** It says how many times an administrator performed each
@@ -509,7 +524,7 @@ comm -13 "$D/steps-present.txt" "$D/steps-expected.txt" | tee "$D/steps-missing.
 
 ```bash
 bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --format=csv \
-  "SELECT MAX(latency_seconds) AS worst FROM \`$MO_PROJECT.mo.mo_approval_latency\`"
+  "SELECT MAX(latency_seconds) AS worst FROM \`$MO_PROJECT.platform_metrics_views.mo_approval_latency\`"
 ```
 
 - **THE RULE:** if `worst` is 300 seconds or more, **the change is refused** and the record says so.
@@ -520,7 +535,7 @@ bq query --use_legacy_sql=false --project_id="$MO_PROJECT" --format=csv \
 cd "$W" && git switch -c improve-approval-ttl
 # edit APPROVAL_TTL_SECONDS from 900 to 300 in doer/actions.py
 ( cd doer && ORG_DOMAIN="$ORG_DOMAIN" PILOT_OU="$PILOT_OU" SYNTHETIC_PREFIX="$SYNTHETIC_PREFIX" \
-    .venv/bin/python actions.py --selftest )      # day 2's twelve results must still pass
+    .venv/bin/python actions.py --selftest )      # day 2's eighteen results must still pass
 git add -A && git commit -m "Tighten approval expiry to 300s; observed worst latency <N>s"
 git push -u origin improve-approval-ttl && gh pr create --fill   # only if a remote exists
 ```
@@ -543,7 +558,7 @@ git merge --no-ff improve-approval-ttl -m "Reviewed and merged by person B on 20
 ```
 
 - **Redeploy only if there is time inside the block**, and then with the env var changed to match:
-  `gcloud run services update steward-actions --region="$REGION" --project="$DOER_PROJECT" --update-env-vars=APPROVAL_TTL_SECONDS=300`.
+  `gcloud run services update ${DOER_ACTIONS} --region="$REGION" --project="$DOER_PROJECT" --update-env-vars=APPROVAL_TTL_SECONDS=300`.
   If there is no time, the merge stands and the deployment is listed in the hand-over as owed. The
   demonstration runs on whichever revision is live, and the record says which.
 - **VERIFY:** `git log --merges -1 --format='%an %s'` names B as the committer of the merge; the
@@ -578,7 +593,7 @@ git merge --no-ff improve-approval-ttl -m "Reviewed and merged by person B on 20
 | # | What happens | What the room should see |
 |---|---|---|
 | 0 | **The synthetic-population guard, day-2 T2-8, run first**, with B's own credential | `http=200 count=4` and `PILOT_OU SYNTHETIC ONLY`. Any other output ends the demonstration before it starts, and the sponsor is told why: absolute 7 is checked on the day it matters most |
-| 1 | A runs `steward-plan` with a sentence such as "suspend the pilot account that is leaving", and reads the plan with `gcloud logging read` (day-2 T2-24) | a JSON plan with `"level": 1` and `"carries_credential": false`. **The plan tool holds no credential and has no invoker on the action service**; A copies the plan by hand into the request |
+| 1 | A runs `${DOER_PLAN}` with a sentence such as "suspend the pilot account that is leaving", and reads the plan with `gcloud logging read` (day-2 T2-24) | a JSON plan with `"level": 1` and `"carries_credential": false`. **The plan tool holds no credential and has no invoker on the action service**; A copies the plan by hand into the request |
 | 2 | A sends the request at level 1 | `"verdict": "dry_run"`, `"executed": false`, a `would_set` naming `suspended: true`; no change in the Admin console |
 | 3 | A sends the same request at level 1 **with a valid approval attached** (B issues it at level 1 first) | `"verdict": "dry_run"`, `"executed": false` again. A valid approval does not buy an execution at level 1; the outcome row carries `l1_dry_run_forced` |
 | 4 | A asks `/approve` for an execution from their own shell | `"denial_reason": "approver_not_authorised"` and no nonce: the requester cannot be the approver. (Self-approval as such, `self_approval`, was proved offline on day 2 and is said to be, not shown) |
@@ -586,8 +601,8 @@ git merge --no-ff improve-approval-ttl -m "Reviewed and merged by person B on 20
 | 6 | Refresh `eve.findings` after one scheduler tick | Eve carries the admin event. Eve was live before the doer existed |
 | 7 | Re-run T3-8's scorecard query | Mo counts the execution, keyed on `agent_id` |
 | 8 | A runs the inverse, on a second approval from B | `"verdict": "executed"` for `restore`; the account is Active again; `mo_pair_completion.left_suspended` returns to `0` |
-| 9 | **B pulls K0** through `POST /control/halt` (day-2 T2-25) | the next request is `"verdict": "denied"`, `"denial_reason": "halted"`, with `halt_state: on` in its outcome row. The halt is read per request and never mounted, so a warm instance sees it |
-| 10 | B clears the halt back to `off`, with A present, out of band (`printf 'off' \| gcloud secrets versions add steward-halt --data-file=- --project="$DOER_PROJECT"`) | the record notes the minute of both |
+| 9 | **B pulls K0** by adding version `on` to the halt secret from B's own account (day-2 T2-25) | the next request is `"verdict": "denied"`, `"denial_reason": "halted"`, with `halt_state: on` in its outcome row. The halt is read per request and never mounted, so a warm instance sees it |
+| 10 | B clears the halt back to `off`, with A present, out of band (`printf 'off' \| gcloud secrets versions add ${DOER_HALT_SECRET} --data-file=- --project="$DOER_PROJECT"`) | the record notes the minute of both |
 
 - **VERIFY:** after step 5, the `phase: intent` row's `ts` is strictly earlier than its matching
   `phase: outcome` row and earlier than the Admin console's event time for that suspension. After
@@ -631,9 +646,10 @@ shasum -a 256 "$W/pack/3day-evidence-2026-09-24.tar.gz" | tee "$W/pack/pack.sha2
 
 - **WHO:** both sign. **WHERE:** `$W/records/2026-09-24-T3-18-handover.md`, drafted by B at D3-B2.
 - **ACTION:** correct parts 2 and 4 from the demonstration record, then sign. Six short parts.
-  1. What exists at 17:15: four projects, four datasets, Eve polling on a schedule with two
-     alerting policies (or deliberately stopped, step d), the action service, the plan tool, five
-     Mo views, the scorecard.
+  1. What exists at 17:15: four projects, five datasets, Eve's job and two alerting policies with
+     the schedule paused and the token disabled (step d; still polling only under the DPO record
+     of [README.md](README.md) §6 row 13), the action service, the plan tool, five Mo views, the
+     scorecard.
   2. What was proved: Eve live before the doer existed; a forced dry run that refuses a valid
      approval; the requester refused as approver, and self-approval refused offline; a two-person
      approved execution with a write-ahead audit row; a reversible pair completed; two kill
@@ -641,8 +657,9 @@ shasum -a 256 "$W/pack/3day-evidence-2026-09-24.tar.gz" | tee "$W/pack/pack.sha2
   3. What was **not** proved: T3-11's eleven rows, unedited.
   4. What is left standing after the unwind: the four projects, the datasets, the deployed services
      with no valid credential, the five synthetic accounts suspended (four in the pilot
-     organisational unit, one in the nonprod unit), `eve-reader@` with a live consented token and
-     its owner named, and Eve still polling, or the recorded decision to stop it.
+     organisational unit, one in the nonprod unit), `eve-reader@` suspended with its token
+     disabled and Eve's schedule paused; or, only under the cited DPO record, `eve-reader@` with a
+     live consented token and its owner named, and Eve still polling.
   5. **What must be unwound before anything real is touched**, if this is ever picked up again:
      the standing IAM grants, the custom admin role, the synthetic accounts. T3-19 does the first
      three today; the sentence stays in the note because the next team will build new ones.
@@ -684,15 +701,31 @@ gcloud projects remove-iam-policy-binding "$P" --project="$P" \
   both written into the hand-over. The two people keep `roles/owner` on projects they created;
   stripping it would lock them out of the evidence.
 
+  **Then the caller accounts of [README.md](README.md) §11, if any were built.** The path chosen on
+  2026-10-01 (day-2 T2-1a) creates none; if the run log says the caller-account path was used
+  instead, read each one back:
+
+```bash
+for SA in $(gcloud iam service-accounts list --project="$DOER_PROJECT" --format='value(email)' | grep -vE "^(${DOER_ACTIONS}|${DOER_PLAN})@"); do
+  echo "== $SA"
+  gcloud iam service-accounts get-iam-policy "$SA" --project="$DOER_PROJECT" --format=json \
+    | grep -q 'roles/iam.serviceAccountTokenCreator' && echo "STOP: $SA still carries serviceAccountTokenCreator" || echo "$SA: no token creator binding"
+done
+```
+
+  **Read back:** every caller account prints `no token creator binding` (or the loop prints
+  nothing, because no caller account exists); remove any binding it names with
+  `gcloud iam service-accounts remove-iam-policy-binding` and read it back again.
+
 **b. Unassign the custom admin role, then delete it**
 
-- **CONSOLE PATH:** Menu > Account > Admin roles > **Pilot Steward (3-day)** > Admins > remove the
+- **CONSOLE PATH:** Menu > Account > Admin roles > **Pilot Admin (3-day)** > Admins > remove the
   robot.
 - **Read back**, from B's own session with their T2-1a-style credential, not A's:
 
 ```bash
 curl -s -H "Authorization: Bearer $(DTOK)" \
-  "https://admin.googleapis.com/admin/directory/v1/customer/${CUSTOMER_ID}/roleassignments?roleId=${PILOT_ROLE_ID}" \
+  "https://admin.googleapis.com/admin/directory/v1/customer/${DIRECTORY_CUSTOMER_ID}/roleassignments?roleId=${PILOT_ROLE_ID}" \
   | python3 -c 'import json,sys; d=json.load(sys.stdin); n=len(d.get("items",[])); print("assignments:", n); sys.exit(1 if n else 0)'
 ```
 
@@ -702,16 +735,16 @@ curl -s -H "Authorization: Bearer $(DTOK)" \
   deleted by API.
 - **Then delete the role. IRREVERSIBLE.** Confirm first that the read-back is empty and that the
   privilege list is written into the hand-over, because a deleted custom role cannot be restored
-  and must be rebuilt by hand: Admin roles > Pilot Steward (3-day) > Delete role (or
-  `DELETE .../customer/${CUSTOMER_ID}/roles/${PILOT_ROLE_ID}` with the `admin.directory.rolemanagement`
+  and must be rebuilt by hand: Admin roles > Pilot Admin (3-day) > Delete role (or
+  `DELETE .../customer/${DIRECTORY_CUSTOMER_ID}/roles/${PILOT_ROLE_ID}` with the `admin.directory.rolemanagement`
   scope, Directory API `roles.delete`, read 2026-09-17, which the read-only credential does not
   carry; the console is the path).
 
 **c. Revoke the robot's OAuth grant**
 
 - **CONSOLE PATH:** Directory > Users > `$DOER_ROBOT` > Security > Connected applications > the
-  `agp-3day steward` app > Remove (day-2 T2-26 used this path). The API equivalent is
-  `DELETE https://admin.googleapis.com/admin/directory/v1/users/${DOER_ROBOT}/tokens/${STEWARD_OAUTH_CLIENT_ID}`,
+  `agp-3day ${AGENT_ID}` app > Remove (day-2 T2-26 used this path). The API equivalent is
+  `DELETE https://admin.googleapis.com/admin/directory/v1/users/${DOER_ROBOT}/tokens/${DOER_OAUTH_CLIENT_ID}`,
   scope `https://www.googleapis.com/auth/admin.directory.user.security` (Directory API,
   `tokens.delete`, read 2026-09-17), which the read-only credential does not carry.
 - **Read back:** the robot's Connected applications page is empty.
@@ -729,19 +762,25 @@ disable_latest() {  # secret project
   [ -n "$V" ] || { echo "STOP: $1 in $2 has no ENABLED version; read the state and decide before continuing"; return 1; }
   gcloud secrets versions disable "$V" --secret="$1" --project="$2" && echo "$1 ($2): disabled $V"
 }
-disable_latest steward-refresh-token "$DOER_PROJECT"
-# Eve: decide in the room, and write the decision down either way.
-# gcloud secrets versions list eve-refresh-token --project="$EVE_PROJECT" --format='value(name,state)'
-# disable_latest eve-refresh-token "$EVE_PROJECT"          # only if Eve is being stopped
+disable_latest ${DOER_TOKEN_SECRET} "$DOER_PROJECT"
+# Eve is STOPPED by default (README section 10 rows 11 and 12). Skip these three lines only if
+# RUN_LOG cites the DPO record and HR's answer of README section 6 row 13.
+disable_latest eve-refresh-token "$EVE_PROJECT"
+gcloud scheduler jobs pause eve-poll-15m --location="$REGION" --project="$EVE_PROJECT"
+gcloud scheduler jobs describe eve-poll-15m --location="$REGION" --project="$EVE_PROJECT" --format='value(state)'   # PAUSED
+printf '%s  T3-19 d Eve stopped: eve-refresh-token disabled, eve-poll-15m paused by %s\n' "$(date -u +%FT%TZ)" "$PERSON_B_EMAIL" >> "$RUN_LOG"
 ```
 
   `gcloud secrets versions disable` is GA, takes `--secret` and `--location` for a regional secret
   (read 2026-09-17). **Disable, not destroy:** disabling is reversible with `versions enable`.
-  **Leave `eve-refresh-token` enabled if Eve is meant to keep polling after today**; if Eve is
-  stopped instead, disable it, pause the scheduler (`gcloud scheduler jobs pause eve-poll-15m
-  --location="$REGION" --project="$EVE_PROJECT"`) and write who paused it and why in `RUN_LOG`.
-  **Read back:** `gcloud secrets versions list steward-refresh-token --project="$DOER_PROJECT"
-  --format='value(name,state)'` shows no `ENABLED` version.
+  **By default Eve is stopped here**: `eve-refresh-token` disabled and `eve-poll-15m` paused, with
+  who paused it and why in `RUN_LOG`, because a poll left standing is a standing monitoring system
+  over the administrators it reads ([README.md](README.md) §10 rows 11 and 12). The three Eve lines
+  are skipped **only** when `RUN_LOG` cites the DPO record and HR's answer of
+  [README.md](README.md) §6 row 13; the hand-over then cites that record and names the account's
+  owner. **Read back:** `gcloud secrets versions list ${DOER_TOKEN_SECRET} --project="$DOER_PROJECT"
+  --format='value(name,state)'` shows no `ENABLED` version; the same for `eve-refresh-token` in
+  `EVE_PROJECT`, and the scheduler reads `PAUSED`, unless the DPO record is cited.
 
 **e. Leave the five synthetic accounts suspended, where they are**
 
@@ -755,8 +794,8 @@ disable_latest steward-refresh-token "$DOER_PROJECT"
 **f. Leave the halt at `on`**, so the service is deployed but a stray invocation refuses:
 
 ```bash
-printf 'on' | gcloud secrets versions add steward-halt --data-file=- --project="$DOER_PROJECT"
-gcloud secrets versions access latest --secret=steward-halt --project="$DOER_PROJECT"; echo   # on
+printf 'on' | gcloud secrets versions add ${DOER_HALT_SECRET} --data-file=- --project="$DOER_PROJECT"
+gcloud secrets versions access latest --secret=${DOER_HALT_SECRET} --project="$DOER_PROJECT"; echo   # on
 ```
 
   Clearing it is a procedure, not a control: both people hold project owner, so either could
@@ -766,10 +805,13 @@ gcloud secrets versions access latest --secret=steward-halt --project="$DOER_PRO
 stay: removing a lien needs the alpha `gcloud alpha resource-manager liens delete LIEN_NAME` and
 `roles/resourcemanager.lienModifier` (read 2026-09-17), and the lien is what stops an accidental
 project deletion after 2026-09-24. The audit table, the evidence dataset and the run log stay:
-they are the record. Eve's poller, policies and dataset stay, unless step d stopped Eve by
-decision. `eve-reader@`, a read-only admin account holding one privilege (Reports) and a live
-consented token, is **left standing on purpose**: name its owner and what would revoke it (step
-c's path, for `$EVE_READER`) in the hand-over.
+they are the record. Eve's job, policies and dataset stay as configuration, with the scheduler
+paused and the token disabled by step d. **`eve-reader@` is suspended by default**: Admin console >
+Directory > Users > `$EVE_READER` > Suspend, read back as Suspended by person B and written in
+`RUN_LOG`, before pov/06 `PE-0.2` starts. It is left standing, holding one privilege (Reports) and
+a live consented token, **only** when `RUN_LOG` cites the DPO record of [README.md](README.md) §6
+row 13; the hand-over then names its owner and what would revoke it (step c's path, for
+`$EVE_READER`).
 
 **h. Remove both OAuth clients from app access control**
 
@@ -777,10 +819,10 @@ c's path, for `$EVE_READER`) in the hand-over.
   (read 2026-09-17). Day-1 T1-14 and T1-14a each marked a client **Trusted** at organisation
   scope, which by Google's own words "can access all Google services (both restricted and
   unrestricted)" for any user in the organisation.
-- **The doer's client (`STEWARD_OAUTH_CLIENT_ID`): remove the configured app, or set it to
-  Blocked.** Eve's client: **if Eve keeps polling, its entry stays**, because a blocked app's
-  tokens stop working and the entry is recorded in the hand-over as deliberately left; if Eve was
-  stopped at step d, remove it too.
+- **The doer's client (`DOER_OAUTH_CLIENT_ID`): remove the configured app, or set it to
+  Blocked.** Eve's client: **remove it too, the default, since step d stopped Eve**; only if
+  `RUN_LOG` cites the DPO record and Eve keeps polling does its entry stay, because a blocked app's
+  tokens stop working, and the hand-over records it as deliberately left.
 - **Read back, by person B, not person A:** the configured-apps list no longer shows the doer's
   client id, or shows it as **Blocked**; Eve's reads as the hand-over says. Google: "Changes can
   take up to 24 hours but typically happen more quickly" (read 2026-09-17), so the read-back is
@@ -790,7 +832,7 @@ c's path, for `$EVE_READER`) in the hand-over.
 **i. Delete the doer's OAuth client, and Eve's if Eve was stopped**
 
 - **CONSOLE PATH:** Cloud console, `DOER_PROJECT`, Menu > Google Auth platform > Clients > tick
-  `STEWARD_OAUTH_CLIENT_ID` > Delete ("You can restore deleted clients within 30 days of the
+  `DOER_OAUTH_CLIENT_ID` > Delete ("You can restore deleted clients within 30 days of the
   deletion", Manage OAuth Clients, read 2026-09-18). The same in `EVE_PROJECT` only if Eve was
   stopped; a deleted client invalidates the tokens issued to it, so deleting Eve's client while
   Eve polls is stopping Eve without saying so.
@@ -800,10 +842,10 @@ c's path, for `$EVE_READER`) in the hand-over.
 
 ```bash
 # the doer's client JSON, in Secret Manager since T1-14a: destroy every version. IRREVERSIBLE.
-for V in $(gcloud secrets versions list steward-oauth-client --project="$DOER_PROJECT" --format='value(name)'); do
-  gcloud secrets versions destroy "$V" --secret=steward-oauth-client --project="$DOER_PROJECT"
+for V in $(gcloud secrets versions list ${DOER_CLIENT_JSON_SECRET} --project="$DOER_PROJECT" --format='value(name)'); do
+  gcloud secrets versions destroy "$V" --secret=${DOER_CLIENT_JSON_SECRET} --project="$DOER_PROJECT"
 done
-gcloud secrets versions list steward-oauth-client --project="$DOER_PROJECT" --format='value(name,state)'   # every row DESTROYED
+gcloud secrets versions list ${DOER_CLIENT_JSON_SECRET} --project="$DOER_PROJECT" --format='value(name,state)'   # every row DESTROYED
 # Eve's client JSON on person A's disk (T1-13). Eve's refresh-token secret already holds the client
 # id and secret it needs (code.md section 6), so the file is redundant whether or not Eve polls.
 F="$HOME/agp-3day/eve-client.json"; { shred -u "$F" 2>/dev/null || rm -P "$F"; }; ls "$F" 2>&1 | head -1
@@ -812,22 +854,22 @@ F="$HOME/agp-3day/eve-client.json"; { shred -u "$F" 2>/dev/null || rm -P "$F"; }
   `gcloud secrets versions destroy` is GA and "This action is irreversible" (reference, read
   2026-09-18). **Confirm first** that step i deleted the doer's client (a destroyed JSON for a
   deleted client loses nothing) and that step d's decision on Eve is written down. **Read back:**
-  every version of `steward-oauth-client` reads `DESTROYED`; `ls` on the JSON path fails with "No
+  every version of `${DOER_CLIENT_JSON_SECRET}` reads `DESTROYED`; `ls` on the JSON path fails with "No
   such file or directory".
 
 **k. Remove the staging unit, the writer role, the dataset writer entry and the invoker bindings**
 
 ```bash
 # the dataset: readers only (day-1 T1-12a's lever), so nothing can write the audit table again
-bq --project_id="$DOER_PROJECT" update --source "$HOME/agp-3day/ds-nowriter.json" "${DOER_PROJECT}:steward_audit"
-bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:steward_audit" | grep -c stewardAuditWriter   # 0
+bq --project_id="$DOER_PROJECT" update --source "$HOME/agp-3day/ds-nowriter.json" "${DOER_PROJECT}:${AUDIT_DATASET}"
+bq --project_id="$DOER_PROJECT" show --format=prettyjson "${DOER_PROJECT}:${AUDIT_DATASET}" | grep -c ${AUDIT_WRITER_ROLE}   # 0
 # the custom IAM role
-gcloud iam roles delete stewardAuditWriter --project="$DOER_PROJECT"
+gcloud iam roles delete ${AUDIT_WRITER_ROLE} --project="$DOER_PROJECT"
 # the two run.invoker bindings on the action service
 for M in "user:${PERSON_A_EMAIL}" "user:${PERSON_B_EMAIL}"; do
-  gcloud run services remove-iam-policy-binding steward-actions --region="$REGION" --project="$DOER_PROJECT" --member="$M" --role=roles/run.invoker
+  gcloud run services remove-iam-policy-binding ${DOER_ACTIONS} --region="$REGION" --project="$DOER_PROJECT" --member="$M" --role=roles/run.invoker
 done
-gcloud run services get-iam-policy steward-actions --region="$REGION" --project="$DOER_PROJECT" --format=json | grep -c 'run.invoker' || echo "0 invokers"
+gcloud run services get-iam-policy ${DOER_ACTIONS} --region="$REGION" --project="$DOER_PROJECT" --format=json | grep -c 'run.invoker' || echo "0 invokers"
 ```
 
 - **The staging organisational unit:** Admin console > Directory > Organisational units >
@@ -857,14 +899,16 @@ gcloud auth application-default print-access-token 2>&1 | head -1     # must fai
   who holds it and where. The doer's keys: with the robot's role unassigned, its grant revoked and
   its client deleted, the keys open an account that can do nothing; retain them sealed with the
   evidence until the account is deleted, or destroy them and suspend the account now. Eve's
-  password: if Eve keeps polling, retained by person B, because it is one of the three ways into
-  the account the watcher depends on.
+  password: with `eve-reader@` suspended at step g (the default), destroy it or retain it sealed
+  with the evidence; if the DPO record keeps Eve polling, retained by person B, because it is one
+  of the three ways into the account the watcher depends on.
 - **Read back:** person B reads each envelope's seal and both signatures aloud; A writes one line
   per envelope in `RUN_LOG` (`retained by <role>` or `destroyed at <UTC>`), and both sign.
 
 - **VERIFY the unwind as a whole:** B reads back a, b, e, h, i and k from their own session while
   A watches, and both sign one line in `RUN_LOG`: the time, what was removed, and what was
-  deliberately left (g, and Eve's entries under d, h and i if Eve polls on).
+  deliberately left (g; and Eve's entries under d, g, h and i only if the DPO record keeps Eve
+  polling).
 
 ---
 
@@ -891,8 +935,9 @@ gcloud auth application-default print-access-token 2>&1 | head -1     # must fai
       client removed from app access control and deleted, its JSON destroyed, Eve's client JSON
       shredded, the staging unit gone, the writer role and the invoker bindings gone, both
       application-default credentials revoked, both envelopes decided and signed (T3-19 a to m).
-- [ ] Eve's fate is one written decision: polling on, with `eve-reader@`'s owner named, or
-      stopped, with the token disabled and the scheduler paused (T3-19 d, g, h, i).
+- [ ] Eve is stopped, the default: token disabled, scheduler paused, `eve-reader@` suspended,
+      its client removed and deleted; or polling on under the DPO record cited in `RUN_LOG`, with
+      `eve-reader@`'s owner named (T3-19 d, g, h, i).
 - [ ] Nothing mutating ever touched a real employee's account, on any of the three days.
 
 ## If the day overran
@@ -953,6 +998,13 @@ Read on 2026-09-18, for the corrections of that date:
 | `roleAssignments.list` scopes and the `roleId` filter | Directory API, `roleAssignments.list` | `admin.directory.rolemanagement` and `.readonly`; `roleId` "returns only role assignments containing this role ID" (T3-19 b) |
 | Reading a job's log | gcloud `logging read` | GA; a filter, `--limit`, `--freshness` (T3-15 row 1) |
 
+Read on 2026-10-01, for the corrections of that date:
+
+| What was checked | Page | What it said |
+|---|---|---|
+| Reading a caller account's policy | gcloud `iam service-accounts get-iam-policy` (`docs.cloud.google.com/sdk/gcloud/reference/iam/service-accounts/get-iam-policy`) | GA; "get the IAM policy for a service account" (T3-19 a) |
+| Pausing Eve's schedule | gcloud `scheduler jobs pause` (`docs.cloud.google.com/sdk/gcloud/reference/scheduler/jobs/pause`) | GA; `JOB --location`; "pause the execution of a job" (T3-19 d) |
+
 ## Could not verify, so each has a check that fails loudly
 
 - **The CSV header names of an Admin log events export.** Google does not document them, which is
@@ -969,6 +1021,6 @@ Read on 2026-09-18, for the corrections of that date:
 - **`Assumption:` the export volume that fits the block** (about 20,000 rows, T3-5). Google
   publishes the 100,000-row cap and no preparation time; the trial search is what settles it.
 - **`Assumption:` a project-level custom role in a dataset access entry** (T3-19 k reads back
-  whichever role T1-12a actually granted, `stewardAuditWriter` or `WRITER`).
+  whichever role T1-12a actually granted, `${AUDIT_WRITER_ROLE}` or `WRITER`).
 - **`Assumption:` `gcloud alpha resource-manager liens`** is still alpha on the team's gcloud
   version. Nothing on day 3 runs it, so nothing on day 3 depends on it.

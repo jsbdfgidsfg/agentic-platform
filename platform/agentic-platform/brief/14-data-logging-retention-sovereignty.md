@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: the engine-invocation audit log is named for the Agent Platform API (`aiplatform.googleapis.com`), Vertex AI's name since 2026-04-22.
 
 ## What you will understand by the end
 
@@ -110,7 +111,7 @@ Central log ingestion and locked retention are the design's largest cost line. T
 
 One audit configuration sits on the folder's IAM policy ([08 §4.1](../08-data-logging-retention-sovereignty.md#41-the-configuration)). Google takes the union of levels, and a child cannot disable what a parent enables. Silencing these logs therefore needs a folder-level policy write, itself logged, watched by a severity-1 SIEM rule and possible only through Privileged Access Manager. No member is exempt.
 
-Each service answers a forensic question: who read a secret (Secret Manager), who produced an Eve approval signature (Cloud KMS), who reached control surfaces and plans (IAP, Firestore), who invoked an engine (Vertex AI), what the human actually asked (Discovery Engine, off unless enabled), who read the evidence (Cloud Logging), credential issuance (Agent Identity) and reconnaissance (IAM and policy reads). Storage Data Access logging runs only on the four evidence-holding projects. "All services" is left out as cost with no consumer, Cloud Run and Pub/Sub as volume no detection uses; Agent Gateway and Agent Runtime are absent from Google's audit-log services list.
+Each service answers a forensic question: who read a secret (Secret Manager), who produced an Eve approval signature (Cloud KMS), who reached control surfaces and plans (IAP, Firestore), who invoked an engine (the Agent Platform API, `aiplatform.googleapis.com`, formerly Vertex AI), what the human actually asked (Discovery Engine, off unless enabled), who read the evidence (Cloud Logging), credential issuance (Agent Identity) and reconnaissance (IAM and policy reads). Storage Data Access logging runs only on the four evidence-holding projects. "All services" is left out as cost with no consumer, Cloud Run and Pub/Sub as volume no detection uses; Agent Gateway and Agent Runtime are absent from Google's audit-log services list.
 
 ### The canary, and registry reads not yet proven (P80)
 

@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Revised 2026-09-18: `GT-4.7`'s who-can-mint check now covers the two approval surfaces `SA_APPROVAL_A` and `SA_APPROVAL_SUPER` as well as the two credential holders, with the same five permissions and the same pass line — an impersonated surface is a forged approver, and [33](33-wall-e-action-services-and-approval-surfaces.md) `WS-5.2` granted `SA_1_ADMIN` that impersonation for a sitting, withdrawn only by `WS-9.0`. The two names join the Consumes line.
 - Stage: review §2 stages 33 and 34, re-cut. It closes the **P-SA tier gate** and the **Stage 0-pre** milestone, and makes the one assignment the whole design is built around: Workspace Super Admin on `ROBOT`. It does **not** reach Stage 0; that is [39](39-wall-e-stage-0.md).
@@ -62,7 +63,7 @@ So by the time this file opens, the project, the services, the consents, the eng
 
 ### Who may refuse, and why it is a person
 
-The enforceable refusal is not CI. The assignment happens in the Admin console, and no continuous-integration job can stop a super admin from clicking it. The enforceable gate is **the second human's multi-party approval**, given only against a merged, parsed checklist that he has read himself. CI's parse (when `B-03` lands) makes his reading cheaper; it does not replace it. That is SD-36's revision-2 correction and it is why §3 has two paths and §6 has two people.
+The enforceable refusal is not CI. The assignment happens in the Admin console, and no continuous-integration job can stop a super admin from clicking it. The enforceable gate is **the second human's multi-party approval**, given only against a merged, parsed checklist that they have read themselves. CI's parse (when `B-03` lands) makes their reading cheaper; it does not replace it. That is SD-36's revision-2 correction and it is why §3 has two paths and §6 has two people.
 
 ```mermaid
 flowchart TD
@@ -89,12 +90,12 @@ R="$BUILD_LOG_DIR/records/$(date -u +%F)-GT"
 ## Preconditions
 
 - [ ] [37](37-wall-e-sandbox-rehearsal.md) complete: `checkpoints.tsv` shows `DONE` for its closing step, and `DENIALS_RECORD`, `K6_DRILL_RECORD`, `K7_PSA_DRILL_RECORD`, `BANDB_DRYRUN_RECORD`, `RESTORE_DRILL_RECORD` and `PENTEST_RECORD` are set and their files exist.
-- [ ] [28](28-eve-independent-proof-and-sandbox-drills.md) complete: `EVE_H_LIVE_RECORD` exists. Eve has been watching the human super admins — including the platform owner — since before Wall-E's first project, and the second human has proved detection himself on a seeded action he chose the window for. **The grant does not open while Eve is not live**, because Eve is the primary control the deviation is written against ([../11-tisax.md](../11-tisax.md) §6.3 row 5).
+- [ ] [28](28-eve-independent-proof-and-sandbox-drills.md) complete: `EVE_H_LIVE_RECORD` exists. Eve has been watching the human super admins — including the platform owner — since before Wall-E's first project, and the second human has proved detection themselves on a seeded action they chose the window for. **The grant does not open while Eve is not live**, because Eve is the primary control the deviation is written against ([../11-tisax.md](../11-tisax.md) §6.3 row 5).
 - [ ] [20](20-gemini-enterprise-gateway-and-tier-c-gate.md) complete: `TIER_C_RECORD` exists (G21), and `GEMINI_APP_LOCATION` is `eu` (X-GE-13, SD-21).
 - [ ] [17](17-factory-module-equivalents-and-tier-r-gate.md) complete: `TIER_R_RECORD` exists.
 - [ ] [36](36-wall-e-joins-to-eve-and-mo.md) complete: Eve's mirror of `walle_audit`, `eve-controller@`'s halt wiring and Mo's Wall-E pack exist, so the detections the deviation leans on have data the day the role lands.
 - [ ] [03](03-decisions-and-people.md): **P33** signed by all three signatories (platform owner decides, security reviewer signs the TISAX deviation, ISMS enters R-01 in the risk register); **P29** both lists signed; **P28** the EU AI Act intended-purpose statement signed with legal; the DPIA started and the works-council information given, both dated; the tabletop date and the penetration-test window recorded.
-- [ ] `B-20` cleared: the **security reviewer is appointed and named**. He signs the TISAX deviation and half the parse; the platform owner may sign neither.
+- [ ] `B-20` cleared: the **security reviewer is appointed and named**. They sign the TISAX deviation and half the parse; the platform owner may sign neither.
 - [ ] `B-21` cleared: **five named humans**, or four with a dated ISMS exception (SD-04, X-ORG-05) — platform owner, second human, two witness administrators who hold no tenant super-admin role, and the security reviewer. The incident commander, validator custodian, blind grader and second operator may be the same people as long as [11](11-keys-and-validator-custodian.md) §7.1's forbidden pairs hold.
 - [ ] `ROSTER_FILE` merged on the default branch with the second human's approval, and matching the live tenant at the last check.
 - [ ] Two admin accounts, `SA_1_ADMIN` and `SA_2_ADMIN`, each with **two** registered security keys and sealed, witnessed backup codes; a support-assisted recovery rehearsal recorded (`GT-4.4`).
@@ -111,7 +112,7 @@ R="$BUILD_LOG_DIR/records/$(date -u +%F)-GT"
 
 | Role | Does | Present at |
 |---|---|---|
-| Platform owner | Assembles the checklist, runs §§1, 4, 5 and the request in `GT-6.5`; signs nothing that gates his own request | all of it |
+| Platform owner | Assembles the checklist, runs §§1, 4, 5 and the request in `GT-6.5`; signs nothing that gates their own request | all of it |
 | Second human (`SA_2_ADMIN`, outside the Wall-E line) | Half the parse; witnesses roster-ready; **approves the grant** under multi-party approval; co-signs `GRANT_RECORD` | §3 to §9 |
 | Security reviewer | Half the parse; signs the TISAX deviation (already, in [03](03-decisions-and-people.md)); signs `GATE_CHECKLIST_RECORD` | §3, §9 |
 | ISMS | Confirms R-01 is in the risk register and that P137's people count is met or excepted; signs `GATE_CHECKLIST_RECORD` | §0, §9 |
@@ -178,7 +179,7 @@ awk -F'\t' '$2 ~ /^(WW|WD|WC|WS|WI|WE|WJ|WR|EV)-/ && $3 == "DONE" {n[substr($2,1
 
 ### GT-0.2 Refuse without the signed decisions (S092)
 
-- **WHO:** Platform owner; the second human opens each record himself rather than taking the exit code on trust.
+- **WHO:** Platform owner; the second human opens each record themselves rather than taking the exit code on trust.
 - **WHERE:** Shell; `PLATFORM_REPO_DIR/decisions/`.
 - **ACTION:** The old runbook's script offered the grant "as soon as `SUPER_ADMIN_GRANT_DECISION` names any existing file". A file existing is not a decision. Every id below has a signed, dated record with the signatories the row demands.
 
@@ -202,7 +203,7 @@ ls -1 "$PLATFORM_REPO_DIR"/decisions/*-tisax-deviation*.md "$PLATFORM_REPO_DIR"/
 
 | # | Person | Rule |
 |---|---|---|
-| 1 | Platform owner | holds `SA_1_ADMIN`; subject of Eve's monitoring; approves nothing on his own requests |
+| 1 | Platform owner | holds `SA_1_ADMIN`; subject of Eve's monitoring; approves nothing on their own requests |
 | 2 | Second human | holds `SA_2_ADMIN`; owner of `GRP_EVE_OWNERS`; required reviewer on `eve/config`; **owner of record** of the witness with a non-administrator witness account, not a witness administrator |
 | 3 | Witness administrator 1 | IT security; **no** tenant super-admin role, no Wall-E group |
 | 4 | Witness administrator 2 | as above; the two are each other's only recovery path |
@@ -486,7 +487,7 @@ printf '| %s | GT-2 | tabletop RB-01+RB-02 | %s | pre-grant (G17) | quarterly th
 
 ### GT-2.3 Write `TABLETOP_RECORD`
 
-- **WHO:** Incident commander writes and signs; the second human counter-signs that he was present for the rota test.
+- **WHO:** Incident commander writes and signs; the second human counter-signs that they were present for the rota test.
 - **WHERE:** `evidence/tabletops/<date>/` in the build log, pushed to the witness.
 - **ACTION:**
 
@@ -620,7 +621,7 @@ gcloud logging read 'logName:"organizations/'"$ORG_ID"'/logs/" AND protoPayload.
 
 ### GT-4.2 Prove the roster: exactly two human super admins (G3)
 
-- **WHO:** Platform owner runs; second human reads the JSON himself.
+- **WHO:** Platform owner runs; second human reads the JSON themselves.
 - **WHERE:** APIs Explorer, signed in as `SA_1_ADMIN` in its own browser profile; the shell for the comparison only.
 - **ACTION:** Three reads, not two. A customer-wide `roleAssignments.list` with `includeIndirectRoleAssignments = true` and no `userKey` returns **direct assignments only** — Google's reference says "You must specify `userKey` or the indirect role assignments will not be included" — so a Super Admin conferred through a group membership would be invisible to the read this line was signed on. The reads below see it twice over.
 
@@ -684,7 +685,7 @@ PY
 
 ### GT-4.3 Prove two keys each, and the sealed codes
 
-- **WHO:** Platform owner for his own account; second human for his; each looks at the other's page over a shared screen so neither self-attests.
+- **WHO:** Platform owner for their own account; second human for theirs; each looks at the other's page over a shared screen so neither self-attests.
 - **WHERE:** Admin console → Menu → **Directory → Users** → the account → **Security**.
 - **ACTION:** By eye, for `SA_1_ADMIN` and then `SA_2_ADMIN`: 2-Step Verification **on**, method **security key**, and **two** keys registered with distinct names and serials matching the key inventory. Then confirm the sealed backup-code envelope for each account: present, sealed, initialled by the custodian and the witness, and with its custody record already in the witness bucket (G18).
 
@@ -852,7 +853,7 @@ PY
   3. Whether the requester can see, and cannot approve, their own request.
   4. Which admin log event the approval writes in **this** tenant's organisation sink, and under which `eventName` — compared with the value `GT-1.8` already pinned from the sandbox as `ADMIN_EVENT_MPA_APPROVAL_LOGGING`. Read the sink for the rehearsal's window with no `eventName` predicate, exactly as `GT-1.8` did, and record what came back. This is a confirmation of a value observed weeks ago, not a discovery on grant day; a production spelling that differs from the pinned one is recorded, and the pinned variable is corrected with `penv_set --force` and a build-log line before `GT-7.2` uses it.
 
-- **VERIFY:** The rehearsal change applied only after the second human approved; the platform owner could not approve his own request; the reversal also needed an approval; all four facts are written down with the values observed, not the values expected; fact 4 states whether the production spelling equals `ADMIN_EVENT_MPA_APPROVAL_LOGGING`.
+- **VERIFY:** The rehearsal change applied only after the second human approved; the platform owner could not approve their own request; the reversal also needed an approval; all four facts are written down with the values observed, not the values expected; fact 4 states whether the production spelling equals `ADMIN_EVENT_MPA_APPROVAL_LOGGING`.
 - **ROLLBACK:** The reversal is part of the step. If the reversal request cannot be approved, the test organisational unit stays changed and the record says so — which is itself the finding.
 - **EVIDENCE:** `${R}-5.5-mpa-rehearsal-v1.txt` with the four observed facts. E-09, E-12. TISAX 1.2.3, 7.1.1.
 
@@ -935,7 +936,7 @@ grep -Fx "$ROBOT" "$PLATFORM_REPO_DIR/config/floor-list.txt" && echo "ROBOT ON F
 
 ### GT-6.4 Merge the roster change, with a short expectation window
 
-- **WHO:** Platform owner opens; **second human reviews and approves** (he is the code owner of `ROSTER_FILE`).
+- **WHO:** Platform owner opens; **second human reviews and approves** (they are the code owner of `ROSTER_FILE`).
 - **WHERE:** Branch `gt-6-roster-walle`.
 - **ACTION:** Eve diffs the live tenant against `ROSTER_FILE` in both directions. Merging the change after the grant would make Eve page `role_assignment_added`; merging it long before would make Eve page `role_assignment_missing`. So it merges **now**, minutes before the request, with a bounded exception:
 
@@ -949,26 +950,26 @@ grep -Fx "$ROBOT" "$PLATFORM_REPO_DIR/config/floor-list.txt" && echo "ROBOT ON F
 
 ### GT-6.5 Request Super Admin for `ROBOT` — **IRREVERSIBLE-class**
 
-- **WHO:** **Platform owner requests. He does not approve.**
+- **WHO:** **Platform owner requests. They do not approve.**
 - **WHERE:** Admin console, signed in as `SA_1_ADMIN` in its own browser profile: Menu → **Account → Admin roles** → **Super Admin** → **Assign admin** → `ROBOT`. (The equivalent path, Menu → Directory → Users → `ROBOT` → **Admin roles and privileges** → Super Admin, reaches the same place; use one, record which.)
 - **ACTION:** With multi-party approval on for role management, saving the assignment creates a **request**, not an assignment. Read the confirmation dialog and record its exact wording before confirming. Then stop: the role is not held until `GT-6.6`.
 
   Nothing else happens in this step. No password is reset. No sign-in as the robot. No second role. No custom role. The old script's gate-day path did all three and took Wall-E down before the role existed (S014).
 
-- **VERIFY:** The Admin roles page shows the assignment as **pending approval**, not as assigned; `roleAssignments.list` filtered by `userKey` = `ROBOT` still returns **nothing**; the approver sees the request in his own console at `GT-6.6`.
+- **VERIFY:** The Admin roles page shows the assignment as **pending approval**, not as assigned; `roleAssignments.list` filtered by `userKey` = `ROBOT` still returns **nothing**; the approver sees the request in their own console at `GT-6.6`.
 - **ROLLBACK:** Withdraw the request from the requests page before it is approved — that is the last cheap moment. **IRREVERSIBLE-class after `GT-6.6`:** the role can be removed (K6, §8) but tokens minted while it was held stay valid until they expire, and the tenant's audit record of the grant is permanent. Gated on: the signed **P33** record with its three signatures, the **TISAX deviation** and risk row R-01, and **every G line** green and fresh at `GT-6.1`.
 - **EVIDENCE:** `${R}-6.5-request-v1.txt` with the console path used, the dialog wording and the timestamp; a screenshot of the pending state to `EVIDENCE_INTERIM_LOCATION`. E-09, E-13. TISAX 1.2.3, 6.3.
 
 ### GT-6.6 Approve it, from `SA_2_ADMIN` — **IRREVERSIBLE-class**
 
 - **WHO:** **The second human, and nobody else.** Not the platform owner. Not the robot. Not a delegated approver.
-- **WHERE:** Admin console signed in as `SA_2_ADMIN`, in the second human's own browser profile on his own workstation: Menu → **Security → Authentication → Multi-party approval requests**.
-- **ACTION:** Before approving, the second human re-reads three things on his own screen: the merged `gate_checklist` with twenty-one green lines; his own parse file from `GT-3.3`; and the request's own details — the role (Super Admin), the target (`ROBOT`), the requester (`SA_1_ADMIN`). Then he approves.
+- **WHERE:** Admin console signed in as `SA_2_ADMIN`, in the second human's own browser profile on their own workstation: Menu → **Security → Authentication → Multi-party approval requests**.
+- **ACTION:** Before approving, the second human re-reads three things on their own screen: the merged `gate_checklist` with twenty-one green lines; their own parse file from `GT-3.3`; and the request's own details — the role (Super Admin), the target (`ROBOT`), the requester (`SA_1_ADMIN`). Then they approve.
 
-  This is the enforceable gate. CI cannot refuse an Admin console click; a person can. If anything he reads does not match what he parsed, he declines the request and says so out loud, and the sitting ends.
+  This is the enforceable gate. CI cannot refuse an Admin console click; a person can. If anything they read does not match what they parsed, they decline the request and say so out loud, and the sitting ends.
 
-- **VERIFY:** The request shows **approved** with his address as approver; the Admin roles page now lists `ROBOT` under Super Admin; `roleAssignments.list` with `userKey` = `ROBOT` returns exactly one assignment, the Super Admin role, and no other.
-- **ROLLBACK:** K6 (§8), which is itself a two-person role change. **IRREVERSIBLE-class as an event:** the grant happened and is recorded forever, whatever happens next. Gated on: `GT-6.1`'s twenty-one green lines and his own reading.
+- **VERIFY:** The request shows **approved** with their address as approver; the Admin roles page now lists `ROBOT` under Super Admin; `roleAssignments.list` with `userKey` = `ROBOT` returns exactly one assignment, the Super Admin role, and no other.
+- **ROLLBACK:** K6 (§8), which is itself a two-person role change. **IRREVERSIBLE-class as an event:** the grant happened and is recorded forever, whatever happens next. Gated on: `GT-6.1`'s twenty-one green lines and their own reading.
 - **EVIDENCE:** `${R}-6.6-approval-v1.txt` with the approver, the timestamp and the request id; a screenshot of the approved request. E-09, E-13. TISAX 1.2.3, 6.3. This record is half of `GRANT_RECORD`.
 
 ### GT-6.7 No second role, now or later
@@ -1277,7 +1278,7 @@ checkpoint GT-9.5 DONE "$SECOND_HUMAN_EMAIL" "${R}-9.1-grant-record"
 | `GT-5.2`, `GT-5.3` | Reversible as a setting, but from `GT-5.4` onwards the reversal itself needs an approval | Two admin accounts with two keys each (`GT-4.3`); sealed codes; **both** recovery paths rehearsed within the hour (`GT-4.4`) |
 | `GT-5.4` | Every covered change afterwards, including K6, is a two-person act; turning a category back off is itself covered | `GT-0.4`'s edition check; `GT-4.5`'s "nothing in flight"; `GT-5.5` booked immediately after so the first real approval is not the grant |
 | `GT-6.5` | The request can be withdrawn, but the role assignment it leads to is a tenant-wide privilege with no organisational-unit scope | `GT-6.1` prints `TWENTY-ONE GREEN, ALL FRESH`; P33 signed by three; the TISAX deviation and R-01; the roster merged with its two-hour exception; the desk answering live |
-| `GT-6.6` | The grant happened and is recorded forever; tokens minted while the role is held stay valid after K6 | The second human has re-read the merged checklist and his own parse **on his own screen**; the request names Super Admin, `ROBOT` and `SA_1_ADMIN`; he is signed in as `SA_2_ADMIN` and not as anyone else |
+| `GT-6.6` | The grant happened and is recorded forever; tokens minted while the role is held stay valid after K6 | The second human has re-read the merged checklist and their own parse **on their own screen**; the request names Super Admin, `ROBOT` and `SA_1_ADMIN`; they are signed in as `SA_2_ADMIN` and not as anyone else |
 | `GT-9.2` | The register then asserts a held super-admin privilege; the admission gate reads it | `GRANT_RECORD` signed; `GT-7.1` shows exactly three super admins; nothing from §7 open |
 
 ## 11. Verification checklist for the whole part

@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- 2026-10-01: the monitored administrator is referred to as "them" (gender-neutral wording).
 - 2026-09-15: scope widened at the owner's request — Eve monitors every human super admin from
   its first run, before Wall-E exists ([below](#scope-from-the-first-run-the-human-super-admins-2026-09-15);
   P153–P155).
@@ -87,7 +88,7 @@ Eve included, and `walle@` joins that set only when it exists. From the first ru
   ([setup 26](../agentic-platform/setup/26-eve-reporting-and-witness-export.md), [setup 27](../agentic-platform/setup/27-witness-grants-and-alarms.md);
   P150, P151). Who receives a report about the second human is decided before the routing is
   merged ([setup 26 ER-0.2](../agentic-platform/setup/26-eve-reporting-and-witness-export.md#er-02-the-b-12-gate-who-receives-a-report-about-the-second-human)).
-- **The monitored administrator installs Eve**, so Eve's independence from him is proven, not
+- **The monitored administrator installs Eve**, so Eve's independence from them is proven, not
   assumed: `eve-owners@` is owned by the second human; `EVE_PROJECT` and every later elevation
   on it are approved by the second human, never the platform owner; `eve/config` requires the
   second human's review; the platform owner holds no standing role that can edit Eve; and the

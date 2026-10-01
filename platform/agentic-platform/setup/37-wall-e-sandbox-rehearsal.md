@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Stage: review §2 stage 32, the Wall-E half. It opens gate lines **G10** (denial suite), **G11** (K6 on the robot twin), **G14**'s dry-run half, **G20** (K7 on `fld-agents-p-sa-nonprod` younger than 30 days), **G8** (penetration test) and the Tier W restore-drill row of **G19**. Nothing in [38](38-super-admin-gate-and-grant.md) may start until the records this file produces exist and are fresh.
 - Step prefix: `WR`. Steps: 79. **BLOCKED:** 22 steps — WR-3.4, WR-3.5 (the twin consents) and WR-3.7 (the password-reset proof, which needs both consents) on `B-17`; WR-4.2 to WR-4.6, WR-4.8, WR-4.9, WR-6.3 to WR-6.5, WR-7.2, WR-8.2 to WR-8.6, WR-9.2, WR-11.3 on `B-16` (the action services, the approval surfaces, the dispatcher, the engine, `tests/denials.py` and `walle/config/hard_denied.yaml` — see the scope line of WR-0.5); WR-10.3 on `B-04` (the `k7-executor` image; the human path of [18](18-model-armor-floor-spikes-and-kill-switch.md) is run instead and is what G20 reads until then). **IRREVERSIBLE:** WR-1.3 (the twin project id is permanent), WR-2.4 (the twin robot's Super Admin in the sandbox, removed only by K6), WR-3.3 (a twin client secret is shown once), WR-8.6 and WR-8.7 (K4 and K5 consume the twin credential), WR-11.4 (the restored database is deleted).
@@ -1101,7 +1102,7 @@ gcloud iam service-accounts get-iam-policy "$SA_ACTIONS" --project="$WALLE_TWIN_
 
 ### WR-6.1 Read the boundaries and the test-to-service map
 
-- **WHO:** Platform owner; security reviewer reads with him.
+- **WHO:** Platform owner; security reviewer reads with them.
 - **WHERE:** [../../wall-e/01-hld.md](../../wall-e/01-hld.md) "The five trust boundaries"; this page.
 - **ACTION:** The suite is grouped by trust boundary, as the superseded §4 was. What the old text never said is **which service each test runs against**, which is why half the system was untested (S125):
 
@@ -1641,7 +1642,7 @@ evidence_add WR-8.9 k6-drill E-08 1.4.1 "build-log:$REC" "$BUILD_LOG_DIR/$REC"
 
 | Attempt | Expected |
 |---|---|
-| The **requester approves his own** request | denied at the surface, and again at the service |
+| The **requester approves their own** request | denied at the surface, and again at the service |
 | The **robot** presented as approver | `escalation_denied`, breaker trip (HD-18b) |
 | The agent principal calls the approval endpoint | `approver_is_agent`, hard invariant |
 | The same approval **replayed** | `approval_already_used` |
@@ -1968,7 +1969,7 @@ done | tee "$BUILD_LOG_DIR/records/$(date -u +%F)-WR-13.1-freshness-v1.tsv"
 |---|---|---|---|
 | `RR-37-1` | any twin or production redeploy | the hard-denied sha comparison of WR-5.2 | this file, and CI once the job exists |
 | `RR-37-2` | `B-16` lands after WR-8.7 | the "first 403" half of the K6 drill | WR-8.7, same sitting as WR-6.3 |
-| `RR-37-3` | the security reviewer is appointed | his signature on the G10 line and on the hard-denied file | WR-5.1, WR-6.6 |
+| `RR-37-3` | the security reviewer is appointed | their signature on the G10 line and on the hard-denied file | WR-5.1, WR-6.6 |
 | `RR-37-4` | production deploys a new image digest | WR-4.1's digest equality, re-checked | [38](38-super-admin-gate-and-grant.md) |
 | `RR-37-5` | the grant date moves past an expiry | repeat K6 or the K7 P-SA drill | WR-13.1 |
 | `RR-37-6` | the twin dispatcher is redeployed, or `B-16`'s route table names different paths | `WALLE_DISPATCH_TRIGGERS_PATH` and `WALLE_DISPATCH_INBOX_PATH`, then WR-4.9's two push endpoints and WR-8.4's restore block | WR-4.6, WR-4.9, and [39](39-wall-e-stage-0.md) `S0-6.1`/`S0-8.3`, which read the same two variables |

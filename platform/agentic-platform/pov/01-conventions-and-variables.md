@@ -3,7 +3,9 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-17
+- Last reviewed: 2026-10-01
+- Reviewed on 2026-10-01: the opening line of "The absolutes" cites setup/README §1 by its wording,
+  not by line numbers that moved.
 - Part of: the proof-of-value (POV) set whose entry point is [README.md](README.md). Full-set
   counterpart: [../setup/01-prerequisites-and-conventions.md](../setup/01-prerequisites-and-conventions.md)
   (1,752 lines), plus the decision tools of [../setup/03-decisions-and-people.md](../setup/03-decisions-and-people.md)
@@ -94,7 +96,7 @@ person's, on their own workstation. Two hands-on people plus a named third is PV
 | Decision record format and `decision-check.sh`, `decision-need.sh`, `decision-value.sh` | setup/03 §4, DC-1.1 to DC-1.4 | Extracted verbatim (PP-4.1); records PV-01 to PV-13 are made in 02 |
 | Repository on the git host: humans-only write, CODEOWNERS, two-reviewer protection, negative tests, bypass audit | setup/03 DC-9.2 to DC-9.9 | Compressed into PP-5.1 to PP-5.5 |
 
-**The absolutes.** setup/README.md:60-66 and the nine absolutes restated in [README.md](README.md)
+**The absolutes.** setup/README §1 ("Standing constraints ... which every file keeps") and the nine absolutes restated in [README.md](README.md)
 bind every POV step. Nothing in this file loosens one.
 
 ## Part A. Day one

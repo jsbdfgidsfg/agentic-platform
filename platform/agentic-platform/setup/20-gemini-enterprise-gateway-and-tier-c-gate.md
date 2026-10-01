@@ -2,7 +2,7 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
 - Last executed: never
 - Stage: review §2 stages 19 and 20: GE-9, GE-10, GE-13 and GE-14 of [03 §16](../03-gemini-enterprise-environment.md#16-runbook-bringing-the-environment-to-baseline), rewritten as executable steps. GE-11 (enforcement of the gateway policy) is **not** in this file: it moves to [39](39-wall-e-stage-0.md), once the first agent row is admitted and 30 days of dry-run log are reviewed. GE-12 (per-agent registration and share) is [35](35-wall-e-engine-registration-and-gateways.md) for Wall-E. Runs after [19](19-gemini-enterprise-import-and-baseline.md), in parallel with files 21 to 29, and closes before 35 and before 38 (gate line G21).
 - Step prefix: `GG`. 54 steps (GG-0.5, GG-5.2b, GG-6.1b and GG-7.2b were added by the 2026-09-16 review pass).
@@ -12,6 +12,7 @@
 - Closes: S050 (the GE-13 and GE-14 half; 15 made the SCC route), X-GE-04, X-GE-08 (the spike half; 19 made the production half), X-GE-09 (test and dry run; enforcement handed to 39), X-GE-11 (the share-source and detection-key half; 19 made the `ADMIN_READ` half), X-GE-16, X-GE-20, X-GE-22 (the platform half; 35 applies it to Wall-E's share). §"Findings" says how.
 - Decisions applied (pending signature in [03](03-decisions-and-people.md)): SD-13, SD-19, SD-20, SD-21; design decisions P6, P53, P57, P59 of [../12-open-decisions.md](../12-open-decisions.md).
 - Every command, flag, field, role, constraint and console path was read on Google's pages on 2026-09-15, and the ones the 2026-09-16 review pass challenged were re-read that day: the Agent Gateway set-up page's required-APIs and constraint-id lists, the `agent-registry services create` flag reference, the custom-constraints page on CREATE-time evaluation, and the organisation-policy constraints reference (§"Sources"). Nothing was run against the tenant while writing. What could not be verified is listed in §"Not verified" and marked `Assumption:` at its step.
+- Changed 2026-10-01: every PAM call passes `--billing-project="$CICD_PROJECT"`; the `ENT_PROJECT_REPAIR_GEMINI` fallback is gone (17 now writes `ENT_PROJECT_REPAIR_TENANT_APP`) and the entitlement keeps 19 GE-2.3's approver; GG-0.4 tries `iam.managed.disableAccessPolicyBinding` (the constraints reference's id, 2026-09-30) first and records Agent Gateway's launch stage; GG-0.5 uses arrays and handles the observability APIs Google lists; `service-extensions authz-extensions` on the GA track with beta as fallback; GG-2.7 drops `--freshness`; GG-5.7 uses `--update-mask=policy.dry_run_spec`; deviation rows are BD-20-1 to BD-20-4 in 01 PR-4.1's columns, with GG-6.2 closing BD-20-3; portable date arithmetic in GG-5.8 and GG-7.5; the `@file` note says Google's pages disagree.
 - Elapsed: 1 to 2 weeks to `TIER_C_RECORD` (the spike, a change-window notice of five business days, seven days of dry-run log). The 30-day dry-run review (GG-5.8) continues after the record and is 39's input, not a Tier C condition. Hands-on: 3 days.
 
 ---
@@ -60,14 +61,14 @@ flowchart TD
 - [ ] File 09: `SCC_TIER` reads `PREMIUM/eu`; `FLD_GEMINI_ENTERPRISE`.
 - [ ] File 10: `CORE_PROJECT`, `LOGGING_PROJECT`, `CICD_PROJECT`, `SA_FACTORY_APPLY`.
 - [ ] File 12: `ENT_GE_ADMIN` (no approval, Tier C), `ENT_PLATFORM_POLICY` (approver the second human), `ENT_FOLDER_ADMIN`; `pam/tools/pam.sh`.
-- [ ] File 13: the state of the managed constraint **Disable binding access policy to resource** on `fld-gemini-enterprise` recorded (row B7); GG-1.1 lifts it on the project if 13 or 19 has not. Its id is written `constraints/iam.managed.disableAccessPolicyBindings` (plural) here, because that is the spelling on Google's Agent Gateway set-up page, the page these steps follow; a singular spelling circulates and could not be confirmed on the constraints reference on 2026-09-15 (§"Not verified"). GG-0.4 resolves the spelling against the live organisation **before** GG-1.1 writes a policy file, and `penv_set`s `GE_APB_CONSTRAINT`; if 13 row B7 recorded the other spelling, GG-0.4's result governs and 13's row is corrected as a wiki edit.
+- [ ] File 13: the state of the managed constraint **Disable binding access policy to resource** on `fld-gemini-enterprise` recorded (row B7); GG-1.1 lifts it on the project if 13 or 19 has not. Its id is `constraints/iam.managed.disableAccessPolicyBinding` (singular) on the organisation-policy constraints reference (updated 2026-09-30, read 2026-10-01), while Google's Agent Gateway set-up page (2026-10-01) still writes the plural `constraints/iam.managed.disableAccessPolicyBindings` (§"Not verified"). GG-0.4 resolves the spelling against the live organisation **before** GG-1.1 writes a policy file, and `penv_set`s `GE_APB_CONSTRAINT`; if 13 row B7 recorded the other spelling, GG-0.4's result governs and 13's row is corrected as a wiki edit.
 - [ ] File 19 GE-3.1 and GE-3.5: the `gcp.restrictServiceUsage` allow-list in force on `fld-gemini-enterprise` **contains** `networkservices.googleapis.com`, `networksecurity.googleapis.com`, `iap.googleapis.com`, `iam.googleapis.com`, `compute.googleapis.com`, `dns.googleapis.com` and `agentregistry.googleapis.com`, or the constraint does not govern them. GG-0.5 checks this before it enables anything and stops if the allow-list would refuse the enable; amending the folder allow-list is 13's and 19 GE-3.5's step, not this file's.
 - [ ] File 14: `S-folder` intercepting audit families; folder `auditConfigs` include `iap.googleapis.com` `DATA_READ` and `DATA_WRITE` (CL-8.1); the `security` view on `platform-evidence-logs` readable by the platform owner or the second human.
 - [ ] File 15 part A: `SCC_NOTIFICATION_CONFIG`, `SCC_ROUTE_TEST_SOURCE`, `NOTIF_CH_PAGER_CORE`, record `<date>-PS-6.8-scc-route-test-v1`.
 - [ ] File 16: `AGENT_REGISTRY`, `REGISTER_PATH` with the `tenant-app` row merged.
 - [ ] File 17: `TIER_R_RECORD`; FM-2.13's channel procedure.
 - [ ] File 18: `CANARY_R_PROJECT`, `ENT_PROJECT_REPAIR_CANARY_R`; KS-1.5's canary engine deployed, or GG-2.1 takes its no-code path (only when 05's import list has no Agent Runtime or A2A agent).
-- [ ] File 19: every GE step `DONE` except its listed BLOCKED ones; `GE_THROWAWAY_APP_ID` (shared with `ge-admins@` only), `GE_ARMOR_TEMPLATE`, `ENT_PROJECT_REPAIR_TENANT_APP` (17 FM-6.2 calls the same entitlement `ENT_PROJECT_REPAIR_GEMINI`; GG-0.1 accepts either); `ge-helpers.sh` in `BUILD_LOG_DIR/ge-baseline`; the colleague's agreement record `records/19-people.md`.
+- [ ] File 19: every GE step `DONE` except its listed BLOCKED ones; `GE_THROWAWAY_APP_ID` (shared with `ge-admins@` only), `GE_ARMOR_TEMPLATE`, `ENT_PROJECT_REPAIR_TENANT_APP` (the one name 17 FM-6.2 and 19 GE-2.3 both write); `ge-helpers.sh` in `BUILD_LOG_DIR/ge-baseline`; the colleague's agreement record `records/19-people.md`.
 - [ ] File 03: SD-13, SD-19, SD-20, SD-21 signed or recorded pending with this file named; `SECOND_HUMAN_EMAIL`, `INCIDENT_COMMANDER_EMAIL`.
 - [ ] The non-admin colleague of 19 (or another) agrees again: licensed, in `ge-users@`, holds no `discoveryengine` role other than through `ge-users@`, not in `ge-admins@`.
 - [ ] Workstation: `gcloud` with `beta` (for `service-extensions`, `monitoring channels`), `curl`, `jq`, `git`, `shasum`.
@@ -120,7 +121,7 @@ penv_guard
 need BUILD_LOG_DIR PLATFORM_REPO_DIR EVIDENCE_REGISTER DEVIATION_REGISTER DRILL_CALENDAR ORG_ID DOMAIN REGION GE_LOCATION SA_1_ADMIN GEMINI_PROJECT GEMINI_PROJECT_NUMBER GEMINI_APP_ID GEMINI_APP_LOCATION GE_INVENTORY_DIR GE_THROWAWAY_APP_ID GE_ARMOR_TEMPLATE ENT_GE_ADMIN ENT_PLATFORM_POLICY GRP_GE_ADMINS GRP_GE_USERS CORE_PROJECT LOGGING_PROJECT CICD_PROJECT AGENT_REGISTRY TIER_R_RECORD SCC_ROUTE_TEST_SOURCE SCC_TIER CANARY_R_PROJECT SECOND_HUMAN_EMAIL
 test "$GE_LOCATION" = eu && test "$GEMINI_APP_LOCATION" = eu || echo "STOP: not eu (SD-21)"
 test "$SCC_TIER" = "PREMIUM/eu" || echo "STOP: SCC not Premium/eu (09)"
-test -n "${ENT_PROJECT_REPAIR_TENANT_APP:-${ENT_PROJECT_REPAIR_GEMINI:-}}" || echo "STOP: no repair entitlement for GEMINI_PROJECT (19 GE-2.3 / 17 FM-6.2)"
+test -n "${ENT_PROJECT_REPAIR_TENANT_APP:-}" || echo "STOP: no repair entitlement for GEMINI_PROJECT (19 GE-2.3 / 17 FM-6.2)"
 gcloud auth login "$SA_1_ADMIN"
 grep -cE $'\tGE-[0-9.]+\tDONE' "$BUILD_LOG_DIR/checkpoints.tsv"
 grep -E $'\tGE-[0-9.]+\tBLOCKED' "$BUILD_LOG_DIR/checkpoints.tsv" | cut -f2 | sort -u
@@ -166,20 +167,21 @@ checkpoint GG-0.2 DONE
 - **WHERE:** shell.
 - **ACTION:** 19 GE-2.3's bundle has project IAM, services, contacts, logging configuration and Model Armor; the gateway needs the permissions Google's set-up page lists (`networkservices.agentGateways.*`, `networkservices.authzExtensions.*`, `networksecurity.authzPolicies.*`), Agent Registry writes (`roles/agentregistry.editor`, registration pages) and the access policy (`roles/iam.accessPolicyAdmin`, IAM access policies page); alert policies need Monitoring. This is the tenant-app module's own entitlement growing with the module's scope, recorded in the deviation register; no role is granted directly.
 ```bash
-ENT_REPAIR="${ENT_PROJECT_REPAIR_TENANT_APP:-$ENT_PROJECT_REPAIR_GEMINI}"
+need ENT_PROJECT_REPAIR_TENANT_APP CICD_PROJECT
+ENT_REPAIR="$ENT_PROJECT_REPAIR_TENANT_APP"
 f="$(gg_file GG-0.3 entitlement-before yaml)"
-gcloud pam entitlements describe "$ENT_REPAIR" --format=yaml > "$f"
+gcloud pam entitlements describe --billing-project="$CICD_PROJECT" "$ENT_REPAIR" --format=yaml > "$f"
 for r in roles/networkservices.admin roles/networksecurity.admin roles/agentregistry.editor roles/iam.accessPolicyAdmin roles/monitoring.editor roles/logging.viewer; do gcloud iam roles describe "$r" --format='value(name)'; done
 g="$(gg_file GG-0.3 entitlement-after yaml)"
 yq '.privilegedAccess.gcpIamAccess.roleBindings += [{"role":"roles/networkservices.admin"},{"role":"roles/networksecurity.admin"},{"role":"roles/agentregistry.editor"},{"role":"roles/iam.accessPolicyAdmin"},{"role":"roles/monitoring.editor"},{"role":"roles/logging.viewer"}] | del(.name, .createTime, .updateTime, .state)' "$f" > "$g"
 diff "$f" "$g"
-gcloud pam entitlements update "$(basename "$ENT_REPAIR")" --project="$GEMINI_PROJECT" --location=global --entitlement-file="$g"
-printf '| %s | GG-0.3 | tenant-app | ent-project-repair-tenant-app gains gateway, registry, access-policy and monitoring roles | %s | platform owner |\n' "$(date -u +%F)" "$g" >> "$DEVIATION_REGISTER"
-GRANT="$(pam_grant "$ENT_REPAIR" 1800s "setup 20 GG-0.3 one-grant test")"; pam_active "$GRANT"; gcloud pam grants revoke "$GRANT" --reason="GG-0.3 test"
+gcloud pam entitlements update --billing-project="$CICD_PROJECT" "$(basename "$ENT_REPAIR")" --project="$GEMINI_PROJECT" --location=global --entitlement-file="$g"
+grep -q '^| BD-20-1 |' "$DEVIATION_REGISTER" || printf '| BD-20-1 | %s | 20 GG-0.3 | MOD | tenant-app: ent-project-repair-tenant-app gains gateway, registry, access-policy and monitoring roles | project %s | 19 GE-2.3 entitlement; %s | six role bindings added to the entitlement (networkservices.admin, networksecurity.admin, agentregistry.editor, iam.accessPolicyAdmin, monitoring.editor, logging.viewer) | BLOCKED: tenant-app module (B-01) | n/a: existing project | second human approves each grant (19 GE-2.3) | superseded by the factory tenant-app module (B-01) | open |\n' "$(date -u +%F)" "$GEMINI_PROJECT" "$g" >> "$DEVIATION_REGISTER"
+GRANT="$(pam_grant "$ENT_REPAIR" 1800s "setup 20 GG-0.3 one-grant test")"; pam_active "$GRANT"; gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-0.3 test"
 ```
   `Assumption:` `yq` (jq-compatible YAML wrapper) is installed, as 19 assumes; without it, edit the copy by hand and keep the `diff`. The `etag` is kept so a concurrent change fails the update; the gcloud reference does not say which fields `update` accepts, so a refusal naming a field is recorded and that field removed.
-- **VERIFY:** each `roles describe` prints its role; `gcloud pam entitlements describe "$ENT_REPAIR" --format=json | jq -r '.privilegedAccess.gcpIamAccess.roleBindings[].role'` lists 19's five roles plus the six; `approvalWorkflow` still absent (Tier C, SD-19); `pam_active` printed `ACTIVE`. Confirm the set-up page's permissions by `gcloud iam roles describe roles/networkservices.admin --format=json | jq '.includedPermissions | map(select(startswith("networkservices.agentGateways.") or startswith("networkservices.authzExtensions."))) | length'` (non-zero) and the same for `networksecurity.authzPolicies.` on `roles/networksecurity.admin`.
-- **ROLLBACK:** `gcloud pam entitlements update ... --entitlement-file="$f"` (the saved before file, without output-only fields).
+- **VERIFY:** each `roles describe` prints its role; `gcloud pam entitlements describe --billing-project="$CICD_PROJECT" "$ENT_REPAIR" --format=json | jq -r '.privilegedAccess.gcpIamAccess.roleBindings[].role'` lists 19's five roles plus the six; `approvalWorkflow` still names the second human as 19 GE-2.3 set it (the added network, access-policy and registry admin roles make a second person necessary); `pam_active` printed `ACTIVE`. Confirm the set-up page's permissions by `gcloud iam roles describe roles/networkservices.admin --format=json | jq '.includedPermissions | map(select(startswith("networkservices.agentGateways.") or startswith("networkservices.authzExtensions."))) | length'` (non-zero) and the same for `networksecurity.authzPolicies.` on `roles/networksecurity.admin`.
+- **ROLLBACK:** `gcloud pam entitlements update --billing-project="$CICD_PROJECT" ... --entitlement-file="$f"` (the saved before file, without output-only fields).
 - **EVIDENCE:** before and after files; `evidence_add GG-0.3 repair-entitlement-gateway E-05 4.1.3 "build-log:ge-gateway/<after>" "$g"`.
 
 #### GG-0.4 Read the before state and open the spike record
@@ -193,13 +195,15 @@ gg_engine_view "$GE_THROWAWAY_APP_ID" | tee "$(gg_file GG-0.4 throwaway-engine-b
 gcloud services list --enabled --project="$GEMINI_PROJECT" --format='value(config.name)' | grep -E '^(networkservices|networksecurity|iap|agentregistry|modelarmor|compute|dns|discoveryengine|logging|monitoring)\.googleapis\.com$' | sort
 gcloud network-services agent-gateways list --location=europe-west1 --project="$GEMINI_PROJECT" --format='table(name,googleManaged.governedAccessPath)'
 GE_APB_CONSTRAINT=""
-for c in iam.managed.disableAccessPolicyBindings iam.managed.disableAccessPolicyBinding; do
+for c in iam.managed.disableAccessPolicyBinding iam.managed.disableAccessPolicyBindings; do   # the reference's singular first (2026-09-30), the set-up page's plural second
   if gcloud org-policies describe "$c" --project="$GEMINI_PROJECT" --effective --format=json > "$GG_DIR/apb-$c.json" 2>"$GG_DIR/apb-$c.err"; then GE_APB_CONSTRAINT="$c"; echo "RESOLVED $c"; break; else echo "NOT $c: $(head -1 "$GG_DIR/apb-$c.err")"; fi
 done
 test -n "$GE_APB_CONSTRAINT" || echo "STOP: neither spelling resolves; read the console value at IAM & Admin > Organization policies, filter 'Disable binding access policy to resource', and do not start GG-1"
 penv_set GE_APB_CONSTRAINT "$GE_APB_CONSTRAINT"
 cp "$GG_DIR/apb-${GE_APB_CONSTRAINT}.json" "$(gg_file GG-0.4 access-policy-binding-effective json)"
 gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json | jq '.auditConfigs'
+# Agent Gateway's launch stage, read on the day from the overview and set-up pages (banner and updated date)
+printf 'Agent Gateway launch stage read %s: <GA | Preview>; source <page, updated date>; 2026-10-01 read: no Preview banner on either page, only Workforce Identity Federation marked Preview with limited Agent Gateway support; the 2026-05-07 IAM blog called it Preview\n' "$(date -u +%F)" > "$GG_DIR/launch-stage.txt"
 GG_SPIKE="$BUILD_LOG_DIR/records/$(date -u +%F)-GG-0.4-ge-spike-record-v1.md"
 cat > "$GG_SPIKE" <<'EOF'
 # Gemini Enterprise gateway spike (setup 20, P57 stage 1, P59)
@@ -231,10 +235,11 @@ checkpoint GG-0.4 DONE - "$GG_SPIKE"
 ```
 - **VERIFY:**
   - the production engine shows no `agentGatewaySetting` (a bound app is a stop: 05 GI-8.4 said "not bound"; open a decision record and do not continue);
-  - the service list shows which of `networkservices`, `networksecurity`, `iap`, `iam`, `agentregistry`, `compute`, `dns` are already on. **This is a read, not a gate.** 19 GE-2.4 enables only `modelarmor`, `logging`, `monitoring` and `cloudquotas`, and the tenant-app manifest's `services_additive` list is the same four, so a missing gateway API is neither an error here nor a re-run of GE-2.4: GG-0.5 enables it. Only `modelarmor.googleapis.com`, `logging.googleapis.com`, `monitoring.googleapis.com` and `discoveryengine.googleapis.com` must already be enabled; a missing one of those four **is** a re-run of 19 GE-2.4 and a stop here;
+  - the service list shows which of `networkservices`, `networksecurity`, `iap`, `iam`, `agentregistry`, `compute`, `dns` are already on. **This is a read, not a gate.** 19 GE-2.4 enables only `modelarmor`, `logging`, `monitoring` and `cloudquotas`, and the tenant-app run spec's `services` list (17 FM-6.1, written in 19 GE-2.1) carries no gateway API, so a missing gateway API is neither an error here nor a re-run of GE-2.4: GG-0.5 enables it. Only `modelarmor.googleapis.com`, `logging.googleapis.com`, `monitoring.googleapis.com` and `discoveryengine.googleapis.com` must already be enabled; a missing one of those four **is** a re-run of 19 GE-2.4 and a stop here;
   - no gateway exists;
   - `auditConfigs` or the folder's (14) cover `iap.googleapis.com`;
-  - **the constraint id resolves**: the loop printed `RESOLVED <id>` and no `STOP`, `need GE_APB_CONSTRAINT` returns 0, and `gcloud org-policies describe "$GE_APB_CONSTRAINT" --project="$GEMINI_PROJECT" --effective --format=json | jq -e '.name' ` prints a name rather than `NOT_FOUND`. A `NOT_FOUND` on both spellings means the id in this file and in 13 row B7 is wrong: **GG-1 does not start**; read the id from the console (**IAM & Admin** → **Organization policies**, filter *Disable binding access policy to resource*), record it in the deviation register with the console screenshot reference, `penv_set GE_APB_CONSTRAINT` to it, and correct 13 row B7 and this file's §"Sources" as a wiki edit. Record which spelling won in `$GG_DIR/constraint-id.txt`.
+  - `launch-stage.txt` holds the stage read today, with the page and its updated date (the `<…>` replaced); if it says Preview or any Pre-GA stage, GG-2.11's go record carries the authorised signer's acceptance of the Pre-GA terms before GG-5.3;
+  - **the constraint id resolves**: the loop printed `RESOLVED <id>` and no `STOP`, `need GE_APB_CONSTRAINT` returns 0, and `gcloud org-policies describe "$GE_APB_CONSTRAINT" --project="$GEMINI_PROJECT" --effective --format=json | jq -e '.name' ` prints a name rather than `NOT_FOUND`. On 2026-10-01 the constraints reference lists the singular `iam.managed.disableAccessPolicyBinding`, so the loop should resolve on its first try; the plural is kept only because the set-up page still writes it. A `NOT_FOUND` on both spellings means the id in this file and in 13 row B7 is wrong: **GG-1 does not start**; read the id from the console (**IAM & Admin** → **Organization policies**, filter *Disable binding access policy to resource*), record it in the deviation register with the console screenshot reference, `penv_set GE_APB_CONSTRAINT` to it, and correct 13 row B7 and this file's §"Sources" as a wiki edit. Record which spelling won in `$GG_DIR/constraint-id.txt`.
 - **ROLLBACK:** none needed (reads and one variable).
 - **EVIDENCE:** the before files and `constraint-id.txt`; `evidence_add GG-0.4 before-state E-05 5.2.7 "build-log:ge-gateway/"`.
 
@@ -242,31 +247,34 @@ checkpoint GG-0.4 DONE - "$GG_SPIKE"
 
 - **WHO:** platform owner under `ENT_PROJECT_REPAIR_TENANT_APP` (its bundle already carries `roles/serviceusage.serviceUsageAdmin`, 19 GE-2.3). Solo.
 - **WHERE:** shell.
-- **ACTION:** Google's Agent Gateway set-up page requires Compute Engine, Network Security, Network Services, Identity and Access Management, Identity-Aware Proxy, Agent Registry, Model Armor and Cloud DNS to be enabled **before** a gateway is created. 19 GE-2.4 enables four services only (`modelarmor`, `logging`, `monitoring`, `cloudquotas`) and the tenant-app manifest's `services_additive` list is the same four, so nothing before this file enables the gateway APIs and GG-1.2 would fail. This step enables them, additively, and never disables anything.
+- **ACTION:** Google's Agent Gateway set-up page requires Compute Engine, Network Security, Network Services, Identity and Access Management, Identity-Aware Proxy, Agent Registry, Model Armor and Cloud DNS to be enabled **before** a gateway is created. 19 GE-2.4 enables four services only (`modelarmor`, `logging`, `monitoring`, `cloudquotas`) and the tenant-app run spec's `services` list (17 FM-6.1, written in 19 GE-2.1) carries no gateway API, so nothing before this file enables the gateway APIs and GG-1.2 would fail. This step enables them, additively, and never disables anything.
 
-  Two things must be true first, and the step checks both rather than assuming them. (a) `gcp.restrictServiceUsage` in force on the project (19 GE-3.1's union allow-list, set on the folder by 19 GE-3.5) must allow each service, or the enable is refused by organisation policy: **amending that allow-list is 19 GE-3.5's step and 13's policy file, not this file's**, so a missing entry is a stop here with a named owner. (b) The tenant-app module's manifest is now short by these seven services: that is recorded as a bootstrap deviation for the factory to supersede, with the owner named, because a later factory re-run from the manifest would not reproduce this project.
+  Two things must be true first, and the step checks both rather than assuming them. (a) `gcp.restrictServiceUsage` in force on the project (19 GE-3.1's union allow-list, set on the folder by 19 GE-3.5) must allow each service, or the enable is refused by organisation policy: **amending that allow-list is 19 GE-3.5's step and 13's policy file, not this file's**, so a missing entry is a stop here with a named owner. (b) The tenant-app run spec (`factory/runs/gemini-prod.json`) is now short by these seven services, and by whichever observability APIs are enabled: that is recorded as a bootstrap deviation for the factory to supersede, with the owner named, because a later factory re-run from the manifest would not reproduce this project.
 ```bash
-GG_SVC="networkservices.googleapis.com networksecurity.googleapis.com iap.googleapis.com iam.googleapis.com compute.googleapis.com dns.googleapis.com agentregistry.googleapis.com"
+GG_SVC=(networkservices.googleapis.com networksecurity.googleapis.com iap.googleapis.com iam.googleapis.com compute.googleapis.com dns.googleapis.com agentregistry.googleapis.com)   # an array: zsh does not split an unquoted string
+GG_OBS=(observability.googleapis.com telemetry.googleapis.com cloudtrace.googleapis.com)   # also required by Google's set-up page (2026-10-01); enabled only where the allow-list carries them
+GG_OBS_ON=()
 before="$(gg_file GG-0.5 services-before json)"
 gcloud services list --enabled --project="$GEMINI_PROJECT" --format=json > "$before"
 gcloud org-policies describe gcp.restrictServiceUsage --project="$GEMINI_PROJECT" --effective --format=json > "$(gg_file GG-0.5 restrict-service-usage-effective json)"
 A="$(ls -t "$GG_DIR"/*-GG-0.5-restrict-service-usage-effective-v*.json | head -1)"
 if jq -e '.spec.rules[0].values.allowedValues // empty' "$A" >/dev/null 2>&1; then
-  for s in $GG_SVC; do jq -e --arg s "$s" '[.spec.rules[0].values.allowedValues[]] | index($s) != null' "$A" >/dev/null || echo "STOP: $s not in the folder allow-list; owner: platform owner via 19 GE-3.5 and 13's fld-gemini-enterprise policy file. Do not start GG-1."; done
-else echo "gcp.restrictServiceUsage not in allow-list form on this project; record the effective read and continue"; fi
+  for s in "${GG_SVC[@]}"; do jq -e --arg s "$s" '[.spec.rules[0].values.allowedValues[]] | index($s) != null' "$A" >/dev/null || echo "STOP: $s not in the folder allow-list; owner: platform owner via 19 GE-3.5 and 13's fld-gemini-enterprise policy file. Do not start GG-1."; done
+  for s in "${GG_OBS[@]}"; do if jq -e --arg s "$s" '[.spec.rules[0].values.allowedValues[]] | index($s) != null' "$A" >/dev/null; then GG_OBS_ON+=("$s"); else echo "OFF $s: not on the fld-gemini-enterprise allow-list; recorded as deliberately off in BD-20-2 until 19 GE-3.5 adds it"; fi; done
+else echo "gcp.restrictServiceUsage not in allow-list form on this project; record the effective read and continue"; GG_OBS_ON=("${GG_OBS[@]}"); fi
 GRANT="$(pam_grant "$ENT_REPAIR" 1800s "setup 20 GG-0.5 enable the Agent Gateway APIs on the app project")"; pam_active "$GRANT"
-gcloud services enable $GG_SVC --project="$GEMINI_PROJECT"
+gcloud services enable "${GG_SVC[@]}" ${GG_OBS_ON[@]+"${GG_OBS_ON[@]}"} --project="$GEMINI_PROJECT"
 after="$(gg_file GG-0.5 services-after json)"
 gcloud services list --enabled --project="$GEMINI_PROJECT" --format=json > "$after"
 comm -13 <(jq -r '.[].config.name' "$before" | sort) <(jq -r '.[].config.name' "$after" | sort)
 comm -23 <(jq -r '.[].config.name' "$before" | sort) <(jq -r '.[].config.name' "$after" | sort)
-gcloud pam grants revoke "$GRANT" --reason="GG-0.5 done"
-printf '| %s | GG-0.5 | tenant-app | services_additive in the tenant-app manifest is short by %s; a factory re-run would not reproduce this project. Supersede when the factory module is written. | %s | platform owner |\n' "$(date -u +%F)" "$(echo $GG_SVC | tr ' ' ',')" "$after" >> "$DEVIATION_REGISTER"
+gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-0.5 done"
+grep -q '^| BD-20-2 |' "$DEVIATION_REGISTER" || printf '| BD-20-2 | %s | 20 GG-0.5 | MOD | tenant-app: the run spec services list (17 FM-6.1) is short by %s; observability APIs deliberately off: %s | project %s | factory/runs/gemini-prod.json | services enabled additively, none disabled | %s | n/a: existing project | ENT_PROJECT_REPAIR_TENANT_APP grant, second human | superseded when the factory tenant-app module is written (B-01) | open |\n' "$(date -u +%F)" "$(IFS=,; echo "${GG_SVC[*]} ${GG_OBS_ON[*]:-}")" "$(for s in "${GG_OBS[@]}"; do case " ${GG_OBS_ON[*]:-} " in *" $s "*) ;; *) printf '%s ' "$s";; esac; done)" "$GEMINI_PROJECT" "$after" >> "$DEVIATION_REGISTER"
 checkpoint GG-0.5 DONE
 ```
-- **VERIFY:** no `STOP` line; the first `comm` lists only services from `GG_SVC` that were not already on; the second `comm` prints nothing (nothing went away); and
+- **VERIFY:** no `STOP` line; the first `comm` lists only services from `GG_SVC` and `GG_OBS_ON` that were not already on; each `OFF` line is named in BD-20-2; the second `comm` prints nothing (nothing went away); and
 ```bash
-for s in $GG_SVC modelarmor.googleapis.com discoveryengine.googleapis.com; do gcloud services list --enabled --project="$GEMINI_PROJECT" --format='value(config.name)' | grep -qx "$s" || echo "MISSING $s"; done
+for s in "${GG_SVC[@]}" ${GG_OBS_ON[@]+"${GG_OBS_ON[@]}"} modelarmor.googleapis.com discoveryengine.googleapis.com; do gcloud services list --enabled --project="$GEMINI_PROJECT" --format='value(config.name)' | grep -qx "$s" || echo "MISSING $s"; done
 ```
   prints nothing. A refusal naming `constraints/gcp.restrictServiceUsage` means check (a) was wrong: stop, and take the allow-list amendment through 19 GE-3.5 before returning here.
 - **ROLLBACK:** `gcloud services disable <service> --project="$GEMINI_PROJECT"` for a service **this step** added only (the `comm -13` list), after GG-6 has removed every gateway object and only after `gcloud asset search-all-resources --scope="projects/$GEMINI_PROJECT" --asset-types=<type>` shows nothing was created in it. Never disable a service that was already on in `services-before`.
@@ -278,7 +286,7 @@ for s in $GG_SVC modelarmor.googleapis.com discoveryengine.googleapis.com; do gc
 
 - **WHO:** platform owner under `ENT_PLATFORM_POLICY`; approver: the second human.
 - **WHERE:** shell, in `PLATFORM_REPO_DIR`.
-- **PRECONDITION:** `need GE_APB_CONSTRAINT` returns 0 and `$GG_DIR/constraint-id.txt` exists — GG-0.4 resolved the constraint id against the live organisation. **This step does not guess the spelling.** Google's Agent Gateway set-up page writes it plural (`constraints/iam.managed.disableAccessPolicyBindings`); a singular spelling circulates and could not be confirmed on the constraints reference on 2026-09-15. Every command below uses the resolved variable, so a wrong id is caught in GG-0.4's read and never inside an approved `ENT_PLATFORM_POLICY` grant with a policy file already merged.
+- **PRECONDITION:** `need GE_APB_CONSTRAINT` returns 0 and `$GG_DIR/constraint-id.txt` exists — GG-0.4 resolved the constraint id against the live organisation. **This step does not guess the spelling.** The constraints reference (updated 2026-09-30, read 2026-10-01) lists the singular `constraints/iam.managed.disableAccessPolicyBinding`; Google's Agent Gateway set-up page (2026-10-01) still writes the plural. GG-0.4 tries the singular first. Every command below uses the resolved variable, so a wrong id is caught in GG-0.4's read and never inside an approved `ENT_PLATFORM_POLICY` grant with a policy file already merged.
 - **ACTION:** Google's set-up page requires the constraint not to be enforced where the access policy is bound. `N/A` when GG-0.4's effective read already shows `enforce: false` for the project.
 ```bash
 need GE_APB_CONSTRAINT
@@ -293,7 +301,7 @@ EOF
 git -C "$PLATFORM_REPO_DIR" add "$f" "${f%.yaml}.before.yaml" && git -C "$PLATFORM_REPO_DIR" commit -m "GG-1.1 lift access-policy binding constraint on the app project (gateway binding, review 2027-03-15)"
 GRANT="$(pam_grant "$ENT_PLATFORM_POLICY" 3600s "setup 20 GG-1.1 lift ${GE_APB_CONSTRAINT} on GEMINI_PROJECT for gemini-egress")"; pam_active "$GRANT"
 gcloud org-policies set-policy "$f"
-gcloud pam grants revoke "$GRANT" --reason="GG-1.1 done"
+gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-1.1 done"
 ```
 - **VERIFY:** `gcloud org-policies describe "$GE_APB_CONSTRAINT" --project="$GEMINI_PROJECT" --effective --format='value(spec.rules[0].enforce)'` prints `False` after up to 15 minutes; the folder's policy is unchanged (`gcloud org-policies describe "$GE_APB_CONSTRAINT" --folder="$FLD_GEMINI_ENTERPRISE" --format=yaml` matches 13 row B7's recorded state). If `set-policy` is refused with a message naming the constraint id, the id is wrong: revert the commit, return to GG-0.4, and do not retry with the other spelling inside this grant.
 - **ROLLBACK:** `gcloud org-policies delete "$GE_APB_CONSTRAINT" --project="$GEMINI_PROJECT"` under a new grant (restores inheritance), only when no access-policy binding remains in the project: after GG-6.1 if GG-2.11 decided the compensating control, never while `gemini-egress-access-binding` exists.
@@ -339,11 +347,12 @@ metadata:
   iapPolicyVersion: "V2"
   iamEnforcementMode: "DRY_RUN"
 EOF
-gcloud beta service-extensions authz-extensions import gg-spike-iap-authz --source="$W" --location=europe-west1 --project="$GEMINI_PROJECT"
-gcloud beta service-extensions authz-extensions describe gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT" --format=yaml | tee "$(gg_file GG-1.3 gg-spike-iap-authz-describe yaml)"
+gcloud service-extensions authz-extensions import gg-spike-iap-authz --source="$W" --location=europe-west1 --project="$GEMINI_PROJECT" \
+  || gcloud beta service-extensions authz-extensions import gg-spike-iap-authz --source="$W" --location=europe-west1 --project="$GEMINI_PROJECT"   # GA group (reference updated 2026-05-27); beta only as fallback
+gcloud service-extensions authz-extensions describe gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT" --format=yaml | tee "$(gg_file GG-1.3 gg-spike-iap-authz-describe yaml)"
 ```
 - **VERIFY:** `describe` shows `metadata.iamEnforcementMode: DRY_RUN` and `failOpen: false`.
-- **ROLLBACK:** `gcloud beta service-extensions authz-extensions delete gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT"` (after GG-1.4's policy is deleted).
+- **ROLLBACK:** `gcloud service-extensions authz-extensions delete gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT"` (after GG-1.4's policy is deleted).
 - **EVIDENCE:** YAML and describe; `evidence_add GG-1.3 spike-authz-extension E-05 5.2.7 "build-log:ge-gateway/<describe>"`.
 
 #### GG-1.4 Import the authorisation policy for the throwaway gateway
@@ -384,7 +393,7 @@ jq -n --arg p "$P" '[{description:"setup 20 spike: throwaway app egress, evaluat
 gcloud iam access-policies create gg-spike-access --details-rules="$W" --project="$GEMINI_PROJECT" --location=global
 gcloud iam policy-bindings create gg-spike-access-binding --policy="projects/${GEMINI_PROJECT}/locations/global/accessPolicies/gg-spike-access" --target-resource="//cloudresourcemanager.googleapis.com/projects/${GEMINI_PROJECT}" --project="$GEMINI_PROJECT" --location=global
 gcloud iam access-policies describe gg-spike-access --project="$GEMINI_PROJECT" --location=global --format=json | tee "$(gg_file GG-1.5 gg-spike-access-describe json)"
-gcloud pam grants revoke "$GRANT" --reason="GG-1 chain done"
+gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-1 chain done"
 ```
 - **VERIFY:** `describe` returns the rule; `gcloud iam policy-bindings describe gg-spike-access-binding --project="$GEMINI_PROJECT" --location=global --format='value(target)'` shows the project; `checkpoint GG-1.5 DONE`.
 - **ROLLBACK:** `gcloud iam policy-bindings delete gg-spike-access-binding --project="$GEMINI_PROJECT" --location=global`, then `gcloud iam access-policies delete gg-spike-access --project="$GEMINI_PROJECT" --location=global`.
@@ -411,8 +420,8 @@ curl -sS --fail-with-body -H "Authorization: Bearer $(gcloud auth print-access-t
 penv_set GG_SPIKE_ENGINE "$(head -1 "$(ls -t "$GG_DIR"/*-GG-2.1-canary-engines-v*.txt | head -1)")"
 G2="$(pam_grant "$ENT_PROJECT_REPAIR_CANARY_R" 3600s "setup 20 GG-2.1 spike: discoveryengine service agent query grant on canary-r (removed GG-6.2)")"; pam_active "$G2"
 gcloud projects add-iam-policy-binding "$CANARY_R_PROJECT" --member="serviceAccount:service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com" --role=roles/discoveryengine.serviceAgent --condition=None --format=none
-gcloud pam grants revoke "$G2" --reason="GG-2.1 grant made"
-printf '| %s | GG-2.1 | spike | roles/discoveryengine.serviceAgent on %s for the app service agent; removed in GG-6.2 | %s | platform owner |\n' "$(date -u +%F)" "$CANARY_R_PROJECT" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"
+gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$G2" --reason="GG-2.1 grant made"
+grep -q '^| BD-20-3 |' "$DEVIATION_REGISTER" || printf '| BD-20-3 | %s | 20 GG-2.1 | DEV | spike: roles/discoveryengine.serviceAgent on canary-r for the Gemini Enterprise service agent (cross-project ADK page), instead of the engine-scoped geEngineQuery | project %s | %s | one project binding | n/a | n/a | ENT_PROJECT_REPAIR_CANARY_R grant, second human | removed in GG-6.2 | open |\n' "$(date -u +%F)" "$CANARY_R_PROJECT" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"
 GRANT="$(pam_grant "$ENT_GE_ADMIN" 3600s "setup 20 GG-2.1 register canary-r in the throwaway app before binding")"; pam_active "$GRANT"
 B="$(gg_file GG-2.1 agent-create json)"
 jq -n --arg e "$GG_SPIKE_ENGINE" '{displayName:"gg-spike-canary-r", description:"Setup 20 spike agent. Responses are generated by an AI system.", adkAgentDefinition:{provisionedReasoningEngine:{reasoningEngine:$e}}}' > "$B"
@@ -595,7 +604,7 @@ gg_answer Q10 "definition Upd <accepted|refused: text>; definition New <accepted
 - **ACTION:** Record the roles listed in **Assign role** (X-GE-22). Share to member type **Group**, `ge-admins@`, with the role whose name maps to `roles/discoveryengine.agentspaceUser` (record the display name). Wait 10 minutes. Then **All users** with the same role; wait 10 minutes; remove both. Read Admin Activity (in the project's `_Required` bucket) and Data Access (in `LOGGING_PROJECT`).
 ```bash
 T0="<UTC time of the first Save>"
-gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND timestamp>=\"${T0}\"" --project="$GEMINI_PROJECT" --freshness=2h --format=json > "$(gg_file GG-2.7 activity json restricted)"
+gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND timestamp>=\"${T0}\"" --project="$GEMINI_PROJECT" --format=json > "$(gg_file GG-2.7 activity json restricted)"
 gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND LOG_ID(\"cloudaudit.googleapis.com/data_access\") AND resource.labels.project_id=\"${GEMINI_PROJECT}\" AND timestamp>=\"${T0}\"" --bucket=platform-evidence-logs --location=europe-west1 --view=security --project="$LOGGING_PROJECT" --format=json > "$(gg_file GG-2.7 data-access json restricted)"
 for f in "$(ls -t "$GG_DIR"/restricted/*-GG-2.7-activity-v*.json | head -1)" "$(ls -t "$GG_DIR"/restricted/*-GG-2.7-data-access-v*.json | head -1)"; do jq -r '.[] | [.timestamp, .logName, .protoPayload.methodName, ((.protoPayload.request // {}) | keys | join(","))] | @tsv' "$f"; done
 ```
@@ -674,7 +683,7 @@ grep -c "$(basename "$GE_SPIKE_RECORD" .md)" "$WIKI_DIR/platform/agentic-platfor
 cat "${GE_SPIKE_RECORD}.results"
 GO=yes; for q in Q1 Q6 Q7; do gg_result "$q" || { echo "NOT PASS: $q"; GO=no; }; done; echo "GO=$GO"
 ```
-  Q6 answered on the no-code path counts as PASS only when 05's import list has no Agent Runtime or A2A agent (GG-2.1). `GO=yes` (all three `RESULT … PASS`): write `decisions/<date>-ge-binding-go.md` (bind in a change window; rollback is Q7's method). `GO=no`: write `decisions/<date>-ge-binding-compensating-control.md` per 03 §11.2 "If Stage 1 fails": the connector allow-list (19 GE-4) and per-engine query grant stand, re-test at each Agent Gateway release note; GG-3 to GG-5 are `N/A`, `TIER_C_RECORD` records the compensating control, and 35's precondition is amended by that record.
+  Q6 answered on the no-code path counts as PASS only when 05's import list has no Agent Runtime or A2A agent (GG-2.1). `GO=yes` (all three `RESULT … PASS`): write `decisions/<date>-ge-binding-go.md` (bind in a change window; rollback is Q7's method; one line quoting `$GG_DIR/launch-stage.txt`, and, if Agent Gateway is Pre-GA on the day, the authorised signer's acceptance of the Pre-GA terms, which GG-5.3 needs). `GO=no`: write `decisions/<date>-ge-binding-compensating-control.md` per 03 §11.2 "If Stage 1 fails": the connector allow-list (19 GE-4) and per-engine query grant stand, re-test at each Agent Gateway release note; GG-3 to GG-5 are `N/A`, `TIER_C_RECORD` records the compensating control, and 35's precondition is amended by that record.
 - **VERIFY:** exactly one of the two records exists and is merged; `checkpoint GG-2.11 DONE - - "<go|compensating>"`.
 - **ROLLBACK:** superseding decision record.
 - **EVIDENCE:** `evidence_add GG-2.11 binding-decision E-03 1.4.1 "platform-repo:decisions/"`.
@@ -720,10 +729,11 @@ esac
 ```bash
 Y="$PLATFORM_REPO_DIR/factory/runs/gemini-prod/gemini-egress-iap-authz.yaml"
 printf 'name: gemini-egress-iap-authz\nservice: iap.googleapis.com\nfailOpen: false\ntimeout: 1s\nmetadata:\n  iapPolicyVersion: "V2"\n  iamEnforcementMode: "DRY_RUN"\n' > "$Y"
-gcloud beta service-extensions authz-extensions import gemini-egress-iap-authz --source="$Y" --location=europe-west1 --project="$GEMINI_PROJECT"
+gcloud service-extensions authz-extensions import gemini-egress-iap-authz --source="$Y" --location=europe-west1 --project="$GEMINI_PROJECT" \
+  || gcloud beta service-extensions authz-extensions import gemini-egress-iap-authz --source="$Y" --location=europe-west1 --project="$GEMINI_PROJECT"   # GA first, beta as fallback
 penv_set GE_AUTHZ_EXTENSION "projects/${GEMINI_PROJECT}/locations/europe-west1/authzExtensions/gemini-egress-iap-authz"
 ```
-- **VERIFY:** `gcloud beta service-extensions authz-extensions describe gemini-egress-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT" --format='value(metadata.iamEnforcementMode,failOpen)'` prints `DRY_RUN` and `False`.
+- **VERIFY:** `gcloud service-extensions authz-extensions describe gemini-egress-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT" --format='value(metadata.iamEnforcementMode,failOpen)'` prints `DRY_RUN` and `False`.
 - **ROLLBACK:** delete after GG-3.3's policy.
 - **EVIDENCE:** `evidence_add GG-3.2 gemini-egress-extension E-05 5.2.7 "platform-repo:$Y"`.
 
@@ -752,7 +762,7 @@ gcloud iam access-policies create gemini-egress-access --details-rules="$Y" --pr
 gcloud iam policy-bindings create gemini-egress-access-binding --policy="projects/${GEMINI_PROJECT}/locations/global/accessPolicies/gemini-egress-access" --target-resource="//cloudresourcemanager.googleapis.com/projects/${GEMINI_PROJECT}" --project="$GEMINI_PROJECT" --location=global
 git -C "$PLATFORM_REPO_DIR" add factory/runs/gemini-prod && git -C "$PLATFORM_REPO_DIR" commit -m "GG-3 gemini-egress chain in DRY_RUN"
 penv_set GE_ACCESS_POLICY "projects/${GEMINI_PROJECT}/locations/global/accessPolicies/gemini-egress-access"
-gcloud pam grants revoke "$GRANT" --reason="GG-3 done"
+gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-3 done"
 ```
 - **VERIFY:** `gcloud iam access-policies describe gemini-egress-access --project="$GEMINI_PROJECT" --location=global --format=json | jq -r '.details.rules[0].principals[0]'` equals `PRINC`; the binding describes with the project target; `checkpoint GG-3.4 DONE`.
 - **ROLLBACK:** delete binding, then policy.
@@ -781,7 +791,7 @@ ge_call GET "${GG_HOST}/v1alpha/projects/${GEMINI_PROJECT}/locations/eu/collecti
 - **WHERE:** shell.
 - **ACTION:** Multi-region `eu` registries refuse manual registration, so every entry is in `europe-west1`. One command per line of the list, by kind (registration pages).
 
-  **No `@` prefix.** `@file` is curl and `gh` syntax, not gcloud's. The gcloud reference (re-read 2026-09-16) describes `--agent-spec-content` and `--mcp-server-spec-content` as "the content of the … spec in the JSON format … limited to `10KB`", so they take the JSON itself; `--interfaces`, a complex-value flag, additionally accepts `path_to_file.(yaml|json)` with no `@`. Written with the `@` the flag value is the literal string `@/path/…`, which is either refused as malformed or stored as the spec, and GG-4.3's name comparison would not notice either way. Read the content in with `$(cat …)`, and confirm the form on the day:
+  **No `@` prefix, by choice.** Google's pages disagree: the MCP registration page (updated 2026-09-24, read 2026-10-01) writes `--mcp-server-spec-content=@toolspec.json`, while the gcloud reference (re-read 2026-09-16) describes `--agent-spec-content` and `--mcp-server-spec-content` as "the content of the … spec in the JSON format … limited to `10KB`", so they take the JSON itself; `--interfaces`, a complex-value flag, additionally accepts `path_to_file.(yaml|json)` with no `@`. If the reference is right, an `@` value would be the literal string `@/path/…`, refused as malformed or stored as the spec, and GG-4.3's name comparison would not notice. `$(cat …)` works under both readings, so it is kept; confirm the form on the day:
 ```bash
 gcloud agent-registry services create --help | sed -n '/--agent-spec-content/,+6p'
 ```
@@ -820,7 +830,7 @@ T="$(ls -t "$GG_DIR"/*-GG-4.1-import-list-today-v*.csv | head -1)"
 awk -F, 'NR>1 && $1!="connector" {print $NF}' "$T" | sort > "$GG_DIR/want.txt"
 gcloud agent-registry services list --project="$GEMINI_PROJECT" --location=europe-west1 --format='value(name.basename())' | sort > "$GG_DIR/have.txt"
 comm -3 "$GG_DIR/want.txt" "$GG_DIR/have.txt"
-gcloud pam grants revoke "$GRANT" --reason="GG-4 done"
+gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-4 done"
 ```
 - **VERIFY:** `comm` prints nothing; GG-4.2's spec assertion printed no `BAD` line (name equality alone does not prove the spec landed, because the service is created either way); `checkpoint GG-4.3 DONE`. A line in "have" only is a leftover spike entry: delete it.
 - **ROLLBACK:** none needed.
@@ -912,7 +922,7 @@ git -C "$BUILD_LOG_DIR" add "$W" && git -C "$BUILD_LOG_DIR" commit -q -m "GG-5.2
 penv_set GG_WINDOW_RECORD "$W"
 checkpoint GG-5.2b DONE - "$W"
 ```
-- **VERIFY:** `grep -c 'tbd' "$GG_WINDOW_RECORD"` prints `0` — every line has a time and a reference, the desk's reply among them; `gcloud pam grants list --entitlement="$ENT_GE_ADMIN" --filter='state=ACTIVE' --format='value(name,requester)'` shows the rollback operator's grant. Any line unanswered: the window does not open, GG-5.3 does not run, and GG-4.4's cancellation notice goes out.
+- **VERIFY:** `grep -c 'tbd' "$GG_WINDOW_RECORD"` prints `0` — every line has a time and a reference, the desk's reply among them; `gcloud pam grants list --billing-project="$CICD_PROJECT" --entitlement="$ENT_GE_ADMIN" --filter='state=ACTIVE' --format='value(name,requester)'` shows the rollback operator's grant. Any line unanswered: the window does not open, GG-5.3 does not run, and GG-4.4's cancellation notice goes out.
 - **ROLLBACK:** send the cancellation notice of GG-4.4 and reschedule; nothing has changed in the tenant.
 - **EVIDENCE:** the window record and the desk reply; `evidence_add GG-5.2b window-open E-12 5.2.1 "build-log:records/$(basename "$GG_WINDOW_RECORD")" "$W"`.
 
@@ -949,7 +959,7 @@ case "$GE_GW_NAME_FORM" in number) ALT="projects/${GEMINI_PROJECT}/locations/eur
 B2="$(gg_file GG-5.3 bind-alt json)"
 jq -n --arg gw "$ALT" '{agentGatewaySetting:{defaultEgressAgentGateway:{name:$gw}}}' > "$B2"
 curl -sS --fail-with-body -X PATCH -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" --data-binary @"$B2" "https://eu-discoveryengine.googleapis.com/v1/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}?updateMask=agentGatewaySetting.defaultEgressAgentGateway.name" | tee "$(gg_file GG-5.3 bind-alt-response json)"
-printf '| %s | GG-5.3 | binding | first form %s refused; %s accepted; Q8 answer corrected | %s | platform owner |\n' "$(date -u +%F)" "$GE_GW_NAME_FORM" "$ALT" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"
+grep -q '^| BD-20-4 |' "$DEVIATION_REGISTER" || printf '| BD-20-4 | %s | 20 GG-5.3 | DEV | production binding: gateway name form %s refused, %s accepted; spike Q8 answer corrected | app %s in project %s | %s | agentGatewaySetting on the production app | n/a | n/a | ENT_GE_ADMIN grant; second human witness at the screen | closed when 03 section 11 records the accepted form | open |\n' "$(date -u +%F)" "$GE_GW_NAME_FORM" "$ALT" "$GEMINI_APP_ID" "$GEMINI_PROJECT" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"
 gg_answer Q8 "production bind accepted the name form: $ALT (spike had recorded the other)" RECORDED
 ```
   A second refusal ends the window: revoke the grant, send the cancellation note, and re-open Q8 before rescheduling. Never fall back to the global host (X-GE-20).
@@ -990,7 +1000,7 @@ diff <(jq -S 'del(.agentGatewaySetting, .associatedAgentRegistry)' "$(ls -t "$GG
 - **WHERE:** shell.
 - **ACTION:** GG-2.3's two reads with `T0` from `prod-bind-time.txt`, saved under `restricted/`, and a summary: destinations by resource name, principal, counts of would-deny decisions. Then revoke the grant and send "window closed" to users and the desk.
 ```bash
-gcloud pam grants revoke "$GRANT" --reason="GE-10 window closed"
+gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE-10 window closed"
 ```
 - **VERIFY:** `DRY_RUN` entries present with the Q2 principal; no user-reported denial; `checkpoint GG-5.6 DONE`.
 - **ROLLBACK:** none needed.
@@ -1023,8 +1033,8 @@ GRANT="$(pam_grant "$ENT_PLATFORM_POLICY" 3600s "setup 20 GG-5.7 gateway constra
 gcloud org-policies delete custom.geEngineGatewayRequiredUpd --project="$GEMINI_PROJECT"
 gcloud org-policies delete-custom-constraint custom.geEngineGatewayRequiredUpd --organization="$ORG_ID"
 gcloud org-policies set-custom-constraint "$C"
-gcloud org-policies set-policy "$P" --update-mask=dryRunSpec
-gcloud pam grants revoke "$GRANT" --reason="GG-5.7 done"
+gcloud org-policies set-policy "$P" --update-mask=policy.dry_run_spec   # the reference accepts policy.spec, policy.dry_run_spec or * (read 2026-10-01)
+gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-5.7 done"
 ```
 - **VERIFY:** `gcloud org-policies describe custom.geEngineGatewayRequired --folder="$FLD_GEMINI_ENTERPRISE" --format=yaml` shows `dryRunSpec` and no `spec`; `gcloud org-policies list-custom-constraints --organization="$ORG_ID" --format='value(name)' | grep geEngineGatewayRequired` prints `custom.geEngineGatewayRequired` and nothing else (neither `…Upd` nor `…New` survives); the project-level spike policies are gone (`gcloud org-policies list --project="$GEMINI_PROJECT" --format='value(constraint)' | grep geEngineGatewayRequired` prints nothing); `methodTypes` in the applied definition matches Q10's outcome row. Until GG-6.3 deletes the throwaway app, dry-run violation entries for it are expected and recorded as such.
 - **ROLLBACK:** `gcloud org-policies delete custom.geEngineGatewayRequired --folder="$FLD_GEMINI_ENTERPRISE"` under a new grant.
@@ -1036,7 +1046,7 @@ gcloud pam grants revoke "$GRANT" --reason="GG-5.7 done"
 - **WHERE:** shell; `DRILL_CALENDAR`.
 - **ACTION:** Day 7 (a `TIER_C_RECORD` input) and day 30 (39's input for GE-11): GG-5.6's reads over the period, a table of every destination seen against today's list and the register, each unexpected destination either given a register row and registry entry, or recorded for removal at GE-11.
 ```bash
-printf '| DR-20-1 | gemini-egress dry-run review: destinations vs register | day 7 and day 30 after %s | platform owner | - | 20 | %s | | | TIER_C_RECORD (day 7); 39 GE-11 (day 30) |\n' "$(cat "$GG_DIR/prod-bind-time.txt")" "$(date -u -v+7d +%F)" >> "$DRILL_CALENDAR"
+printf '| DR-20-1 | gemini-egress dry-run review: destinations vs register | day 7 and day 30 after %s | platform owner | - | 20 | %s | | | TIER_C_RECORD (day 7); 39 GE-11 (day 30) |\n' "$(cat "$GG_DIR/prod-bind-time.txt")" "$(date -u -v+7d +%F 2>/dev/null || date -u -d '+7 days' +%F)" >> "$DRILL_CALENDAR"
 git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit -q -m "GG-5.8 dry-run review rows"
 ```
 - **VERIFY:** day-7 record `<date>-GG-5.8-dry-run-day7-v1.md` with zero unexplained destinations; day-30 record likewise (checked by 39, not by this file's close).
@@ -1054,7 +1064,7 @@ git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit 
 gcloud iam policy-bindings delete gg-spike-access-binding --project="$GEMINI_PROJECT" --location=global
 gcloud iam access-policies delete gg-spike-access --project="$GEMINI_PROJECT" --location=global
 gcloud network-security authz-policies delete gg-spike-authz-policy --location=europe-west1 --project="$GEMINI_PROJECT"
-gcloud beta service-extensions authz-extensions delete gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT"
+gcloud service-extensions authz-extensions delete gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT"
 for g in gg-spike-egress gg-spike-egress-2; do gcloud network-services agent-gateways delete "$g" --location=europe-west1 --project="$GEMINI_PROJECT"; done
 ```
   **Nothing about the gateway custom constraint is deleted here.** The two lines that used to close this block deleted the organisation-level constraint definition that GG-5.7's `fld-gemini-enterprise` `dryRunSpec` policy points at, guarded only by a shell comment; pasted after a Q10 PASS they silently remove the Tier C gateway control and the input 39 needs for GE-11. They are now GG-6.1b, conditional and with their own approver.
@@ -1084,7 +1094,7 @@ if grep -qE $'\tGG-5\\.7\tN/A' "$BUILD_LOG_DIR/checkpoints.tsv"; then
   GRANT="$(pam_grant "$ENT_PLATFORM_POLICY" 1800s "setup 20 GG-6.1b delete the spike gateway constraint, Q10 FAIL, GG-5.7 N/A")"; pam_active "$GRANT"
   gcloud org-policies delete custom.geEngineGatewayRequiredUpd --project="$GEMINI_PROJECT"
   gcloud org-policies delete-custom-constraint custom.geEngineGatewayRequiredUpd --organization="$ORG_ID"
-  gcloud pam grants revoke "$GRANT" --reason="GG-6.1b done"
+  gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-6.1b done"
 else
   echo "N/A: GG-5.7 is not N/A; the constraint stays. checkpoint GG-6.1b N/A - - 'Q10 PASS or PASS-UPDATE'"
 fi
@@ -1103,7 +1113,7 @@ fi
 gcloud projects remove-iam-policy-binding "$CANARY_R_PROJECT" --member="serviceAccount:service-${GEMINI_PROJECT_NUMBER}@gcp-sa-discoveryengine.iam.gserviceaccount.com" --role=roles/discoveryengine.serviceAgent
 ma_eu model-armor templates delete gg-spike-response --location=eu --project="$GEMINI_PROJECT"
 ge_call DELETE "${GG_HOST}/v1alpha/$(jq -r '.name' "$(ls -t "$GG_DIR"/*-GG-2.1-agent-created-v*.json | head -1)")"
-printf '| %s | GG-6.2 | spike | closed: GG-2.1 grant removed | %s | platform owner |\n' "$(date -u +%F)" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"
+grep -q '^| BD-20-3 | [0-9-]* | GG-2.1 grant removed' "$DEVIATION_REGISTER" || printf '| BD-20-3 | %s | GG-2.1 grant removed (%s) | GG-6.2 |\n' "$(date -u +%F)" "$GE_SPIKE_RECORD" >> "$DEVIATION_REGISTER"   # a Closures line (01 PR-4.1): the row itself is never edited
 ```
 - **VERIFY:** `gcloud projects get-iam-policy "$CANARY_R_PROJECT" --flatten=bindings[].members --filter="bindings.members:gcp-sa-discoveryengine" --format='value(bindings.role)'` prints nothing; no `gg-spike` template listed.
 - **ROLLBACK:** none needed.
@@ -1233,7 +1243,7 @@ gcloud scc findings create "$F" --organization="$ORG_ID" --location=eu --source=
 - **WHERE:** console → **Gemini Enterprise** → production app → **Agents** → each agent → **User permissions**; shell for the API read Q13 found (if any).
 - **ACTION:** X-GE-11: no audit method for a group share is documented, so the source is a read. Weekly: for every agent, compare the permissioned members with the register row's `audience_groups`; any member not in the row, any **All users** not in the row, any agent without a row is a severity 2 finding to `platform-security@` (03 §10.1). Private agents created by users (Q12) are counted, not raised.
 ```bash
-printf '| DR-20-2 | Gemini Enterprise share read: members vs audience_groups (manual until B-02) | weekly, Tuesdays | platform owner | second human reads | 20 | %s | | | X-GE-11; PL-10 sev 2 |\n' "$(date -u -v+7d +%F)" >> "$DRILL_CALENDAR"
+printf '| DR-20-2 | Gemini Enterprise share read: members vs audience_groups (manual until B-02) | weekly, Tuesdays | platform owner | second human reads | 20 | %s | | | X-GE-11; PL-10 sev 2 |\n' "$(date -u -v+7d +%F 2>/dev/null || date -u -d '+7 days' +%F)" >> "$DRILL_CALENDAR"
 git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit -q -m "GG-7.5 weekly share read"
 ```
 - **VERIFY:** the first weekly record `<date>-GG-7.5-share-read-v1.md` exists with one line per agent; a week without a record is itself raised by the second human.
@@ -1259,8 +1269,8 @@ git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit 
 - **WHERE:** shell.
 - **ACTION:**
 ```bash
-gcloud pam grants list --entitlement="$ENT_REPAIR" --filter='state=ACTIVE' --format='value(name)' | while read -r G; do gcloud pam grants revoke "$G" --reason="setup 20 GG-7 closed"; done
-gcloud pam grants list --entitlement="$ENT_GE_ADMIN" --filter='state=ACTIVE' --format='value(name)' | while read -r G; do gcloud pam grants revoke "$G" --reason="setup 20 GG-7 closed"; done
+gcloud pam grants list --billing-project="$CICD_PROJECT" --entitlement="$ENT_REPAIR" --filter='state=ACTIVE' --format='value(name)' | while read -r G; do gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$G" --reason="setup 20 GG-7 closed"; done
+gcloud pam grants list --billing-project="$CICD_PROJECT" --entitlement="$ENT_GE_ADMIN" --filter='state=ACTIVE' --format='value(name)' | while read -r G; do gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$G" --reason="setup 20 GG-7 closed"; done
 grep -E $'\tGG-[0-9.]+\t(DONE|BLOCKED|N/A)' "$BUILD_LOG_DIR/checkpoints.tsv" | cut -f2,3 | sort -u
 ```
 - **VERIFY:** no active grant; every GG step before GG-8 has `DONE`, `N/A` with a reason, `PENDING` (GG-7.2b only, with its reason) or `BLOCKED` (GG-7.6 only, and GG-2.1 on its Agent Runtime path); GG-6.3 is `DONE`; GG-6.1b reads `DONE` or `N/A` and never both.
@@ -1388,8 +1398,8 @@ Deferred: the enforcement half of X-GE-09 (move `custom.geEngineGatewayRequired`
 - Whether the IAM access policy accepts a rule without `conditions` (GG-1.5 records the error and the fallback).
 - Whether the custom-constraint service accepts `resource.agentGatewaySetting...` for `Engine`, since the Gemini Enterprise field list omits it while the gateway deploy page uses it (GG-2.6).
 - Whether `resource.name` is populated for a `discoveryengine.googleapis.com/Engine` CREATE. Google's custom-constraints page (re-read 2026-09-16) says conditions are evaluated against the resource in the request and warns that querying a value that does not exist returns `BAD_CONDITION`, but it does not say which fields are set at create time. GG-2.6 therefore tests CREATE with an unscoped condition rather than a name-scoped one, and grades "not evaluable at CREATE" separately from "not constrainable" (`Assumption:`).
-- The exact id of the managed constraint **Disable binding access policy to resource**. Google's Agent Gateway set-up page writes `constraints/iam.managed.disableAccessPolicyBindings`; the organisation-policy constraints reference and the IAM managed-constraints documentation did not carry it under either spelling on 2026-09-16. GG-0.4 resolves it against the live organisation and `penv_set`s `GE_APB_CONSTRAINT`; nothing in GG-1 uses a literal id.
-- Whether `gcloud agent-registry services create --agent-spec-content` accepts only inline JSON or also a file path. The reference describes it as the content, limited to 10 KB, while `--interfaces` documents a file form; GG-4.2 passes `$(cat …)` and confirms with `--help` on the day. The `@file` form used before this review pass is curl syntax and is wrong under gcloud in either case.
+- The id of the managed constraint **Disable binding access policy to resource**. The organisation-policy constraints reference (updated 2026-09-30, read 2026-10-01) lists the singular `constraints/iam.managed.disableAccessPolicyBinding`; Google's Agent Gateway set-up page (2026-10-01) still writes the plural `constraints/iam.managed.disableAccessPolicyBindings`. GG-0.4 tries the singular first, resolves it against the live organisation and `penv_set`s `GE_APB_CONSTRAINT`; nothing in GG-1 uses a literal id. A script hard-codes the singular and keeps GG-0.4's read as its check.
+- Whether `gcloud agent-registry services create --agent-spec-content` accepts only inline JSON or also a file path. The reference describes it as the content, limited to 10 KB, while `--interfaces` documents a file form; GG-4.2 passes `$(cat …)` and confirms with `--help` on the day. Google's pages disagree: the MCP registration page (updated 2026-09-24) writes `--mcp-server-spec-content=@toolspec.json`; `$(cat …)` works under both readings, so it is kept.
 - Whether a Gemini Enterprise app IAM policy can carry two unconditional bindings for one role. The IAM policy shape and "the setIamPolicy method replaces the existing policy" are documented; that duplicate role bindings are rejected with `INVALID_ARGUMENT` is the general IAM rule and was not re-tested against `discoveryengine` (GG-2.8 asserts one binding per role before and after, so a service that tolerated duplicates would still be caught).
 - The URL and protocol binding under which an Agent Runtime engine is registered in Agent Registry cross-project (GG-4.2 `Assumption:`).
 - Whether `agents:getIamPolicy` exists on the v1alpha agent path; it is not in the method list (GG-2.9 probes).
@@ -1413,7 +1423,7 @@ Read on 2026-09-15 (page "last updated" date in brackets).
 - https://docs.cloud.google.com/service-mesh/docs/reference/network-services/rest/v1alpha1/projects.locations.agentGateways — `protocols` enum (`MCP`), `GovernedAccessPath`, registries "limited to project-scoped registries".
 - gcloud reference: `network-services agent-gateways` (import, describe, list, delete; GA), `service-extensions authz-extensions` (beta and GA), `network-security authz-policies`, `iam access-policies`, `iam policy-bindings` (GA and beta), `identity groups memberships check-transitive-membership` (GA), `org-policies set-custom-constraint` and `delete-custom-constraint`, `model-armor templates create`.
 - https://docs.cloud.google.com/agent-registry/setup [2026-09-03] — project-level, no registry resource to create; roles. https://docs.cloud.google.com/agent-registry/manual-registration [2026-09-10] — `gcloud agent-registry services create --agent-spec-type`, cross-project rules, `agents list`. https://docs.cloud.google.com/agent-registry/register-endpoints [2026-09-10] — `--endpoint-spec-type=no-spec`, `protocolBinding` values. https://docs.cloud.google.com/agent-registry/register-mcp-servers [2026-09-11] and https://docs.cloud.google.com/agent-registry/manage-mcp-tools [2026-09-03] — MCP registration, `services delete`, `mcp-servers list`. https://docs.cloud.google.com/agent-registry/concepts — resource types.
-- https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry/services/create [re-read 2026-09-16] — `--agent-spec-content` "the content of the Agent spec in the JSON format … limited to `10KB`"; `--mcp-server-spec-content` likewise; `--endpoint-spec-content` "reserved for future use"; `--interfaces` takes shorthand, inline JSON **or** `path_to_file.(yaml|json)`. No flag takes an `@file` prefix (GG-4.2).
+- https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry/services/create [re-read 2026-09-16] — `--agent-spec-content` "the content of the Agent spec in the JSON format … limited to `10KB`"; `--mcp-server-spec-content` likewise; `--endpoint-spec-content` "reserved for future use"; `--interfaces` takes shorthand, inline JSON **or** `path_to_file.(yaml|json)`. The reference documents no `@file` prefix, while the [MCP registration page](https://docs.cloud.google.com/agent-registry/register-mcp-servers) (updated 2026-09-24, read 2026-10-01) writes `--mcp-server-spec-content=@toolspec.json`: the pages disagree, and GG-4.2's `$(cat …)` works under both.
 - https://docs.cloud.google.com/gemini/enterprise/docs/iam-policy-for-apps [2026-09-03] — `getIamPolicy` GET and `setIamPolicy` POST on `ENDPOINT_LOCATION-discoveryengine.googleapis.com`; body shape `{"policy":{"etag":…,"bindings":[{"role":…,"members":[…]}]}}`; "the setIamPolicy method replaces the existing policy" (GG-2.8's merge).
 - https://docs.cloud.google.com/resource-manager/docs/organization-policy/creating-managing-custom-constraints [re-read 2026-09-16] — conditions are CEL over "a representation of a supported service resource" in the request; "Querying a list value that does not exist returns a `BAD_CONDITION` error. This error blocks all creation of the specified resource where the custom organization policy is enforced." The page does not state which fields are populated at CREATE (GG-2.6's split).
 - https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/delete-custom-constraint — deleting a custom constraint removes the definition; policies referencing it become invalid (GG-6.1b).
@@ -1425,9 +1435,9 @@ Read on 2026-09-15 (page "last updated" date in brackets).
 - https://docs.cloud.google.com/gemini/enterprise/docs/import-govern-agent-registry [2026-09-03] — console import path; gateway prerequisite.
 - https://docs.cloud.google.com/gemini/enterprise/docs/share-custom-agents [2026-09-04] — **User permissions** → **Add user**; member types; "Select a role in the Assign role field".
 - https://docs.cloud.google.com/gemini/enterprise/docs/audit-logging [2026-09-03] — `v1alpha.AgentService.CreateAgent/UpdateAgent/DeleteAgent` Admin Activity; `SetIamPolicy` only for engines, collections, data stores.
-- https://docs.cloud.google.com/gemini/enterprise/docs/org-policy-custom-constraints [2026-09-03] — `resourceTypes`, `methodTypes` CREATE and UPDATE, Engine fields list, dry run with `--update-mask=dryRunSpec`, 15 minutes.
+- https://docs.cloud.google.com/gemini/enterprise/docs/org-policy-custom-constraints [2026-09-03] — `resourceTypes`, `methodTypes` CREATE and UPDATE, Engine fields list, dry run (the page's example writes `--update-mask=dryRunSpec`; the gcloud `org-policies set-policy` reference, read 2026-10-01, accepts only `policy.spec`, `policy.dry_run_spec` or `*`, and GG-5.7 uses `policy.dry_run_spec`), 15 minutes.
 - https://docs.cloud.google.com/gemini/enterprise/docs/enable-model-armor [2026-09-14] — assistant PATCH with `update_mask=customerPolicy`, `FAIL_CLOSED` default.
 - https://docs.cloud.google.com/iam/docs/roles-permissions/discoveryengine [2026-09-14] — `agentspaceUser` holds `agents.create`, `agents.update`, not `agents.setIamPolicy` (raw fetch).
 - https://docs.cloud.google.com/logging/docs/alerting/log-based-alerts [2026-09-09] — which entries log-based alerts scan; one `conditionMatchedLog`; `autoClose` minimum.
 - https://docs.cloud.google.com/security-command-center/docs/how-to-api-create-manage-findings — `gcloud scc findings create` with `--location` under data residency.
-- https://docs.cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints — organisation policy constraints reference. Re-read on 2026-09-16: it does **not** carry a constraint for binding an access policy to a resource under either spelling, and a search of the IAM managed-constraints documentation returned nothing for `iam.managed.disableAccessPolicyBinding(s)`. The only source that names it is the Agent Gateway set-up page, in the plural (`constraints/iam.managed.disableAccessPolicyBindings`). The earlier claim in this file that the reference carried the singular spelling was wrong and is withdrawn; GG-0.4 resolves the id against the live organisation and GG-1.1 uses only what it resolved.
+- https://docs.cloud.google.com/resource-manager/docs/organization-policy/org-policy-constraints — organisation policy constraints reference. Read on 2026-10-01 (updated 2026-09-30): it lists "Disable binding access policy to resource" as `constraints/iam.managed.disableAccessPolicyBinding` (singular) and "Disable custom MCP server connector for Gemini Enterprise" as `constraints/discoveryengine.managed.disableCustomMcpServerConnector`. The Agent Gateway set-up page (2026-10-01) still writes the plural; GG-0.4 tries the singular first, resolves the id against the live organisation and GG-1.1 uses only what it resolved.

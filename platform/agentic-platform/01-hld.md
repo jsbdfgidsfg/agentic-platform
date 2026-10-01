@@ -2,7 +2,10 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- 2026-10-01: §0.2 and §17 cite the register as P1–P207 (P205 is the R3 reading; new rows at
+  P208); the standing constraints add "a dry run never mutates"; §4.5 says the deny-policy
+  names were re-verified on 2026-10-01 and that the PAB names Resource Manager resources only.
 - 2026-09-18: §0.6 row R3 now qualified — the human prompt is Wall-E's mandate, not its only
   trigger; band A earns T1–T3 through the ladder, band B stays `chat` only; the owner's
   confirmation is a register row still to be appended at P205. §0.4 row X now counts §11.5's
@@ -25,7 +28,9 @@
   and, decided on 2026-09-13 in §13.2, that path writes reports and pages only: nothing it
   writes is read by the gate or by any action service);
   Mo holds no credential and reaches production only through a pull request a human merges;
-  safety interlocks are plain authenticated REST; no secrets in the wiki.
+  safety interlocks are plain authenticated REST; a dry run never mutates — L1 forces `dry_run` and
+  refuses to execute even with a valid approval
+  ([../wall-e/05](../wall-e/05-autonomy-ladder.md) §2); no secrets in the wiki.
 - Super Admin for Wall-E is the owner's decision of 2026-09-13 (register row P33) and is not
   re-argued here; the platform is designed around it. "What this reverses
   and what it costs" and §13.1 say what it costs in safety and what compensates.
@@ -115,7 +120,7 @@ terms, used precisely throughout") and the rule is lifted from [../wall-e/13-age
 and made a platform rule; every table below that grades a control uses these two words.
 
 The six primitives are numbered **CP1–CP6** so that they are never confused with the platform
-decisions P1–P143 of §17 and [12-open-decisions.md](12-open-decisions.md).
+decisions P1–P207 of §17 and [12-open-decisions.md](12-open-decisions.md).
 
 | # | Primitive | What it promises | Enforced by | Grade | Section |
 |---|---|---|---|---|---|
@@ -194,7 +199,7 @@ explicitly declined:
 |---|---|---|---|
 | R1 | Secure Gemini Enterprise environment; agent identity, registry, Model Armor | §2, §4.1, §5, §6 | — |
 | R2 | Other security elements, with the correct path | §3.3, §4.5, §7, §8, §9, §11.4 | — |
-| R3 | Wall-E executes on a human prompt | §13.1 band A, T0 | qualified: the human prompt is the origin of Wall-E's mandate, not its only trigger — a band A family earns scheduled, event and inbox triggers (T1–T3) through the ladder (§12.1, §12.2), and only band A can; band B is `chat` only (§13.1). The owner confirms this reading — register row *tbd*, to be appended at P205 in [12-open-decisions.md](12-open-decisions.md) |
+| R3 | Wall-E executes on a human prompt | §13.1 band A, T0 | qualified: the human prompt is the origin of Wall-E's mandate, not its only trigger — a band A family earns scheduled, event and inbox triggers (T1–T3) through the ladder (§12.1, §12.2), and only band A can; band B is `chat` only (§13.1). The owner confirms this reading — register row P205 (proposed) in [12-open-decisions.md](12-open-decisions.md) |
 | R4 | Any super-admin-level action | §13.1 bands A/B/C | the literal reading is declined: band C is instructions to a human and the hard-denied list is refused in every lane (P28) |
 | R5 | Dedicated licensed user account with Super Admin | §13.1, P33 | — |
 | R6 | Eve controls and reports any misbehaviour | §13.2 detection catalogue, reconciliation over every stream, P34 | "any" ends where enumeration ends; the reporting path is report-only |
@@ -486,12 +491,12 @@ Lifted from `WALLE_PROJECT` to the folder, one copy for the fleet. `deny-agents-
 service-account sets the factory adds (`MO_PROJECT`'s included) and denies them secret access,
 signing, key creation, token minting, `setIamPolicy`, deploy, build, org-policy and sink writes
 (rules R1–R5; R6 alone names `factory-apply@`), each action service's own account being exempted
-for its own secrets only; every permission name was verified against Google's deny-supported list on 2026-09-13
-(P61) — a name not on the list would make the policy silently narrower — and acceptance of the
+for its own secrets only; every permission name was verified against Google's deny-supported list on 2026-09-13 and
+re-verified on 2026-10-01 (P61) — a name not on the list would make the policy silently narrower — and acceptance of the
 agent principal-set spelling stays `Assumption:` until a throwaway engine proves it (P8).
 `EVE_PROJECT` keeps its own `deny-eve-project-foreign` (topology decision 48); the PAB
-`pab-agents` (and a stricter `pab-agents-p-sa`) limits agents to `fld-agentic-platform` and the
-named core resources, and its enforcement version 4 makes it **enforcement-grade for engine
+`pab-agents` (and a stricter `pab-agents-p-sa`) limits agents to `fld-agentic-platform` (Resource Manager resources only; topics are fenced by
+IAM), and its enforcement version 4 makes it **enforcement-grade for engine
 queries** and the families it blocks but **no fence for Cloud Run invocation** (P60), which rests
 on resource-level `run.invoker` plus the deny policy. The rules and verified names are
 [04 §3](04-identity-and-privileged-access.md#3-the-folder-deny-policy-deny-agents-platform-with-verified-permission-names)
@@ -1241,7 +1246,8 @@ witnessed key custody, `cloud-platform` forbidden and CI-checked, the organisati
 
 Platform decisions continue Wall-E's register (which ends at 52) as **P1..**; each names its
 options, owner and the gate it blocks. The HLD's own P1–P34 and the detailed pages' P35–P143 are
-consolidated, grouped by gate and cross-referenced in
+consolidated (P144–P191 proposed by the setup procedures, P192–P204 by the proof of value, P205–P207
+on 2026-10-01, P205 being the R3 reading of §0.6; new rows append at P208), grouped by gate and cross-referenced in
 [12-open-decisions.md §0](12-open-decisions.md#0-the-register-in-one-screen), the register of
 record, with the rows per gate in [§2](12-open-decisions.md#2-before-the-folder-exists) (before the
 folder exists), [§3](12-open-decisions.md#3-before-any-tier-w-agent-writes) (before any Tier W

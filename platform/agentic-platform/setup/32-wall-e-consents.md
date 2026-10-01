@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-16
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Stage: review §2 stage 26 (SETUP Phase 9, both clients, one sitting). It closes the production half of gate line **G13** and produces the two pinned token versions that [33](33-wall-e-action-services-and-approval-surfaces.md) deploys against.
 - Step prefix: `WC`. Steps: 46 (WC-5.5 and WC-6.5 added on 2026-09-16; the old WC-7.1 and WC-7.3 folded into WC-6.3, §7 renumbered). Run order: numeric, with one rule that matters — every `gcloud` command in this file runs between WC-0.3 (the repair grant) and WC-6.5 (its revocation and `sitting_end`); §7 is console and paper. **BLOCKED:** WC-2.2 and WC-2.3 (the consent command's self-tests), WC-4.3 and WC-5.2 (the two consent runs) — all on `B-17`, the consent bootstrap with `--scopes-file` and a granted-scope comparison, which must be committed in `WALLE_REPO_REMOTE` before the sitting opens; WC-7.4 (the service-side scope endpoint) on `B-16`, and it is carried as a re-run line into [33](33-wall-e-action-services-and-approval-surfaces.md). **IRREVERSIBLE:** WC-3.3 and WC-3.5 (a client secret is shown and downloadable once, at creation, and never again), WC-4.3 and WC-5.2 (the consented scope set is frozen for the life of the client), WC-8.3 (a destroyed secret version cannot be recovered).
@@ -90,7 +91,7 @@ flowchart TD
 | Role | Does | Present at |
 |---|---|---|
 | Platform owner (`SA_1_ADMIN`, holder of key A) | Operates every step: the console work, the two consent runs, the robot sign-in | all |
-| Second human (`SA_2_ADMIN`, IT security, holder of key B) | Witnesses the whole sitting; countersigns each attestation; reads the tenant-side scope proof of WC-7.2 on her own workstation; co-signs `CONSENT_SITTING_RECORD` | all, and §7 |
+| Second human (`SA_2_ADMIN`, IT security, holder of key B) | Witnesses the whole sitting; countersigns each attestation; reads the tenant-side scope proof of WC-7.2 on their own workstation; co-signs `CONSENT_SITTING_RECORD` | all, and §7 |
 
 Nobody else is in the room, on the call, or on the screen share — there is no screen share. Two people, one sitting, about 2 hours of hands-on (Phase 9 measured 75 minutes; the added verification and the deviation rows take the rest), plus a 30-minute follow-up the next morning for WC-7.2, which cannot be done sooner because OAuth token log events lag by a couple of hours.
 
@@ -146,7 +147,7 @@ test -z "$(gcloud config get project 2>/dev/null)" && echo "no default project"
 
 ### WC-0.2 Refuse without the signed decisions and the latest D2
 
-- **WHO:** Platform owner; second human reads the records over his shoulder.
+- **WHO:** Platform owner; second human reads the records over their shoulder.
 - **WHERE:** Shell; `PLATFORM_REPO_DIR/decisions/`.
 - **ACTION:** D2 is allowed to be signed twice — a first answer before [30](30-wall-e-workspace-side.md), a superseding final list before this file. Only the latest counts.
 
@@ -174,7 +175,7 @@ gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_WALLE" --requested-d
 gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_WALLE" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name,requester)"
 ```
 
-  The second human approves in her own console at **Security → Privileged Access Manager → Approve grants** (or with `gcloud pam grants approve`), never at the operator's screen. The `list` line is re-run until it prints one `ACTIVE` grant with the platform owner as requester; nothing below runs before it does.
+  The second human approves in their own console at **Security → Privileged Access Manager → Approve grants** (or with `gcloud pam grants approve`), never at the operator's screen. The `list` line is re-run until it prints one `ACTIVE` grant with the platform owner as requester; nothing below runs before it does.
 
   **Second half — the five secrets.**
 
@@ -200,7 +201,7 @@ for S in $(printf '%s' "$WALLE_SECRET_NAMES" | tr ',' ' '); do
 done
 ```
 
-- **VERIFY:** One `ACTIVE` grant, requester the platform owner, approver the second human (her console shows the approval; the `ApproveGrant` audit entry lands in the aggregated sink). Then: five names print, none `MISSING`. Every `versions` line is empty on a first run (a non-empty line means a previous attempt: go to WC-4.1's `--rotate` path and record why). The `readers` lines are exactly: `walle-oauth-client`, `walle-refresh-token`, `walle-confirm-hmac` → `serviceAccount:$SA_ACTIONS`; `walle-super-oauth-client`, `walle-super-refresh-token` → `serviceAccount:$SA_ACTIONS_SUPER`. No line names both; no line names a human, a group or `allUsers`. Anything else is a re-run line against [31](31-wall-e-project-and-data-plane.md), the grant is revoked with the WC-6.5 command, and the sitting is rebooked.
+- **VERIFY:** One `ACTIVE` grant, requester the platform owner, approver the second human (their console shows the approval; the `ApproveGrant` audit entry lands in the aggregated sink). Then: five names print, none `MISSING`. Every `versions` line is empty on a first run (a non-empty line means a previous attempt: go to WC-4.1's `--rotate` path and record why). The `readers` lines are exactly: `walle-oauth-client`, `walle-refresh-token`, `walle-confirm-hmac` → `serviceAccount:$SA_ACTIONS`; `walle-super-oauth-client`, `walle-super-refresh-token` → `serviceAccount:$SA_ACTIONS_SUPER`. No line names both; no line names a human, a group or `allUsers`. Anything else is a re-run line against [31](31-wall-e-project-and-data-plane.md), the grant is revoked with the WC-6.5 command, and the sitting is rebooked.
 - **ROLLBACK:** The reads are read only. The grant: `gcloud pam grants revoke <GRANT_NAME> --reason="32 sitting stopped" --location=global --project="$WALLE_PROJECT" --billing-project="$CICD_PROJECT"` — always, whatever stopped the sitting.
 - **EVIDENCE:** `${R}-0.3-secrets-preflight-v1.txt` (the grant name and the three listings). E-05, E-08. TISAX 5.1, 4.1, 4.1.3.
 
@@ -270,13 +271,13 @@ grep -c 'userinfo.email' "$WALLE_REPO_DIR/config/"scopes-*.txt
 comm -12 <(sort "$WALLE_REPO_DIR/config/scopes-narrow.txt") <(sort "$WALLE_REPO_DIR/config/scopes-super.txt")
 ```
 
-- **VERIFY:** Both files are non-empty, one scope per line, no trailing spaces. `no cloud-platform` prints. Each file contains `openid` and `userinfo.email` exactly once — without them the account check of WC-2.1 rule 10 cannot run, which is the check that stops the operator storing his own credential. The `comm` output is read aloud: shared scopes are expected (`admin.directory.user`, `apps.licensing`, `admin.reports.audit.readonly`, `openid`, `userinfo.email`), and `admin.directory.user.security` must appear in **super only**. Any scope in the narrow file that the second human cannot name a catalogue operation for is removed before consent, not after.
+- **VERIFY:** Both files are non-empty, one scope per line, no trailing spaces. `no cloud-platform` prints. Each file contains `openid` and `userinfo.email` exactly once — without them the account check of WC-2.1 rule 10 cannot run, which is the check that stops the operator storing their own credential. The `comm` output is read aloud: shared scopes are expected (`admin.directory.user`, `apps.licensing`, `admin.reports.audit.readonly`, `openid`, `userinfo.email`), and `admin.directory.user.security` must appear in **super only**. Any scope in the narrow file that the second human cannot name a catalogue operation for is removed before consent, not after.
 - **ROLLBACK:** `git checkout -- config/` while unmerged.
 - **EVIDENCE:** `${R}-1.1-scope-lists-v1.txt` (the two files and the `comm` output). E-05. TISAX 5.2.
 
 ### WC-1.2 Hash both files and check the hashes against the signature
 
-- **WHO:** Platform owner; second human recomputes both hashes on her own workstation.
+- **WHO:** Platform owner; second human recomputes both hashes on their own workstation.
 - **WHERE:** Shell.
 - **ACTION:**
 
@@ -321,7 +322,7 @@ grep -F "$SCOPES_SUPER_SHA" "$(ls -1 "$PLATFORM_REPO_DIR"/decisions/*-wall-e-sco
 | 7 | Read the client id and secret from Secret Manager, never from a file on disk | The client secret has one home |
 | 8 | Request `access_type=offline` and `prompt=consent` | Otherwise a repeat authorisation returns no refresh token |
 | 9 | Print the authorisation URL and wait. **Never** call `webbrowser.open`. Capture the code on a loopback listener on `127.0.0.1`; only if the operator passes `--paste` read the redirect URL with `getpass`, unechoed | A launched browser opens the operator's own signed-in profile and consents as a super admin — the single most likely mistake in the whole build. Out-of-band redirect is no longer supported, so the loopback listener is the flow (S166) |
-| 10 | After the exchange call `userinfo` and compare the returned email with `--expect-account`; on mismatch refuse to store, print the mismatch without the token, exit non-zero | The check that stops the operator storing his own credential |
+| 10 | After the exchange call `userinfo` and compare the returned email with `--expect-account`; on mismatch refuse to store, print the mismatch without the token, exit non-zero | The check that stops the operator storing their own credential |
 | 11 | Compare the **granted** scope set — the `scope` field of the token response, exposed as `granted_scopes` — with the file, in both directions; refuse to store when it is absent, narrower or wider. Never compare the requested list with itself | The requested list always equals itself; that check is vacuous and passes a narrowed grant straight into the pinned secret (S098) |
 | 12 | Write the refresh token straight into the regional secret with one API call; never to a file, never to an environment variable, never to the terminal | No secret value is printed, pasted or stored ([01](01-prerequisites-and-conventions.md)) |
 | 13 | Print the version number and nothing else that is sensitive | `REFRESH_TOKEN_VERSION` is `1` only on a clean first bootstrap |
@@ -373,7 +374,7 @@ grep -F "$SCOPES_SUPER_SHA" "$(ls -1 "$PLATFORM_REPO_DIR"/decisions/*-wall-e-sco
 
 - **WHO:** Platform owner, in the shell and then in the `SA_1_ADMIN` browser profile; second human witnesses the binding and the screen.
 - **WHERE:** Shell; then Console → Google Auth Platform → **Branding**, then **Audience** (`console.cloud.google.com/auth/audience`), project `WALLE_PROJECT`.
-- **ACTION:** The Google Auth Platform pages need the `clientauthconfig.*` permissions (`brands.create/get/list`, `clients.create/getWithSecret/listWithSecrets/update/delete`), which Google's page lists as carried by Owner, Editor and the OAuth Config Editor role — and by **none** of the eleven roles in `ent-project-repair-walle`'s bundle (17 §FM-2.17's table). The grant of WC-0.3 carries `roles/resourcemanager.projectIamAdmin`, so the operator binds `roles/oauthconfig.editor` to himself for the sitting only, with an IAM condition that expires it three hours from now even if WC-6.5 is never reached; the second human reads the expression before it is run. A conditioned binding on a predefined role is the documented form; a basic role could not carry one. `date -u -v+3H` is the macOS form of "now plus three hours". This is a self-grant inside an approved grant, witnessed, and it is recorded as deviation `BD-32-4` whose closure is a `ent-consent-walle` entitlement in [12](12-privileged-access-catalogue.md)'s catalogue (OAuth Config Editor plus the two secret permissions of WC-2.1 rule 16, 2 h, approver the second human), so that a later sitting takes one narrow grant instead of a broad one and a self-bind.
+- **ACTION:** The Google Auth Platform pages need the `clientauthconfig.*` permissions (`brands.create/get/list`, `clients.create/getWithSecret/listWithSecrets/update/delete`), which Google's page lists as carried by Owner, Editor and the OAuth Config Editor role — and by **none** of the eleven roles in `ent-project-repair-walle`'s bundle (17 §FM-2.17's table). The grant of WC-0.3 carries `roles/resourcemanager.projectIamAdmin`, so the operator binds `roles/oauthconfig.editor` to themselves for the sitting only, with an IAM condition that expires it three hours from now even if WC-6.5 is never reached; the second human reads the expression before it is run. A conditioned binding on a predefined role is the documented form; a basic role could not carry one. `date -u -v+3H` is the macOS form of "now plus three hours". This is a self-grant inside an approved grant, witnessed, and it is recorded as deviation `BD-32-4` whose closure is a `ent-consent-walle` entitlement in [12](12-privileged-access-catalogue.md)'s catalogue (OAuth Config Editor plus the two secret permissions of WC-2.1 rule 16, 2 h, approver the second human), so that a later sitting takes one narrow grant instead of a broad one and a self-bind.
 
 ```bash
 need WALLE_PROJECT SA_1_ADMIN
@@ -393,7 +394,7 @@ gcloud projects get-iam-policy "$WALLE_PROJECT" --flatten="bindings[].members" -
 
 ### WC-3.2 Read the download rule aloud before creating anything
 
-- **WHO:** Second human reads; platform owner confirms his hands are off the mouse.
+- **WHO:** Second human reads; platform owner confirms their hands are off the mouse.
 - **WHERE:** The room.
 - **ACTION:** "The creation dialog is the only place the client secret is ever shown. Download the JSON **in the dialog**, before closing it. If it closes without a download, the client is abandoned, not repaired, and we create another." Then: the download goes to `~/Downloads`, is moved into Secret Manager in the next step, and is never opened, `cat`-ed or copied anywhere else.
 - **VERIFY:** Spoken and recorded in the sitting record.
@@ -478,7 +479,7 @@ printf '%s\tWC-3.7\t%s\t%s\tPENDING\tadd walle@ client ids to Eve SA-05 committe
   "$(date -u +%F)" "$NARROW_CLIENT_ID" "$SUPER_CLIENT_ID" >> "$BUILD_LOG_DIR/rerun-index.tsv"
 ```
 
-- **VERIFY:** The file holds two distinct ids, both ending in `.apps.googleusercontent.com`. The second human reads each committed id against the Clients page (`console.cloud.google.com/auth/clients`, project `WALLE_PROJECT`): the `narrow` line equals the id of `walle-narrow-<date>` and the `super` line the id of `walle-super-<date>`, and she records that WC-3.4's and WC-3.5's store lines named those same ids — which is what proves the JSON stored in `walle-oauth-client` belongs to the narrow client and not the broad one. The pull request is merged; the `rerun-index.tsv` line exists so [25](25-eve-human-super-admin-detections.md)'s `SA-05` list gains both ids when Eve's configuration is next changed, and [38](38-super-admin-gate-and-grant.md) checks it before the grant.
+- **VERIFY:** The file holds two distinct ids, both ending in `.apps.googleusercontent.com`. The second human reads each committed id against the Clients page (`console.cloud.google.com/auth/clients`, project `WALLE_PROJECT`): the `narrow` line equals the id of `walle-narrow-<date>` and the `super` line the id of `walle-super-<date>`, and they record that WC-3.4's and WC-3.5's store lines named those same ids — which is what proves the JSON stored in `walle-oauth-client` belongs to the narrow client and not the broad one. The pull request is merged; the `rerun-index.tsv` line exists so [25](25-eve-human-super-admin-detections.md)'s `SA-05` list gains both ids when Eve's configuration is next changed, and [38](38-super-admin-gate-and-grant.md) checks it before the grant.
 - **ROLLBACK:** Revert the commit; the re-run line stays, with status `WITHDRAWN`.
 - **EVIDENCE:** `${R}-3.7-client-ids-v1.txt`. E-05. TISAX 4.1.
 
@@ -510,7 +511,7 @@ gcloud secrets versions list "$REFRESH_TOKEN_SECRET_NAME" --location="$REGION" -
 
 ### WC-4.3 Run the narrow consent — **BLOCKED on B-17; IRREVERSIBLE (the scope set freezes)**
 
-- **WHO:** Platform owner types; second human reads the printed scope list against `config/scopes-narrow.txt` before he confirms.
+- **WHO:** Platform owner types; second human reads the printed scope list against `config/scopes-narrow.txt` before they confirm.
 - **WHERE:** Shell inside `walle_shell` (SD-37: `PROJECT` exists only there); the URL goes into the clean profile by hand.
 - **ACTION:**
 
@@ -682,7 +683,7 @@ done
 gcloud identity groups memberships list --group-email="$WALLE_OPERATORS_GROUP" --format='value(preferredMemberKey.id)' | grep -qx "$ROBOT" && { echo "STOP: the robot is a member of the operators group"; false; } || echo "robot not in operators group (expected)"
 ```
 
-- **VERIFY:** Each of the **five** secrets — `walle-oauth-client`, `walle-refresh-token`, `walle-confirm-hmac`, `walle-super-oauth-client`, `walle-super-refresh-token` — shows exactly one `ENABLED` version and no other state; the token versions equal `REFRESH_TOKEN_VERSION` and `SUPER_REFRESH_TOKEN_VERSION`, the HMAC version equals `CONFIRM_HMAC_VERSION`. The first `readers` line prints `serviceAccount:$SA_ACTIONS` and nothing else; the second `serviceAccount:$SA_ACTIONS_SUPER` and nothing else — no user, no group, no `SA_1_ADMIN`: no standing binding will outlive WC-6.5. `robot not in operators group (expected)` prints; a `STOP` line ends the sitting with a finding against [30](30-wall-e-workspace-side.md). **What this step does not claim:** while the grant is live the operator's `roles/secretmanager.admin` carries `secretmanager.versions.access`; that he cannot read the tokens is proved in WC-6.5, after revocation, and the window in between is deviation `BD-32-4`.
+- **VERIFY:** Each of the **five** secrets — `walle-oauth-client`, `walle-refresh-token`, `walle-confirm-hmac`, `walle-super-oauth-client`, `walle-super-refresh-token` — shows exactly one `ENABLED` version and no other state; the token versions equal `REFRESH_TOKEN_VERSION` and `SUPER_REFRESH_TOKEN_VERSION`, the HMAC version equals `CONFIRM_HMAC_VERSION`. The first `readers` line prints `serviceAccount:$SA_ACTIONS` and nothing else; the second `serviceAccount:$SA_ACTIONS_SUPER` and nothing else — no user, no group, no `SA_1_ADMIN`: no standing binding will outlive WC-6.5. `robot not in operators group (expected)` prints; a `STOP` line ends the sitting with a finding against [30](30-wall-e-workspace-side.md). **What this step does not claim:** while the grant is live the operator's `roles/secretmanager.admin` carries `secretmanager.versions.access`; that they cannot read the tokens is proved in WC-6.5, after revocation, and the window in between is deviation `BD-32-4`.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-6.3-secret-versions-and-readers-v1.txt`. E-05. TISAX 5.1, 4.1.
 
@@ -724,7 +725,7 @@ Nothing in this section runs `gcloud`: the sitting's rights ended in WC-6.5. The
 
 ### WC-7.1 The tenant's own record of the granted scopes (S098) — next morning
 
-- **WHO:** **Second human**, alone, on her own workstation. The platform owner does not run this check on the consent he performed.
+- **WHO:** **Second human**, alone, on their own workstation. The platform owner does not run this check on the consent they performed.
 - **WHERE:** Admin console as `SA_2_ADMIN` → Menu → Reporting → Audit and investigation → **OAuth log events**.
 - **ACTION:** OAuth token log events lag a couple of hours, so this runs the morning after the sitting. Filter on event `Authorize` and on each client id in turn, over the sitting's window. Export the two rows. Read the `scope` (and `scope_data`) parameter of each and compare, scope by scope, with the merged `config/scopes-narrow.txt` and `config/scopes-super.txt` at the hashes of WC-1.2.
 - **VERIFY:** Exactly two `Authorize` events in the window, one per client id, both with actor `ROBOT`. The narrow event's scope set equals the narrow file; the broad event's equals the broad file; neither contains `cloud-platform`. A missing scope on either side — which the Trusted setting is meant to prevent but does not guarantee — is a **finding**, and the answer is §8 for that client, not a widening. Any `Authorize` event for a client id that is not one of the two, or with an actor other than `ROBOT`, is an incident raised to the incident commander the same hour.
@@ -742,7 +743,7 @@ Nothing in this section runs `gcloud`: the sitting's rights ended in WC-6.5. The
 
 ### WC-7.3 No domain-wide delegation for either client
 
-- **WHO:** Platform owner as super admin; **second human independently repeats the check** on her own screen.
+- **WHO:** Platform owner as super admin; **second human independently repeats the check** on their own screen.
 - **WHERE:** Admin console → Menu → Apps & integrations → **Domain-wide delegation** (the API controls page links the same list).
 - **ACTION:** Read the API clients list. Search it for `NARROW_CLIENT_ID` and for `SUPER_CLIENT_ID`. Neither may appear. Then read the whole list once: every entry is compared with the inventory [06](06-organisation-bootstrap-and-roster.md) took. This is the sentence the design is built on — the robot's reach is its own consented scopes plus its own Workspace role, and nothing that lets a service impersonate a user.
 - **VERIFY:** Neither client id is present. The list's entries equal [06](06-organisation-bootstrap-and-roster.md)'s inventory; **a new entry since then is reported to the second human and recorded, never used and never deleted by the platform owner alone** ([01](01-prerequisites-and-conventions.md)), and it is raised to the incident commander as a possible `SI-08`. Both people sign the screenshot.
@@ -806,7 +807,7 @@ Used when WC-7.1 shows the wrong scopes, when the consent was granted as the wro
 
 ### WC-8.3 Destroy the secret version — **IRREVERSIBLE**
 
-- **WHO:** Platform owner; second human types the confirmation with him.
+- **WHO:** Platform owner; second human types the confirmation with them.
 - **WHERE:** Shell, inside a fresh `ENT_PROJECT_REPAIR_WALLE` grant (the sitting's grant was revoked in WC-6.5; request another with WC-0.3's command and the case id as justification — `secretmanager.versions.destroy` is in its `secretmanager.admin`).
 - **ACTION:** Two fences, one per client, each behind its own confirmation. A rollback sitting is a stressed one, and the old single fence destroyed both tokens with one paste. Run **only** the fence for the affected client; run both only when both consents are wrong.
 

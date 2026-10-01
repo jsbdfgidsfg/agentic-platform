@@ -2,14 +2,15 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Changed on 2026-10-01: SD-01 carries `BOOTSTRAP_EXCEPTION_EXPIRY` and SD-16 carries `BILLING_ACCOUNT_ID` and `BOOTSTRAP_BILLING_EXPIRY` as Values; DC-9.11 creates and protects the build-log repository and sets `BUILD_LOG_REMOTE`; the `penv_set` open item is closed by 01.
 - Stage: review §2 stage 1. Every later file gates on a row of this page.
 - Step prefix: `DC`.
 - Replaces: [../../wall-e/PREREQUISITES.md](../../wall-e/PREREQUISITES.md) §1 and §2 (the decision and people tables), the "Decisions that must be closed" tables of [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md) and [../../mo/07-build-runbook.md](../../mo/07-build-runbook.md). Salvaged with corrections: D8 reads `eu` only (X-GE-13), D12 starts on day one in [02-toil-baseline.md](02-toil-baseline.md) (S084), D13 reads G1-G21 (S092). Not copied: decision 29 "before Stage 1" (X-ORG-14), decision 6 "at Stage 1" (X-RQB-01), P22 "Tier W" (S051), P52's 30 days as a value to set (X-GE-01).
 - Review findings closed here: S035, S051, S063, S130, S135, S140, S144, X-GE-12, X-GE-13, X-ORG-05, X-ORG-08, X-ORG-09, X-ORG-14, X-RQB-01, X-RQB-04, X-RQB-05 (§15). None deferred.
 - BLOCKED here: DC-9.9 (the bot-approval CI rule, code of file 16).
 - Bootstrap deviations opened here: `BD-03-1` (DC-9.1: commits made before a reviewer was named, and 02's commits reviewed inside the repository rather than as `reviews/<sha>.md`), `BD-03-2` (DC-9.5: the initial push without a pull request). Both in [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md) PR-4.1's format.
-- Open item for another file: `penv_set` in 01 PR-2.2 has no empty-value guard, so every step of this page reads a decision value in two steps (§4.2). Owner: the platform owner, as a change to 01 before 04 runs.
+- Open item for another file, closed on 2026-10-01: `penv_set` in 01 PR-2.2 now refuses an empty or `<placeholder>` value, and PR-2.5 checks both. Every step of this page still reads a decision value in two steps (§4.2), as a second guard.
 - Last executed: never.
 
 ## 1. What this part builds
@@ -61,13 +62,13 @@ One record may carry several decision ids when they share signatories and a gate
 
 **Two idioms every step of this page uses.** Both exist because a command substitution that fails still produces a string.
 
-1. *Reading a value into a variable.* `decision-value.sh` runs under `set -euo pipefail` and exits 1 with a message on standard error when the record is unsigned or the `Values` row is missing; its standard output is then **empty**. `penv_set` (01 PR-2.2) has no empty-value guard: `penv_set NAME "$(...)"` would write `export NAME=""`, print `set NAME`, and then refuse every later correct value, because `""` is neither the new value nor `*tbd*` and the refusal branch demands `--force`. So a value is never read inline. Every step writes the two-step form, which stops on a non-zero exit before `penv_set` is reached:
+1. *Reading a value into a variable.* `decision-value.sh` runs under `set -euo pipefail` and exits 1 with a message on standard error when the record is unsigned or the `Values` row is missing; its standard output is then **empty**. Before 2026-10-01, `penv_set` (01 PR-2.2) had no empty-value guard, so `penv_set NAME "$(...)"` would have written `export NAME=""` and refused every later correct value; it now refuses an empty value, but a value is still never read inline. Every step writes the two-step form, which stops on a non-zero exit before `penv_set` is reached:
 
    ```bash
    v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" <ID> <NAME>) && penv_set <NAME> "$v"
    ```
 
-   An empty-value guard in `penv_set` itself would be the better place for this (`[ -n "$_pv" ] || return 2` in 01 PR-2.2's template, which files 04 to 42 would inherit). Until that change is made and reviewed, the guard lives at every call site. Open item, owner: the platform owner, to be raised as a change to 01 PR-2.2 before 04 runs.
+   The empty-value guard now also lives in `penv_set` itself (01 PR-2.2, revised 2026-10-01, which files 04 to 42 inherit); the two-step form stays at every call site because it also stops on `decision-value.sh`'s non-zero exit.
 
 2. *Naming a record file.* A VERIFY that greps a record never writes `<record>` as the file operand: in POSIX shell an unquoted `<word>` after a command is an input redirection from a file called `word`, so `grep -c 'x' <record>` reads a file named `record` and prints `0` or `no such file or directory` — a false result that looks like a content failure. The record path is derived from the tracker into a quoted variable first:
 
@@ -454,8 +455,8 @@ v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" D7-LETTER DPO_CONTACT) && penv_
 
 - WHO: platform owner drafts; ITSEC and ISMS sign.
 - WHERE: record per DC-1.4 (`<date>-setup-conventions-and-bootstrap-deviation.md`).
-- ACTION: ids SD-01, SD-13, SD-17, SD-22, SD-35, SD-37, SD-38, SD-40, SD-41, SD-44, SD-45; body quotes each resolution of the plan's §6 verbatim, with the dated organisation exception's expiry left to 06 (`BOOTSTRAP_EXCEPTION_EXPIRY`).
-- VERIFY: `tools/decision-need.sh SD-01 SD-13 SD-17 SD-22 SD-35 SD-37 SD-38 SD-40 SD-41 SD-44 SD-45`.
+- ACTION: ids SD-01, SD-13, SD-17, SD-22, SD-35, SD-37, SD-38, SD-40, SD-41, SD-44, SD-45; body quotes each resolution of the plan's §6 verbatim, with the dated organisation exception's expiry in the record's Values table as `BOOTSTRAP_EXCEPTION_EXPIRY` (`YYYY-MM-DD`; *Assumption:* about eight weeks after 06's first sitting, the time 07 to 12 need), which 06 OB-3.2 reads with `decision-value.sh`.
+- VERIFY: `tools/decision-need.sh SD-01 SD-13 SD-17 SD-22 SD-35 SD-37 SD-38 SD-40 SD-41 SD-44 SD-45`; `tools/decision-value.sh SD-01 BOOTSTRAP_EXCEPTION_EXPIRY` prints a `YYYY-MM-DD` date.
 - ROLLBACK: superseding record.
 - EVIDENCE: record. E-05; TISAX 1.1-1.2, 1.4 (the deviation).
 
@@ -507,7 +508,7 @@ case "$GIT_OIDC_ISSUER" in https://*) echo ok;; *) echo "FAIL: the issuer is not
 
 - WHO: finance and the billing administrator for P31; ITSEC and finance for P11; ITSEC for P10; platform owner drafts.
 - WHERE: shell for the billing read (run by the billing administrator, who holds a role on the account); record per DC-1.4 (`<date>-billing-scc-and-siem.md`).
-- ACTION: the billing administrator reads the candidate account (the id is typed, not stored here; 07 sets `BILLING_ACCOUNT_ID`):
+- ACTION: the billing administrator reads the candidate account (the id goes into the record's Values table, because an id is not a secret; 07 reads it into `BILLING_ACCOUNT_ID`):
 
 ```bash
 gcloud billing accounts describe "<candidate-billing-account-id>" --format="value(open,currencyCode,masterBillingAccount,parent)"
@@ -518,7 +519,7 @@ gcloud billing accounts describe "<candidate-billing-account-id>" --format="valu
   - P11, SD-15: Premium at the organisation with `eu` data residency, activated in 09 before any location policy. The payer is named: `payg-org` charges every project's billing account in the organisation (finance signs and notifies cost-centre owners) or `subscription` (a 12-month sales contract through Google). Closes X-RQB-04.
   - P10: `secops` (Google SecOps in the EU) or `existing` (the organisation's SIEM), and the MDR partner; purchases in 04.
 
-  Values: `SCC_BILLING_MODEL`, `SIEM_KIND`.
+  Values: `SCC_BILLING_MODEL`, `SIEM_KIND`; under SD-16, `BILLING_ACCOUNT_ID` (the account read above) and `BOOTSTRAP_BILLING_EXPIRY` (`YYYY-MM-DD`, the end of `sa-1-admin@`'s two billing roles), both read by 07 with `decision-value.sh`.
 
 ```bash
 v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P11 SCC_BILLING_MODEL) && penv_set SCC_BILLING_MODEL "$v"
@@ -1296,6 +1297,56 @@ expr "$(wc -l < "$BUILD_LOG_DIR/03-prepush-commits.txt" | tr -d ' ')" - "$(wc -l
 - ROLLBACK: before merge, close the pull request; after merge, a reverting pull request under the same protection.
 - EVIDENCE: the merged pull request URL with its two approvals. E-05; TISAX 5.2.
 
+#### DC-9.11 Create the build-log repository, protect it and set its remote
+
+- WHO: platform owner as organisation owner on the git host; the second human witnesses the protection on screen.
+- WHERE: shell; `gh` signed in (`gh auth status`); `~/.platform-env` sourced.
+- PRECONDITION: DC-9.6 is `DONE`. This step closes the residual risk of [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md) §7.1 (the build log has no remote).
+- ACTION: one private repository on the same git host, wiki disabled, write granted to the same named humans as DC-9.3 through the same team, and nothing else. *Assumption:* its name is the platform repository's name with `-build-log` appended, unless the NAMES record carries a `BUILD_LOG_REPO_NAME` row, which then wins. The build log is written by direct commits, so no pull-request rule is set; the protection forbids force-push and deletion, administrators included.
+
+```bash
+source ~/.platform-env
+need GIT_ORG PLATFORM_REPO_SLUG BUILD_LOG_DIR SECOND_HUMAN_EMAIL
+gh auth status
+blname=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES BUILD_LOG_REPO_NAME 2>/dev/null) || blname="${PLATFORM_REPO_SLUG#*/}-build-log"
+blrepo="$GIT_ORG/$blname"
+echo "build-log repository $blrepo"
+checkpoint DC-9.11 START "$SECOND_HUMAN_EMAIL" - "build-log repository $blrepo"
+gh repo create "$blrepo" --private --description "Agentic platform build log: checkpoints, registers, records" --disable-wiki
+remote="https://github.com/$blrepo.git"
+git -C "$BUILD_LOG_DIR" branch -M main
+git -C "$BUILD_LOG_DIR" remote get-url origin >/dev/null 2>&1 || git -C "$BUILD_LOG_DIR" remote add origin "$remote"
+git -C "$BUILD_LOG_DIR" push -u origin main
+penv_set BUILD_LOG_REMOTE "$remote"
+p=$(mktemp)
+cat > "$p" <<'JSON'
+{
+  "required_status_checks": null,
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false
+}
+JSON
+gh api -X PUT "repos/$blrepo/branches/main/protection" --input "$p"
+rm "$p"
+```
+
+  Then grant write to the DC-9.3 team on `$blrepo` in the git host's organisation settings, and repeat DC-9.3's collaborator listing against `$blrepo`. From this step on, every sitting ends with `git -C "$BUILD_LOG_DIR" push origin main` before `sitting_end`, and the interim bundle control of 01 §7.1 stops; the bundles already uploaded stay in `EVIDENCE_INTERIM_LOCATION`. The deviation row 02 opened for the missing remote is closed by a line in the register's Closures table naming this step.
+- VERIFY:
+
+```bash
+gh repo view "$blrepo" --json visibility,hasWikiEnabled --jq '[.visibility, .hasWikiEnabled] | @tsv'
+gh api "repos/$blrepo/branches/main/protection" --jq '{admins: .enforce_admins.enabled, force: .allow_force_pushes.enabled, deletions: .allow_deletions.enabled}'
+[ "$(git -C "$BUILD_LOG_DIR" rev-parse HEAD)" = "$(gh api "repos/$blrepo/branches/main" --jq .commit.sha)" ] && echo "pushed"
+need BUILD_LOG_REMOTE
+```
+
+  Expect `PRIVATE` and `false`; `admins` true, `force` false, `deletions` false; `pushed`; `need` silent. A test `git -C "$BUILD_LOG_DIR" push --force origin main` is refused. Then `checkpoint DC-9.11 DONE "$SECOND_HUMAN_EMAIL" - "build-log remote set and protected"`.
+- ROLLBACK: before the first push, `gh repo delete "$blrepo"` (asks for confirmation; permanent). After the push, none: the protected history is evidence.
+- EVIDENCE: the verify output and the repository URL in the build log; the second human's witness line; the Closures line. E-xx: E-05; TISAX 5.2.1, 1.5.1.
+
 ### 12.1 GitLab equivalents, if P22 chooses GitLab
 
 | Requirement | GitLab setting (API attribute), per GitLab's API pages read 2026-09-15 |
@@ -1315,6 +1366,7 @@ expr "$(wc -l < "$BUILD_LOG_DIR/03-prepush-commits.txt" | tr -d ' ')" - "$(wc -l
 - [ ] `tools/decision-need.sh` over the ids gating 04 to 09 prints `SIGNED` for each: `D7-LETTER PPL-SH E-2 PPL-IC SH-REPORTS PPL-WA1 PPL-WA2 PPL-BA SD-01 SD-04 SD-12 SD-13 SD-14 SD-15 SD-16 SD-17 SD-21 SD-27 SD-28 SD-29 SD-30 SD-38 SD-45 D8 P1 P10 P11 P14 P22 P31 WDEC-29 G3-ROSTER NAMES`.
 - [ ] The D7 letter left on or before 2026-09-21.
 - [ ] `need MODEL_ID` is expected to fail until DC-8.3; every other variable in §14's list is set or deliberately `*tbd*` with its tracker row open.
+- [ ] `BUILD_LOG_REMOTE` is set and its `main` refuses force-push and deletion (DC-9.11).
 - [ ] `PLATFORM_REPO_REMOTE`, `GIT_ORG` and `PLATFORM_REPO_SLUG` are set; DC-9.4's `codeowners/errors` length is `0`; DC-9.6's verify JSON matches; DC-9.7's refusals are recorded.
 - [ ] The deviation register holds `BD-03-1` and `BD-03-2`, both in the first table (their line numbers are smaller than the `## Closures` heading's) and both in PR-4.1's thirteen-column form: `awk -F'|' '/^\| BD-03-/ {print $2, NF}' "$DEVIATION_REGISTER"` prints `15` fields for each (13 columns between 14 pipes).
 - [ ] `DC-9.9` has a `BLOCKED` checkpoint line and a row in README's BLOCKED index; no other step of this file is BLOCKED.
@@ -1337,6 +1389,7 @@ expr "$(wc -l < "$BUILD_LOG_DIR/03-prepush-commits.txt" | tr -d ' ')" - "$(wc -l
 | `MO_OWNER_EMAIL` | 22, 29, 40 | empty |
 | `DPO_CONTACT` | 19, 25 | empty |
 | `GIT_ORG`, `PLATFORM_REPO_SLUG` | DC-9.3 to DC-9.10; 15 part B (the bypass query moves to the SIEM); 16 (CI rules on the same repository) | empty, or not of the form `<org>/<name>`; IT security's weekly DC-9.8 reads them from the variables file, never from a sitting's shell |
+| `BUILD_LOG_REMOTE` (DC-9.11) | every later file's end-of-sitting push; 42 | empty, or a push to it is not refused for force-push |
 | `GIT_HOST`, `GIT_OIDC_ISSUER`, `PLATFORM_REPO_REMOTE` | 06, 10, 13, 15, 16 | empty; 06 and 16 also check that `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `ONCALL_FILE` and the ladder sit under `/roster/`, `/control-groups/`, `/oncall/`, `/ladder/` so CODEOWNERS covers them |
 | `SIEM_KIND`, `SCC_BILLING_MODEL` | 04, 09, 15 | not one of the listed values |
 | `EVIDENCE_RETENTION_DAYS`, `IDENTITY_RETENTION_DAYS` | 08, 14, 23 | not an integer at a lock |

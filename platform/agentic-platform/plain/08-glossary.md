@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: the Model Armor entry says where a floor applies.
 - What this page is: every technical term, acronym, Google product, tier, kill switch, role and decision-id family used in this set, in alphabetical order, each in one or two everyday sentences, with a link to the page of the full documentation that defines it precisely. Nothing described here is built.
 
 ## In one sentence
@@ -167,7 +168,7 @@ If a word in pages 01 to 07 or the README stopped you, it is here, said plainly,
 
 **MDR.** Managed detection and response: an outside company contracted to watch the super-admin detections and respond round the clock. Bought for Tier P with the SIEM; months to procure (`Assumption:`); which partner is open (P10) ([what the sponsor is asked for](../brief/02-executive-summary.md#what-the-sponsor-is-asked-for-in-order); [the purchase table](../setup/04-purchases-and-lead-times.md#1-the-purchase-table-longest-lead-time-first)).
 
-**Model Armor.** Google's screen for the text going into and coming out of a model. It works by probability, so it produces evidence and is never a trust boundary. A floor is a minimum setting applied tenant-wide. The sentence "Model Armor blocked the injection" is never used; see the entry on the never-to-be-used sentences ([Google products](../brief/31-glossary.md#google-products-and-features); [Model Armor](../06-gateways-model-armor-perimeter.md#3-model-armor)).
+**Model Armor.** Google's screen for the text going into and coming out of a model. It works by probability, so it produces evidence and is never a trust boundary. A floor is a minimum setting: at organisation and folder level it stops anyone saving a weaker template; on each agent's project it screens that agent's model calls. The sentence "Model Armor blocked the injection" is never used; see the entry on the never-to-be-used sentences ([Google products](../brief/31-glossary.md#google-products-and-features); [Model Armor](../06-gateways-model-armor-perimeter.md#3-model-armor)).
 
 **Multi-party approval.** A Workspace setting under which covered administrative changes need a second administrator's approval. Switched on before the grant (P66), it is the only Google-enforced two-person rule over the robot's credential; the robot is never an approver and switching it off is hard-denied ([the two-person rule Google enforces](../04-identity-and-privileged-access.md#84-workspace-multi-party-approval-the-two-person-rule-google-enforces)).
 

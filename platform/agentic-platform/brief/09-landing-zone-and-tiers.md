@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-14
+- Last reviewed: 2026-10-01
+- 2026-10-01: "Vertex AI" replaced by the Agent Platform API (`aiplatform.googleapis.com`), Google's name since 2026-04-22, in the controllers bullet and the allow-list paragraph.
 
 ## What you will understand by the end
 
@@ -86,7 +87,7 @@ What each folder is for ([§2.2](../02-landing-zone-and-tiers.md#22-every-folder
 - **Tier folders R, W, P** hold one project per agent; service lists widen by tier. R lacks Secret Manager and signing keys, so it has no write path to enable; W adds credential and control-plane services; P adds Access Approval, HSM-only key rings and a second approver on deploy grants.
 - **P-SA** sits under P, inheriting all of it and tightening it.
 - **X** cannot hold anything until a dated decision records each opening condition (Chapter 14).
-- **Controllers** allow Vertex AI at the folder but deny it on `EVE_PROJECT` at project level, because a folder denial would strip the reporting path of its model; Eve's "deterministic by absence" rests on that drift-checked project constraint.
+- **Controllers** allow the Agent Platform API (`aiplatform.googleapis.com`) at the folder but deny it on `EVE_PROJECT` at project level, because a folder denial would strip the reporting path of its model; Eve's "deterministic by absence" rests on that drift-checked project constraint.
 - **Improvers** hold Mo, with no Secret Manager, no keys and no invoker on any credential holder.
 
 The controller and improver nonprod folders exist because Eve must be drilled against the sandbox tenant before the super-admin grant, not against production with a robot already holding Super Admin (P40).
@@ -155,7 +156,7 @@ Two open edges: the access-policy-binding constraint is spelled singular in Goog
 
 ### Service allow-lists
 
-`gcp.restrictServiceUsage` runs in allow-list mode on every folder ([§4.2](../02-landing-zone-and-tiers.md#42-gcprestrictserviceusage-per-folder--the-allow-lists); P44, proposed). It carries several claims: Tier R cannot enable Secret Manager; X is empty; no tier folder allows the Agent Registry API; the Gemini folder never allows Vertex AI. It is also the fleet kill switch's first lever: allow and deny modes exclude each other, so the lever replaces a tier folder's policy with a pre-written one lacking Vertex AI and Cloud Run (Chapter 8). The exact lists are an `Assumption:` until the first nonprod factory run, where a missing service fails closed and the fix is a pull request, never a console edit.
+`gcp.restrictServiceUsage` runs in allow-list mode on every folder ([§4.2](../02-landing-zone-and-tiers.md#42-gcprestrictserviceusage-per-folder--the-allow-lists); P44, proposed). It carries several claims: Tier R cannot enable Secret Manager; X is empty; no tier folder allows the Agent Registry API; the Gemini folder never allows `aiplatform.googleapis.com`. It is also the fleet kill switch's first lever: allow and deny modes exclude each other, so the lever replaces a tier folder's policy with a pre-written one lacking `aiplatform.googleapis.com` and Cloud Run (Chapter 8). The exact lists are an `Assumption:` until the first nonprod factory run, where a missing service fails closed and the fix is a pull request, never a console edit.
 
 ### Custom constraints and their spikes
 

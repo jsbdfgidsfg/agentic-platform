@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-09-05
+- Last reviewed: 2026-10-01
+- 2026-10-01: Flow B's example prompt uses "they" for the employee.
 
 ## Flow A — low-risk write: "send a mail to the DWP team about Friday's maintenance"
 
@@ -39,7 +40,7 @@ is no way to send as another user. If mail must appear to come from a team addre
 that address as a **send-as alias** on the robot account (Gmail settings, verified once
 during bootstrap) — this is supported and does not require delegation.
 
-## Flow B — high-risk admin write: "suspend jdoe, he left today"
+## Flow B — high-risk admin write: "suspend jdoe, they left today"
 
 ```mermaid
 sequenceDiagram

@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-18
+- Last reviewed: 2026-10-01
+- Changed 2026-10-01: the no-price sentence names the one vendor minimum on record.
 - What this page is: the platform in plain words — its one front door, the five things it is made of, the six tiers of trust, why the hundredth agent is cheap, and the tier that stays closed.
 
 ## In one sentence
@@ -152,7 +153,7 @@ The reason is where the controls sit. Every rule Google can enforce is set once 
 
 What does limit the count is people, not projects. An agent that writes climbs its ladder only on the evidence of humans grading a blind sample of its work, about an hour a week per Tier W agent. The number of writing agents is therefore capped by named grading hours, and that cap (P25) is still open, to be measured after the first Tier W agent's first quarter ([01-hld.md §11.1](../01-hld.md#111-tiers-and-mandatory-controls); [12-open-decisions.md, P25](../12-open-decisions.md#3-before-any-tier-w-agent-writes)).
 
-The gate has a price, and it is speed. In the design's words, "a sponsor who funds the build but not the people gets a read-only platform" ([brief/29, the tier gate](../brief/29-roadmap-and-cost.md#the-tier-gate)). What the platform costs in money and what it returns is [07-what-it-costs-and-what-you-get.md](07-what-it-costs-and-what-you-get.md); no price is quoted anywhere in the set.
+The gate has a price, and it is speed. In the design's words, "a sponsor who funds the build but not the people gets a read-only platform" ([brief/29, the tier gate](../brief/29-roadmap-and-cost.md#the-tier-gate)). What the platform costs in money and what it returns is [07-what-it-costs-and-what-you-get.md](07-what-it-costs-and-what-you-get.md); no price is quoted in the design; one vendor minimum is on record ([07](07-what-it-costs-and-what-you-get.md#why-no-price-is-quoted)).
 
 ## The closed tier: agents of general capability
 

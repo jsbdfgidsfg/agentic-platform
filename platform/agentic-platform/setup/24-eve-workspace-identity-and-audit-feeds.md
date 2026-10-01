@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-15
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Stage: review §2 stage 30, the identity part (the superseded Eve runbook's Phases 7, 8 and 9 identity half), pulled before Wall-E by SD-10. This file is **Eve-H part 2**. It opens gate line **G-3** (`eve@` holds no Super Admin role and exactly the E-16 privilege set). It runs after [23](23-eve-project-and-evidence-stores.md) and after [21](21-sandbox-tenant-and-nonprod-foundation.md); [22](22-mo-foundations.md) is not a precondition of any step here.
 - Step prefix: `EW`. Steps: 66. BLOCKED steps: EW-6.1, EW-6.2, EW-6.3, EW-6.5, EW-8.1, EW-9.5 and EW-9.6, all on one piece of code — Eve's consent command (README BLOCKED index row *Eve: the consent command*, `B-10`; if README §8 numbers it differently, the id is corrected here in the same pull request); and EW-2.2, blocked not on code but on [23](23-eve-project-and-evidence-stores.md) EP-3.8 and EP-4.5 (the twin key and the twin dataset, which this file reads back and never creates), which holds the rest of §2 with it. EW-6.4 is blocked on EW-7.1 by ordering only and runs in the same sitting. Steps that record `PENDING` rather than `BLOCKED`: EW-3.9 (`walle-protected@` does not exist until 30), EW-2.8 (the drift inventory, whose job is `B-02`), EW-4.6 (the security reviewer's signature while nobody is appointed).
@@ -126,8 +127,8 @@ The platform owner is a subject of Eve-H and builds Eve's identity. The ways thi
 | Risk | Who could | Control here | Residual, and where it is covered |
 |---|---|---|---|
 | The sink is created with an actor exclusion that hides one person | the builder | The filter is a merged file read from the repository, never typed at the prompt (EW-1.2); EW-1.6 asserts no `principalEmail!=` clause; the second human approves the grant only after reading the merged filter | a later `UpdateSink` is a severity 1 self-integrity rule (25) and moves the configuration fingerprint (26, 27) |
-| The builder holds a key to `eve@` and can act as Eve | the platform owner | Key A goes to the second human, key B to the security reviewer or the incident commander; the platform owner holds neither (SD-12 item 6); the forced password change of EW-3.3 kills the password he saw | a super admin can still reset `eve@`'s password: Eve raises severity 1 on any change to `eve@` (25) and the login rule of EW-3.8 mails the second human |
-| The consent is performed by the builder in his own browser | the platform owner | EW-6.2 is performed by the second human, in their own clean profile, with key A, and the command refuses unless `userinfo` is `eve@` | recorded in the login stream, read back in EW-8.3 |
+| The builder holds a key to `eve@` and can act as Eve | the platform owner | Key A goes to the second human, key B to the security reviewer or the incident commander; the platform owner holds neither (SD-12 item 6); the forced password change of EW-3.3 kills the password they saw | a super admin can still reset `eve@`'s password: Eve raises severity 1 on any change to `eve@` (25) and the login rule of EW-3.8 mails the second human |
+| The consent is performed by the builder in their own browser | the platform owner | EW-6.2 is performed by the second human, in their own clean profile, with key A, and the command refuses unless `userinfo` is `eve@` | recorded in the login stream, read back in EW-8.3 |
 | The token is copied off the machine between consent and storage | anyone in the room | The command writes straight into Secret Manager and prints only a version number (EW-6.1); EW-6.5 proves nothing is on disk | the token is read-only, revocable at `myaccount.google.com/permissions`, and `EVE_TOKEN_VERSION` is pinned, never `latest` |
 | The role is created with a write privilege nobody notices | the builder | The privilege list is merged and signed before the role exists (EW-4.2); EW-8.2 reads the live role back and fails on any privilege outside the list | daily by Eve's roster check from 25; G-3 at the gate |
 | `eve@` quietly gains Super Admin | any super admin | EW-4.5 asserts `isAdmin false`; EW-4.7 puts `eve@` on the roster as `robot_non_admin` so any role beyond the read-only one is `role_assignment_added` | 25's roster check, SA-06 in 15, G-3 in 38 |
@@ -142,7 +143,7 @@ The feeds this file builds are Eve's whole view of the tenant, and no page state
 | Reports application `mobile` | not in the polled set of [25](25-eve-human-super-admin-detections.md) EH-2.2 | wipe or approve a device, including one holding another person's data | Eve owner; 25 EH-2.2, which adds `mobile` to the polled applications — it is a valid `applicationName` (activities.list, read 2026-09-16) and cheap |
 | Reports application `data_migration` | not in the polled set of 25 EH-2.2 | migrate another user's mail into an account the administrator controls — a real exfiltration path that leaves no admin-audit change | Eve owner; 25 EH-2.2, added with `mobile` |
 | Reports applications `directory_sync`, `ldap`, `chrome`, `gmail`, `access_evaluation` | not polled; all valid `applicationName` values | sync-source and Chrome-policy changes; Gmail-side settings | Eve owner; 25 EH-2.2 decides each with a reason, and records the ones deliberately excluded. Not silently omitted |
-| **Every organisation-level Cloud act by a super admin**: organisation IAM, organisation policy, project creation outside the platform folders, sink changes elsewhere in the organisation | `eve-workspace-audit`'s filter is the Workspace-admin view (four service names plus Access Transparency); Eve reads no Cloud Audit Logs beyond it | grant himself an organisation role, relax an organisation policy, create a project outside the folders, or change another sink | Platform owner; `S-org` (14 CL-6.2) and the SIEM (15) hold these, and [25](25-eve-human-super-admin-detections.md)'s `platform_logs_views` grant is where an Eve rule over them would be added. Until then it is **covered by the SIEM, not by Eve**, and the G-3 record says so |
+| **Every organisation-level Cloud act by a super admin**: organisation IAM, organisation policy, project creation outside the platform folders, sink changes elsewhere in the organisation | `eve-workspace-audit`'s filter is the Workspace-admin view (four service names plus Access Transparency); Eve reads no Cloud Audit Logs beyond it | grant themselves an organisation role, relax an organisation policy, create a project outside the folders, or change another sink | Platform owner; `S-org` (14 CL-6.2) and the SIEM (15) hold these, and [25](25-eve-human-super-admin-detections.md)'s `platform_logs_views` grant is where an Eve rule over them would be added. Until then it is **covered by the SIEM, not by Eve**, and the G-3 record says so |
 | The Access Transparency clause's correctness | matched by log id, not by a service name Google publishes; `Assumption:` in EW-1.2 | — | Platform owner; EW-1.8's per-service count on an edition that carries it; the clause is corrected by pull request before anything relies on it (§15) |
 | Any stream `WORKSPACE_EDITION` does not carry | edition-conditional (OAuth token, SAML, Access Transparency) | — | Platform owner; the edition is pinned at EW-1.7 and recorded, so the gap is declared rather than discovered. A stream the edition **does** carry and that is absent is a stop, not a residual |
 | Anything that leaves no record at all | Google publishes no log for it | — | Second human; a permanent declared limit, restated at every gate |
@@ -463,7 +464,7 @@ gcloud projects get-iam-policy "$EVE_PROJECT" --format=json | jq -r --arg w "${E
 
 ### EW-1.7 Verify the sink's shape and its first table
 
-- **WHO:** Platform owner runs; the second human reads the output (the monitored subject does not certify his own evidence path alone).
+- **WHO:** Platform owner runs; the second human reads the output (the monitored subject does not certify their own evidence path alone).
 - **WHERE:** Shell, at least one hour after EW-1.6 and after at least one admin change has happened in the tenant.
 - **ACTION:**
 
@@ -572,7 +573,7 @@ gcloud organizations get-iam-policy "$ORG_ID" --format=json | jq -r '[.bindings[
 
 ### EW-1.12 Commit the residual list, and hand it to 28
 
-- **WHO:** Platform owner writes; **the second human is the required reviewer** (he is the person who signs Eve live in 28, on this list); a second reviewer approves.
+- **WHO:** Platform owner writes; **the second human is the required reviewer** (they are the person who signs Eve live in 28, on this list); a second reviewer approves.
 - **WHERE:** `PLATFORM_REPO_DIR/eve/`.
 - **ACTION:** Copy the "What Eve does not see" table of this file into `eve/residual-coverage.md`, unchanged, with today's date. It is an input to two things: 25 EH-2.2's decision on which Reports applications to poll, and 28 EV-8.2's `EVE_H_LIVE_RECORD`, where it appears verbatim under "What is not live, and who owns it".
 
@@ -664,7 +665,7 @@ gcloud organizations add-iam-policy-binding "$SANDBOX_ORG_ID" --member="user:${S
 gcloud organizations get-iam-policy "$SANDBOX_ORG_ID" --format=json | jq -r '[.bindings[] | select(.role=="roles/logging.configWriter")]'
 ```
 
-- **VERIFY:** The binding exists, carries the four-hour condition and names only `SANDBOX_SA_1_EMAIL`; sandbox super admin 2 reads the same policy from his own workstation and confirms. On macOS use the `date -u -v+4H` form; the `date -u -d` form is the GNU fallback for a Linux workstation.
+- **VERIFY:** The binding exists, carries the four-hour condition and names only `SANDBOX_SA_1_EMAIL`; sandbox super admin 2 reads the same policy from their own workstation and confirms. On macOS use the `date -u -v+4H` form; the `date -u -d` form is the GNU fallback for a Linux workstation.
 - **ROLLBACK:** `gcloud organizations remove-iam-policy-binding` with the same `--role` and `--condition` (EW-2.7 does it).
 - **EVIDENCE:** The policy extract and the deviation row `BD-24-3` in `DEVIATION_REGISTER`. E-08. TISAX 4.1.3.
 
@@ -693,7 +694,7 @@ checkpoint EW-2.4 DONE "$SANDBOX_SA_2_EMAIL" "$T/ew-2-4-writer.txt"
 ```
 
   Commit `$T/ew-2-4-filter.txt` and `$T/ew-2-4-writer.txt` into the build log by pull request (21's sandbox rule: nothing crosses from the sandbox workstation by being read aloud), then `rm -f "$T/ew-2-4-filter.txt" "$T/ew-2-4-writer.txt"`. EW-2.5 reads the committed writer file, not a spoken address. Neither file is a secret; both leave the working area at the end of the step so nothing stale is picked up on a re-run. The dataset name is written literally here because `EVE_WS_LOGS_DS` lives in the tenant copy of the variables file, not the sandbox copy.
-- **VERIFY:** `SUBSTITUTION CHANGED ONLY THE ORGANISATION ID`; `no actor exclusion`; the writer identity has the form `serviceAccount:service-<sandbox organisation number>@gcp-sa-logging.iam.gserviceaccount.com`; `describe` shows `includeChildren: True` and the substituted filter; sandbox super admin 2 confirms he watched both. The sink will report write failures until EW-2.5 grants it; that is expected for a few minutes and Logging retries.
+- **VERIFY:** `SUBSTITUTION CHANGED ONLY THE ORGANISATION ID`; `no actor exclusion`; the writer identity has the form `serviceAccount:service-<sandbox organisation number>@gcp-sa-logging.iam.gserviceaccount.com`; `describe` shows `includeChildren: True` and the substituted filter; sandbox super admin 2 confirms they watched both. The sink will report write failures until EW-2.5 grants it; that is expected for a few minutes and Logging retries.
 - **ROLLBACK:** `gcloud logging sinks delete eve-twin-workspace-audit --organization="$SANDBOX_ORG_ID"`. **This does not undo the step**: the history a wrong filter failed to capture is gone, exactly as at EW-1.5. And as at EW-1.5, from this step on deleting `EVE_TWIN_PROJECT` is no longer a complete rollback — the sandbox organisation sink survives it and keeps exporting to a destination that no longer exists. **Delete the sink first, always.**
 - **EVIDENCE:** The committed `ew-2-4-writer.txt` and the substituted filter, merged to the build log as `${R}-2.4-twin-sink-v1`, with the `SUBSTITUTION CHANGED ONLY` line. E-06. TISAX 5.2.4.
 
@@ -802,7 +803,7 @@ This part is the whole of SD-32. **`eve@` is created by this file and by nothing
 
 ### EW-3.1 Prove that `eve@` does not exist, and read the target OU's enforcement
 
-- **WHO:** Platform owner as `sa-1-admin@`, in his clean browser profile; the second human present from here to the end of §4.
+- **WHO:** Platform owner as `sa-1-admin@`, in their clean browser profile; the second human present from here to the end of §4.
 - **WHERE:** Admin console: Menu > Directory > Users; Menu > Security > Authentication > 2-step verification.
 - **ACTION:** Search the directory for `eve@<domain>`, including suspended and recently deleted users. Then open the 2-Step Verification settings for `SERVICE_IDENTITY_OU` (`/Automation/Service Identities`) and read three values, with a screenshot of each: **Allow users to turn on 2-Step Verification**, **Enforcement** (expected: On, "Only security key"), and **New user enrollment period** (expected: none set).
 
@@ -844,7 +845,7 @@ penv_set EVE_STAGING_OU "/Automation/Staging"
   | Field | Value | Why |
   |---|---|---|
   | Organisational unit | `/Automation/Staging` | a user inherits the OU it is created in; creating it in the enforced OU is S038 |
-  | Password | **Automatically generated**, and **"Ask for a password change at the next sign-in" ticked** | the platform owner sees a password that dies at the second human's first sign-in; he is not a custodian of `eve@` (SD-12 item 6) |
+  | Password | **Automatically generated**, and **"Ask for a password change at the next sign-in" ticked** | the platform owner sees a password that dies at the second human's first sign-in; they are not a custodian of `eve@` (SD-12 item 6) |
   | Secondary email, phone | none | a recovery channel is a takeover channel nobody monitors |
   | Employee ID, groups | none | — |
 
@@ -866,14 +867,14 @@ checkpoint EW-3.3 DONE "$SECOND_HUMAN_EMAIL" - "eve@ created in EVE_STAGING_OU, 
 - **WHERE:** Admin console: Menu > Directory > Users > `eve@` > Licences > Edit. Then a **clean browser profile belonging to the second human**.
 - **ACTION:** Assign one Workspace licence of the tenant's edition (04 PU-6.2 bought it). A licence is what buys the independent read: without it the account has no Gmail-bearing seat and several Directory reads behave differently.
 
-  The second human then signs in at `https://accounts.google.com` in his own clean profile as `eve@<domain>` with the generated password, is forced to change it, sets a long random password from the vault, and writes it into the vault entry. He does **not** set a recovery email or phone; if the flow offers one, he skips it.
+  The second human then signs in at `https://accounts.google.com` in their own clean profile as `eve@<domain>` with the generated password, is forced to change it, sets a long random password from the vault, and writes it into the vault entry. They do **not** set a recovery email or phone; if the flow offers one, they skip it.
 - **VERIFY:** The Licences panel shows one licence assigned. The sign-in succeeds — proving the staging OU's enforcement is genuinely off — and the account lands on the Google account home page, not on a 2SV enrolment wall. The sign-in appears in `eve_workspace_logs`'s data-access table within minutes (this is half of EW-1.8's pre-grant check, and EW-8.3 reads it again).
 - **ROLLBACK:** Unassign the licence; reset the password as a super admin (which is itself a severity 1 event from 25 onwards).
 - **EVIDENCE:** Licence screenshot `${R}-3.4-eve-licence-v1`; the sign-in time in the build log. E-08. TISAX 4.1.3.
 
 ### EW-3.5 Register both hardware keys, with their custodians present
 
-- **WHO:** **Key A: the second human. Key B: the security reviewer, or the incident commander until the security reviewer is appointed** (EW-0.6 named which). A witness from the other administration line signs each envelope. **The platform owner is a custodian of neither key and does not touch either**; he may be in the room for the OU and role steps but must not handle an `eve@` key (SD-12 item 6; this overrides 04 §8.3, which still names him).
+- **WHO:** **Key A: the second human. Key B: the security reviewer, or the incident commander until the security reviewer is appointed** (EW-0.6 named which). A witness from the other administration line signs each envelope. **The platform owner is a custodian of neither key and does not touch either**; they may be in the room for the OU and role steps but must not handle an `eve@` key (SD-12 item 6; this overrides 04 §8.3, which still names them).
 - **WHERE:** The second human's clean profile, signed in as `eve@<domain>`: `https://myaccount.google.com/signinoptions/twosv` > Add security key. Then repeat for key B with its custodian present.
 - **ACTION:** Register key A, then key B, in one sitting. Label each key physically and in the account's key list (`eve-A`, `eve-B`). Seal each key in its own envelope with a custody record naming the custodian, the witness, the date and the key's label. No recovery email, no recovery phone, no code fallback — under "Only security key" enforcement a user cannot generate their own backup codes anyway, and admin-generated codes are refused for this account by policy: two keys and two custodians are the recovery.
 
@@ -906,7 +907,7 @@ checkpoint EW-3.3 DONE "$SECOND_HUMAN_EMAIL" - "eve@ created in EVE_STAGING_OU, 
 
 ### EW-3.8 The login activity rule on `eve@`
 
-- **WHO:** Platform owner creates; the second human confirms he receives the test mail.
+- **WHO:** Platform owner creates; the second human confirms they receive the test mail.
 - **WHERE:** Admin console: Menu > Rules > Create rule > Reporting (activity rule) on the Login audit log.
 - **ACTION:** After bootstrap, an interactive login to this account is by definition an incident. Create a reporting rule with actor `eve@<domain>`, **event type unfiltered** (a run of failed logins is as interesting as a successful one), severity high, action: email to `SECOND_HUMAN_EMAIL` and to `GRP_EVE_OWNERS`. **Not** to the platform owner alone, and **not** to `walle-operators@`, which does not exist and which the platform owner would administer (SD-12 item 10; this corrects the superseded runbook's routing).
 
@@ -933,7 +934,7 @@ exists_or_pending --pending "group:walle-protected@${DOMAIN}" "EW-3.9" "add EVE_
 
 ### EW-4.1 Resolve the privilege names on this tenant
 
-- **WHO:** Platform owner as `sa-1-admin@`, in his clean browser profile; second human reads the result.
+- **WHO:** Platform owner as `sa-1-admin@`, in their clean browser profile; second human reads the result.
 - **WHERE:** Google's Directory API reference page for `privileges.list`, "Try this method" panel, signed in as `sa-1-admin@`.
 - **ACTION:** Google publishes no complete catalogue of privilege names, and the console labels are not the API names, so the set is resolved against this tenant before the role is created (E-16). The call is `GET https://admin.googleapis.com/admin/directory/v1/customer/{customer}/roles/ALL/privileges`, scope `admin.directory.rolemanagement.readonly`, with `{customer}` set to `DIRECTORY_CUSTOMER_ID` (never `my_customer` — 01's retired-names rule). It returns `items[]`, each with `privilegeName`, `serviceId`, `serviceName`, `isOuScopable` and nested `childPrivileges[]`.
 
@@ -989,7 +990,7 @@ grep -c '<' "$PLATFORM_REPO_DIR/eve/role-privileges.json"
 
 ### EW-4.3 Create the role and assign it customer-scoped
 
-- **WHO:** Platform owner as `sa-1-admin@`; second human present and reading the tick-boxes with him.
+- **WHO:** Platform owner as `sa-1-admin@`; second human present and reading the tick-boxes with them.
 - **WHERE:** Admin console: Menu > Account > Admin roles > Create new role.
 - **ACTION:** Name the role `Eve - Verifier`. Tick **only** the privileges in the merged `eve/role-privileges.json`. Tick **no** write privilege, **no** License Management, **no** Security settings, Vault, eDiscovery or content privilege, and never Super Admin. Then assign the role to `eve@<domain>`, **customer-scoped** (Reports and Groups privileges cannot be unit-scoped, and Eve's work is tenant-wide observation by design).
 
@@ -1083,7 +1084,7 @@ git -C "$PLATFORM_REPO_DIR" commit -m "roster: eve@ as robot_non_admin with the 
 git -C "$PLATFORM_REPO_DIR" push -u origin ew-4-7-roster-eve
 ```
 
-- **VERIFY:** The JSON parses; `expected_later[]` no longer holds `eve@`; `accounts[]` holds it once with `super_admin: false`. The pull request carries the second human's approval, and the second human states in it that the row matches what he saw in EW-4.3 and EW-4.4. The README re-run row "`ROSTER_FILE` update in 24 (`eve@`)" is closed with this step's id. From 25, Eve's roster check expects this principal and reports any divergence, in both directions, to the second human.
+- **VERIFY:** The JSON parses; `expected_later[]` no longer holds `eve@`; `accounts[]` holds it once with `super_admin: false`. The pull request carries the second human's approval, and the second human states in it that the row matches what they saw in EW-4.3 and EW-4.4. The README re-run row "`ROSTER_FILE` update in 24 (`eve@`)" is closed with this step's id. From 25, Eve's roster check expects this principal and reports any divergence, in both directions, to the second human.
 - **ROLLBACK:** Revert the merge; Eve then stops watching its own account, so a revert is itself reportable.
 - **EVIDENCE:** The merge commit and the pull request URL; `evidence_add EW-4.7 roster-eve E-08 4.2.1 repo:$ROSTER_FILE`. TISAX 4.2.1.
 
@@ -1171,9 +1172,9 @@ gcloud secrets versions list "$EVE_OAUTH_CLIENT_SECRET_NAME" --location="$REGION
 
 ### EW-6.1 The consent command's contract — **BLOCKED** (`B-10`)
 
-- **WHO:** Eve owner writes the code; the second human and the security reviewer (or incident commander) review it; the platform owner does not merge his own reviewer's approval.
+- **WHO:** Eve owner writes the code; the second human and the security reviewer (or incident commander) review it; the platform owner does not merge their own reviewer's approval.
 - **WHERE:** Eve's repository, at a named commit with green CI; recorded in README §8 as `B-10`.
-- **ACTION:** **BLOCKED.** No executable consent step exists anywhere in the procedures. The only consent tool that is written down is Wall-E's `bootstrap/oauth_bootstrap.py`, which has no scope-list flag and whose own `walle_setup.py consent` subcommand explicitly refuses `--eve`; neither file is on disk. The obvious improvisation — a desktop `InstalledAppFlow` — opens the operator's **default browser**, which is signed in as his own super admin, and nothing compares the consenting account with `eve@` (S040).
+- **ACTION:** **BLOCKED.** No executable consent step exists anywhere in the procedures. The only consent tool that is written down is Wall-E's `bootstrap/oauth_bootstrap.py`, which has no scope-list flag and whose own `walle_setup.py consent` subcommand explicitly refuses `--eve`; neither file is on disk. The obvious improvisation — a desktop `InstalledAppFlow` — opens the operator's **default browser**, which is signed in as their own super admin, and nothing compares the consenting account with `eve@` (S040).
 
   Until the command is committed, EW-6.2, EW-6.3, EW-6.5, EW-8.1 and EW-9.5 are BLOCKED, and this file's resting state is: sinks live, `eve@` created and hardened, role assigned, client created and Trusted, secrets created and empty. That state is safe and can stand for weeks.
 
@@ -1203,7 +1204,7 @@ printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%d)" "EW-6.1" "Eve owner" "c
 
 ### EW-6.2 The consent, performed by the second human — **BLOCKED** on `B-10`
 
-- **WHO:** **The second human**, in his own clean browser profile, signed in as `eve@<domain>` with **key A, which he holds**. The platform owner runs no part of this step and does not touch the keyboard.
+- **WHO:** **The second human**, in their own clean browser profile, signed in as `eve@<domain>` with **key A, which they hold**. The platform owner runs no part of this step and does not touch the keyboard.
 - **WHERE:** The second human's workstation, shell with the tenant variables and the Eve repository at `EVE_CONSENT_COMMIT`.
 - **ACTION:** **BLOCKED until `B-10` is committed.** When it is:
 
@@ -1270,7 +1271,7 @@ done
 
 ### EW-6.5 Prove nothing is left on disk — **BLOCKED** on `B-10`
 
-- **WHO:** Second human on his workstation; platform owner on his.
+- **WHO:** Second human on their workstation; platform owner on theirs.
 - **WHERE:** Both workstations.
 - **ACTION:**
 
@@ -1438,7 +1439,7 @@ exit
 - **WHO:** Sandbox super admin 1 creates and assigns; sandbox super admin 2 reads it back.
 - **WHERE:** Sandbox Admin console: Menu > Account > Admin roles > Create new role.
 - **ACTION:** Create `Eve - Verifier` on the sandbox tenant with the same privilege names as the merged `eve/role-privileges.json`, resolved against the **sandbox** customer id with the same `privileges.list` call as EW-4.1 (privilege names are Google's, not the tenant's, but the service ids differ per customer). Assign it to `eve@<sandbox domain>`, customer-scoped. Never Super Admin, on either tenant.
-- **VERIFY:** The sandbox role's privileges equal the production role's, name for name; the twin robot holds that role and no other; `isAdmin` is false. Sandbox super admin 2 confirms from his own workstation. A difference from production is recorded in `sandbox/sandbox.yaml`, because 28's drills compare the two.
+- **VERIFY:** The sandbox role's privileges equal the production role's, name for name; the twin robot holds that role and no other; `isAdmin` is false. Sandbox super admin 2 confirms from their own workstation. A difference from production is recorded in `sandbox/sandbox.yaml`, because 28's drills compare the two.
 - **ROLLBACK:** Remove the assignment, delete the role.
 - **EVIDENCE:** `${R}-9.2-twin-role-v1` with both sandbox super admins' names. E-08. TISAX 4.1.3.
 
@@ -1483,7 +1484,7 @@ exit
 
 ### EW-9.5 The twin consent — **BLOCKED** on `B-10`
 
-- **WHO:** Sandbox super admin 1, in his own clean profile, signed in as `eve@<sandbox domain>`.
+- **WHO:** Sandbox super admin 1, in their own clean profile, signed in as `eve@<sandbox domain>`.
 - **WHERE:** Sandbox workstation shell, inside `twin_shell`.
 - **ACTION:** **BLOCKED until the consent command is committed.** When it is, the same command with the twin's values:
 
@@ -1593,7 +1594,7 @@ gcloud auth list --format='value(account)'
 ```
 
   Each person signs out of the clean browser profile used for the Admin console and for any consent. Sealed envelopes go back to the safe; the day's paper records are scanned to `EVIDENCE_INTERIM_LOCATION` and handed to a witness administrator.
-- **VERIFY:** The grants list with `state=ACTIVE` prints **nothing** for either entitlement; the project IAM read prints **nothing** — no human, group or domain holds anything in `EVE_PROJECT`, which is the property SD-12 item 2 rests on and the baseline 28's drill measures against. Any line printed is removed before the sitting ends and the removal recorded. Then `SITTING-END OK`; `gcloud auth list` prints nothing; no application-default credentials file exists; the browser profiles are signed out. The second human confirms he retains key A and that the platform owner holds no `eve@` key. A sitting **may not be closed with a live grant**.
+- **VERIFY:** The grants list with `state=ACTIVE` prints **nothing** for either entitlement; the project IAM read prints **nothing** — no human, group or domain holds anything in `EVE_PROJECT`, which is the property SD-12 item 2 rests on and the baseline 28's drill measures against. Any line printed is removed before the sitting ends and the removal recorded. Then `SITTING-END OK`; `gcloud auth list` prints nothing; no application-default credentials file exists; the browser profiles are signed out. The second human confirms they retain key A and that the platform owner holds no `eve@` key. A sitting **may not be closed with a live grant**.
 - **ROLLBACK:** Not applicable.
 - **EVIDENCE:** The `sitting_end` output per workstation as `${R}-10.3-sitting-end-v1.txt`, and `${R}-10.3-no-human-in-eve-project-v1.txt` (which must be empty); `evidence_add EW-10.3 no-human-in-eve-project E-08 4.1.3 build-log:records/ "${R}-10.3-no-human-in-eve-project-v1.txt"`. TISAX 4.1.1, 4.1.3.
 

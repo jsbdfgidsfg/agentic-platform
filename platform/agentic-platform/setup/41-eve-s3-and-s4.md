@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-16
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed.
 - Last executed: never
 - Review corrections applied on 2026-09-16, with the pages re-read that day: `E3-4.2` polls version 1 out of `PENDING_GENERATION` before anything reads it, and `E3-4.3` refuses unless that poll recorded `ENABLED`; every KMS command addresses the ring through `EVE_KEYRING` (as `EVE_KEYRING_NAME`, checked against `EVE_PROJECT` and `REGION` in the preamble) and both Policy Troubleshooter resource names are built from it; the three PEM digests are all taken from files, never from a pipe; the bucket-lock reads use the JSON field names `gcloud storage` actually renders; `E3-2.3` reads the Cloud Run v2 path `template.template.containers[0].image` and fails on an empty projection; §7.1 to §7.4 run **before** §6 because `E3-6.2` needs `EVE_RECEIPTS_DS`; `E3-7.6` maps SQL files to transfer configs by `displayName` and stops on a file that resolves to none; `E3-9.3` proves EVE-12 and EVE-22 by Policy Troubleshooter with no grant and no impersonation; values one step creates and a later step consumes (working directories, the grant name) are carried in `E3_VARS`; `pam_wait` waits for `ACTIVE`, the state PAM actually reports; the `keys/` condition derives the bucket name from `EVE_EVIDENCE_BUCKET`; `E3-1.5` derives the repository slug instead of relying on `gh`'s placeholders.
 - Stage: review §2 stage 40. Two entries, not one sitting: **S3 entry** (verify the Eve-H and Eve-W halves, then make the invariant-class halt and demote live) and, after the S3 exit gate has passed at 100 %, **S4 entry** (the `eve-approval` key, the PEM archive, `eve-gate`, the receipt view, the denial suite). Between them sit at least thirty days of S3 running against real L3 batch executions. **Execution order of the S4 sitting: §4, §5, §7, §6, §8, §9, §10** — the receipts dataset of `E3-7.1` is an input to the `eve-gate` deploy of `E3-6.2`, so §7 runs first; the section numbers keep their ids.
@@ -90,8 +91,8 @@ EVE_KEYRING_NAME="${EVE_KEYRING##*/}"
 - [ ] `EVE_CODE_COMMIT` set, with green CI, and the commit carries `tests/seeded_faults/` with twelve fixtures and two negative controls. Without them §3 cannot be run and S4 cannot be entered — README **B-09**.
 - [ ] Wall-E has been running **L3 batch executions for at least thirty days** at the moment §3 opens, counted from `walle_audit` and not from a calendar note (`E3-3.1`).
 - [ ] [03](03-decisions-and-people.md): **E-18** signed — `thresholds.yaml`'s numbers are measurements taken at S2, not guesses; **E-4** signed — `eve_authority` is the per-cell switch and absent reads as advisory; **E-13** signed and **decision 11** closed — a **blind grader who is not the ladder owner** is named and has been grading; **E-15** signed — where the seeded-fault harness runs; **CC-32** recorded — scheduled F2 is L3 at S2 and S3 and reaches L4 here; **P118** in force; **P13** signed, so `EVIDENCE_RETENTION_DAYS` is a number and not `*tbd*`.
-- [ ] `B-20` cleared: the security reviewer is appointed and named. He signs the S3 exit gate; the platform owner signs neither gate in this file.
-- [ ] The second human is the Eve owner of record, owner of `GRP_EVE_OWNERS` and a required reviewer on `eve/config` ([06](06-organisation-bootstrap-and-roster.md), [25](25-eve-human-super-admin-detections.md)). He approves every PAM grant used here (SD-12).
+- [ ] `B-20` cleared: the security reviewer is appointed and named. They sign the S3 exit gate; the platform owner signs neither gate in this file.
+- [ ] The second human is the Eve owner of record, owner of `GRP_EVE_OWNERS` and a required reviewer on `eve/config` ([06](06-organisation-bootstrap-and-roster.md), [25](25-eve-human-super-admin-detections.md)). They approve every PAM grant used here (SD-12).
 - [ ] `ENT_PROJECT_REPAIR_EVE` is `AVAILABLE` and its `CTL` override carries `roles/cloudkms.admin` ([23](23-eve-project-and-evidence-stores.md) `EP-1.5`). Without it the key cannot be created by anybody: [17](17-factory-module-equivalents-and-tier-r-gate.md) `FM-2.19` removed the creator's Owner.
 - [ ] The Wall-E owner is available for the `contracts/eve-public-keys/1.pem` pull request, which needs **two distinct approving reviewers, neither the author**, and must merge **before** the first signature.
 - [ ] Three sittings booked: **S3 entry** (half a day, Eve owner and platform owner), **the S3 exit gate** (two hours, Eve owner, security reviewer, blind grader), **S4 entry** (a full day, Eve owner, platform owner, Wall-E owner available). They are weeks apart and are never merged.
@@ -102,8 +103,8 @@ EVE_KEYRING_NAME="${EVE_KEYRING##*/}"
 | Role | Does | Present at |
 |---|---|---|
 | **Eve owner (the second human)** | Owns this file. Approves every PAM grant the platform owner uses here; reviews and merges every `eve/config` change; signs the S3-entry, S3-exit and S4-entry records; holds no signer role and no key material | all of it |
-| Platform owner | Builds under PAM: creates the key, exports the PEM, deploys `eve-gate`, makes the bindings. Approves nothing, signs no gate, and cannot use what he builds | §1, §2, §4 to §9 |
-| Security reviewer | Signs the S3 exit gate with the Eve owner; reads the key policy and the Policy Troubleshooter results himself; countersigns `E3-4.2` and `E3-4.3` | §3, §4, §5 |
+| Platform owner | Builds under PAM: creates the key, exports the PEM, deploys `eve-gate`, makes the bindings. Approves nothing, signs no gate, and cannot use what they build | §1, §2, §4 to §9 |
+| Security reviewer | Signs the S3 exit gate with the Eve owner; reads the key policy and the Policy Troubleshooter results themselves; countersigns `E3-4.2` and `E3-4.3` | §3, §4, §5 |
 | Blind grader (decision 11) | Has been grading through `eve.review_queue_blind` since S1; supplies the agreement figure, reported for information only | §3 |
 | Wall-E owner | Raises and merges the `contracts/eve-public-keys/1.pem` pull request; confirms `walle-actions` verifies against the pinned PEM as the primary path | §4, §9 |
 | Incident commander (IT security) | Witnesses the live halt and demote proof of `E3-2.4`; owns the page that a halt produces | §2 |
@@ -141,7 +142,7 @@ Nobody signs their own gate. The platform owner requests; the Eve owner approves
 
 ### E3-0.1 Open the file and read the inputs
 
-- **WHO:** Platform owner; the Eve owner reads the output with him.
+- **WHO:** Platform owner; the Eve owner reads the output with them.
 - **WHERE:** Shell, `~/.platform-env` sourced.
 - **ACTION:**
 
@@ -165,7 +166,7 @@ grep -E '^(EP|EW|EH|ER|WG|EV|WJ)-' "$BUILD_LOG_DIR/rerun-index.tsv" | grep -i '4
 
 ### E3-0.2 Refuse without the signed decisions
 
-- **WHO:** Platform owner runs it; the Eve owner opens each record himself rather than taking an exit code on trust.
+- **WHO:** Platform owner runs it; the Eve owner opens each record themselves rather than taking an exit code on trust.
 - **WHERE:** Shell; `PLATFORM_REPO_DIR/decisions/`.
 - **ACTION:**
 
@@ -212,7 +213,7 @@ wc -c "$E3_VARS"
 |---|---|
 | Eve owner / platform owner | Never the same person. The Eve owner approves the grant under which the key is made; the platform owner makes it |
 | Blind grader / ladder owner | Never the same person (E-13). Without this the blind sample is blind in form only and the compromised-Eve bound is weaker than claimed |
-| Security reviewer / platform owner | Never the same person. He signs the S3 exit gate the platform owner's work is measured by |
+| Security reviewer / platform owner | Never the same person. They sign the S3 exit gate the platform owner's work is measured by |
 
 - **VERIFY:** `people.yaml` names all three with dates and the three pairs are distinct people. A doubling anywhere needs a dated ISMS exception naming what compensates; without one, §3 does not open.
 - **ROLLBACK:** Read only.
@@ -267,7 +268,7 @@ bq ls --format=prettyjson "${EVE_PROJECT}:${EVE_MIRROR_DS}" | jq -r '.[].tableRe
 
 ### E3-1.3 The deterministic boundary, proved rather than asserted
 
-- **WHO:** Platform owner runs; security reviewer reads the output himself.
+- **WHO:** Platform owner runs; security reviewer reads the output themselves.
 - **WHERE:** Shell.
 - **ACTION:** Three reads and one deliberate failure. The failure is the pass.
 
@@ -286,7 +287,7 @@ gcloud services enable aiplatform.googleapis.com --project="$EVE_PROJECT" 2>&1 |
 
 ### E3-1.4 The blind review queue exists, and has been read
 
-- **WHO:** Eve owner; the blind grader confirms from his own session.
+- **WHO:** Eve owner; the blind grader confirms from their own session.
 - **WHERE:** Shell and the `eve-console`.
 - **ACTION:** `eve.review_queue_blind` lands with the console at S3 entry — **before** the S3 exit gate, not before S4 — because it is what the grader reads and the gate is argued from grades taken through it.
 
@@ -297,7 +298,7 @@ bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --format=csv \
   'SELECT COUNT(*) AS graded, MIN(graded_at) AS first_grade, MAX(graded_at) AS last_grade FROM `'"$WALLE_PROJECT"'.'"$WALLE_AUDIT_DS"'.grades`'
 ```
 
-- **VERIFY:** The blind view's column list contains **no** `verdict` and no `reason_code` column — blindness is structural, not a console setting. `grades` shows a first grade dated at or before Wall-E's S1 and a continuous series since, at `max(10 %, 5 items/week)`. The grader confirms he has never seen a machine verdict in that surface.
+- **VERIFY:** The blind view's column list contains **no** `verdict` and no `reason_code` column — blindness is structural, not a console setting. `grades` shows a first grade dated at or before Wall-E's S1 and a continuous series since, at `max(10 %, 5 items/week)`. The grader confirms they have never seen a machine verdict in that surface.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-1.4-blind-queue-v1.txt`. E-11. TISAX 5.2.4.
 
@@ -434,7 +435,7 @@ bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --format=prettyjson 
 curl -s -H "Authorization: Bearer $(gcloud auth print-identity-token --include-email)" "${ACTIONS_URL}/v1/ladder" | jq -r '.effective_level, .halted, .halt_reason'
 ```
 
-- **VERIFY:** An incident row with `action_taken: halt`, the severity the catalogue gives the rule, and the page delivered to the Eve owner through `NOTIF_CH_EVE_SMS_SECOND_HUMAN` inside its target. `walle-actions` reports `halted: true` with Eve's reason. The demote half is proved on the same pass: a cell whose rule demands demotion reads one level lower in `GET /v1/ladder` than the published ladder artefact, and **only** lower — a level above the merged value is a severity-1 finding, because machines lower and humans raise. Then the second operator clears the halt with one authenticated call and the clear is recorded with his name; Eve returning clears nothing.
+- **VERIFY:** An incident row with `action_taken: halt`, the severity the catalogue gives the rule, and the page delivered to the Eve owner through `NOTIF_CH_EVE_SMS_SECOND_HUMAN` inside its target. `walle-actions` reports `halted: true` with Eve's reason. The demote half is proved on the same pass: a cell whose rule demands demotion reads one level lower in `GET /v1/ladder` than the published ladder artefact, and **only** lower — a level above the merged value is a severity-1 finding, because machines lower and humans raise. Then the second operator clears the halt with one authenticated call and the clear is recorded with their name; Eve returning clears nothing.
 - **ROLLBACK:** The clear is the rollback, and it is part of the test. If the halt cannot be cleared by an operator inside five minutes, that is the finding: revert `E3-2.2` and fix the clear path before the class goes live again.
 - **EVIDENCE:** The seed record, the incident row, the ladder read before and after, the page and the clear as `${R}-2.4-halt-live-v1`; `evidence_add E3-2.4 halt-live E-12 1.5.1 build-log:records/<file> <file>`. E-08, E-12. TISAX 1.5.1, 4.2.1.
 
@@ -534,7 +535,7 @@ bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --format=prettyjson 
   "$(cat "$PLATFORM_REPO_DIR/eve/checks/blind_agreement.sql")"
 ```
 
-- **VERIFY:** The query reports agreement as a **Wilson interval bound**, not a point estimate, over the thirty-day window, with the sample size and the draw seed. It is written into the gate record explicitly **as information, not as a criterion** ([../../eve/05-stages.md](../../eve/05-stages.md), C12): a 95 % agreement rate is a sensible gate for a model and a meaningless one for a deterministic checker, which either implements the rule or does not. The grader confirms he graded blind and names the number of items.
+- **VERIFY:** The query reports agreement as a **Wilson interval bound**, not a point estimate, over the thirty-day window, with the sample size and the draw seed. It is written into the gate record explicitly **as information, not as a criterion** ([../../eve/05-stages.md](../../eve/05-stages.md), C12): a 95 % agreement rate is a sensible gate for a model and a meaningless one for a deterministic checker, which either implements the rule or does not. The grader confirms they graded blind and names the number of items.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `${R}-3.4-agreement-v1.json`. E-11. TISAX 5.2.4.
 
@@ -542,7 +543,7 @@ bq --project_id="$EVE_PROJECT" query --use_legacy_sql=false --format=prettyjson 
 
 - **WHO:** Eve owner and **security reviewer** sign; the platform owner signs neither.
 - **WHERE:** `BUILD_LOG_DIR/records/`, then the witness.
-- **ACTION:** One page: the thirty-day window with its dates and counts; the twelve faults with their observed verdicts; the two negative controls; the agreement figure marked informational; the blind grader's name and the date he was appointed; the `eve_config_version` under test; and one sentence — **"S4 entry may begin"** or **"it may not, and why"**.
+- **ACTION:** One page: the thirty-day window with its dates and counts; the twelve faults with their observed verdicts; the two negative controls; the agreement figure marked informational; the blind grader's name and the date they were appointed; the `eve_config_version` under test; and one sentence — **"S4 entry may begin"** or **"it may not, and why"**.
 - **VERIFY:** Two signatures, neither the platform owner's. The record is copied to the witness before §4 opens, so that the authority to build a signing key is recorded outside the administration line that will use it.
 - **ROLLBACK:** Not applicable; superseded, never rewritten.
 - **EVIDENCE:** `${R}-3.5-s3-exit-v1.md` in `WITNESS_BUCKET`; `evidence_add E3-3.5 s3-exit-gate E-13 5.2.4 witness:records/<file> <file>`. E-01, E-13. TISAX 1.4.1, 5.2.4.
@@ -687,7 +688,7 @@ git -C "$T41W/wall-e" push -u origin eve-approval-v1
 
 ### E3-4.5 Three digests, one lock, one version
 
-- **WHO:** Security reviewer runs this one himself.
+- **WHO:** Security reviewer runs this one themselves.
 - **WHERE:** Shell. Nothing from the platform owner's working directory is reused: each of the three copies is fetched afresh from where it now lives — the locked bucket, the merged `main` of `WALLE_REPO_REMOTE`, and Cloud KMS — into a directory of the reviewer's own, and hashed as a file.
 - **ACTION:**
 
@@ -861,7 +862,7 @@ gcloud kms keyrings get-iam-policy "$EVE_KEYRING_NAME" --location="$REGION" --pr
 
 ### E3-5.7 The KMS negative test, by Policy Troubleshooter (S137)
 
-- **WHO:** Security reviewer runs it himself.
+- **WHO:** Security reviewer runs it themselves.
 - **WHERE:** Shell.
 - **ACTION:** The superseded runbook proved this with `--impersonate-service-account="$SA_EVE_VERIFIER"` and expected `PERMISSION_DENIED`. That is a **false pass**: impersonation needs `roles/iam.serviceAccountTokenCreator` on the target account — which this design deliberately never grants, and which even a project Owner does not carry — so the command fails at the impersonation step with its own permission error that reads exactly like the expected one. Worse, an operator who grants token creator to make the test run has created a standing impersonation path into the reconciler. The policy proof needs no impersonation and also covers inherited project and folder grants, which a key-level `get-iam-policy` does not show.
 

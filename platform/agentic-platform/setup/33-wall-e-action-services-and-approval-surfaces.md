@@ -3,7 +3,8 @@
 ## Status
 
 - Owner: the platform owner
-- Last reviewed: 2026-09-16
+- Last reviewed: 2026-10-01
+- Revised 2026-10-01: gendered pronouns for roles replaced with they/them/their and verb agreement fixed (WHO line "as themselves").
 - Last executed: never
 - Review corrections applied on 2026-09-16, with Google's pages re-read that day: the sitting's privilege is split into the deploy grant (`roles/run.developer`, `roles/iam.serviceAccountUser`) for the `gcloud run deploy`/`update` steps and a second-person-approved `ENT_PROJECT_REPAIR_WALLE` grant for every subnet, API-enable, service-account and `*-iam-policy-binding` step, because `roles/run.developer` holds no `run.services.setIamPolicy` (WS-0.3, WS-0.4, WS-9.4); every PAM call carries `--location=global` and the project scope, as 31 WD-4.1 does; the impersonation the smoke and negative tests need is granted for the sitting and withdrawn before the read-back, on 31 WD-7.3's pattern (WS-2.5, WS-5.2, WS-9.0); WS-3.1 no longer claims a VPC that 31 never made, guards every create, fails loudly on an empty network name and takes its range from the signed plan; `AUDIENCE` is absent from the first deploys and added by the URL steps, so each count is stated for its own step; both credential-holding deploys read their environment back and fail on a secret-looking value (35 WE-2.8's pattern); `walle-operators@` is off the in-app lists and the renderer refuses any non-service-account principal; WS-2.1 is a two-file pull request that amends `manifest_sha`; WS-5.1 reads the service list from where 31 actually keeps it; the Policy Troubleshooter call uses the positional resource and asserts on `overallAccessState`; the dispatcher carries no `AUDIT_DATASET`; the interim-dataset anti-check uses `bq show`; WS-3.3's rollback is `gcloud run services update-traffic`.
 - Stage: review §2 stage 27, the first half — the superseded `wall-e/SETUP.md` Phases 10 and 11, plus the approval-surface phase that page never had (§7.10, S009). Milestone M7. Opens gate lines G12 and G14's unit-test half, and contributes two rows to G19.
@@ -1262,7 +1263,7 @@ gcloud pubsub subscriptions add-iam-policy-binding walle-triggers-push --project
 
 ### WS-7.6 One real admin event, and the dispatcher drops it
 
-- **WHO:** Platform owner, as himself (**not** as the robot).
+- **WHO:** Platform owner, as themselves (**not** as the robot).
 - **WHERE:** Admin console, then shell.
 - **ACTION:** Make a trivial admin change — renaming a test group in `SANDBOX_OU`'s scope, never touching a real principal — and watch what the dispatcher does with it.
 
