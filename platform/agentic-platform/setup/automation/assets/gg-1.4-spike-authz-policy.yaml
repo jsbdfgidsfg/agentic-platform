@@ -1,0 +1,10 @@
+name: gg-spike-authz-policy
+target:
+  resources:
+    - "projects/${GEMINI_PROJECT}/locations/europe-west1/agentGateways/gg-spike-egress"
+policyProfile: REQUEST_AUTHZ
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources:
+      - "projects/${GEMINI_PROJECT}/locations/europe-west1/authzExtensions/gg-spike-iap-authz"

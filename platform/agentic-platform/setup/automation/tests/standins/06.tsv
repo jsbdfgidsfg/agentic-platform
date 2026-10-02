@@ -1,0 +1,11 @@
+# tests/standins/06.tsv: what a person produces at phase 06 manual steps (see tests/standin.py)
+# OB-2.14: the two APIs Explorer responses, pasted one after the other (distinct; this tenant keeps no delegated admin after G3).
+# The addresses are the tests' fake SA_1_ADMIN and SA_2_ADMIN, written out: standin.py cannot expand ${NAME} (its value() format string).
+OB-2.14	file	$BLD/evidence/06/OB-2.14-users-isAdmin.json	{"kind": "admin#directory#users", "etag": "\"isAdmin-test\"", "users": [{"primaryEmail": "sa-1-admin@example.test", "isAdmin": true, "isDelegatedAdmin": false, "orgUnitPath": "/Admins"}, {"primaryEmail": "sa-2-admin@example.test", "isAdmin": true, "isDelegatedAdmin": false, "orgUnitPath": "/Admins"}]}\n
+OB-2.14	file	$BLD/evidence/06/OB-2.14-users-isDelegatedAdmin.json	{"kind": "admin#directory#users", "etag": "\"isDelegatedAdmin-test\""}\n
+# OB-3.5: the change record both humans sign in PLATFORM_REPO_DIR, which OB-3.6's gate 1 reads (committed later, at OB-5.4)
+OB-3.5	file	$PRD/decisions/$DATE-remove-organisation-creation-defaults.md	# Remove the organisation-creation defaults\n\nTest stand-in: no project or person depends on domain-wide Project Creator or Billing Account Creator.\nSigned: platform owner, second human.\n
+# OB-3.5a action 4: the console cross-check, done while the simulator roles are held, and its record
+OB-3.5a	file	$BLD/evidence/06/OB-3.5a-console-crosscheck.txt	DONE $DATE witness witness@example.test (test stand-in: Test changes read and screenshot by the second human)\n
+# OB-3.3: the Cloud console grant the person makes (IAM & Admin > IAM, with the condition of OB-3.2's file), made here with gcloud
+OB-3.3	shell	gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:$SA_1_ADMIN" --role=roles/resourcemanager.organizationAdmin --condition-from-file="$PLATFORM_REPO_DIR/identity/bootstrap-exception-condition.yaml" >/dev/null

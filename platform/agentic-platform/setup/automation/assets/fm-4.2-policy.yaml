@@ -1,0 +1,7 @@
+name: projects/${P_ID}/policies/gcp.restrictServiceUsage
+spec:
+  inheritFromParent: true
+  rules:
+  - values:
+      deniedValues:
+      - aiplatform.googleapis.com

@@ -1,0 +1,17 @@
+# tests/standins/21.tsv: what a person produces for phase 21 (see tests/standin.py).
+# Rows are `shell` rows with $NAME (no braces) expanded by bash: standin.py's value() cannot run (see its line 31),
+# so `value`, `commit` and ${NAME} rows fail; a shell row sources ~/.platform-env and needs none of them.
+#
+# The world: values a person typed in earlier phases, with shapes setup/21 SB-1.1 checks (the generic fakes put the
+# sandbox domain on DOMAIN and the sandbox super admins off it), and 03 DC-4.7's sandbox-tenant record, signed.
+*	shell	penv_set SANDBOX_DOMAIN example-sandbox.test 2>/dev/null || penv_set --force SANDBOX_DOMAIN example-sandbox.test
+*	shell	penv_set SANDBOX_SA_1_EMAIL sb-admin-1@example-sandbox.test 2>/dev/null || penv_set --force SANDBOX_SA_1_EMAIL sb-admin-1@example-sandbox.test
+*	shell	penv_set SANDBOX_SA_2_EMAIL sb-admin-2@example-sandbox.test 2>/dev/null || penv_set --force SANDBOX_SA_2_EMAIL sb-admin-2@example-sandbox.test
+*	shell	f="decisions/$DATE-sandbox-tenant.md"; cd "$PLATFORM_REPO_DIR" && [ ! -f "$f" ] && mkdir -p decisions && printf '# %s — Sandbox tenant: timing and edition\n\n- **Status:** accepted\n- **Ids:** WDEC-29 SD-29 D3\n\nThe sandbox Workspace tenant exists before the super-admin grant; "before Stage 1" is superseded (X-ORG-14).\ntest stand-in for a record signed per DC-1.4\n' "$(date -u +%F)" > "$f" && git add "$f" && git commit -qm "DC-4.7 sandbox-tenant (test stand-in: signed)" && { git push -q origin HEAD:main 2>/dev/null || true; }
+# SB-6.8 (HUMAN): the identifiers sandbox super admin 1 reads out, typed with penv_set (distinct from the tenant's own).
+SB-6.8	shell	penv_set --force SANDBOX_CUSTOMER_ID C04sbx7q2
+SB-6.8	shell	penv_set --force SANDBOX_ORG_ID 210987654321
+SB-6.8	shell	penv_set --force SANDBOX_OPERATORS_GROUP walle-operators@example-sandbox.test
+# SB-7.3 (HUMAN): the page's pol() writes one B5 child policy per target folder; the reviewers merge it on main.
+# SB-7.2 was stood in without improvers_nonprod_admits_sandbox=true, so the targets are the three of the page's loop.
+SB-7.3	shell	cd "$PLATFORM_REPO_DIR" && for T in FLD_AGENTS_P_NONPROD FLD_AGENTS_P_SA_NONPROD FLD_CONTROLLERS_NONPROD; do F="$(eval echo \$$T)"; mkdir -p "policies/org/$T" && jq -n --arg name "folders/$F/policies/iam.allowedPolicyMemberDomains" --argjson spec "{\"inheritFromParent\":true,\"rules\":[{\"values\":{\"allowedValues\":[\"$SANDBOX_CUSTOMER_ID\"]}}]}" '{name:$name, spec:$spec}' > "policies/org/$T/iam.allowedPolicyMemberDomains.json" || exit 1; done && git add policies/org && git commit -qm "SB-7.3 B5: nonprod twin folders merge with parent and admit the sandbox customer (SD-25; test stand-in: merged)" && { git push -q origin HEAD:main 2>/dev/null || true; }

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# agp-platform: runs the platform layer of the agentic-platform setup procedures (setup/01 to 21 and
+# 42 sitting 1) as code. Plan mode by default; nothing is changed without `apply`. Every step carries
+# the id of the procedure step it implements, and a scripted run leaves the same ~/.platform-env
+# values, checkpoints and evidence rows as a run by hand, so the agent files (22 onwards) continue
+# from either. See README.md.
+if [ -z "${BASH_VERSION-}" ]; then echo "agp-platform: run with bash" >&2; exit 2; fi
+AGP_HOME="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/core.sh
+. "$AGP_HOME/lib/core.sh"
+# shellcheck source=lib/preflight.sh
+. "$AGP_HOME/lib/preflight.sh"
+agp_main "$@"

@@ -1,0 +1,7 @@
+name: gg-spike-iap-authz
+service: iap.googleapis.com
+failOpen: false
+timeout: 1s
+metadata:
+  iapPolicyVersion: "V2"
+  iamEnforcementMode: "DRY_RUN"

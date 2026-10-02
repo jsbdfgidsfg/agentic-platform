@@ -1,0 +1,10 @@
+name: gemini-egress-authz-policy
+target:
+  resources:
+    - "projects/${GEMINI_PROJECT}/locations/europe-west1/agentGateways/gemini-egress"
+policyProfile: REQUEST_AUTHZ
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources:
+      - "projects/${GEMINI_PROJECT}/locations/europe-west1/authzExtensions/gemini-egress-iap-authz"

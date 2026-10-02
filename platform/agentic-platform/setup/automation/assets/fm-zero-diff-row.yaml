@@ -1,0 +1,12 @@
+agent_id: fm-fixture
+rows:
+  - env: prod
+    tier: R
+    manifest_sha: "0000000000000000000000000000000000000000000000000000000000000000"
+    status: draft
+    privilege: none
+  - env: nonprod
+    tier: R
+    manifest_sha: "1111111111111111111111111111111111111111111111111111111111111111"
+    status: draft
+    privilege: none

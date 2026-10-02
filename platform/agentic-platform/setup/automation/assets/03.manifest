@@ -1,0 +1,5 @@
+# asset	page	opening line of the heredoc in the page (setup/03 DC-1.1 and DC-1.2)
+decision-template.md	03-decisions-and-people.md	cat > "$PLATFORM_REPO_DIR/decisions/_template.md" <<'EOF'
+decision-check.sh	03-decisions-and-people.md	cat > "$PLATFORM_REPO_DIR/tools/decision-check.sh" <<'EOF'
+decision-need.sh	03-decisions-and-people.md	cat > "$PLATFORM_REPO_DIR/tools/decision-need.sh" <<'EOF'
+decision-value.sh	03-decisions-and-people.md	cat > "$PLATFORM_REPO_DIR/tools/decision-value.sh" <<'EOF'

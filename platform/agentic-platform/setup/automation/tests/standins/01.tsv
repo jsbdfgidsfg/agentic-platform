@@ -1,0 +1,7 @@
+# tests/standins/01.tsv: what a person produces at phase 01 manual steps (see tests/standin.py)
+PR-2.6	file	$BLD/records/$DATE-PR-2.6-super-admin-roster-v1.pdf	%PDF-1.4 test stand-in roster\n
+PR-2.6	file	$BLD/records/$DATE-PR-2.6-tenant-identifiers-v1.pdf	%PDF-1.4 test stand-in identifiers\n
+PR-4.4	evidence	PR-2.6	super-admin-roster	E-06	4.1.3	interim:$DATE-PR-2.6-super-admin-roster-v1.pdf	$BLD/records/$DATE-PR-2.6-super-admin-roster-v1.pdf
+PR-4.4	file	$HOME/Downloads/$DATE-PR-4.4-interim-location-members-v1.pdf	%PDF-1.4 test stand-in members screenshot\n
+PR-4.4	evidence	PR-4.4	interim-location-members	E-08	5.2.4	interim:$DATE-PR-4.4-interim-location-members-v1.pdf	$HOME/Downloads/$DATE-PR-4.4-interim-location-members-v1.pdf
+PR-4.4	shell	rm -f "$HOME/Downloads/$DATE-PR-4.4-interim-location-members-v1.pdf"

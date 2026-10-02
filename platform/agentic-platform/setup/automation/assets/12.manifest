@@ -1,0 +1,5 @@
+# asset	page	opening line of the heredoc in the page (setup/12 PA-1.5, PA-2.1)
+pa-1.5-pam.sh	12-privileged-access-catalogue.md	cat > "$PLATFORM_REPO_DIR/pam/tools/pam.sh" <<'EOF'
+pa-1.5-compare.py	12-privileged-access-catalogue.md	cat > "$PLATFORM_REPO_DIR/pam/tools/compare.py" <<'EOF'
+pa-1.5-sweep.py	12-privileged-access-catalogue.md	cat > "$PLATFORM_REPO_DIR/pam/tools/sweep.py" <<'EOF'
+pa-2.1-catalogue.py	12-privileged-access-catalogue.md	cat > "$PLATFORM_REPO_DIR/pam/tools/catalogue.py" <<'EOF'

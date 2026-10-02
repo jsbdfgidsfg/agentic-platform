@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""A stand-in for gcloud and bq in the offline tests. It never contacts Google.
+
+Every call is appended to $FAKE_LOG as "<tool>\t<READ|MUTATE|META>\t<argv>". A read of a resource is
+"absent" the first time its exact argv is seen and "present" once any mutation has happened since,
+which is enough to drive check -> apply -> re-check, and makes a second apply a pure idempotency test.
+IAM bindings added with add-iam-policy-binding are remembered and returned by get-iam-policy.
+"""
+import json, os, re, sys
+
+tool = os.path.basename(sys.argv[0])
+args = sys.argv[1:]
+state_path = os.environ['FAKE_STATE']
+st = json.load(open(state_path)) if os.path.exists(state_path) else {'mutations': 0, 'seen': {}, 'bindings': []}
+
+MUTATE = {'create', 'add-iam-policy-binding', 'remove-iam-policy-binding', 'set-iam-policy', 'update', 'patch',
+          'delete', 'enable', 'disable', 'link', 'unlink', 'lock', 'deploy', 'add', 'remove', 'import', 'apply',
+          'grant', 'revoke', 'activate', 'deactivate', 'undelete', 'mk', 'rm', 'cp', 'attach', 'detach', 'move',
+          'approve', 'publish', 'sign', 'rotate', 'load', 'insert', 'replace', 'execute', 'run', 'set-default',
+          'set-policy', 'reset', 'restore', 'destroy', 'versions-add', 'unset'}
+READ = {'describe', 'list', 'get-iam-policy', 'get', 'read', 'get-value', 'show', 'ls', 'search',
+        'search-all-resources', 'search-all-iam-policies', 'test-iam-permissions', 'query', 'head', 'cat',
+        'lookup', 'troubleshoot', 'analyze-iam-policy', 'explain', 'access', 'get-ancestors', 'check', 'validate'}
+
+positional = [a for a in args if not a.startswith('-')]
+flags = {}
+for a in args:
+    if a.startswith('--') and '=' in a:
+        k, v = a[2:].split('=', 1); flags[k] = v
+for i, a in enumerate(args):
+    if a.startswith('--') and '=' not in a and i + 1 < len(args) and not args[i + 1].startswith('-'):
+        flags.setdefault(a[2:], args[i + 1])
+fmt = flags.get('format', '')
+
+
+def log(kind):
+    with open(os.environ['FAKE_LOG'], 'a') as f:
+        f.write('%s\t%s\t%s\n' % (tool, kind, ' '.join(args)))
+
+
+def save():
+    json.dump(st, open(state_path, 'w'))
+
+
+def out(s):
+    if s is not None:
+        sys.stdout.write(s if s.endswith('\n') or s == '' else s + '\n')
+
+
+# ---- meta commands
+joined = ' '.join(positional[:3])
+if tool == 'gcloud':
+    if positional[:1] == ['version']:
+        log('META'); out('587.0.0' if 'Google Cloud SDK' in fmt else 'Google Cloud SDK 587.0.0'); sys.exit(0)
+    if positional[:2] == ['components', 'list']:
+        log('META'); out('alpha\nbeta\nbq\ncore\ngcloud'); sys.exit(0)
+    if positional[:2] == ['auth', 'revoke'] or positional[:3] == ['auth', 'application-default', 'revoke']:
+        st['revoked'] = True; save(); log('META'); sys.exit(0)
+    if positional[:2] == ['auth', 'login']:
+        st['revoked'] = False; save(); log('META'); sys.exit(0)
+    if (positional[:2] == ['auth', 'list'] or positional[:3] == ['config', 'get', 'account']) and st.get('revoked'):
+        log('META'); out(''); sys.exit(0)
+    if positional[:2] == ['auth', 'list'] or positional[:3] == ['config', 'get', 'account']:
+        # the account the procedures expect at this point: SA_1_ADMIN once set (06 OB-2.12), else the daily account
+        acct, env = os.environ.get('FAKE_ACCOUNT', 'admin@example.test'), os.path.join(os.environ.get('HOME', ''), '.platform-env')
+        if os.path.exists(env):
+            vals = dict(l[7:].split('=', 1) for l in open(env) if l.startswith('export ') and '=' in l)
+            for n in ('SA_1_ADMIN', 'OWNER_DAILY_ACCOUNT'):
+                v = vals.get(n, '').strip().strip('"')
+                if v and v != '*tbd*':
+                    acct = v; break
+        log('META'); out(acct); sys.exit(0)
+    if (positional[:2] == ['config', 'get'] or positional[:2] == ['config', 'get-value']) and 'account' not in positional:
+        log('META'); out('(unset)' if 'project' in positional else ''); sys.exit(0)
+    if positional[:1] == ['config']:
+        log('META'); out('platform-bootstrap\tTrue'); sys.exit(0)
+    if positional[:2] in (['auth', 'print-access-token'], ['auth', 'print-identity-token']) or positional[:3] == ['auth', 'application-default', 'print-access-token']:
+        log('META'); out('fake-token-not-a-credential'); sys.exit(0)
+    if positional[:1] == ['auth']:
+        log('META'); sys.exit(0)
+
+# ---- classify
+if tool == 'bq':
+    verb = positional[0] if positional else ''
+    if verb == 'query':
+        sql = ' '.join(positional[1:]).upper()
+        kind = 'MUTATE' if any(w in sql for w in ('CREATE ', 'INSERT ', 'DELETE ', 'MERGE ', 'UPDATE ', 'DROP ', 'ALTER ')) else 'READ'
+    else:
+        kind = 'MUTATE' if verb in MUTATE else 'READ'
+else:
+    MUT_PREFIX = ('create', 'delete', 'set-', 'add-', 'remove-', 'update', 'enable', 'disable', 'undelete',
+                  'grant', 'revoke', 'lock', 'link', 'unlink', 'deploy', 'import', 'apply', 'patch', 'move', 'rotate')
+    READ_PREFIX = ('describe', 'list', 'get', 'search', 'test-', 'read', 'show', 'troubleshoot', 'analyze', 'lookup')
+    def vkind(p):
+        if p in MUTATE or p.startswith(MUT_PREFIX): return 'MUTATE'
+        if p in READ or p.startswith(READ_PREFIX): return 'READ'
+        return ''
+    verbs = [p for p in positional if vkind(p)]
+    verb = verbs[-1] if verbs else ''
+    kind = vkind(verb) or 'READ'
+    if positional[:2] == ['projects', 'describe'] or 'test-iam-permissions' in positional:
+        kind = 'READ'
+
+log(kind)
+
+if kind == 'MUTATE':
+    st['mutations'] += 1
+    # per step, the command groups it created or deleted last (e.g. 'pam entitlements': 'created')
+    _grp = ' '.join(positional[:positional.index(verb)]) if verb in positional else ''
+    _sg = st.setdefault('step_groups', {}).setdefault(os.environ.get('AGP_CUR_STEP', ''), {})
+    if verb.startswith('create') or verb in ('mk', 'deploy', 'import'):
+        _sg[_grp] = 'created'
+    elif verb.startswith('delete') or verb in ('rm', 'remove', 'destroy', 'undeploy'):
+        _sg[_grp] = 'deleted'
+    if verb in ('add-iam-policy-binding', 'remove-iam-policy-binding', 'set-iam-policy'):
+        idx = positional.index(verb)
+        res = positional[idx + 1] if idx + 1 < len(positional) else flags.get('project', '')
+        cond = None
+        if flags.get('condition-from-file'):
+            try:
+                txt = open(flags['condition-from-file']).read()
+                try:
+                    cond = json.loads(txt)
+                except Exception:   # the YAML gcloud takes: expression, title, description
+                    cond = {}
+                    for line in txt.splitlines():
+                        if ':' in line and not line.startswith(' '):
+                            k, v = line.split(':', 1); cond[k.strip()] = v.strip().strip('"\'')
+            except Exception:
+                cond = None
+        elif flags.get('condition') and flags['condition'] not in ('None', 'none'):
+            cond = dict(kv.split('=', 1) for kv in flags['condition'].split(',') if '=' in kv)
+        trip = [res, flags.get('member', ''), flags.get('role', ''), cond]
+        st['bindings'] = [b if len(b) == 4 else b + [None] for b in st['bindings']]
+        if verb == 'add-iam-policy-binding' and trip not in st['bindings']:
+            st['bindings'].append(trip)
+        elif verb == 'remove-iam-policy-binding':
+            all_cond = '--all' in args
+            st['bindings'] = [b for b in st['bindings'] if not (b[:3] == trip[:3] and (all_cond or b[3] == cond or (cond is None and flags.get('condition') in ('None', 'none') and b[3] is None)))]
+        elif verb == 'set-iam-policy' and idx + 2 < len(positional):
+            try:
+                pol = json.load(open(positional[idx + 2]))
+                st['bindings'] = [b for b in st['bindings'] if b[0] != res]
+                for bd in pol.get('bindings', []):
+                    for m in bd.get('members', []):
+                        st['bindings'].append([res, m, bd.get('role', ''), bd.get('condition')])
+            except Exception:
+                pass
+    if positional[:2] == ['projects', 'delete'] and len(positional) > 2:   # Google keeps it 30 days as DELETE_REQUESTED
+        st.setdefault('projects_deleted', [])
+        if positional[2] not in st['projects_deleted']:
+            st['projects_deleted'].append(positional[2])
+    if positional[:2] == ['projects', 'undelete'] and len(positional) > 2:
+        st['projects_deleted'] = [x for x in st.get('projects_deleted', []) if x != positional[2]]
+    if positional[:2] == ['projects', 'create'] and len(positional) > 2:
+        st.setdefault('projects', [])
+        if positional[2] not in st['projects']:
+            st['projects'].append(positional[2])
+        # Google makes the creator Owner of a new project with no parent policy saying otherwise
+        acct = os.environ.get('FAKE_ACCOUNT', 'admin@example.test')
+        env = os.path.join(os.environ.get('HOME', ''), '.platform-env')
+        if os.path.exists(env):
+            vals = dict(l[7:].split('=', 1) for l in open(env) if l.startswith('export ') and '=' in l)
+            for n in ('SA_1_ADMIN', 'OWNER_DAILY_ACCOUNT'):
+                v = vals.get(n, '').strip().strip('"')
+                if v and v != '*tbd*':
+                    acct = v; break
+        b4 = [positional[2], 'user:' + acct, 'roles/owner', None]
+        if b4 not in st['bindings']:
+            st['bindings'].append(b4)
+    if tool == 'bq':
+        st.setdefault('datasets', {})
+        ref = next((p for p in positional[1:] if ':' in p and not p.startswith('/')), '') or next((p for p in positional[1:] if '.' in p and not p.startswith('/') and not p.endswith(('.json', '.yaml', '.sql'))), '')
+        if verb == 'mk' and ('--dataset' in args or '-d' in args) and ref:
+            proj, ds = (ref.split(':', 1) + [''])[:2] if ':' in ref else ('fake-project', ref)
+            labels = {}
+            for i, x in enumerate(args):   # every --label=k:v (or --label k:v), not only the last
+                v = x[len('--label='):] if x.startswith('--label=') else (args[i + 1] if x == '--label' and i + 1 < len(args) else None)
+                if v and ':' in v:
+                    k, val = v.split(':', 1); labels[k] = val
+            st['datasets'][ref] = {'datasetReference': {'projectId': proj, 'datasetId': ds}, 'location': flags.get('location', 'EU'),
+                                   'access': [], 'labels': labels, 'description': flags.get('description', '')}
+        elif verb == 'update' and ref in st['datasets'] and flags.get('source'):
+            try:
+                upd = json.load(open(flags['source']))
+                st['datasets'][ref].update({k: v for k, v in upd.items() if k in ('access', 'labels', 'description', 'defaultTableExpirationMs')})
+            except Exception:
+                pass
+    save()
+    out('fake: done')
+    sys.exit(0)
+
+# ---- reads
+if verb == 'get-iam-policy':
+    idx = positional.index(verb)
+    res = positional[idx + 1] if idx + 1 < len(positional) else ''
+    groups = {}
+    for bnd in st['bindings']:
+        r, m, role = bnd[:3]; cond = bnd[3] if len(bnd) > 3 else None
+        if r == res:
+            groups.setdefault((role, json.dumps(cond, sort_keys=True)), []).append(m)
+    pol = {'bindings': [dict({'role': k[0], 'members': v}, **({'condition': json.loads(k[1])} if json.loads(k[1]) else {}))
+                        for k, v in groups.items()], 'etag': 'BwFake=', 'version': 3}
+    if 'bindings[].members' in flags.get('flatten', ''):
+        rows = [dict({'bindings.role': k[0], 'bindings.members': m,
+                      'bindings.condition': (json.loads(k[1]) or {}).get('expression', '') if json.loads(k[1]) else ''},
+                     **{('bindings.condition.' + ck): cv for ck, cv in (json.loads(k[1]) or {}).items()})
+                for k, ms in groups.items() for m in ms]
+        flt = flags.get('filter', '')
+        for cond in [c.strip() for c in flt.replace(' and ', ' AND ').split(' AND ') if c.strip()]:
+            neg = cond.startswith('-') or cond.upper().startswith('NOT ')
+            c2 = cond[1:] if cond.startswith('-') else (cond[4:] if cond.upper().startswith('NOT ') else cond)
+            for op in ('~', '=', ':'):
+                if op in c2:
+                    k, val = c2.split(op, 1); k, val = k.strip(), val.strip().strip('"\'')
+                    k = k if k.startswith('bindings.') else 'bindings.' + k
+                    import re as _re
+                    def hit(r):
+                        got = r.get(k, '')
+                        if op == '~': return _re.search(val, got) is not None
+                        if op == '=': return got == val
+                        return val == '*' and bool(got) or val in got
+                    rows = [r for r in rows if hit(r) != neg]
+                    break
+        if fmt.startswith('value(') or fmt.startswith('csv'):
+            fields = [f.strip() for f in fmt[fmt.find('(') + 1:fmt.rfind(')')].split(',')]
+            out('\n'.join('\t'.join(r.get(f if f.startswith('bindings.') else 'bindings.' + f.split('.')[-1], '') for f in fields) for r in rows))
+        else:
+            out(json.dumps(rows))
+        save(); sys.exit(0)
+    out(json.dumps(pol)); save(); sys.exit(0)
+
+# Presence, per step: a read inside an apply sees an existing world; a check's read is absent until a
+# mutation by the SAME step follows it, then present for good (so a second apply is a pure no-op test).
+if tool == 'bq' and verb == 'show':
+    ref = next((p for p in positional[1:] if ':' in p and not p.startswith('/')), '') or next((p for p in positional[1:] if '.' in p and not p.startswith('/') and not p.endswith(('.json', '.yaml', '.sql'))), '')
+    if ref in st.get('datasets', {}):
+        out(json.dumps(st['datasets'][ref])); save(); sys.exit(0)
+key = tool + ' ' + ' '.join(args)
+cur, ctx = os.environ.get('AGP_CUR_STEP', ''), os.environ.get('AGP_CALL_CONTEXT', '')
+# Projects are modelled: one exists once created here, or when the test world says an earlier phase made it
+_pm = re.search(r'projectId[=:]\s*"?([a-z][a-z0-9-]+)', flags.get('filter', '')) if tool == 'gcloud' and positional[:2] == ['projects', 'list'] else None
+if _pm and ctx != 'apply':
+    _pid = _pm.group(1); _flt = flags.get('filter', '')
+    _deleted = _pid in st.get('projects_deleted', [])
+    _wanted_deleted = 'DELETE_REQUESTED' in _flt
+    _exists = _deleted if _wanted_deleted else (_pid in st.get('projects', []) and ('ACTIVE' not in _flt or not _deleted))
+    if _exists:
+        out(json.dumps([dict(GENERIC, projectId=_pid)]) if 'json' in fmt else _pid)
+    else:
+        out('[]' if 'json' in fmt else '')
+    save(); sys.exit(0)
+if tool == 'gcloud' and positional[:2] == ['projects', 'describe'] and len(positional) > 2 and ctx != 'apply':
+    if positional[2] in st.get('projects', []):
+        GENERIC['projectId'] = positional[2]
+        if positional[2] in st.get('projects_deleted', []):
+            GENERIC['lifecycleState'] = 'DELETE_REQUESTED'; GENERIC['state'] = 'DELETE_REQUESTED'
+        out(json.dumps(GENERIC) if ('json' in fmt or fmt == '') else ('123456789012' if 'projectNumber' in fmt else positional[2])); save(); sys.exit(0)
+    sys.stderr.write('ERROR: (gcloud.projects.describe) NOT_FOUND: fake: project %s does not exist\n' % positional[2]); save(); sys.exit(1)
+st.setdefault('present', [])
+if ctx == 'apply' or key in st['present']:
+    present = True
+else:
+    seen = st['seen'].get(key)
+    if isinstance(seen, list) and seen[0] == cur and st['mutations'] > seen[1]:
+        present = True; st['present'].append(key)
+    elif seen is None and ctx == 'check' and verb in ('describe', 'list', 'get') and st.get('step_groups', {}).get(cur, {}).get(
+            ' '.join(positional[:positional.index(verb)]) if verb in positional else '') == 'created':
+        present = True; st['present'].append(key)   # a first read of what this step just created sees it
+    else:
+        present = False
+        if ctx != 'plan':
+            st['seen'][key] = [cur, st['mutations']]
+save()
+
+GENERIC = {'name': 'fake/resources/fake', 'displayName': 'fake', 'state': 'ACTIVE', 'lifecycleState': 'ACTIVE',
+           'projectId': 'fake-project', 'projectNumber': '123456789012', 'email': 'fake@example.test',
+           'enabled': True, 'billingEnabled': True, 'locked': True, 'id': 'fake', 'currencyCode': 'EUR',
+           'config': {'name': 'fake.googleapis.com', 'title': 'fake'}}
+lister = verb in ('list', 'ls', 'search', 'search-all-resources', 'search-all-iam-policies') or verb.startswith(('list', 'search'))
+# A realistic resource name from the command itself: projects/P/locations/L/<collection>/<id>
+try:
+    vi = positional.index(verb)
+    coll = positional[vi - 1] if vi >= 1 else ''
+    rid = positional[vi + 1] if vi + 1 < len(positional) and not lister else 'fake'
+    proj = flags.get('project') or flags.get('billing-project') or 'fake-project'
+    if rid.startswith(('projects/', 'organizations/', 'folders/')):
+        GENERIC['name'] = rid
+    elif coll and tool == 'gcloud' and coll not in ('projects', 'folders', 'organizations', 'resource-manager'):
+        loc = flags.get('location') or flags.get('region') or 'global'
+        GENERIC['name'] = 'projects/%s/locations/%s/%s/%s' % (proj, loc, coll, rid)
+    if positional[:2] == ['projects', 'describe'] and len(positional) > 2:
+        GENERIC['projectId'] = positional[2]; GENERIC['name'] = 'projects/123456789012'
+except ValueError:
+    pass
+if not present:
+    if lister:
+        out('[]' if 'json' in fmt else ''); sys.exit(0)
+    sys.stderr.write('ERROR: (%s) NOT_FOUND: fake: %s is absent\n' % (tool, ' '.join(positional[:4])))
+    sys.exit(1)
+if 'json' in fmt or fmt == '':
+    out(json.dumps([GENERIC] if lister else GENERIC)); sys.exit(0)
+if fmt.startswith('value(') or fmt.startswith('csv') or fmt.startswith('table'):
+    fields = fmt[fmt.find('(') + 1:fmt.rfind(')')].split(',')
+    vals = []
+    for fld in fields:
+        f = fld.split('.')[-1].strip().strip('"')
+        vals.append(str(GENERIC.get(f, 'fake-value')))
+    out('\t'.join(vals)); sys.exit(0)
+out('fake-value'); sys.exit(0)

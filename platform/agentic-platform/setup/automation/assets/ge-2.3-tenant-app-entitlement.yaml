@@ -1,0 +1,26 @@
+privilegedAccess:
+  gcpIamAccess:
+    resourceType: cloudresourcemanager.googleapis.com/Project
+    resource: //cloudresourcemanager.googleapis.com/projects/${GEMINI_PROJECT}
+    roleBindings:
+    - role: roles/resourcemanager.projectIamAdmin
+    - role: roles/serviceusage.serviceUsageAdmin
+    - role: roles/essentialcontacts.admin
+    - role: roles/logging.configWriter
+    - role: roles/modelarmor.admin
+maxRequestDuration: 3600s
+eligibleUsers:
+- principals:
+  - group:${GRP_PLATFORM_OWNERS}
+requesterJustificationConfig:
+  unstructured: {}
+approvalWorkflow:
+  manualApprovals:
+    requireApproverJustification: true
+    steps:
+    - approvalsNeeded: 1
+      approvers:
+      - principals:
+        - user:${SA_2_ADMIN}
+      approverEmailRecipients:
+      - ${SECOND_HUMAN_EMAIL}

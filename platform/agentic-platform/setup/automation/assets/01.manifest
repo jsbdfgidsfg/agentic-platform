@@ -1,0 +1,2 @@
+# asset	setup page	the page's opening line, character for character
+platform-env.template	01-prerequisites-and-conventions.md	cat > "$PLATFORM_REPO_DIR/env/platform-env.template" <<'PLATFORM_ENV_TEMPLATE'

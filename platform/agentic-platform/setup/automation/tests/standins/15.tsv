@@ -1,0 +1,14 @@
+# tests/standins/15.tsv: what a person produces at phase 15 manual steps (see tests/standin.py).
+# Values with a shape the page fixes override the generic fakes, as shell rows (penv_set --force): standin.py's own
+# value and commit kinds fail in its value() (line 31), so files are file rows plus one shell commit.
+PS-2.4b	shell	penv_set --force PAGER_SUBJECT_SH_SERVICE_NAME agentic-platform-roster-subject-sh
+# PS-3.1 and PS-3.2: oncall.yaml, merged on main with the second human's approval
+PS-3.2	file	$PRD/oncall/oncall.yaml	# oncall/oncall.yaml (setup 15 PS-3.1), test stand-in for the merged file\nversion: 1\ntier_now: C\nbusiness_tz: Europe/Paris\nbusiness_hours: "08:00-18:00"\nservices:\n  platform:\n    levels: [second-human, platform-owner, incident-commander]\n
+PS-3.2	shell	cd "$PLATFORM_REPO_DIR" && git add oncall && git commit -qm 'oncall: oncall.yaml (setup 15 PS-3.1), test stand-in merge' && (git push -q origin HEAD:main 2>/dev/null || true) && penv_set --force ONCALL_FILE oncall/oncall.yaml
+# PS-4.3, PS-4.4, PS-4.6: the channel names Cloud Monitoring returns (projects/<id>/notificationChannels/<number>)
+PS-4.3	shell	penv_set --force NOTIF_CH_PAGER_CORE "projects/$CORE_PROJECT/notificationChannels/1000000000000000001"
+PS-4.4	shell	penv_set --force NOTIF_CH_PAGER_LOGGING "projects/$LOGGING_PROJECT/notificationChannels/1000000000000000002"
+PS-4.6	shell	penv_set --force NOTIF_CH_SMS_SECOND_HUMAN "projects/$CORE_PROJECT/notificationChannels/1000000000000000005"
+PS-4.6	shell	penv_set --force NOTIF_CH_SMS_SECOND_HUMAN_LOGGING "projects/$LOGGING_PROJECT/notificationChannels/1000000000000000006"
+PS-6.3	shell	penv_set --force SCC_NOTIFICATION_CONFIG "organizations/$ORG_ID/locations/eu/notificationConfigs/agp-scc-to-pager"
+PS-6.6	shell	penv_set --force SCC_ROUTE_TEST_SOURCE "organizations/$ORG_ID/sources/1234567890123456789"

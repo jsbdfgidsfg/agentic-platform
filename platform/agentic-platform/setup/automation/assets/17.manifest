@@ -1,0 +1,6 @@
+# asset	page	opening line of the heredoc in the page (setup/17 FM-1.1, FM-1.2, FM-1.4, FM-3.1, FM-4.2)
+fm-runspec-template.json	17-factory-module-equivalents-and-tier-r-gate.md	cat > "$PLATFORM_REPO_DIR/factory/runs/_template.json" <<'JSON'
+fm-zero-diff.py	17-factory-module-equivalents-and-tier-r-gate.md	cat > "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" <<'PY'
+fm-zero-diff-row.yaml	17-factory-module-equivalents-and-tier-r-gate.md	cat > register/fixtures/fm-zero-diff-row.yaml <<'YAML'
+fm-3.1-psa-rows.py	17-factory-module-equivalents-and-tier-r-gate.md	"$PY" - "$PLATFORM_REPO_DIR/$REGISTER_PATH" <<'EOF'
+fm-4.2-policy.yaml	17-factory-module-equivalents-and-tier-r-gate.md	cat > "${R}-FM-4.2-policy.yaml" <<YAML

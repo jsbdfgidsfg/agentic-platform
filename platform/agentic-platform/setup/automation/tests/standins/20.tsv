@@ -1,0 +1,25 @@
+# tests/standins/20.tsv: what a person produces at phase 20 manual steps (see tests/standin.py)
+# Values are written by shell rows (penv_set --force), which run with ~/.platform-env sourced, so a row may
+# name a value as $NAME there.
+# GG-0.4: the constraint spelling GG-0.4 resolved, and the spike record its heredoc opens
+GG-0.4	file	$BLD/records/$DATE-GG-0.4-ge-spike-record-v1.md	# Gemini Enterprise gateway spike record (test stand-in)\n\n| Q | answer | result | time |\n|---|---|---|---|\n
+GG-0.4	shell	penv_set --force GE_APB_CONSTRAINT iam.managed.disableAccessPolicyBinding && penv_set --force GE_SPIKE_RECORD "$BLD/records/$DATE-GG-0.4-ge-spike-record-v1.md"
+# GG-2.1: the engine of the runtime path, as the page's penv_set reads it
+GG-2.1	shell	penv_set --force GG_SPIKE_ENGINE "projects/$CANARY_R_PROJECT/locations/europe-west1/reasoningEngines/1234567890123456789"
+# GG-2.2: spike Q8, the name form the bind accepted and the name the GET returned
+GG-2.2	shell	penv_set --force GE_GW_NAME_FORM number && penv_set --force GE_GW_NAME_RETURNED "projects/$GEMINI_PROJECT_NUMBER/locations/europe-west1/agentGateways/gg-spike-egress"
+# GG-2.11: the go decision record, merged on main (GG-3.1 and GG-3.2 refuse when the compensating-control record exists)
+GG-2.11	file	$PRD/decisions/$DATE-ge-binding-go.md	# Decision: bind the production app to gemini-egress (test stand-in)\n\nGO: yes, from gg_result Q1, Q6 and Q7.\n
+GG-2.11	shell	cd "$PLATFORM_REPO_DIR" && git add decisions && git commit -qm 'decisions: ge-binding-go (setup 20 GG-2.11), test stand-in merge' && (git push -q origin HEAD:main 2>/dev/null || true)
+# GG-3.4: the production access policy the person created
+GG-3.4	shell	penv_set --force GE_ACCESS_POLICY "projects/$GEMINI_PROJECT/locations/global/accessPolicies/gemini-egress-access"
+# GG-4.4: the rollback operator, a second ge-admins@ member, never SA_1_ADMIN
+GG-4.4	shell	penv_set --force GG_ROLLBACK_OPERATOR ge-rollback-operator@example.test
+# GG-5.2b: the window record, every *tbd* replaced
+GG-5.2b	file	$BLD/records/$DATE-GG-5.2b-window-record-v1.md	# Change window record (test stand-in)\n\n| who | answer | time |\n|---|---|---|\n| desk | acknowledged | 09:00Z |\n
+GG-5.2b	shell	penv_set --force GG_WINDOW_RECORD "$BLD/records/$DATE-GG-5.2b-window-record-v1.md"
+# GG-7.1: the two channels' full resource names in GEMINI_PROJECT
+GG-7.1	shell	penv_set --force NOTIF_CH_EMAIL_GEMINI "projects/$GEMINI_PROJECT/notificationChannels/2000000000000000001" && penv_set --force NOTIF_CH_PAGER_GEMINI "projects/$GEMINI_PROJECT/notificationChannels/2000000000000000002"
+# GG-8.2: the signed Tier C record
+GG-8.2	file	$BLD/records/$DATE-GG-8.2-tier-c-record-v1.md	# Tier C gate record (test stand-in)\n\n| line | Result |\n|---|---|\n| binding | PASS E-05 |\n
+GG-8.2	shell	penv_set --force TIER_C_RECORD "$BLD/records/$DATE-GG-8.2-tier-c-record-v1.md"

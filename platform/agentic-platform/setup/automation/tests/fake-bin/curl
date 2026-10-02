@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""A stand-in for curl, for the calling convention of lib/core.sh `api` only. Never contacts anything."""
+import json, os, sys
+a = sys.argv[1:]
+outf, method, data, url, wfmt = None, 'GET', None, None, None
+i = 0
+while i < len(a):
+    x = a[i]
+    if x == '-o': outf = a[i + 1]; i += 2; continue
+    if x == '-X': method = a[i + 1]; i += 2; continue
+    if x == '-w': wfmt = a[i + 1]; i += 2; continue
+    if x in ('-H',): i += 2; continue
+    if x == '--data-binary': data = a[i + 1]; i += 2; continue
+    if x.startswith('-'): i += 1; continue
+    url = x; i += 1
+sys.stdin.read()
+state_path = os.environ['FAKE_STATE']
+st = json.load(open(state_path)) if os.path.exists(state_path) else {'mutations': 0, 'seen': {}, 'bindings': []}
+code, body = 200, '{}'
+if url and url.endswith(':testIamPermissions'):
+    req = json.load(open(data[1:])) if data and data.startswith('@') else {}
+    body = json.dumps({'permissions': req.get('permissions', [])}); kind = 'READ'
+elif method == 'GET':
+    kind = 'READ'
+    key = 'curl GET ' + url
+    cur, ctx = os.environ.get('AGP_CUR_STEP', ''), os.environ.get('AGP_CALL_CONTEXT', '')
+    st.setdefault('present', [])
+    if ctx == 'apply' or key in st['present']:
+        present = True
+    else:
+        seen = st['seen'].get(key)
+        present = (isinstance(seen, list) and seen[0] == cur and st['mutations'] > seen[1]) or \
+                  (seen is None and ctx == 'check' and any(url.split('?')[0].startswith(u) for u in st.get('step_posts', {}).get(cur, [])))
+        if present:
+            st['present'].append(key)
+        elif ctx != 'plan':
+            st['seen'][key] = [cur, st['mutations']]
+    if not present:
+        code, body = 404, '{"error":{"code":404,"status":"NOT_FOUND"}}'
+    else:
+        body = json.dumps({'name': 'fake', 'state': 'ACTIVE'})
+else:
+    kind = 'MUTATE'; st['mutations'] += 1
+    if method == 'POST':   # a POST creates the collection's resource; a later GET of it in the same step sees it
+        st.setdefault('step_posts', {}).setdefault(os.environ.get('AGP_CUR_STEP', ''), []).append(url.split('?')[0])
+json.dump(st, open(state_path, 'w'))
+with open(os.environ['FAKE_LOG'], 'a') as f:
+    f.write('curl\t%s\t%s %s\n' % (kind, method, url))
+if outf:
+    open(outf, 'w').write(body)
+else:
+    sys.stdout.write(body)
+if wfmt:
+    sys.stdout.write(str(code))

@@ -1,0 +1,2 @@
+# asset	page	opening line of the heredoc in the page (setup/19 GE-2.3)
+ge-2.3-tenant-app-entitlement.yaml	19-gemini-enterprise-import-and-baseline.md	cat > "$f" <<EOF

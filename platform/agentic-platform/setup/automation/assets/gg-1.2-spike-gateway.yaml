@@ -1,0 +1,7 @@
+name: gg-spike-egress
+protocols:
+  - MCP
+googleManaged:
+  governedAccessPath: AGENT_TO_ANYWHERE
+registries:
+  - //agentregistry.googleapis.com/projects/${GEMINI_PROJECT}/locations/europe-west1

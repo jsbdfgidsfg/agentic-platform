@@ -1,0 +1,2 @@
+# asset	page	opening line of the heredoc in the page (setup/05 GI-0.2)
+gi-0.2-gi-helpers.sh	05-gemini-enterprise-inventory.md	cat > "$GE_INVENTORY_DIR/gi-helpers.sh" <<'EOF'
