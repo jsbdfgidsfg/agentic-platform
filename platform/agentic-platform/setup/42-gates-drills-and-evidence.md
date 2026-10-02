@@ -6,6 +6,7 @@
 - Last reviewed: 2026-10-01
 - Revised 2026-10-01: GD-3.1 requests its `ENT_PROJECT_REPAIR_CORE` grant and encrypts the bucket with its own Autokey key handle instead of binding the Cloud Storage service agent on `KEY_PLATFORM_LOGS` (whose sole Encrypter/Decrypter stays the Logging service account, 11 KV-2.3); the `LOGGING_PROJECT` placement is recorded as a `BD-42` departure from 08 §5.4 and 02 §5; GD-1.1 and GD-1.2 branch, push and open a pull request; GD-1.4 files pointer records and `gate-index.sh` prints `MALFORMED` for a missing or bad `date:`; GD-3.4 resolves each file from the register's location column and skips record ids already copied; gendered pronouns for roles replaced with they/them/their and verb agreement fixed; GD-3.1 writes the departure as row `BD-42-1`, inserted into the register's first table with 03 DC-9.1's block; GD-1.4's TIER-R row names `records/gates/`, where 17 FM-10.2 keeps the signed record, as the pointer's evidence location.
 - Revised 2026-10-01: GD-7.1 lists as open only first-table rows with no Closures line, in POSIX awk with today's date from `date -u`, and prints `MALFORMED` for a `BD-` line in neither table's form; a re-dating closes the old row with `bd_close`. The listing was run on 2026-10-01 under `/bin/bash` 3.2 with macOS's awk 20200816 against a throwaway register made by 01 PR-4.1's block and filled with `bd_insert` and `bd_close`: it listed the five unclosed rows of seven, one `OVERDUE` and one `MALFORMED` line. A check of the shell, not evidence (S177).
+- Revised 2026-10-01: GD-3.2's two blocks each request an `ENT_PROJECT_REPAIR_CORE` grant for their `buckets update`; GD-3.3's VERIFY names the `projectOwner:`, `projectEditor:` and `projectViewer:` legacy-role bindings Google adds to a uniform-access bucket and reads that nobody holds a basic role on `LOGGING_PROJECT`; GD-4.1's section 4 passes a commit-pinned `repo:…@<commit>` location and a record whose step and slug have a later hashed row; GD-4.3 files a row under every TISAX group of its cell, not only the first.
 - Part 42 of the setup set. Entry point: [README.md](README.md). Conventions, helpers and the
   step format: [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md).
 - What this part is: the **standing** half of the set. Files 01 to 41 each produce gate lines,
@@ -729,8 +730,9 @@ gcloud storage buckets describe "$PLATFORM_EVIDENCE_BUCKET" --format="value(loca
 
 ### GD-3.2 Set the retention period, then lock it — **IRREVERSIBLE**
 
-- **WHO:** Platform owner runs; **the second human is present and countersigns**, as at
-  [14](14-central-logging-and-billing-export.md) CL-10.2.
+- **WHO:** Platform owner runs, under `ENT_PROJECT_REPAIR_CORE`; **the second human is present,
+  approves the grant and countersigns**, as at [14](14-central-logging-and-billing-export.md)
+  CL-10.2.
 - **WHERE:** Shell.
 - **Gated on:** `tools/decision-need.sh P13` prints `SIGNED` **and** the record carries an
   integer `RECORD_RETENTION_DAYS` for the `record` class; GD-3.1 has a `DONE` checkpoint and its
@@ -743,9 +745,12 @@ gcloud storage buckets describe "$PLATFORM_EVIDENCE_BUCKET" --format="value(loca
   on the project".
 
 ```bash
-need PLATFORM_EVIDENCE_BUCKET RECORD_RETENTION_DAYS PLATFORM_REPO_DIR
+need PLATFORM_EVIDENCE_BUCKET RECORD_RETENTION_DAYS PLATFORM_REPO_DIR ENT_PROJECT_REPAIR_CORE SECOND_HUMAN_EMAIL CICD_PROJECT
 case "$RECORD_RETENTION_DAYS" in ''|*[!0-9]*) echo "STOP: RECORD_RETENTION_DAYS is not an integer" >&2; false;; esac
 [ "$RECORD_RETENTION_DAYS" = "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 RECORD_RETENTION_DAYS)" ] || { echo "STOP: the variable differs from the signed P13 value" >&2; false; }
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
+g="$(gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-duration=3600s --justification="setup 42 GD-3.2: set the platform evidence bucket retention period" --additional-email-recipients="$SECOND_HUMAN_EMAIL" --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"
+pam_wait "$g" ACTIVE
 gcloud storage buckets update "$PLATFORM_EVIDENCE_BUCKET" --retention-period="P${RECORD_RETENTION_DAYS}D"
 gcloud storage buckets describe "$PLATFORM_EVIDENCE_BUCKET" --format="default(retention_policy)"
 ```
@@ -759,16 +764,22 @@ gcloud storage buckets describe "$PLATFORM_EVIDENCE_BUCKET" --format="default(re
   Then, **at a separate sitting**, after the four checks below are written into the record:
 
 ```bash
-need PLATFORM_EVIDENCE_BUCKET RECORD_RETENTION_DAYS PLATFORM_REPO_DIR
+need PLATFORM_EVIDENCE_BUCKET RECORD_RETENTION_DAYS PLATFORM_REPO_DIR BUILD_LOG_DIR ENT_PROJECT_REPAIR_CORE SECOND_HUMAN_EMAIL CICD_PROJECT
 case "$RECORD_RETENTION_DAYS" in ''|*[!0-9]*) echo "STOP: RECORD_RETENTION_DAYS is not an integer" >&2; false;; esac
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" P13
 grep -q "GD-3.1.*DONE" "$BUILD_LOG_DIR/checkpoints.tsv" || { echo "STOP: GD-3.1 has no DONE line" >&2; false; }
+source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
+g="$(gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --requested-duration=3600s --justification="setup 42 GD-3.2: lock the platform evidence bucket retention policy" --additional-email-recipients="$SECOND_HUMAN_EMAIL" --billing-project="$CICD_PROJECT" --format='value(name)')"; echo "$g"
+pam_wait "$g" ACTIVE
 gcloud storage buckets describe "$PLATFORM_EVIDENCE_BUCKET" --format="default(location,retention_policy)"
 checkpoint GD-3.2 START "$SECOND_HUMAN_EMAIL" - "lock retention at ${RECORD_RETENTION_DAYS} days"
 gcloud storage buckets update "$PLATFORM_EVIDENCE_BUCKET" --lock-retention-period
 ```
 
-  The `describe` immediately before the lock is not decoration: it is the last chance to see the
+  Both `buckets update` commands need `storage.buckets.update` on the bucket, which the platform
+  owner holds only inside an `ENT_PROJECT_REPAIR_CORE` grant (12 names it for "buckets, locks and
+  views in `LOGGING_PROJECT`"); each sitting therefore requests its own grant, as GD-3.1 does, and
+  nothing in the block runs before it is `ACTIVE`. The `describe` immediately before the lock is not decoration: it is the last chance to see the
   location and the period with resolved keys, and the second human reads both aloud before the
   next line is run.
 
@@ -832,10 +843,27 @@ gcloud storage buckets get-iam-policy "$PLATFORM_EVIDENCE_BUCKET" --format=json 
   lists them. If they are not, the third binding goes to `user:${SECOND_HUMAN_EMAIL}` instead and
   the reason is written into the record.
 
-- **VERIFY:** The policy has exactly four bindings besides inherited project roles. No principal
-  holds `roles/storage.admin`, `objectAdmin`, `legacyBucketOwner` or any role carrying
-  `storage.objects.delete` at bucket level — that absence is what makes the store append-only.
-  No `eve-*`, `mo-*` or `walle-*` service account appears, and no witness principal appears.
+- **VERIFY:** The policy has exactly the four bindings of the table, plus the ones Google adds to
+  a bucket created with uniform bucket-level access: principals with `roles/owner` or
+  `roles/editor` on the project "gain the `roles/storage.legacyBucketOwner` and
+  `roles/storage.legacyObjectOwner` roles for the bucket", and those with `roles/viewer` gain
+  `legacyBucketReader` and `legacyObjectReader` (IAM roles for Cloud Storage,
+  https://docs.cloud.google.com/storage/docs/access-control/iam-roles, read 2026-10-01). They
+  appear as the convenience members `projectOwner:`, `projectEditor:` and `projectViewer:` of
+  `LOGGING_PROJECT`, and `legacyBucketOwner` carries `storage.objects.delete` (same page). They are
+  left in place and named in the record, not removed: a convenience member stands for whoever holds
+  the basic role on the project, so the control is that **nobody** holds one there.
+  [12](12-privileged-access-catalogue.md) PA-9.2 removed the creator's Owner and
+  [14](14-central-logging-and-billing-export.md)'s IAM VERIFY reads no human or group with Owner,
+  Editor or Viewer on `LOGGING_PROJECT`; this step reads it again:
+  `gcloud projects get-iam-policy "$LOGGING_PROJECT" --flatten="bindings[].members" --filter="bindings.role:(roles/owner OR roles/editor OR roles/viewer)" --format="value(bindings.role,bindings.members)"`
+  prints no `user:`, `group:` or `domain:` member (a Google-managed service agent may appear and is
+  written into the record). After GD-3.2, the locked retention refuses any deletion within the
+  period whoever asks. Apart from those convenience members, no principal holds
+  `roles/storage.admin`, `objectAdmin`, `legacyObjectOwner`, `legacyBucketOwner` or any role
+  carrying `storage.objects.delete` at bucket level — that absence is what makes the store
+  append-only. No `eve-*`, `mo-*` or `walle-*` service account appears, and no witness principal
+  appears.
   Then prove the two halves of the owner's binding, as a member of `GRP_PLATFORM_OWNERS`:
   `gcloud storage cat` on a known object **fails** (no read-back), and a second
   `gcloud storage cp` of a file over an existing object **fails** (no overwrite). Both refusals
@@ -1018,7 +1046,11 @@ W=$(mktemp -d)
   echo "# rows"; grep -c '^| 20' "$EVIDENCE_REGISTER"
   echo "# duplicate record ids"; awk -F' *\\| *' '/^\| 20/{print $2}' "$EVIDENCE_REGISTER" | sort | uniq -d
   echo "# rows with no E-xx and no TISAX id"; awk -F' *\\| *' '/^\| 20/ && $5=="-" && $6=="-" {print $2}' "$EVIDENCE_REGISTER"
-  echo "# rows with no SHA-256 and a file-shaped location"; awk -F' *\\| *' '/^\| 20/ && $8=="-" && $7 ~ /^(build-log|repo|bucket|witness):/ {print $2}' "$EVIDENCE_REGISTER"
+  echo "# rows with no SHA-256 and a file-shaped location"
+  awk -F' *\\| *' '/^\| 20/ { k=$2; sub(/^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-/, "", k); sub(/-v[0-9]+$/, "", k)
+    if ($8 != "-" && $8 != "") { h[k]=1; next }
+    if ($7 ~ /^(build-log|repo|bucket|witness):/ && $7 !~ /^repo:[^ ]*@[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]+$/) { n++; id[n]=$2; key[n]=k } }
+    END { for (i=1; i<=n; i++) if (!(key[i] in h)) print id[i] }' "$EVIDENCE_REGISTER"
   echo "# steps with a DONE checkpoint and no evidence row"
   awk -F'\t' '$3=="DONE"{print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u > "$W/steps.done"
   awk -F' *\\| *' '/^\| 20/{print $4}' "$EVIDENCE_REGISTER" | sort -u > "$W/steps.ev"
@@ -1041,7 +1073,18 @@ rm -r "$W"
   difference as a finding. Section 6 is new: it prints the BLOCKED and PENDING steps as their own
   list, so that the thing section 5 used to conflate is still visible — as a state, not as a gap.
 
-- **VERIFY:** Sections 2, 3 and 4 are empty. Section 5 lists only steps whose EVIDENCE line says
+  **Section 4 knows two things a hash-less row can still be.** A `repo:<path>@<commit>` location is
+  pinned by the commit id, which git derives from the content, so it needs no SHA-256 column and
+  is not listed; a `repo:` location with no commit is listed. And a row is corrected the only way
+  an append-only register allows: `evidence_add` again for the same step and slug, with the FILE
+  argument, which writes a later `v<n>` (or a later date) carrying the hash; section 4 drops a
+  record whose step and slug (the id without its date and `-v<n>`) have any row with a hash. A
+  directory is never registered as such: it has no hash, and GD-3.4 cannot copy it. The
+  correction registers a summary file in it that lists the SHA-256 of every other file, as
+  [21](21-sandbox-tenant-and-nonprod-foundation.md) SB-7.1 does.
+
+- **VERIFY:** Sections 2, 3 and 4 are empty. A record still in section 4 is corrected by its producing
+  step's operator as the paragraph above says, never by editing its row, and GD-4.1 is re-run. Section 5 lists only steps whose EVIDENCE line says
   "none" on purpose (reads, N/A steps); every other name in it is a **missing record** and opens
   an action with an owner and a date in the quarterly record. Cross-read section 5 against
   section 6: a step appearing in both means a step that reached `DONE` after a `BLOCKED` and then
@@ -1105,10 +1148,15 @@ penv_set EVIDENCE_PACK_DIR "$BUILD_LOG_DIR/packs"
 D="$EVIDENCE_PACK_DIR/tisax-$(date -u +%F)"; mkdir -p "$D"
 for g in 1.1 1.2 1.3 1.4 1.5 1.6 2.1 3.1 4.1 4.2 5.1 5.2 5.3 6.1 7.1; do
   mkdir -p "$D/$g"
-  awk -F' *\\| *' -v g="$g" '/^\| 20/ && index($6, g)==1 {print $2"\t"$7}' "$EVIDENCE_REGISTER" > "$D/$g/index.tsv"
+  awk -F' *\\| *' -v g="$g" '/^\| 20/ { n=split($6, t, /[ ,]+/); for (i=1; i<=n; i++) if (t[i]==g || index(t[i], g".")==1) { print $2"\t"$7; break } }' "$EVIDENCE_REGISTER" > "$D/$g/index.tsv"
 done
 find "$D" -name index.tsv -size -2c -print   # groups with no evidence at all
 ```
+
+  A TISAX cell often holds several ids (`4.1.3, 4.2.1`), so the awk splits it and files the row
+  under every group one of its ids belongs to; an id belongs to group `4.2` when it is `4.2` or
+  starts with `4.2.`. The first draft compared only the cell's first id, so a group whose rows all
+  carried it second looked empty when it was not.
 
 - **VERIFY:** No group prints from the `find`. A group with an empty index is a gap in the
   mapping, not an empty control: every group of §13 has at least one artefact this set produces.

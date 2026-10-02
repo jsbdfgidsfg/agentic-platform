@@ -3,7 +3,7 @@
 ## Status
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
-- Changed on 2026-10-01: PU-2.11 now only lists the planned projects, and 07 BA-6.2b files the organisation's project-quota increase (the billing-quota form is dropped); 06's exception counted as five roles; they/them for roles.
+- Changed on 2026-10-01: PU-2.11 now only lists the planned projects, and 07 BA-6.2b files the organisation's project-quota increase (the billing-quota form is dropped); 06's exception counted as five roles; they/them for roles; PU-0.1 no longer needs the sandbox super admins' addresses, which 03 DC-2.6 records only after PU-2.5 sets `SANDBOX_DOMAIN`, and checks their appointment records instead; PU-2.3 and PU-3.3 drop the SCC Enterprise tier, deprecated by Google on 2026-05-21.
 - What this is: the one purchase list for the agentic platform, Mo, Eve and Wall-E, sorted by lead time, longest first. Each row names who raises it, who buys and approves it, the file and gate it blocks, and the check that proves the item is in hand. It is stage 3 of the set ([README](README.md)) and runs from day one, in parallel with [03](03-decisions-and-people.md) and [05](05-gemini-enterprise-inventory.md).
 - It replaces: the unsorted lists in [../../wall-e/PREREQUISITES.md](../../wall-e/PREREQUISITES.md) §3.1 and §9, the day-one items of [../brief/29-roadmap-and-cost.md](../brief/29-roadmap-and-cost.md) and the cost lines of [../01-hld.md](../01-hld.md) §0.5, which now point here. The key count of PREREQUISITES §3.1 and 04 §8.3 is superseded by §4 below.
 - Step prefix: `PU`. Steps: 22. Steps marked BLOCKED: none (no step here needs code that does not exist).
@@ -37,7 +37,7 @@ A quote, a question or a domain-availability search may start before any signatu
   - [ ] P11 / SD-15 (SCC Premium: `SCC_BILLING_MODEL` and the payer), signed by IT security and finance.
   - [ ] P14 / SD-28 (the witness: domain, edition, billing, the two witness administrators), signed by IT security; `WITNESS_ADMIN_1_EMAIL`, `WITNESS_ADMIN_2_EMAIL` set.
   - [ ] P31 / SD-16 (the dedicated platform billing account), signed by the owner and finance; `BILLING_ADMIN_EMAIL` set.
-  - [ ] Decision 29 / SD-29 (sandbox before the grant, edition, whether the twin robots use hardware-key 2SV); `SANDBOX_SA_1_EMAIL`, `SANDBOX_SA_2_EMAIL` set.
+  - [ ] Decision 29 / SD-29 (sandbox before the grant, edition, whether the twin robots use hardware-key 2SV); the two sandbox super admins named in PPL-SB1 and PPL-SB2 ([03](03-decisions-and-people.md) DC-2.6). Their addresses, `SANDBOX_SA_1_EMAIL` and `SANDBOX_SA_2_EMAIL`, are not needed here: DC-2.6's superseding record adds them only once PU-2.5 has set `SANDBOX_DOMAIN`.
   - [ ] Decision 6 / SD-09 (model pin), only for PU-2.8.
   - [ ] SD-12 (the subject-report escalation), co-signed by the second human; `SECOND_HUMAN_EMAIL`, `INCIDENT_COMMANDER_EMAIL` set.
   - [ ] P63 (the Chrome Enterprise Premium licence count: one per operator and approver on the Tier W+ control surfaces), signed by the platform owner and IT security. Gates PU-2.9 only.
@@ -105,12 +105,12 @@ The steps are numbered from §1's lead-time order, so they are not in execution 
 
 ```bash
 need SIEM_KIND SCC_BILLING_MODEL BILLING_ADMIN_EMAIL SECOND_HUMAN_EMAIL INCIDENT_COMMANDER_EMAIL
-need WITNESS_ADMIN_1_EMAIL WITNESS_ADMIN_2_EMAIL SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL
-"$PLATFORM_REPO_DIR/tools/decision-need.sh" P10 P11 SD-15 P14 SD-28 P31 SD-16 WDEC-29 SD-29 SD-12 P22 SD-14
+need WITNESS_ADMIN_1_EMAIL WITNESS_ADMIN_2_EMAIL
+"$PLATFORM_REPO_DIR/tools/decision-need.sh" P10 P11 SD-15 P14 SD-28 P31 SD-16 WDEC-29 SD-29 PPL-SB1 PPL-SB2 SD-12 P22 SD-14
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" P63 P99 || echo "GAP: P63 and/or P99 have no signed record; PU-2.9 and PU-2.6 may quote but not commit"
 ```
 
-  The second `decision-need.sh` line is written with `|| echo` on purpose: on 2026-09-15 neither P63 nor P99 has a row in 03's tracker (see the precondition gap above), so a hard failure here would stop every other row for two purchases that are only quoted on day one.
+  `SANDBOX_SA_1_EMAIL` and `SANDBOX_SA_2_EMAIL` are not in the `need` lines: the sandbox addresses exist only after PU-2.5 records `SANDBOX_DOMAIN`, so 03 DC-2.6 first signs PPL-SB1 and PPL-SB2 naming the two people, with the Values cell `*tbd*`, and `decision-need.sh` checks those records. The second `decision-need.sh` line is written with `|| echo` on purpose: on 2026-09-15 neither P63 nor P99 has a row in 03's tracker (see the precondition gap above), so a hard failure here would stop every other row for two purchases that are only quoted on day one.
 
 - **VERIFY:** the two `need` lines and the first `decision-need.sh` line return without error. A failure names the empty or `*tbd*` variable, or the unsigned decision: start the quotes and questions for that row, and do not commit it. If the second line prints `GAP`, record which of P63 and P99 is missing and carry it into PU-2.6 and PU-2.9 as an uncommitted row.
 - **ROLLBACK:** none needed (read-only).
@@ -156,7 +156,7 @@ need WITNESS_ADMIN_1_EMAIL WITNESS_ADMIN_2_EMAIL SANDBOX_SA_1_EMAIL SANDBOX_SA_2
      - **standalone Model Armor**, bought outside Security Command Center, is free up to 2 million tokens a month, then 0.10 USD per million tokens.
 
      The allowance carried by **organisation-level Premium on pay-as-you-go** is *tbd*: it is not stated as retrievable text on either page. Do not assume it is the 2 million figure, which is the standalone allowance. PU-3.3 asks the account team for it, and the answer is written back into this step and into §5 before P11 is signed. If P11 must be signed before the answer arrives, the pay-as-you-go option is costed with a **zero** included allowance, which is the conservative reading.
-  5. If P11 chooses the Enterprise tier instead (P94 does not), see PU-3.3 before anything else.
+  5. The Enterprise tier is not an option. Google deprecated it on 2026-05-21 and shuts it down on 2027-05-21, when organisations on it move to Premium (Security Command Center release note of 2026-05-21 and service-tiers page, read 2026-10-01). If P11 names Enterprise, it goes back to 03 to be re-signed for Premium, as P94 already chooses.
 - **VERIFY:** a signed payer record naming the model and the payer; for pay-as-you-go, the dated notice to cost-centre owners; for the subscription, a countersigned order. Activation with `eu` residency is file 09's step, not this one.
 - **ROLLBACK:** pay-as-you-go: none until 09 activates. Subscription: **IRREVERSIBLE** for 12 months. Confirm before signing: P11 signed by IT security and finance, and P94's tier (Premium) and residency (`eu`) are what the order names. Gate: P11 / SD-15.
 - **EVIDENCE:** `<date>-PU-2.3-scc-payer-v1` and, if bought, `<date>-PU-2.3-scc-order-v1` (E-11; TISAX 6.1).
@@ -196,11 +196,11 @@ dig +short NS "$WITNESS_DOMAIN"
   1. Specify the order from SD-29, and write the reasons into it so no one buys a cheaper edition:
      - edition equal to production (`WORKSPACE_EDITION`, 01) and never below Enterprise Standard: multi-party approval exists only on Enterprise Standard and Plus, Education Standard and Plus and Enterprise Essentials Plus; Essentials editions carry no Gmail, which the twins' Gmail scopes need; OAuth and SAML log sharing to Google Cloud and the SecOps export need Enterprise Standard or Plus. Enterprise Plus if G-4's Access Transparency stream is drilled.
      - seats: `walle@SANDBOX_DOMAIN` and `eve@SANDBOX_DOMAIN` (the twin robots), the two sandbox super admins, and *tbd* synthetic accounts (`Assumption:` three to four, as SETUP §1.4 planned).
-     - two named sandbox super admins, `SANDBOX_SA_1_EMAIL` and `SANDBOX_SA_2_EMAIL` (03). Multi-party approval needs two or more super admin accounts, and G14 needs a requester and a different approver, so the platform owner cannot build or drill the twin alone.
+     - the two sandbox super admins named in PPL-SB1 and PPL-SB2 (03 DC-2.6). Their sandbox addresses become `SANDBOX_SA_1_EMAIL` and `SANDBOX_SA_2_EMAIL` only through DC-2.6's superseding record, once step 3 below has recorded the domain. Multi-party approval needs two or more super admin accounts, and G14 needs a requester and a different approver, so the platform owner cannot build or drill the twin alone.
      - the person entitled to accept Google Cloud terms for the sandbox organisation, named in the order.
      - P59 closed in 03 as "no sandbox Gemini Enterprise app; the twin engine is called directly", or the app licence added here.
   2. The domain owner registers a separate domain (`Assumption:` not a subdomain of a production domain, so it cannot collide with the production account's verification), not attached to any Google account, with DNS the sandbox super admins can edit for the TXT and MX records of file 21 (MX `smtp.google.com`, priority 1).
-  3. Record the name:
+  3. Record the name, then tell the ISMS that `SANDBOX_DOMAIN` is set, so 03 DC-2.6's superseding record can add the two sandbox super admins' addresses:
 
 ```bash
 penv_set SANDBOX_DOMAIN "<registered sandbox domain>"
@@ -380,14 +380,14 @@ Each question is sent in writing by the named person; the answer is filed the da
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `<date>-PU-3.2-witness-invoicing-answer-v1` (TISAX 6.1).
 
-### PU-3.3 SCC Enterprise residency activation date, and the Premium Model Armor allowance
+### PU-3.3 SCC Premium residency activation and lead time, and the Premium Model Armor allowance
 
 - **WHO:** IT security asks; the platform owner writes the answer back into PU-2.3 step 4 and §5.
 - **WHERE:** the account team.
 - **ACTION:** ask, in one message:
-  1. "For the Enterprise tier with data residency, Google says activation must be scheduled with the account representative. Confirm that the Premium tier with `eu` residency at organisation level needs no scheduled date, and give the lead time for a Premium subscription order." P94 does not choose Enterprise; the answer is recorded so P11 is closed on facts.
+  1. "Confirm that Security Command Center Premium activated at organisation level with `eu` data residency needs no activation date scheduled with you, and give the lead time for a Premium subscription order." The Enterprise tier is deprecated (PU-2.3 step 5) and is not asked about; the answer is recorded so P11 is closed on facts.
   2. "How many Model Armor tokens a month are included with Security Command Center Premium activated at organisation level on **pay-as-you-go**, as opposed to the 3 billion a month stated for a Premium **subscription** and the 2 million a month stated for standalone Model Armor? State the overage rate that applies in each case."
-- **VERIFY:** a dated written answer covering both questions. If P11 selects Enterprise, the scheduled activation date is recorded and file 09 waits for it. The token figure replaces the *tbd* in PU-2.3 step 4 and in §5's SCC row on the day it arrives; if the answer does not give one, PU-2.3's zero-allowance costing stands and that is written into §5.
+- **VERIFY:** a dated written answer covering both questions. If Premium activation with `eu` residency does need a scheduled date, that date is recorded and file 09 waits for it. The token figure replaces the *tbd* in PU-2.3 step 4 and in §5's SCC row on the day it arrives; if the answer does not give one, PU-2.3's zero-allowance costing stands and that is written into §5.
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `<date>-PU-3.3-scc-residency-answer-v1` (E-11; TISAX 6.1).
 
@@ -587,7 +587,8 @@ No finding in this page's scope is deferred. One fix is **declined as out of sco
 - The metered ingestion metric `logging.googleapis.com/billing/bytes_ingested`, with `log_source` and `log_bucket_id` labels (read 2026-09-16): https://docs.cloud.google.com/logging/docs/logs-based-metrics and https://docs.cloud.google.com/stackdriver/estimating-bills
 - GitHub: protected branches and code owners on private repositories need GitHub Pro, Team, Enterprise Cloud or Enterprise Server; code review settings on organisation-owned private repositories need Team or Enterprise (read 2026-09-16): https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches and https://docs.github.com/articles/about-code-owners and https://docs.github.com/en/organizations/organizing-members-into-teams/managing-code-review-settings-for-your-team
 - GitLab: Code Owners and merge-request approval rules are Premium and Ultimate features; audit events record a bypass (read 2026-09-16): https://docs.gitlab.com/user/project/codeowners/ and https://docs.gitlab.com/user/project/merge_requests/approvals/rules/ and https://docs.gitlab.com/user/compliance/audit_events/
-- SCC and SecOps data residency, Enterprise activation scheduled with the account representative: https://docs.cloud.google.com/security-command-center/docs/data-residency-support and https://docs.cloud.google.com/security-command-center/docs/activate-enterprise-tier
+- SCC and SecOps data residency: https://docs.cloud.google.com/security-command-center/docs/data-residency-support
+- SCC tiers "Standard-legacy", "Standard", "Premium" and "Enterprise (Deprecated)"; the Enterprise tier deprecated on 2026-05-21 and shut down on 2027-05-21, organisations moving to Premium on that date (read 2026-10-01; service-tiers page updated 2026-09-30): https://docs.cloud.google.com/security-command-center/docs/service-tiers and https://docs.cloud.google.com/security-command-center/docs/release-notes
 - Access Approval pricing (included with Standard, Enhanced and Premium Support): https://cloud.google.com/assured-workloads/access-approval/pricing
 - Billing access and inheritance from the parent organisation: https://docs.cloud.google.com/billing/docs/how-to/billing-access
 - Disabling billing stops a project's services: https://docs.cloud.google.com/billing/docs/how-to/modify-project

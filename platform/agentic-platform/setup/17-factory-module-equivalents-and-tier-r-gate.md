@@ -9,6 +9,7 @@
 - Replaces: the Phase 6 "factory call" and "manual fallback" of `wall-e/SETUP.md`, Eve's Phase 1 project creation (`eve/07-build-runbook.md`) and Mo-1 step 0 (`mo/07-build-runbook.md`). Salvaged: the verify reads of those three (project parent, enabled API list, service-account list, the `aiplatform` absence check on Eve, the IAM read for standing roles), now inside the zero-diff checker of §1. Not copied: project creation under `FOLDER_ID` (S019, S027, S042), a standing creator Owner nobody removes (S018), `gcloud config set project` (S071), a budget filtered by project number (S158), the "Absent = stop" verify that expected a factory nobody ran (S027).
 - Changed 2026-10-01: step count 77; Fabric v59.0.0 noted at FM-0.2; `gcloud observability buckets` on the GA track (FM-1.2, FM-2.9); FM-2.12a reads `floors.json`'s accepted spelling block (18 KS-2.5, KS-2.9); FM-3.1 reads the register with PyYAML; FM-3.2 builds the agent principal from `DENY_AGENT_FORM` (18 KS-3.2); FM-5.1 computes the project number and lists R3b; the tenant-app repair entitlement is `ent-project-repair-tenant-app` / `ENT_PROJECT_REPAIR_TENANT_APP` as 19 GE-2.3 creates it; every grant followed by a privileged command waits for `ACTIVE` with 12's `pam_wait`; FM-4.4 no longer uses `grep -P`; FM-10.4's VERIFY no longer expects §12 lines; FM-10.2 keeps `TIER_R_RECORD` in `records/gates/` and names 42 GD-1.4's pointer `gates/TIER-R-<date>.md` as the way the gate index reaches it; FM-7.3's VERIFY reads it in README §8 row B-16.
 - Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (FM-2.22, FM-7.7, FM-8.7, FM-11.3).
+- Changed 2026-10-01: FM-0.1, FM-2.1, FM-8.1 and FM-9.4 register their records with the file argument, so 42 GD-4.1 finds a SHA-256; FM-2.2 reads `ENT` from the named entitlement variable and its `need` line lists every variable the block reads; FM-6.1's floor `made_elsewhere` line names the floor (the checker refused it) and the page gives the two `pending` objects in full; FM-9.5 reads every role `factory-apply@` still holds on the canary and removes any binding under another role.
 - Applies decisions (pending signature in 03): SD-01 (bootstrap deviation), SD-12 (the second human approves every elevation on `EVE_PROJECT`), SD-17 (regional `_Default`, global `_Required`, explicit `_Trace`), SD-18 (platform-core rows), SD-22 (deny-policy principal form; see the conflict recorded in FM-3.2), SD-40 (no agent organisation sink), SD-41 (floors), SD-42 (singleton approvers), SD-44 (`exists_or_pending`), SD-46 (`ent-bootstrap-module`).
 - Closes: S001 (module-equivalent, negative-test and Tier R half), S018 (every module project), S019, S027, S042, S048, S085 (Tier R half), S102, S156, S158, X-RQB-03 (module-project half), X-RQB-08 (the project floor on every module project, FM-2.12a). Defers nothing without an owner; see §13.
 
@@ -130,7 +131,7 @@ grep -E '^\| BD-10-6 \|' "$DEVIATION_REGISTER" >/dev/null && grep -A200 '^## Clo
 
 - **VERIFY:** `decision-need.sh` prints `SIGNED` for each id. For each of 09 to 16, the status count shows `DONE` for every step, except the BLOCKED steps README's BLOCKED index lists for that file (for example CP-6.2 on B-02 and B-04) and PENDING grants listed in the re-run index; the BLOCKED and PENDING listing contains nothing that is not in those two indexes. `BD-10-6` has a row in "Closures" (the creator's Owner was removed from the core projects in 12). Any other state: stop and finish the earlier file.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** The output as `<date>-FM-0.1-inputs-v1` in `BUILD_LOG_DIR/records`, registered with `evidence_add FM-0.1 inputs E-05 1.4.1 build-log:records/...`. TISAX 1.4.1.
+- **EVIDENCE:** The output saved as `"$BUILD_LOG_DIR/records/<date>-FM-0.1-inputs-v1.txt"`, registered with its file so that the register holds its SHA-256: `evidence_add FM-0.1 inputs E-05 1.4.1 "build-log:records/<date>-FM-0.1-inputs-v1.txt" "$BUILD_LOG_DIR/records/<date>-FM-0.1-inputs-v1.txt"` (42 GD-4.1 lists a `build-log:` row with no hash as a gap). TISAX 1.4.1.
 
 ### FM-0.2 Record that the factory's automation is BLOCKED
 
@@ -681,7 +682,7 @@ git -C "$PLATFORM_REPO_DIR" add "$RUN_SPEC" && git -C "$PLATFORM_REPO_DIR" commi
   Filling rules: `services` is the subset of the parent folder's allow-list (02 §4.2) that the manifest's stores, egress and module section need, never the whole list (the `inputs` check refuses anything outside it); `labels` from 02 §3.6 with the row's values (slugged), `created_by=bootstrap-hand`, `factory_run=<run_id>`; `budget.amount` from 02 §2.2 and §3.7 (the checker's table) or the row's `budget_eur` with its reason; `essential_contacts` to the row's `owner_group` (all four categories) and `platform-security@` (`SECURITY`); `service_accounts` and `project_bindings` from the module section; `made_elsewhere` for every module item another file makes; `pending` only with an owner and a re-run file.
 - **VERIFY:** `inputs` prints `ZERO-DIFF` and exits 0 (every source agrees: row, NAMES, `folders.yaml`, the allow-list, the budget table). The pull request is merged with the required approvals; `git -C "$PLATFORM_REPO_DIR" log --oneline -1 origin/main -- "factory/runs/${RUN}.json"` shows the merge. `need TIER_R_RECORD` passes.
 - **ROLLBACK:** Close the pull request; nothing exists in Google Cloud yet.
-- **EVIDENCE:** The inputs report and the merge commit, `evidence_add FM-2.1@${RUN} inputs E-05 1.3.1 ...`. TISAX 1.3.1 (asset has an owner and classification before it exists), 5.2.1. EU AI Act E-05.
+- **EVIDENCE:** The inputs report, registered with its file, and the merge commit noted beside it: `evidence_add FM-2.1@${RUN} inputs E-05 1.3.1 "build-log:records/$(basename "$R")-FM-2.1-inputs-v1.json" "${R}-FM-2.1-inputs-v1.json"`. TISAX 1.3.1 (asset has an owner and classification before it exists), 5.2.1. EU AI Act E-05.
 
 ### FM-2.2 Activate the run's entitlement
 
@@ -690,13 +691,14 @@ git -C "$PLATFORM_REPO_DIR" add "$RUN_SPEC" && git -C "$PLATFORM_REPO_DIR" commi
 - **ACTION:**
 
 ```bash
-ENT="<the entitlement variable's value for this run>"
-need ENT RUN_ID
+ENT_VAR="<the entitlement variable the module section names for this run, for example ENT_BOOTSTRAP_MODULE_IMPROVERS_PROD>"
+ENT="$(printenv "$ENT_VAR")"
+need ENT RUN_ID CICD_PROJECT PLATFORM_REPO_DIR
 gcloud pam entitlements describe "$ENT" --location=global --billing-project="$CICD_PROJECT" --format="yaml(eligibleUsers,approvalWorkflow,maxRequestDuration,privilegedAccess)"
 gcloud pam grants create --entitlement="$ENT" --requested-duration=3600s --justification="${RUN_ID}: hand module equivalent, spec $(git -C "$PLATFORM_REPO_DIR" rev-parse --short origin/main) (setup 17, SD-01, SD-46)" --location=global --billing-project="$CICD_PROJECT"
 ```
 
-  The approver reads the justification, opens the merged run spec, and approves: `gcloud pam grants approve <GRANT_NAME> --reason="spec reviewed: ${RUN_ID}" --location=global --billing-project="$CICD_PROJECT"` (the `approve` reference, read 2026-09-15, takes the grant name and `--reason`). `create` takes `--entitlement`, `--requested-duration` (for example `3600s`) and `--justification` (GA reference, read 2026-09-15). *Assumption:* passing the entitlement's full resource name to `--entitlement` makes `--folder` unnecessary; if gcloud asks for the parent, add `--folder=<P_FLD>`.
+  `ENT_VAR` is the only text typed: the entitlement column of the "Who is called with what" table names it for the run's folder, and the value comes from `~/.platform-env`, as `P_FLD` does in the run preamble. While the angle brackets remain, or the variable has no value, `ENT` is empty and `need` prints `MISSING ENT`. The approver reads the justification, opens the merged run spec, and approves: `gcloud pam grants approve <GRANT_NAME> --reason="spec reviewed: ${RUN_ID}" --location=global --billing-project="$CICD_PROJECT"` (the `approve` reference, read 2026-09-15, takes the grant name and `--reason`). `create` takes `--entitlement`, `--requested-duration` (for example `3600s`) and `--justification` (GA reference, read 2026-09-15). *Assumption:* passing the entitlement's full resource name to `--entitlement` makes `--folder` unnecessary; if gcloud asks for the parent, add `--folder=<P_FLD>`.
 - **VERIFY:** The describe shows `eligibleUsers` including `platform-owners@` (or the platform owner), the role bundle of 04 §5.2 `ent-factory-singleton` (`projectCreator`, `serviceUsageAdmin`, `serviceAccountCreator`, unconditioned `projectIamAdmin`) on this folder, `maxRequestDuration` of 1 hour, and the approvers listed in the module section; for P-SA production, `approvalsNeeded` equals the number of distinct named approvers 12 configured (two approvals, or two named approvers in the set as 12 recorded) and neither is the platform owner. Then `gcloud pam grants list --entitlement="$ENT" --location=global --billing-project="$CICD_PROJECT" --filter="state=ACTIVE" --format="value(name,state,requester)"` shows the grant `ACTIVE` with `requester` = `sa-1-admin@`. A requester that is not eligible, or an approver list containing the platform owner, stops the run: 12 is corrected first.
 - **ROLLBACK:** `gcloud pam grants revoke <GRANT_NAME> --reason="run stopped" --location=global --billing-project="$CICD_PROJECT"` (*Assumption:* `revoke` takes `--reason` as `approve` does).
 - **EVIDENCE:** The describe YAML and the grant name as `${R}-FM-2.2-grant-v1`; the approval is a `privilegedaccessmanager.googleapis.com` `ApproveGrant` Admin Activity entry in the aggregated sink. TISAX 4.1.3 (privileged access approved by a second person), 4.2.1. EU AI Act E-08.
@@ -1427,7 +1429,18 @@ Called by 19: GE-2 runs FM-6.1 to FM-6.3 and records FM-6.5; GE-3 runs FM-6.6 in
 
 - **WHO:** Platform owner.
 - **WHERE:** `PLATFORM_REPO_DIR`; `GE_INVENTORY_DIR` (05).
-- **ACTION:** Copy the template to `factory/runs/gemini-prod.json` with `"module": "tenant-app"`, `"create": false`, `project_variable: GEMINI_PROJECT`, `parent_folder_variable: FLD_GEMINI_ENTERPRISE` (the state after the move), labels per 02 §3.6 with `tier=ge`, `created_by=bootstrap-hand` (the label describes who made the platform's record, not the project), `factory_run=dev-19-tenant-gemini-prod`; `services` equal to the inventory's enabled services (05), each marked in the spec either inside the `fld-gemini-enterprise` allow-list or listed in `pending` with 19 GE-3's allow-list decision as owner; `budget` `amount` 0 with `reason_if_not_tier_default: "licence-driven, *tbd* (02 §2.2)"` and a `pending` line for the budget check; `allowed_human_members` equal to the human members the inventory recorded (GE-5 in 19 reduces them and revises the spec); `lien: false` unless 19 adds one; `entitlements: ["ent-project-repair-tenant-app"]`; `pab_bindings: []`; `deny_entries: []`; `project_floor` `{"applies": false, "reason": "the tenant app is a live service; its Model Armor posture is the template pair and app-level settings of 19 GE-7, not a floor written by an import", "vertex_ai": false}` with a `made_elsewhere` line `{"item": "Model Armor for the tenant app (template pair ge-console-standard, FAIL_CLOSED)", "file": "19", "step": "GE-7"}` — FM-2.12a is therefore `N/A` for this module, and the check has an owner.
+- **ACTION:** Copy the template to `factory/runs/gemini-prod.json` with `"module": "tenant-app"`, `"create": false`, `project_variable: GEMINI_PROJECT`, `parent_folder_variable: FLD_GEMINI_ENTERPRISE` (the state after the move), labels per 02 §3.6 with `tier=ge`, `created_by=bootstrap-hand` (the label describes who made the platform's record, not the project), `factory_run=dev-19-tenant-gemini-prod`; `services` equal to the inventory's enabled services (05), each marked in the spec either inside the `fld-gemini-enterprise` allow-list or listed in `pending` with 19 GE-3's allow-list decision as owner; `budget` `amount` 0 with `reason_if_not_tier_default: "licence-driven, *tbd* (02 §2.2)"` and a `pending` line for the budget check; `allowed_human_members` equal to the human members the inventory recorded (GE-5 in 19 reduces them and revises the spec); `lien: false` unless 19 adds one; `entitlements: ["ent-project-repair-tenant-app"]`; `pab_bindings: []`; `deny_entries: []`; `project_floor` `{"applies": false, "reason": "the tenant app is a live service; its Model Armor posture is the template pair and app-level settings of 19 GE-7, not a floor written by an import", "vertex_ai": false}` with a `made_elsewhere` line `{"item": "Model Armor for the tenant app in place of a project floor (template pair ge-console-standard, FAIL_CLOSED)", "file": "19", "step": "GE-7"}` — FM-2.12a is therefore `N/A` for this module, and the check has an owner. The item text keeps the word "floor": the checker's `floor.not_applicable_is_owned` accepts `applies: false` only beside a `made_elsewhere` or `pending` line that mentions the floor and names a file or owner.
+
+  Every `made_elsewhere` and `pending` member is an object of FM-1.1's shape, never a plain string (the checker reads its keys). The two `pending` lines this spec needs, with the `check` value exactly as the checker's report prints it:
+
+```json
+"pending": [
+  {"check": "services.subset_of_folder_allowlist", "reason": "<the inventory's services outside the fld-gemini-enterprise allow-list, comma-separated>", "owner": "platform owner", "rerun_in": "19 GE-3 (the allow-list decision)"},
+  {"check": "budget", "reason": "licence-driven amount *tbd* (02 §2.2); no budget exists on GEMINI_PROJECT", "owner": "platform owner", "rerun_in": "17 FM-2.10 on GEMINI_PROJECT once 02 §2.2 sets the amount"}
+]
+```
+
+  Drop the first line when every inventoried service is inside the allow-list.
 
 ```bash
 need GEMINI_PROJECT GE_INVENTORY_DIR FLD_GEMINI_ENTERPRISE
@@ -1607,7 +1620,7 @@ done
 
 - **VERIFY:** Four `exit=0` lines. In particular `iam.no_human_or_basic_role` passes on all four (12 removed the creator's Owner) and `logging.default_route` passes (10 CP-1.7). A `FAIL` is repaired under `ENT_PROJECT_REPAIR_CORE` and recorded as a `DEV` row.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** Four reports, `evidence_add FM-8.1 core-zero-diff E-05 5.2.4 ...`. TISAX 5.2.4, 1.3.1. The machine check that replaces 10 CP-1.12's manual comparison.
+- **EVIDENCE:** Four reports, each registered with its file: `for P in core logging kms validator; do f="$BUILD_LOG_DIR/records/$(date -u +%F)-FM-8.1-${P}-live-v1.json"; evidence_add FM-8.1 core-zero-diff E-05 5.2.4 "build-log:records/$(basename "$f")" "$f"; done`. TISAX 5.2.4, 1.3.1. The machine check that replaces 10 CP-1.12's manual comparison.
 
 ### FM-8.2 Row 36: `platform-drift@` on the platform folder
 
@@ -1821,7 +1834,7 @@ gcloud logging read "protoPayload.serviceName=\"secretmanager.googleapis.com\" A
   In Policy Troubleshooter enter principal `SA_FACTORY_APPLY`, resource the canary secret's full resource name, permission `secretmanager.versions.access`.
 - **VERIFY:** The run succeeds with `read refused` and `setIamPolicy refused` in its log and no payload. The log read shows the access attempt with status code `7` (`PERMISSION_DENIED`) (*Assumption:* denied requests appear in the Data Access audit log that 14 turned on for `secretmanager`; if absent, the run log and the troubleshooter are the evidence). Policy Troubleshooter reports the allow binding as granting and the deny policy as denying, with access **denied**. A successful read is severity 1: the platform owner removes the binding at once (FM-9.5), pages `platform-security@`, and Tier R does not open until the security reviewer (or, before appointment, the second human) signs the incident note.
 - **ROLLBACK:** None needed.
-- **EVIDENCE:** The run URL and its log, the audit read, a troubleshooter screenshot as `<date>-FM-9.4-negative-test-v1`; `evidence_add FM-9.4 negative-test E-08 4.2.1 ...`. TISAX 4.2.1, 5.2.4. EU AI Act E-08 (the credential fence on the build identity is enforced).
+- **EVIDENCE:** The run URL, its log and the audit read, saved together as `"$BUILD_LOG_DIR/records/<date>-FM-9.4-negative-test-v1.txt"`, and the troubleshooter screenshot as `<date>-FM-9.4-troubleshooter-v1.png` beside it; each registered with its file: `evidence_add FM-9.4 negative-test E-08 4.2.1 "build-log:records/<date>-FM-9.4-negative-test-v1.txt" "$BUILD_LOG_DIR/records/<date>-FM-9.4-negative-test-v1.txt"` and `evidence_add FM-9.4 troubleshooter E-08 4.2.1 "build-log:records/<date>-FM-9.4-troubleshooter-v1.png" "$BUILD_LOG_DIR/records/<date>-FM-9.4-troubleshooter-v1.png"`. TISAX 4.2.1, 5.2.4. EU AI Act E-08 (the credential fence on the build identity is enforced).
 
 ### FM-9.5 Remove the allow binding and park the canary
 
@@ -1830,12 +1843,14 @@ gcloud logging read "protoPayload.serviceName=\"secretmanager.googleapis.com\" A
 - **ACTION:**
 
 ```bash
+need SA_FACTORY_APPLY CORE_PROJECT REGION
 gcloud secrets remove-iam-policy-binding fm-negative-canary --location="$REGION" --member="serviceAccount:${SA_FACTORY_APPLY}" --role=roles/secretmanager.secretAccessor --all --project="$CORE_PROJECT"
+gcloud secrets get-iam-policy fm-negative-canary --location="$REGION" --project="$CORE_PROJECT" --format=json | jq -r --arg m "serviceAccount:${SA_FACTORY_APPLY}" '.bindings[]? | select(.members | any(. == $m)) | .role' | sort -u
 gcloud secrets versions disable 1 --secret=fm-negative-canary --location="$REGION" --project="$CORE_PROJECT"
 ```
 
-  The secret stays (disabled) for the factory's release-time re-runs; each re-run enables a new version, repeats FM-9.3 to FM-9.5 and records the result in `DRILL_CALENDAR`'s "factory negative test" row, added here.
-- **VERIFY:** `gcloud secrets get-iam-policy fm-negative-canary --location="$REGION" --project="$CORE_PROJECT"` shows no `factory-apply@` member; the version is `DISABLED`; `DRILL_CALENDAR` has the row with this run's date.
+  The `remove` line takes FM-9.3's binding under every condition (`--all`), but only under `roles/secretmanager.secretAccessor`. The read after it lists every role `factory-apply@` still holds on the canary and must print nothing. A role it prints is a binding FM-9.3 did not place: only FM-9.4's IAM-change attempt could have added one (`roles/secretmanager.secretVersionManager`), and that success is already severity 1 there. Remove each printed role with the same `remove-iam-policy-binding` line and `--role=<that role>`, add it to FM-9.4's incident note, and repeat the read until it prints nothing. The secret stays (disabled) for the factory's release-time re-runs; each re-run enables a new version, repeats FM-9.3 to FM-9.5 and records the result in `DRILL_CALENDAR`'s "factory negative test" row, added here.
+- **VERIFY:** The role read prints nothing, and `gcloud secrets get-iam-policy fm-negative-canary --location="$REGION" --project="$CORE_PROJECT"` shows no `factory-apply@` member under any role; the version is `DISABLED`; `DRILL_CALENDAR` has the row with this run's date.
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** Outputs as `<date>-FM-9.5-cleanup-v1`. TISAX 4.2.1.
 

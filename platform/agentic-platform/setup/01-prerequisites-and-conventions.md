@@ -6,6 +6,7 @@
 - Last reviewed: 2026-10-01
 - 2026-10-01: PR-4.4 action 6 registers the Super Admin roster with `evidence_add`; PR-5.2 checks for that row, and no step registered it before.
 - Changed on 2026-10-01: gcloud floor raised to 586.0.0 (newest 587.0.0); §3.3 probe computed from Google's role definitions and its two checks placed before OB-3.3 and at OB-3.7; `penv_set` refuses an empty or `<placeholder>` value (PR-2.5 checks both); the three registers are created only when absent; PR-5.1 registers its record; PR-5.2 stops without writing, appends, and closes P-14; PAM folder-role note re-read; P-26 and §14 name Folder IAM Admin by the id Google's Resource Manager role reference gives it (`roles/resourcemanager.folderIamAdmin`, page updated 2026-09-29, read 2026-10-01); they/them for roles.
+- Changed on 2026-10-01, later: PR-1.1's EVIDENCE names PR-2.1 as the step that moves `tools.txt`; PR-2.6's EVIDENCE points at PR-4.4 action 6; PR-4.4 action 6 is guarded and idempotent, and a new action 7 registers the Manage members screenshot with one TISAX id (5.2.4) before the step's checkpoint; PR-5.2's STOP names PR-4.4 action 6; PR-3.2's duplicate "Start of a sitting:" line removed; PR-6.2 reads that no credential is left instead of running `sitting_end`, since part 01 opens no sitting of its own.
 - Changed on 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close — the two helpers join the PR-2.2 template and its helper table, PR-2.5 checks them, PR-4.1 names them; both were run under bash 3.2 and zsh 5.9 on 2026-10-01 against a throwaway copy of PR-4.1's register.
 - Part of: the setup procedure set whose only entry point is [README.md](README.md). This page
   supports every stage. It is the platform prerequisites page the review calls M2
@@ -349,8 +350,8 @@ Expected: `gcloud version OK`, `beta OK`, and the `no shred` line.
 
 **ROLLBACK:** Uninstall the tools. Nothing outside the workstation is touched.
 
-**EVIDENCE:** `tools.txt`, moved into the build log at PR-2.4 as
-`<date>-PR-1.1-workstation-tools-v1`. E-xx: E-05 (development environment of the technical
+**EVIDENCE:** `tools.txt`, moved into the build log's `records/` by PR-2.1, committed by PR-2.4
+and registered by PR-4.2 as `<date>-PR-1.1-workstation-tools-v1`. E-xx: E-05 (development environment of the technical
 documentation). TISAX: 5.3.1.
 
 ### PR-1.2 Disk encryption and a working area outside synced folders
@@ -1035,8 +1036,9 @@ the value. The `--force` write appends the old and new values to
 `BUILD_LOG_DIR/variables-changes.tsv`; PR-2.4 never truncates that file.
 
 **EVIDENCE:** A screenshot of each of the four console pages, as
-`<date>-PR-2.6-tenant-identifiers-v1` and `<date>-PR-2.6-super-admin-roster-v1` (PDF) in
-`EVIDENCE_INTERIM_LOCATION` once PR-4.4 exists; until then in `BUILD_LOG_DIR/records/`. E-xx:
+`<date>-PR-2.6-tenant-identifiers-v1` and `<date>-PR-2.6-super-admin-roster-v1` (PDF), saved now
+in `BUILD_LOG_DIR/records/`; PR-4.4 action 6 uploads both to `EVIDENCE_INTERIM_LOCATION` and
+registers the roster with `evidence_add`. E-xx:
 E-05; E-06 for the roster read. TISAX: 1.3.1; 4.1.3 for the roster read.
 
 ## 6. Shell and credential rules
@@ -1105,8 +1107,6 @@ another configuration, then `rm -rf "$CLOUDSDK_CONFIG"`.
 
 **ACTION:** These two blocks open and close every sitting of files 02 to 42. Run them once now,
 without signing in.
-
-Start of a sitting:
 
 The sitting id is computed **once**, at the start, and carried to the end in `SITTING_ID`. It is
 never recomputed: `date -u +%Y%m%d%H%M` changes within the minute, so a second computation gives
@@ -1423,20 +1423,33 @@ Then the new shared drive → its name menu → Manage members.
 
 ```bash
 penv_set EVIDENCE_INTERIM_LOCATION "<shared drive id>"
-checkpoint PR-4.4 DONE "$SECOND_HUMAN_EMAIL" - "interim evidence location created by the second human"
+```
+
+6. The platform owner uploads PR-2.6's two records (the tenant identifiers and the Super Admin
+   roster PDF) into the drive and registers the roster, the record that closes P-02 and that PR-5.2
+   checks for. A second run registers nothing twice:
+
+```bash
+need BUILD_LOG_DIR EVIDENCE_REGISTER
+roster="$(ls "$BUILD_LOG_DIR"/records/*-PR-2.6-super-admin-roster-v*.pdf 2>/dev/null | tail -n 1)"
+if [ -z "$roster" ]; then echo "STOP: no Super Admin roster PDF in $BUILD_LOG_DIR/records/; save PR-2.6's screenshot there first"
+elif grep -q -- '-PR-2.6-super-admin-roster-v' "$EVIDENCE_REGISTER"; then echo "exists: the roster is registered"
+else evidence_add PR-2.6 super-admin-roster E-06 4.1.3 "interim:$(basename "$roster")" "$roster"; fi
+```
+
+7. The second human takes a dated screenshot of Manage members and saves it in the drive as
+   `<date>-PR-4.4-interim-location-members-v1` (PDF). The platform owner downloads it, registers
+   it, deletes the download and records the step. `evidence_add` takes one TISAX id, so the row
+   carries 5.2.4 (EVIDENCE below):
+
+```bash
+evidence_add PR-4.4 interim-location-members E-08 5.2.4 "interim:<file name>.pdf" "$HOME/Downloads/<file name>.pdf"
+rm -f "$HOME/Downloads/<file name>.pdf"
+checkpoint PR-4.4 DONE "$SECOND_HUMAN_EMAIL" "interim:<file name>.pdf" "interim evidence location created by the second human"
 ```
 
 If `SECOND_HUMAN_EMAIL` is not set yet (03), write the witness field as the second human's
 name.
-
-6. The platform owner uploads PR-2.6's two records (the tenant identifiers and the Super Admin
-   roster PDF) into the drive and registers the roster, the record that closes P-02 and that PR-5.2
-   checks for:
-
-```bash
-roster="$(ls "$BUILD_LOG_DIR"/records/*-PR-2.6-super-admin-roster-v*.pdf | tail -n 1)"
-evidence_add PR-2.6 super-admin-roster E-06 4.1.3 "interim:$(basename "$roster")" "$roster"
-```
 
 **VERIFY:** The platform owner uploads a one-line test PDF into the drive, then right-clicks
 it: "Move to trash" is absent or refused. The second human opens Manage members and confirms
@@ -1447,7 +1460,10 @@ from 25, and every file's SHA-256 is in `EVIDENCE_REGISTER`.
 **ROLLBACK:** The second human deletes the shared drive while it is empty.
 
 **EVIDENCE:** `<date>-PR-4.4-interim-location-members-v1`: a dated screenshot of Manage members,
-in the drive itself and registered with `evidence_add`. E-xx: E-08. TISAX: 5.2.4, 3.1.1-3.1.4.
+in the drive itself and registered with `evidence_add` by action 7. E-xx: E-08. TISAX: 5.2.4, the
+one id the row carries, because 42 GD-4.3 files a row under the group its TISAX field starts
+with. The location also serves 3.1.1-3.1.4 through the custody scans it receives, and those carry
+3.1 on their own EVIDENCE lines (06), not on this row.
 
 ## 8. Change conventions
 
@@ -1573,7 +1589,7 @@ admins read and its screenshot, P-03 by PR-3.3, P-14 by PR-4.4. The rest are ope
 ```bash
 need BUILD_LOG_DIR EVIDENCE_REGISTER
 if ! grep -q -- '-PR-2.6-super-admin-roster-v' "$EVIDENCE_REGISTER"; then
-  echo "STOP: P-02 is not proven; nothing written. Register PR-2.6's Super Admin roster screenshot first, then re-run: evidence_add PR-2.6 super-admin-roster E-06 4.1.3 \"interim:<file name>.pdf\"" >&2
+  echo "STOP: P-02 is not proven; nothing written. Register PR-2.6's Super Admin roster PDF with PR-4.4 action 6 first, then re-run this step" >&2
 else
 F="$BUILD_LOG_DIR/prerequisites-status.tsv"
 [ -e "$F" ] || printf 'date\tid\tstate\tclosed_by_file\tnote\n' > "$F"
@@ -1695,16 +1711,22 @@ awk -F'\t' '$3=="DONE"{print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u
 awk -F'\t' '($2=="PR-4.4" || $2=="PR-6.1") && $3=="DONE" {print $2, $5}' "$BUILD_LOG_DIR/checkpoints.tsv"
 grep -n '<[^>]*>' "$BUILD_LOG_DIR/checkpoints.tsv" && echo "FAIL: an unreplaced placeholder is in the log" || echo "no placeholder in the log"
 git -C "$BUILD_LOG_DIR" status --short
-sitting_end
+gcloud auth list --format='value(account)'
+for f in "$CLOUDSDK_CONFIG/application_default_credentials.json" "$HOME/.walle/operator-token.json"; do [ ! -e "$f" ] || echo "FAIL: $f exists"; done
 checkpoint PR-6.2 DONE - - "part 01 complete"
 ```
+
+Part 01 opens no sitting of its own (People needed): its one sign-in, PR-3.3, ended with
+`sitting_end`. The last two lines are therefore a read that proves nothing was left behind, not
+the close of a sitting. If either prints anything, run `sitting_end`, which revokes it, record in
+the build log why a credential outlived PR-3.3, and run this block again.
 
 **VERIFY:** `need` is silent; `guard clean`; the DONE list contains every step id from PR-1.1 to
 PR-6.1 (PR-1.1 to PR-2.3 carry the backfilled lines of PR-2.4) with no id twice; the two
 two-person steps PR-4.4 and PR-6.1 each print a witness field that is **not** `-` — a `-` there
 means the witness was lost to an unset `SECOND_HUMAN_EMAIL` and the line must be corrected by an
 appended line before 02 starts; `no placeholder in the log`; `git status` prints nothing;
-`SITTING-END OK`.
+`gcloud auth list` prints no account, and no `FAIL:` line follows it.
 
 **ROLLBACK:** None.
 

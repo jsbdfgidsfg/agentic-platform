@@ -38,6 +38,7 @@ Scope: agentic platform on **GCP** + **Google Workspace**, Gemini Enterprise adm
 - **Agentic platform: in plain words, for any reader** → [platform/agentic-platform/plain/README.md](platform/agentic-platform/plain/README.md)
 - **Agentic platform: documents per audience** (HR and works council, security, compliance, architecture, C-level deck, executive brief) → [platform/agentic-platform/audiences/README.md](platform/agentic-platform/audiences/README.md)
 - **Agentic platform: sales presentation and pitch** → [platform/agentic-platform/pitch/sales-presentation.md](platform/agentic-platform/pitch/sales-presentation.md), [pitch.md](platform/agentic-platform/pitch/pitch.md)
+- **Agentic platform: the platform setup script (`agp-platform`)** → [platform/agentic-platform/setup/automation/README.md](platform/agentic-platform/setup/automation/README.md)
 - **Agentic platform: cross-check review (2026-09-18)** → [platform/agentic-platform/14-crosscheck-review.md](platform/agentic-platform/14-crosscheck-review.md)
 
 ## Conventions

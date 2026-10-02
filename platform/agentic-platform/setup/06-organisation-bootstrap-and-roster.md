@@ -5,6 +5,7 @@
 - Last reviewed: 2026-10-01
 - Changed on 2026-10-01: Security Admin added to the SD-01 exception (five roles, OB-3.7, OB-5.1) with 01 §3.3's checks; decisions checked with `decision-need.sh`; the expiry read with `decision-value.sh`; deviation ids are `BD-06-1` to `BD-06-5`, inserted into the register's first table, and `BD-06-2` to `BD-06-5` now have their full thirteen-column rows in "Deviation rows of this file" (`bd06_row`), used by the preconditions, OB-2.6, OB-2.9, OB-2.10a, OB-3.5a and OB-8.2; OB-3.1 and OB-8.3 use 01's sitting blocks; OB-3.4 never overwrites its before-policy; steps write `checkpoint` lines; they/them for roles.
 - Changed on 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close; this file's own copies of the two functions are deleted, `bd06_row` stays, OB-3.2 inserts `BD-06-1` with `bd_insert`, and the preconditions, OB-2.6, OB-2.9 and OB-8.2 name 01 as the source of both functions.
+- Changed on 2026-10-01, third change: the preconditions say no gcloud account is signed in before OB-3.1; OB-1.1 reads the configured origin URL (`git config --get remote.origin.url`), which `insteadOf` rewriting does not alter; OB-2.12 says how the second human's own removal is recorded; OB-3.4 says why `projects list` names no scope; OB-3.5a records action 4 in `OB-3.5a-console-crosscheck.txt` and stops before action 5 without it; OB-5.1's hand edit is a STOP; OB-7.1's two grants name `--condition=None`.
 - Last executed: never
 - Stage: review §2 stage 6 (organisation bootstrap) and the roster hygiene that gate line G3 reads. It runs after files 01 to 04 and before file 07, because 07 grants billing roles to `sa-1-admin@`, which this file creates.
 - Step prefix: OB. Steps: 50 (OB-2.0, OB-2.10a and OB-3.5a were added on 2026-09-15 to keep Part 1 read-only, to let the second human hold both factors of their own account, and to preview the removal of the domain-wide defaults; no step was renumbered). BLOCKED steps: none. Every step is Admin console, Cloud console, gcloud or git work; no platform code is needed.
@@ -50,6 +51,7 @@ flowchart TD
 ## Preconditions
 
 - [ ] File 01 is complete: `~/.platform-env` exists with `DOMAIN`, `DIRECTORY_CUSTOMER_ID`, `ORG_ID`, `WORKSPACE_EDITION`, `OWNER_DAILY_ACCOUNT`, `PLATFORM_REPO_DIR`, `BUILD_LOG_DIR`, `EVIDENCE_INTERIM_LOCATION`, `EVIDENCE_REGISTER`, `DEVIATION_REGISTER`, `GCLOUD_CONFIG_NAME` and the helpers `penv_set` and `need`. The gcloud configuration named `GCLOUD_CONFIG_NAME` has no default project.
+- [ ] No gcloud account is signed in. Parts 1 and 2 are Admin console and APIs Explorer work; OB-1.1's two gcloud lines read only the local configuration, which needs no account. The first sign-in of this file is OB-3.1, whose VERIFY expects the first `gcloud auth list` to print nothing.
 - [ ] File 03 has recorded signed decision files for SD-01 (with the exception's expiry date), SD-12, SD-18, SD-27 and SD-30, and the **G3 reduction decision** (every current super admin other than the two admin accounts, each with the delegated role they move to, signed by IT security). `SECOND_HUMAN_EMAIL` is set. `PLATFORM_REPO_REMOTE` exists with branch protection (two human approvals, approvals by service accounts or bot users not counted, admin bypass audited) and CODEOWNERS making the second human a required reviewer on `identity/`.
 - [ ] File 03 has named `INCIDENT_COMMANDER_EMAIL` or `SECURITY_REVIEWER_EMAIL`. Without either, OB-2.6 rule B cannot be created and OB-2.8 waits (reports about the second human have no recipient).
 - [ ] The **envelope witness** of [01 §2.1](01-prerequisites-and-conventions.md) ("anyone from the other administration line than the custodian") is appointed by name, for both envelope classes of the People table below, in a dated ISMS record written under file 03's appointment pattern ([03 DC-2.1 to DC-2.8](03-decisions-and-people.md)) as `PPL-EW`. *Assumption:* file 03's tracker carries no `PPL-EW` row today (its rows run `PPL-SH` to `PPL-MO`); until it does, the platform owner asks ISMS for the record before the first sitting and opens `BD-06-4` (owner: the second human) naming the two people who signed in its place: `EW_SIGNERS='<two names>'; bd_insert "$(bd06_row 4)"` with `bd06_row` from "Deviation rows of this file" and 01's `bd_insert`; it is closed with `bd_close BD-06-4 "PPL-EW recorded in 03" "06 OB-8.2"` when file 03 carries the row. No envelope is sealed without a named witness: OB-2.9, OB-2.10a, OB-2.11 and OB-7.3 all stop at `WAITING envelope witness`.
@@ -133,11 +135,11 @@ test -z "$(gcloud config get project 2>/dev/null)" && echo "OK no default projec
 test -z "${CLOUDSDK_CORE_PROJECT:-}" && echo "OK CLOUDSDK_CORE_PROJECT unset" || echo "FAIL CLOUDSDK_CORE_PROJECT set"
 mkdir -p "$BUILD_LOG_DIR/evidence/06"
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" SD-01 SD-12 SD-18 SD-27 SD-30 G3-ROSTER
-git -C "$PLATFORM_REPO_DIR" remote get-url origin
+git -C "$PLATFORM_REPO_DIR" config --get remote.origin.url
 ```
 
   Then open each decision file listed and read: SD-01's expiry date for the organisation exception; the G3 decision's table of accounts and target delegated roles; SD-27's custody rule. Confirm with the second human the two sitting dates, at least eight days apart.
-- **VERIFY:** Both guard lines print `OK`. `decision-need.sh` prints six `SIGNED` lines (03 names its records by slug, so the decision ids, not the file names, are checked). `git remote get-url origin` prints `PLATFORM_REPO_REMOTE`. If a decision is missing or unsigned, stop: nothing below may run.
+- **VERIFY:** Both guard lines print `OK`. `decision-need.sh` prints six `SIGNED` lines (03 names its records by slug, so the decision ids, not the file names, are checked). `git config --get remote.origin.url` prints `PLATFORM_REPO_REMOTE`. The configured value is read, not `git remote get-url origin`, because `get-url` expands `insteadOf` and `pushInsteadOf` ([git-remote](https://git-scm.com/docs/git-remote), read 2026-10-01), so a workstation that rewrites the host's URL would print a different string for the right remote. If a decision is missing or unsigned, stop: nothing below may run.
 - **ROLLBACK:** None needed; the step only reads.
 - **EVIDENCE:** A build-log line under OB-1.1 in `BUILD_LOG_DIR` naming the decision files, their commit ids and the two sitting dates. TISAX 1.1–1.2 (decision files). EU AI Act E-05.
 
@@ -478,7 +480,7 @@ PY
   4. Sign out of the daily account's Admin console session everywhere.
 - **VERIFY:** Account > Admin roles > Super Admin > Admins no longer lists either daily account. Signed in as `OWNER_DAILY_ACCOUNT`, admin.google.com does not open the Admin console. Rule C mailed the second human for each removal.
 - **ROLLBACK:** As `sa-1-admin@` or `sa-2-admin@`, re-assign Super Admin to the daily account (OB-2.10's path). Only if both admin accounts have failed; record why.
-- **EVIDENCE:** Screenshot and rule-C mails as `<date>-OB-2.12-daily-super-admin-removed-v1`. TISAX 4.2.1. EU AI Act E-08.
+- **EVIDENCE:** Screenshot and rule-C mails as `<date>-OB-2.12-daily-super-admin-removed-v1`. Action 3 is the second human's own act inside a step the platform owner performs, and it has no checkpoint of its own: OB-2.12's `DONE` line names the second human as witness, and its note says who unassigned which account and at what time, for example `checkpoint OB-2.12 DONE "$SECOND_HUMAN_EMAIL" <evidence> "OWNER_DAILY_ACCOUNT unassigned by sa-1-admin@ 10:02; SECOND_HUMAN_EMAIL unassigned by sa-2-admin@ 10:05"` (or "SECOND_HUMAN_EMAIL held no Super Admin"). TISAX 4.2.1. EU AI Act E-08.
 
 ### OB-2.13 Execute the G3 reduction of every other super admin
 
@@ -656,6 +658,8 @@ gcloud projects list --sort-by=~createTime --limit=50 --format="table(projectId,
 gcloud resource-manager folders list --organization="$ORG_ID" --format="table(displayName,name)"
 ```
 
+  `gcloud projects list` takes no `--organization` or `--folder` flag: it lists "all active projects, where the active account has Owner, Editor, Browser or Viewer permissions" ([reference](https://docs.cloud.google.com/sdk/gcloud/reference/projects/list), read 2026-10-01). The first list is scoped by its filter on `parent.id=$ORG_ID`; the second is deliberately the account's whole view, so that a recent project under a folder of the organisation, or outside it, is seen too. Both are reads, and the account is `sa-1-admin@`, so what they show is what Organization Administrator can see.
+
   Then, in the record, mark every binding that is: `domain:` members; `roles/resourcemanager.organizationAdmin`; `roles/owner` or `roles/editor` at the organisation; `roles/privilegedaccessmanager.admin`; `roles/orgpolicy.policyAdmin`; `roles/iam.denyAdmin`; `roles/logging.configWriter`; `roles/billing.*`. Name the owner of each (the person or team).
 - **VERIFY:** The record lists every binding printed, with an owner or *tbd*. The two project lists are saved. The organisation's existing `domain:` bindings are identified: typically `domain:DOMAIN` on `roles/resourcemanager.projectCreator` and `roles/billing.creator` ("When the organization resource is created, all users in your domain are automatically granted Project Creator … and Billing Account Creator … IAM roles", [set up an organisation resource](https://docs.cloud.google.com/resource-manager/docs/creating-managing-organization)). If they are already absent, record "already removed, date unknown" and skip OB-3.5 and OB-3.6.
 - **ROLLBACK:** None needed; the step only reads.
@@ -739,7 +743,13 @@ PY
 ```
 
   *Assumption:* the replay result's field names; the printed record is the file itself, so a different shape is read by eye from `OB-3.5a-replay.json` and the states are copied into the record by hand.
-  4. Console route, as the cross-check the second human watches: IAM & Admin > IAM with the organisation selected, Edit the `domain:` principal, revoke the two roles, and click **Test changes** instead of Save. Wait for the simulation, read "Access changes over the past 90 days", screenshot it, then **leave the page without saving**.
+  4. Console route, as the cross-check the second human watches: IAM & Admin > IAM with the organisation selected, Edit the `domain:` principal, revoke the two roles, and click **Test changes** instead of Save. Wait for the simulation, read "Access changes over the past 90 days", screenshot it, then **leave the page without saving**. Record the cross-check at once, with `DONE`, or with `REFUSED` if the console route was refused too (VERIFY 3):
+
+```bash
+printf '%s %s witness %s\n' DONE "$(date -u +%FT%TZ)" "<second human's email>" > "$BUILD_LOG_DIR/evidence/06/OB-3.5a-console-crosscheck.txt"
+```
+
+  **STOP** before action 5 until `OB-3.5a-console-crosscheck.txt` exists, is newer than `OB-3.5a-simulator-condition.yaml`, and starts with `DONE` or `REFUSED`: action 5 removes the roles the console route needs, so a cross-check missed now cannot be made later in this sitting.
   5. Remove the two simulator roles again, in this sitting, and close `BD-06-5` once VERIFY 2 prints `SIMULATOR ROLES REMOVED`: `bd_close BD-06-5 "withdrawal: 06 OB-3.5a action 5" "06 OB-3.5a VERIFY 2"`.
 
 ```bash
@@ -749,7 +759,7 @@ gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:$SA_1_AD
 ```
 
 - **VERIFY:**
-  1. `OB-3.5a-replay.json` exists and the printed line is `NO ACCESS LOST`, **or** every principal listed as `REVOKED` or `POTENTIALLY_REVOKED` is written into the OB-3.5 change record with the owner's answer against it. The console screenshot agrees with the command output.
+  1. `OB-3.5a-replay.json` exists and the printed line is `NO ACCESS LOST`, **or** every principal listed as `REVOKED` or `POTENTIALLY_REVOKED` is written into the OB-3.5 change record with the owner's answer against it. The console screenshot agrees with the command output, and `OB-3.5a-console-crosscheck.txt` starts with `DONE` (or `REFUSED`, which VERIFY 3 then treats).
   2. The simulator roles are gone again, so that OB-3.7's `EXCEPTION EXACT` can hold:
 
 ```bash
@@ -758,7 +768,7 @@ gcloud organizations get-iam-policy "$ORG_ID" --format=json | python3 -c 'import
 
   3. If the replay is refused (the simulator API is not enabled on any resource the account may use, or the roles are insufficient), record it, do **not** grant more roles, and fall back to the console route of action 4; if that too is refused, close `BD-06-5` as `superseded by BD-06-6` (or the next free id) and insert that row with `BD-06-5`'s cells and "preview refused: OB-3.6 proceeds on OB-3.5's written confirmations alone" in its "Module or exception" cell, signed by the second human. The step is never skipped silently.
 - **ROLLBACK:** The step changes nothing except the two temporary bindings, which action 5 removes; the console route is left unsaved. If action 5 was missed, run its two commands before OB-3.7.
-- **EVIDENCE:** `OB-3.5a-policy-current.json`, `OB-3.5a-policy-proposed.json`, `OB-3.5a-replay.json`, the printed summary, the console screenshot and the `BD-06-5` open and close lines, as `<date>-OB-3.5a-removal-preview-v1`. TISAX 4.2.1 (change preview), 1.4. EU AI Act E-05.
+- **EVIDENCE:** `OB-3.5a-policy-current.json`, `OB-3.5a-policy-proposed.json`, `OB-3.5a-replay.json`, the printed summary, the console screenshot, `OB-3.5a-console-crosscheck.txt` and the `BD-06-5` open and close lines, as `<date>-OB-3.5a-removal-preview-v1`. TISAX 4.2.1 (change preview), 1.4. EU AI Act E-05.
 
 ### OB-3.6 Remove Project Creator and Billing Account Creator from the whole domain
 
@@ -1028,7 +1038,7 @@ print("wrote", sys.argv[1], len(roster["accounts"]), "accounts")
 PY
 ```
 
-  Then edit the file by hand: replace each `<role name from OB-2.13>` with the delegated role name(s) from the OB-1.3 table as changed by OB-2.13, and add one `exceptions` entry per signed hand-over exception (`email`, `role`, `until`, `decision`).
+  Then edit the file by hand: replace each `<role name from OB-2.13>` with the delegated role name(s) from the OB-1.3 table as changed by OB-2.13, and add one `exceptions` entry per signed hand-over exception (`email`, `role`, `until`, `decision`). **STOP** here until the edit is done: the step resumes at its VERIFY, and never re-runs the block above over an edited file (it would put the placeholders back). If the tenant has no delegated admin and no hand-over exception, the file holds no placeholder and there is nothing to edit.
 - **VERIFY:** `python3 -m json.tool "$PLATFORM_REPO_DIR/$ROSTER_FILE" > /dev/null && grep -c '<role name' "$PLATFORM_REPO_DIR/$ROSTER_FILE"` prints `0`, and the count of `delegated_admin` rows equals the count of delegated admins in the guard file:
 
 ```bash
@@ -1266,9 +1276,11 @@ PY
 
 ```bash
 need ORG_ID GRP_GCP_ORG_ADMINS
-gcloud organizations add-iam-policy-binding "$ORG_ID" --member="group:$GRP_GCP_ORG_ADMINS" --role="roles/resourcemanager.organizationAdmin"
-gcloud organizations add-iam-policy-binding "$ORG_ID" --member="group:$GRP_GCP_ORG_ADMINS" --role="roles/privilegedaccessmanager.admin"
+gcloud organizations add-iam-policy-binding "$ORG_ID" --member="group:$GRP_GCP_ORG_ADMINS" --role="roles/resourcemanager.organizationAdmin" --condition=None
+gcloud organizations add-iam-policy-binding "$ORG_ID" --member="group:$GRP_GCP_ORG_ADMINS" --role="roles/privilegedaccessmanager.admin" --condition=None
 ```
+
+  `--condition=None` is named because the organisation policy already holds conditional bindings (OB-3.3, OB-3.7); with it, "a binding without a condition is added" ([reference](https://docs.cloud.google.com/sdk/gcloud/reference/organizations/add-iam-policy-binding), updated 2026-05-27, read 2026-10-01), which is what a standing break-glass grant is.
 
 - **VERIFY:**
 

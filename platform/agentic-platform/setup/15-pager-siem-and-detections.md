@@ -12,6 +12,7 @@
 - Decisions applied (pending signature in [03](03-decisions-and-people.md)): SD-06, SD-08, SD-10, SD-12, SD-13, SD-15; design decisions P92 to P99 of [../07-monitoring-detection-incident-response.md](../07-monitoring-detection-incident-response.md).
 - Commands, roles, API methods and console paths checked against Google's documentation on 2026-09-15 (§"Sources"); paging-tool facts are the vendor's documentation on the same day and are marked as such. What could not be verified is listed in §"Not verified".
 - Changed 2026-10-01: every PAM call passes `--billing-project="$CICD_PROJECT"` and waits for `ACTIVE` with 12's `pam_wait` before a privileged command; every `STOP:` guard now ends the run; PS-6.1's VERIFY reads `REGION`; PS-6.2 records the project-level fallback; PS-4.2's deviation row is guarded against a duplicate on resume; PS-1.1 and PS-6.3 accept Google's restricting-identities page (read 2026-10-01) as the B5 service-agent record when 13 has none; they/them throughout.
+- Changed 2026-10-01 (second revision): PS-1.1 reads 13 OP-5.3's record under `records/` and OP-2.1's policy file at `.spec.rules`; PS-2.6 and the README hand-over name row B-06; PS-4.1, PS-4.4 and PS-6.12 read and revoke grants with `gcloud pam grants search --caller-relationship=had-created`, as 12 does (gcloud references read 2026-10-01); PS-5.5's view delete drops `--quiet`; PS-6.2 writes its `PENDING` line against PS-6.4, whose `DONE` closes it; PS-4.7's evidence line names the file and its location form.
 - Elapsed time: part A, one working day of hands-on over about a week (a business-hours and an out-of-hours acknowledgement test, and a merge that waits for the second human). Part B, three to five days of hands-on once the SIEM contract exists, which is months away (P10).
 
 ## What this part builds
@@ -133,8 +134,8 @@ for V in PAGER_ADMIN_EMAIL SCC_ADMIN_EMAIL; do
   eval "printf '%s=%s\n' \"\$V\" \"\${$V:-UNSET}\""
 done
 # 13's B5 record: does iam.allowedPolicyMemberDomains admit a Google-managed service agent? (PS-6.3, and 14 CL-6, depend on it)
-grep -l -i 'gcp-sa-\|service agent' "$BUILD_LOG_DIR"/evidence/13/*OP-5.3* 2>/dev/null || echo "NO B5 SERVICE-AGENT RECORD (13 OP-5.3)"
-jq -r '.policies[]?.spec.rules[]?.values.allowedValues[]?' "$PLATFORM_REPO_DIR/policies/org/FLD_AGENTIC_PLATFORM/iam.allowedPolicyMemberDomains.json" 2>/dev/null
+grep -l -i 'gcp-sa-\|service agent' "$BUILD_LOG_DIR"/records/*-OP-5.3-* 2>/dev/null || echo "NO B5 SERVICE-AGENT RECORD (13 OP-5.3)"
+jq -r '.spec.rules[]?.values.allowedValues[]?' "$PLATFORM_REPO_DIR/policies/org/FLD_AGENTIC_PLATFORM/iam.allowedPolicyMemberDomains.json" 2>/dev/null
 for P in "$CORE_PROJECT" "$LOGGING_PROJECT"; do
   gcloud services list --enabled --project="$P" --format='value(config.name)' | grep -E '^(monitoring|pubsub|logging|secretmanager)\.googleapis\.com$' | sort | tr '\n' ' '; echo " <- $P"
 done
@@ -142,7 +143,7 @@ gcloud pam entitlements describe "$ENT_PROJECT_REPAIR_CORE" --billing-project="$
 test "$SCC_TIER" = "PREMIUM/eu" && echo "SCC OK" || echo "STOP: SCC is not Premium with eu residency (09)"
 ```
 
-- **VERIFY:** `GUARD OK`; the decision files are listed; the CODEOWNERS line names `SECOND_HUMAN_EMAIL`; each project line lists `logging`, `monitoring` and `pubsub` (10 CP-1.6 rows 2 and 3), and `secretmanager` is absent from both until PS-4.2; the entitlement's role bindings include roles that grant `monitoring.notificationChannels.create`, `monitoring.alertPolicies.create`, `pubsub.topics.create`, `pubsub.topics.setIamPolicy`, `secretmanager.secrets.create` and `logging.views.create` on the core projects (read each role's permissions with `gcloud iam roles describe <role>` if unsure); `SCC OK`. `OWNER_DAILY_ACCOUNT` passes `need` (01 PR-3.3 set it; PS-3.1 writes it into `oncall.yaml` and fails five steps in without it). `BUSINESS_TZ` and `BUSINESS_HOURS` print a value or `*tbd*`; `*tbd*` is not a stop, it is the note PS-2.1 carries and the wait PS-5.4 records. `PAGER_ADMIN_EMAIL` and `SCC_ADMIN_EMAIL` print `UNSET` on a first run — that is expected, PS-1.2 and PS-1.3 record them from the people who actually turn up. What PS-1.1 must establish is that there *are* two named people to book: a 03 appointment row (`PPL-PA`, `PPL-SCA`) if 03's owner has added them, otherwise the incident commander's written naming of both, and in that case the dated `DEVIATION_REGISTER` row for 03's missing rows named in the Preconditions. Neither may be the platform owner. No name, no booking: PS-1.3 and PS-1.2 do not start. Last, the B5 lines: an `OP-5.3` evidence file naming a `gcp-sa-*` principal is the record PS-6.3 cites. `NO B5 SERVICE-AGENT RECORD (13 OP-5.3)` is not a stop: open the dated `DEVIATION_REGISTER` row addressed to 13's owner now asking for the positive test, and until it exists PS-6.3 cites Google's statement instead — a customer-ID value of `iam.allowedPolicyMemberDomains` admits "All service agents associated with resources in your organization" ([Restricting identities by domain](https://docs.cloud.google.com/organization-policy/restrict-domains), updated 2026-09-30, read 2026-10-01). PS-6.3's own automatic grant to the SCC notification service agent is then the positive test, and a refusal there is a stop. Any other miss: stop, and re-run the owning file (10 for APIs, 12 for the bundle, 09 for SCC, 13 for B5, 03 for a person); granting a role by hand here is refused. Also open 09's FS-7.7 detector diff: a detector the catalogue relies on that residency disables is carried into part B as a SIEM rule over Cloud Audit Logs (07 §3).
+- **VERIFY:** `GUARD OK`; the decision files are listed; the CODEOWNERS line names `SECOND_HUMAN_EMAIL`; each project line lists `logging`, `monitoring` and `pubsub` (10 CP-1.6 rows 2 and 3), and `secretmanager` is absent from both until PS-4.2; the entitlement's role bindings include roles that grant `monitoring.notificationChannels.create`, `monitoring.alertPolicies.create`, `pubsub.topics.create`, `pubsub.topics.setIamPolicy`, `secretmanager.secrets.create` and `logging.views.create` on the core projects (read each role's permissions with `gcloud iam roles describe <role>` if unsure); `SCC OK`. `OWNER_DAILY_ACCOUNT` passes `need` (01 PR-3.3 set it; PS-3.1 writes it into `oncall.yaml` and fails five steps in without it). `BUSINESS_TZ` and `BUSINESS_HOURS` print a value or `*tbd*`; `*tbd*` is not a stop, it is the note PS-2.1 carries and the wait PS-5.4 records. `PAGER_ADMIN_EMAIL` and `SCC_ADMIN_EMAIL` print `UNSET` on a first run — that is expected, PS-1.2 and PS-1.3 record them from the people who actually turn up. What PS-1.1 must establish is that there *are* two named people to book: a 03 appointment row (`PPL-PA`, `PPL-SCA`) if 03's owner has added them, otherwise the incident commander's written naming of both, and in that case the dated `DEVIATION_REGISTER` row for 03's missing rows named in the Preconditions. Neither may be the platform owner. No name, no booking: PS-1.3 and PS-1.2 do not start. Last, the B5 lines: an `OP-5.3` record under `BUILD_LOG_DIR/records/` (13 keeps it there as `<date>-OP-5.3-storage-member-tests-v<n>.txt`) naming a `gcp-sa-*` principal is the record PS-6.3 cites; the `jq` line prints the allowed values of 13 OP-2.1's file, which holds `{name, spec}` with the rules at `.spec.rules`. `NO B5 SERVICE-AGENT RECORD (13 OP-5.3)` is not a stop: open the dated `DEVIATION_REGISTER` row addressed to 13's owner now asking for the positive test, and until it exists PS-6.3 cites Google's statement instead — a customer-ID value of `iam.allowedPolicyMemberDomains` admits "All service agents associated with resources in your organization" ([Restricting identities by domain](https://docs.cloud.google.com/organization-policy/restrict-domains), updated 2026-09-30, read 2026-10-01). PS-6.3's own automatic grant to the SCC notification service agent is then the positive test, and a refusal there is a stop. Any other miss: stop, and re-run the owning file (10 for APIs, 12 for the bundle, 09 for SCC, 13 for B5, 03 for a person); granting a role by hand here is refused. Also open 09's FS-7.7 detector diff: a detector the catalogue relies on that residency disables is carried into part B as a SIEM rule over Cloud Audit Logs (07 §3).
 - **ROLLBACK:** None needed; the step only reads.
 - **EVIDENCE:** Build-log line under PS-1.1 with the output saved as `evidence/15/<date>-PS-1.1-preflight-v1.txt`. E-05. TISAX 1.1-1.2.
 
@@ -285,7 +286,7 @@ git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit 
 
 ### PS-2.6 The configuration-change forwarder (BLOCKED)
 
-> **BLOCKED**: Needs: a job owned by IT security that reads the paging tool's audit records (PagerDuty REST "List audit records") every hour and mails every change to any of the objects in PS-2.5 to `SECOND_HUMAN_EMAIL`, with its own absence alarm. It runs in IT security's own environment, never in a platform project, and its tool API key is IT security's. Commit it in: IT security's tooling repository. Unblocked by: a commit with green CI and one forwarded test change. Gate waiting: none (PS-2.5's weekly review applies meanwhile); recorded in README's BLOCKED index beside B-05. Until then: `checkpoint PS-2.6 BLOCKED - - "paging audit forwarder code"`.
+> **BLOCKED**: Needs: a job owned by IT security that reads the paging tool's audit records (PagerDuty REST "List audit records") every hour and mails every change to any of the objects in PS-2.5 to `SECOND_HUMAN_EMAIL`, with its own absence alarm. It runs in IT security's own environment, never in a platform project, and its tool API key is IT security's. Commit it in: IT security's tooling repository. Unblocked by: a commit with green CI and one forwarded test change. Gate waiting: none (PS-2.5's weekly review applies meanwhile); recorded in README's BLOCKED index in row B-06, as IT security's own code. Until then: `checkpoint PS-2.6 BLOCKED - - "paging audit forwarder code"`.
 
 - **WHO:** IT security paging administrator; the second human confirms the test mail.
 - **WHERE:** IT security's environment.
@@ -427,7 +428,7 @@ g="$(gcloud pam grants create --entitlement="$ENT_PROJECT_REPAIR_CORE" --request
 pam_wait "$g" ACTIVE
 ```
 
-- **VERIFY:** `pam_wait` prints `STATE ACTIVE` (no privileged command of PS-4 to PS-6 runs before it does); `gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_CORE" --filter='state=ACTIVE' --billing-project="$CICD_PROJECT" --format='value(name,requester,state)'` shows one active grant with the platform owner as requester. Repeat this step whenever a later PS step outlives the hour; each grant is its own log line.
+- **VERIFY:** `pam_wait` prints `STATE ACTIVE` (no privileged command of PS-4 to PS-6 runs before it does); `gcloud pam grants search --entitlement="$ENT_PROJECT_REPAIR_CORE" --caller-relationship=had-created --filter='state=ACTIVE' --billing-project="$CICD_PROJECT" --format='value(name,requester,state)'` shows one active grant with the platform owner as requester. Every grant read and revocation in this file uses this `search` form, as 12 does: `gcloud pam grants search` returns the grants "you have created, have approved, or can approve", while `gcloud pam grants list` returns "all … grants associated with an entitlement", so a revocation loop over `list` would also end another person's grant (gcloud references, read 2026-10-01). Repeat this step whenever a later PS step outlives the hour; each grant is its own log line.
 - **ROLLBACK:** `gcloud pam grants revoke <grant name> --reason="done" --billing-project="$CICD_PROJECT"` when the sitting ends early.
 - **EVIDENCE:** Grant names in the build log. E-08. TISAX 4.1-4.2.
 
@@ -518,10 +519,10 @@ RESP="$(gcloud secrets versions access 1 --secret=platform-pager-key --project="
 CH="$(printf '%s' "$RESP" | jq -r '.name // empty')"
 case "$CH" in projects/*/notificationChannels/*) penv_set NOTIF_CH_PAGER_LOGGING "$CH";; *) echo "STOP: no channel name in the response" >&2; return 1 2>/dev/null || exit 1;; esac
 unset RESP
-gcloud pam grants list --entitlement="$ENT_SECRET_READ" --filter='state=ACTIVE' --billing-project="$CICD_PROJECT" --format='value(name)' | while read -r G; do gcloud pam grants revoke "$G" --reason="PS-4.4 done" --billing-project="$CICD_PROJECT"; done
+gcloud pam grants search --entitlement="$ENT_SECRET_READ" --caller-relationship=had-created --filter='state=ACTIVE' --billing-project="$CICD_PROJECT" --format='value(name)' | while read -r G; do gcloud pam grants revoke "$G" --reason="PS-4.4 done" --billing-project="$CICD_PROJECT"; done
 ```
 
-- **VERIFY:** As PS-4.3 on `NOTIF_CH_PAGER_LOGGING` in `LOGGING_PROJECT`; the `ENT_SECRET_READ` grant is no longer active.
+- **VERIFY:** As PS-4.3 on `NOTIF_CH_PAGER_LOGGING` in `LOGGING_PROJECT`; the `ENT_SECRET_READ` grant is no longer active (the `search` of the last line, run again without the revoke, prints nothing).
 - **ROLLBACK:** `gcloud beta monitoring channels delete "$NOTIF_CH_PAGER_LOGGING" --project="$LOGGING_PROJECT"`.
 - **EVIDENCE:** `<date>-PS-4.4-channel-pager-logging-v1`. E-08. TISAX 1.6.
 
@@ -578,7 +579,7 @@ for P in "$CORE_PROJECT" "$LOGGING_PROJECT"; do echo "== $P"; gcloud beta monito
 
 - **VERIFY:** Each project has exactly three channels (pagerduty, email, sms), all enabled, SMS verified, and the names equal the six variables. Any other channel in either project is investigated and recorded before PS-5.
 - **ROLLBACK:** None needed; the step only reads.
-- **EVIDENCE:** The saved table, `evidence_add PS-4.7 channel-inventory E-08 1.6 "$BUILD_LOG_DIR/evidence/15" <file>`. E-08. TISAX 1.6.
+- **EVIDENCE:** The saved table, `evidence_add PS-4.7 channel-inventory E-08 1.6 "build-log:evidence/15/<file>" "$BUILD_LOG_DIR/evidence/15/<file>"`, `<file>` being the name the `tee` wrote. E-08. TISAX 1.6.
 
 ### PS-5 Acknowledgement tests
 
@@ -699,8 +700,10 @@ cp "$W/logging-tamper.yaml" "$BUILD_LOG_DIR/evidence/15/" && rm -rf "$W"
 
 ```bash
 gcloud logging views create agp-alert-test --bucket=_Default --location=global --project="$LOGGING_PROJECT" --description="setup 15 PS-5.5 test, deleted at once" --log-filter='severity>=ERROR'
-gcloud logging views delete agp-alert-test --bucket=_Default --location=global --project="$LOGGING_PROJECT" --quiet
+gcloud logging views delete agp-alert-test --bucket=_Default --location=global --project="$LOGGING_PROJECT"
 ```
+
+  The delete asks for confirmation; the operator answers it, so that every deletion in this set is confirmed by a person (no `--quiet`).
 
 - **VERIFY:** `gcloud logging read 'logName="projects/'"$LOGGING_PROJECT"'/logs/cloudaudit.googleapis.com%2Factivity" AND protoPayload.methodName=~"CreateView|DeleteView"' --project="$LOGGING_PROJECT" --freshness=30m --limit=2 --format='value(protoPayload.methodName)'` prints the two methods (this also proves the exact method spelling; if it differs from the filter, fix the filter, re-create the policy, and re-test). The second human receives the page, SMS and email naming `actor` and `method`. If no page arrives within 15 minutes while the entries exist, the scan rule differs from the reading above: record it, keep the policy, and carry the detection as SIEM-only (SG-02, part B) with a dated row in `DEVIATION_REGISTER`; until part B, the second human's weekly review of PS-2.5 adds a read of this log.
 - **ROLLBACK:** `gcloud monitoring policies delete <name> --project="$LOGGING_PROJECT"`.
@@ -755,10 +758,10 @@ penv_set SCC_TOPIC "projects/${CORE_PROJECT}/topics/scc-findings"
 ```bash
 need CORE_PROJECT SCC_ADMIN_EMAIL
 gcloud pubsub topics add-iam-policy-binding scc-findings --project="$CORE_PROJECT" --member="user:${SCC_ADMIN_EMAIL}" --role=roles/pubsub.admin
-checkpoint PS-6.2 PENDING - - "temporary pubsub.admin on scc-findings; PS-6.4 removes it today"
+checkpoint PS-6.4 PENDING - - "temporary pubsub.admin on scc-findings granted in PS-6.2; PS-6.4 removes it today"
 ```
 
-  `SCC_ADMIN_EMAIL` is the address PS-1.1 checked (03 `PPL-SCA` when 03 has the row, otherwise the incident commander's written name with the deviation row open). The grant is to a named person, never to a group or a domain.
+  `SCC_ADMIN_EMAIL` is the address PS-1.1 checked (03 `PPL-SCA` when 03 has the row, otherwise the incident commander's written name with the deviation row open). The grant is to a named person, never to a group or a domain. The `PENDING` line is written against PS-6.4, the step that still owes the removal, so PS-6.4's own `DONE` line after its VERIFY is what closes it; until then 17 and 42 read the grant as open.
 - **VERIFY:** `gcloud pubsub topics get-iam-policy scc-findings --project="$CORE_PROJECT" --format=json` shows the one binding for the administrator. If the binding is refused naming `constraints/iam.allowedPolicyMemberDomains`, the member is outside 13's B5 value and this is a 13 re-run, not a change here.
 - **ROLLBACK:** `gcloud pubsub topics remove-iam-policy-binding scc-findings --project="$CORE_PROJECT" --member="user:${SCC_ADMIN_EMAIL}" --role=roles/pubsub.admin`.
 - **EVIDENCE:** Policy JSON before and after in the build log. E-05. TISAX 4.1-4.2.
@@ -799,7 +802,7 @@ gcloud pubsub topics remove-iam-policy-binding scc-findings --project="$CORE_PRO
 gcloud pubsub topics get-iam-policy scc-findings --project="$CORE_PROJECT" --format='table(bindings.role,bindings.members)'
 ```
 
-- **VERIFY:** The policy holds only the SCC notification service agent binding (and any binding 10 or 12 placed deliberately, each named in the record). No user principal remains.
+- **VERIFY:** The policy holds only the SCC notification service agent binding (and any binding 10 or 12 placed deliberately, each named in the record). No user principal remains. PS-6.4's `DONE` line, written after this VERIFY, closes the `PENDING` line PS-6.2 wrote against PS-6.4.
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** Policy table in the build log. E-05. TISAX 4.1-4.2.
 
@@ -979,7 +982,7 @@ need ENT_PROJECT_REPAIR_CORE CICD_PROJECT ONCALL_FILE NOTIF_CH_PAGER_CORE NOTIF_
 printf '%s\n' "$SCC_ROUTE_TEST_SOURCE" | grep -qE '^organizations/[0-9]+/sources/[0-9]+$' && echo "SOURCE VALUE OK" || echo "STOP: SCC_ROUTE_TEST_SOURCE is not a source name (PS-6.6)"
 awk -F'\t' '$3=="DONE" && $2 ~ /^PS-(1\.[1-3]|2\.[1-5]|2\.4b|2\.7|3\.[12]|4\.[1-7]|5\.[1-6]|6\.[1-9])$/ {print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u | wc -l
 awk -F'\t' '$3=="BLOCKED" && $2 ~ /^PS-(2\.6|6\.10|6\.11)$/ {print $2}' "$BUILD_LOG_DIR/checkpoints.tsv" | sort -u
-gcloud pam grants list --entitlement="$ENT_PROJECT_REPAIR_CORE" --filter='state=ACTIVE' --billing-project="$CICD_PROJECT" --format='value(name)' | while read -r G; do gcloud pam grants revoke "$G" --reason="setup 15 part A closed" --billing-project="$CICD_PROJECT"; done
+gcloud pam grants search --entitlement="$ENT_PROJECT_REPAIR_CORE" --caller-relationship=had-created --filter='state=ACTIVE' --billing-project="$CICD_PROJECT" --format='value(name)' | while read -r G; do gcloud pam grants revoke "$G" --reason="setup 15 part A closed" --billing-project="$CICD_PROJECT"; done
 sitting_end
 ```
 
@@ -1225,7 +1228,7 @@ Part B (when unblocked):
 | [28](28-eve-independent-proof-and-sandbox-drills.md) | The subject-escalation proof (PS-5.3) as the model for the second human's confirmation | PS-5.3 |
 | [38](38-super-admin-gate-and-grant.md) | G2 | PS-8.10 |
 | [42](42-gates-drills-and-evidence.md) | Drill rows PS-2.5, PS-5.6, PS-6.9 in `DRILL_CALENDAR` | PS-2.5, PS-5.6, PS-6.9 |
-| [README](README.md) | BLOCKED rows: PS-2.6 (paging audit forwarder, IT security), PS-6.10 and PS-8.6 (B-05), PS-6.11 (SCC notifier, platform owner), PS-7.1 to PS-8.10 (B-06); re-run rows: security reviewer appointed → PS-2.4 level 1 of the second-human subject escalation; `K7_JOB` → PS-8.9; B20 applied at P12 → PS-6.1's topic re-read for CMEK. Role rows §6 needs and does not have: paging administrator, SCC administrator, SIEM administrator (03 §5 `PPL-PA`, `PPL-SCA`, `PPL-SIA`, with their incompatible pairs in 01 §2.1 and lead times in 01 §3.1 P-15, P-16, P-18, P-19) | this file |
+| [README](README.md) | BLOCKED rows: PS-6.10, PS-6.11 and PS-8.6 (B-05: H-3, the SCC notifier and H-2, platform owner); PS-2.6 (B-06: the paging audit forwarder, IT security's own code) and PS-7.1 to PS-8.10 (B-06); re-run rows: security reviewer appointed → PS-2.4 level 1 of the second-human subject escalation; `K7_JOB` → PS-8.9; B20 applied at P12 → PS-6.1's topic re-read for CMEK. Role rows §6 needs and does not have: paging administrator, SCC administrator, SIEM administrator (03 §5 `PPL-PA`, `PPL-SCA`, `PPL-SIA`, with their incompatible pairs in 01 §2.1 and lead times in 01 §3.1 P-15, P-16, P-18, P-19) | this file |
 
 Variables produced: `ONCALL_FILE`, `NOTIF_CH_PAGER_CORE`, `NOTIF_CH_EMAIL_CORE`, `NOTIF_CH_SMS_SECOND_HUMAN`, `SCC_TOPIC`, `SCC_NOTIFICATION_CONFIG`, `SIEM_INGEST_PRINCIPAL` (part B). Added by this file beyond the plan's table, for the plan's next revision: `NOTIF_CH_PAGER_LOGGING`, `NOTIF_CH_EMAIL_LOGGING`, `NOTIF_CH_SMS_SECOND_HUMAN_LOGGING` (the scope puts channels in `LOGGING_PROJECT` too), `PAGER_SUBJECT_SH_SERVICE_NAME` (one subject service cannot serve both sole recipients), `SCC_ROUTE_TEST_SOURCE` (the permanent test source), `PAGER_ADMIN_EMAIL` and `SCC_ADMIN_EMAIL` (PS-1.3 and PS-1.2 record them so that the grants of PS-4.2, PS-6.2 and PS-6.4 name a stored address; they belong in 03 §5 as `PPL-PA` and `PPL-SCA`, and `SIEM_ADMIN_EMAIL` as `PPL-SIA` for part B).
 
@@ -1279,6 +1282,7 @@ Google, read 2026-10-01:
 
 - Restricting identities by domain (a customer ID admits all service agents associated with resources in the organisation; updated 2026-09-30): https://docs.cloud.google.com/organization-policy/restrict-domains
 - Notification prerequisites (Security Center Admin and Project IAM Admin on the topic's project; PS-6.2): https://docs.cloud.google.com/security-command-center/docs/how-to-notifications
+- PAM grant reads (`search` returns the grants the caller created, approved or can approve, chosen by `--caller-relationship`; `list` returns every grant of an entitlement; PS-4.1, PS-4.4, PS-6.12): https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/search ; https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/list
 
 Vendor (paging tool), read 2026-09-15: escalation policies https://support.pagerduty.com/main/docs/escalation-policies ; audit trail reporting https://support.pagerduty.com/main/docs/audit-trail-reporting.
 

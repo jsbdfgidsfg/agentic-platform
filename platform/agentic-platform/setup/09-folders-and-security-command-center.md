@@ -12,6 +12,7 @@
 - Commands verified against Google's documentation on 2026-09-15. The pages are cited at each step. Anything not confirmed on a Google page is marked `Assumption:`.
 - 2026-10-01: observability settings moved to the GA `gcloud observability settings` track and the beta-component precondition dropped; the folder's time-bound logging role narrowed to `roles/logging.configWriter` (the access-control page now lists `logging.settings.*` under it); folder undelete uses the GA command and FS-1.1's VERIFY reads `lifecycleState` or `state`; FS-5.1 creates `agp-env` only when FS-0.2's record lists it; FS-7.2 gains the Standard-legacy and auto-activated Standard rows; the precondition and FS-8.1's restore note name the bootstrap exception's five roles, Security Admin included, as 06 OB-3.7 grants them.
 - 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (FS-8.2).
+- 2026-10-01: FS-5.1 writes FS-5.4's PENDING checkpoint and its re-run index line (01 PR-2.4's columns) when `agp-env` is unsigned, and FS-5.2 and FS-5.4 skip `agp-env` then; FS-5.2's values are marked IRREVERSIBLE as names; FS-0.3's record goes to `BUILD_LOG_DIR/records/` like every command output; FS-6.1 carries FS-2.1's quota-project assumption and stop; BD-09-1's value and binding counts follow `agp-env` (14 and 23, or 12 and 11 when PENDING).
 
 ## What this part builds
 
@@ -143,7 +144,7 @@ rec=$(awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="NAMES") {r=$4; gsub(/ /,"",r); p
 grep -o "agp-[a-z-]*" "$PLATFORM_REPO_DIR/decisions/$rec" | sort -u | tee "$BUILD_LOG_DIR/records/$(date +%F)-FS-0.2-names-tag-keys-v1.txt"
 ```
 
-- **VERIFY:** Six `SIGNED` lines. The names register lists `agp-tier` and `agp-tisax-scope`. If it does not list `agp-env`, FS-5.1 creates only the two signed keys, and FS-5.4 is recorded `checkpoint FS-5.4 PENDING` with a line in the re-run index, until a superseding NAMES record adds `agp-env` (a tag key's short name cannot be changed, so it is created only once signed). Folder display names are not in the names register: they come from [02 §2.1](../02-landing-zone-and-tiers.md), which NAMES and SD-01 adopt, and a folder can be renamed. Any `UNSIGNED`, `MISMATCH` or `INVALID` line stops the file. SD-15 and P11 gate FS-7, SD-17 gates FS-2, and NAMES gates FS-5.1.
+- **VERIFY:** Six `SIGNED` lines. The names register lists `agp-tier` and `agp-tisax-scope`. If it does not list `agp-env`, FS-5.1 creates only the two signed keys, FS-5.2 creates no `agp-env` value, and FS-5.1 records `checkpoint FS-5.4 PENDING` and appends one line for FS-5.4 to `BUILD_LOG_DIR/rerun-index.tsv` in 01 PR-2.4's columns (`date`, `step_id`, `member`, `what_to_rerun`, `status`, `detail`), until a superseding NAMES record adds `agp-env` (a tag key's short name cannot be changed, so it is created only once signed). Folder display names are not in the names register: they come from [02 §2.1](../02-landing-zone-and-tiers.md), which NAMES and SD-01 adopt, and a folder can be renamed. Any `UNSIGNED`, `MISMATCH` or `INVALID` line stops the file. SD-15 and P11 gate FS-7, SD-17 gates FS-2, and NAMES gates FS-5.1.
 - **ROLLBACK:** None. The step only reads.
 - **EVIDENCE:** Build-log line `FS-0.2` listing the six record paths. TISAX 1.4.1; E-03 (decision records).
 
@@ -176,7 +177,7 @@ gcloud org-policies describe essentialcontacts.managed.allowedContactDomains --o
 | `essentialcontacts.managed.allowedContactDomains` | Absent, or includes `DOMAIN` | Stop FS-6 until the organisation's owner of that policy confirms. |
 
 - **ROLLBACK:** None. The step only reads.
-- **EVIDENCE:** The seven outputs saved as `<date>-FS-0.3-org-read-v1.txt` in `EVIDENCE_INTERIM_LOCATION`, and one line in `EVIDENCE_REGISTER`. TISAX 1.5.1, 5.2.4. EU AI Act E-05.
+- **EVIDENCE:** The seven outputs saved as `BUILD_LOG_DIR/records/<date>-FS-0.3-org-read-v1.txt`, the home of every command output (01 §7.1), and one line in `EVIDENCE_REGISTER`. TISAX 1.5.1, 5.2.4. EU AI Act E-05.
 
 ### FS-0.4 Probe the permissions at the organisation
 
@@ -508,11 +509,17 @@ if cat "$BUILD_LOG_DIR"/records/*-FS-0.2-names-tag-keys-v1.txt | grep -qx agp-en
   penv_set TAG_KEY_ENV "$(gcloud resource-manager tags keys describe "$ORG_ID/agp-env" --format='value(name)')"
 fi
 penv_set TAG_KEY_TISAX "$(gcloud resource-manager tags keys describe "$ORG_ID/agp-tisax-scope" --format='value(name)')"
+if ! cat "$BUILD_LOG_DIR"/records/*-FS-0.2-names-tag-keys-v1.txt | grep -qx agp-env \
+   && ! awk -F'\t' '$2 == "FS-5.4" && $3 == "PENDING" {f=1} END {exit f ? 0 : 1}' "$BUILD_LOG_DIR/checkpoints.tsv"; then
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%d)" FS-5.4 "agp-env key and its bindings" "09 FS-5.1 agp-env lines, FS-5.2 env values, FS-5.4, FS-5.6" PENDING "agp-env not in the signed NAMES record (09 FS-0.2)" >> "$BUILD_LOG_DIR/rerun-index.tsv"
+  git -C "$BUILD_LOG_DIR" add rerun-index.tsv
+  checkpoint FS-5.4 PENDING - - "agp-env not in the signed NAMES record (FS-0.2); bind after a superseding NAMES record"
+fi
 . "$PLATFORM_ENV_FILE"
 ```
 
 - **VERIFY:** `echo "$TAG_KEY_TIER $TAG_KEY_ENV $TAG_KEY_TISAX"` prints three `tagKeys/<digits>` values, and `gcloud resource-manager tags keys list --parent="organizations/$ORG_ID" --format="value(shortName)" | grep -c '^agp-'` prints `3`.
-  The `agp-env` lines run only if FS-0.2's record `<date>-FS-0.2-names-tag-keys-v1.txt` lists `agp-env`; otherwise the step prints two `tagKeys/<digits>` values and a count of `2`, and FS-5.4 stays PENDING (FS-0.2).
+  The `agp-env` lines run only if FS-0.2's record `<date>-FS-0.2-names-tag-keys-v1.txt` lists `agp-env`; otherwise the step prints two `tagKeys/<digits>` values and a count of `2`, and its last block records FS-5.4 as PENDING: one `PENDING` line in `checkpoints.tsv` (committed by `checkpoint`, with the staged `rerun-index.tsv`) and one line in the re-run index naming what to re-run once a superseding NAMES record signs `agp-env`. A re-run of the step finds the `PENDING` line and writes neither again.
 - **ROLLBACK:** **IRREVERSIBLE as a name** (03 DC-5.1): a tag key's short name cannot be changed. The key itself can be deleted: before any value exists, `gcloud resource-manager tags keys delete "$TAG_KEY_TIER"` (and the same for the others). After values exist, run FS-5.2's rollback first. **Confirm before running:** FS-0.2 printed `SIGNED NAMES`, and the three short names above match the names register character for character.
 - **EVIDENCE:** Build-log line `FS-5.1` with the three key names. Input to `BD-09-1` and `BD-09-2` (keys made under a time-bound self-grant instead of PAM `roles/resourcemanager.tagAdmin`). TISAX 1.3.1. EU AI Act E-05.
 
@@ -520,15 +527,15 @@ penv_set TAG_KEY_TISAX "$(gcloud resource-manager tags keys describe "$ORG_ID/ag
 
 - **WHO:** Platform owner.
 - **WHERE:** The shell.
-- **ACTION:** A value's parent may be the permanent key id or the namespaced name (same page).
+- **ACTION:** A value's parent may be the permanent key id or the namespaced name (same page). The `agp-env` values are created only when FS-5.1 created `agp-env` (`TAG_KEY_ENV` is set); while it is PENDING (FS-0.2), that line is skipped.
 
 ```bash
 for v in c r w p p-sa x ctl imp core ge; do gcloud resource-manager tags values create "$v" --parent="$TAG_KEY_TIER" --description="agp-tier=$v"; done
-for v in prod nonprod; do gcloud resource-manager tags values create "$v" --parent="$TAG_KEY_ENV" --description="agp-env=$v"; done
+if [ -n "${TAG_KEY_ENV-}" ]; then for v in prod nonprod; do gcloud resource-manager tags values create "$v" --parent="$TAG_KEY_ENV" --description="agp-env=$v"; done; fi
 for v in in out; do gcloud resource-manager tags values create "$v" --parent="$TAG_KEY_TISAX" --description="agp-tisax-scope=$v"; done
 ```
 
-- **VERIFY:** The three list commands print `c core ctl ge imp p p-sa r w x`, `nonprod prod` and `in out` (sorted):
+- **VERIFY:** The three list commands print `c core ctl ge imp p p-sa r w x`, `nonprod prod` and `in out` (sorted). While `agp-env` is PENDING, skip the second; the other two print as stated:
 
 ```bash
 gcloud resource-manager tags values list --parent="$TAG_KEY_TIER" --format="value(shortName)" | sort | tr '\n' ' '; echo
@@ -536,7 +543,7 @@ gcloud resource-manager tags values list --parent="$TAG_KEY_ENV" --format="value
 gcloud resource-manager tags values list --parent="$TAG_KEY_TISAX" --format="value(shortName)" | sort | tr '\n' ' '; echo
 ```
 
-- **ROLLBACK:** Remove bindings first (FS-5.3 to FS-5.5 rollbacks), then `gcloud resource-manager tags values delete "$ORG_ID/agp-tier/<value>"`. Google notes that a value in use may also carry tag holds that must be removed first (same page).
+- **ROLLBACK:** **IRREVERSIBLE as a name**, as FS-5.1's keys: a tag value's `shortName` is "Required. Immutable." ([TagValue REST reference](https://docs.cloud.google.com/resource-manager/reference/rest/v3/tagValues), read 2026-10-01). A value can be deleted, not renamed: remove bindings first (FS-5.3 to FS-5.5 rollbacks), then `gcloud resource-manager tags values delete "$ORG_ID/agp-tier/<value>"`. Google notes that a value in use may also carry tag holds that must be removed first (same page). **Confirm before running:** the short names above are P38's vocabulary as 02 §3.6 gives it, character for character.
 - **EVIDENCE:** The three list outputs in the build log under `FS-5.2`. TISAX 1.3.1.
 
 ### FS-5.3 Bind `agp-tier` on the tier folders
@@ -566,7 +573,7 @@ gcloud resource-manager tags bindings create --tag-value="$ORG_ID/agp-tier/imp" 
 
 - **WHO:** Platform owner.
 - **WHERE:** The shell (set `F` as in FS-5.3 if the shell is new).
-- **ACTION:**
+- **ACTION:** Run only when FS-5.1 created `agp-env`. While it is PENDING (FS-0.2), skip this step: FS-5.1 has already written its `PENDING` checkpoint and re-run index line, and it runs, with FS-5.1's `agp-env` lines, FS-5.2's `agp-env` values and FS-5.6, once a superseding NAMES record signs `agp-env`.
 
 ```bash
 for id in "$FLD_AGENTS_R_PROD" "$FLD_AGENTS_W_PROD" "$FLD_AGENTS_P_PROD" "$FLD_AGENTS_P_SA_PROD" "$FLD_CONTROLLERS_PROD" "$FLD_IMPROVERS_PROD"; do gcloud resource-manager tags bindings create --tag-value="$ORG_ID/agp-env/prod" --parent="$F/$id"; done
@@ -634,6 +641,8 @@ PY
 gcloud essential-contacts create --email="$GRP_PLATFORM_SECURITY" --notification-categories=security,technical --language=en --folder="$FLD_AGENTIC_PLATFORM"
 gcloud essential-contacts create --email="$GRP_PLATFORM_OWNERS" --notification-categories=security,technical --language=en --folder="$FLD_AGENTIC_PLATFORM"
 ```
+
+  If gcloud refuses either call, or the reads below, with a message about a quota project or a disabled service on a project, stop and do not add `--billing-project` with a project picked on the spot. `Assumption:` as in FS-2.1, the gcloud shared project serves these folder-scoped calls, because no platform project exists yet; Google says the shared project "is sometimes used as the quota project" and that not every client-based API falls back on it ([set the quota project](https://docs.cloud.google.com/docs/quotas/set-quota-project), updated 2026-09-24, read 2026-10-01). Raise the same decision in 03 as FS-2.1, naming an existing project outside `fld-agentic-platform` as quota project for bootstrap calls. From [10](10-core-projects-and-ci-identities.md) on, Essential Contacts calls name `CICD_PROJECT` as their billing project.
 
 - **VERIFY:** The list shows both groups with `SECURITY` and `TECHNICAL`. Computing the contacts on the deepest folder shows both groups inherited:
 
@@ -878,7 +887,7 @@ gcloud resource-manager folders get-iam-policy "$FLD_AGENTIC_PLATFORM" --flatten
 ```bash
 need DEVIATION_REGISTER BUILD_LOG_DIR FLD_AGENTIC_PLATFORM BOOTSTRAP_EXCEPTION_EXPIRY
 d=$(date -u +%Y-%m-%d)
-bd_insert "$(printf '| BD-09-1 | %s | 09 FS-1.1 to FS-6.1 | MOD | platform-core: folder tree, tags, Essential Contacts, observability default (02 2.1, 3.6, 3.7; SD-17) | organisation %s; folder %s and descendants | 02 2.1 tree; P38 vocabulary; NAMES record; folders.yaml commit <commit> | 22 folders; tag keys agp-tier, agp-tisax-scope, agp-env <or PENDING>; 14 values; 23 bindings; 2 contacts; observability default europe-west1; Logging folder default unset; labels, APIs, policies and grants none (folders carry no labels; policies 13; grants 10 and 12) | BUILD_LOG_DIR/records/<date>-FS-3.4-tree-diff-v1.txt; <date>-FS-5.6-effective-tags-v1.txt; FS-2.1 and FS-2.2 describes | n/a (no project) | none: SD-01 one-person bootstrap, reviewed at 42 | superseded by terraform import and an empty plan when the factory exists (B-01); Tier W gate at the latest | open |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM")"
+bd_insert "$(printf '| BD-09-1 | %s | 09 FS-1.1 to FS-6.1 | MOD | platform-core: folder tree, tags, Essential Contacts, observability default (02 2.1, 3.6, 3.7; SD-17) | organisation %s; folder %s and descendants | 02 2.1 tree; P38 vocabulary; NAMES record; folders.yaml commit <commit> | 22 folders; tag keys agp-tier, agp-tisax-scope, agp-env <or agp-env PENDING>; <14, or 12 if agp-env PENDING> values; <23, or 11 if agp-env PENDING> bindings; 2 contacts; observability default europe-west1; Logging folder default unset; labels, APIs, policies and grants none (folders carry no labels; policies 13; grants 10 and 12) | BUILD_LOG_DIR/records/<date>-FS-3.4-tree-diff-v1.txt; <date>-FS-5.6-effective-tags-v1.txt; FS-2.1 and FS-2.2 describes | n/a (no project) | none: SD-01 one-person bootstrap, reviewed at 42 | superseded by terraform import and an empty plan when the factory exists (B-01); Tier W gate at the latest | open |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM")"
 bd_insert "$(printf '| BD-09-2 | %s | 09 FS-0.5, FS-1.2, FS-7.3 | DEV | time-bound self-grants through Organization Administrator instead of PAM (no entitlement before 12) | organisation %s; folder %s | FS-0.4 and FS-1.2 probes | tagAdmin, tagUser (organisation); observability.editor, essentialcontacts.admin, logging.configWriter for describe only (folder); securitycenter.admin (organisation, path B only, 12 hours to cover FS-7.3 to FS-7.7, re-granted under the same condition title if the window lapsed); each with an fs-bootstrap-* condition of at most 12 hours | FS-8.1 removal by condition title, with no unconditional binding touched, and the two empty get-iam-policy outputs | n/a | none: SD-01; FS-7.3 witnessed by IT security | removed <date of FS-8.1>; within BOOTSTRAP_EXCEPTION_EXPIRY %s | closed |\n' "$d" "$ORG_ID" "$FLD_AGENTIC_PLATFORM" "$BOOTSTRAP_EXCEPTION_EXPIRY")"
 bd_close BD-09-2 "withdrawal: 09 FS-8.1, every fs-bootstrap-* binding removed by condition title" "09 FS-8.1 VERIFY"
 ```
@@ -921,7 +930,7 @@ sitting_end
 - [ ] `register/folders.yaml` is merged under review, or committed locally with a signed review record (FS-4.2).
 - [ ] FS-2.1: `gcloud observability settings describe --location=global --folder="$FLD_AGENTIC_PLATFORM"` shows `europe-west1`.
 - [ ] FS-2.2: `gcloud logging settings describe --folder="$FLD_AGENTIC_PLATFORM"` shows no `storageLocation` other than `global`, and no `kmsKeyName`.
-- [ ] FS-5.6 prints `tags: 22 folders match`. `TAG_KEY_TIER`, `TAG_KEY_ENV` and `TAG_KEY_TISAX` are set.
+- [ ] FS-5.6 prints `tags: 22 folders match`. `TAG_KEY_TIER`, `TAG_KEY_ENV` and `TAG_KEY_TISAX` are set; while `agp-env` is PENDING, `TAG_KEY_ENV` is not, FS-5.6's only `DIFF` lines are the twelve environment folders, and FS-5.4 has its `PENDING` line in `checkpoints.tsv` and in the re-run index.
 - [ ] FS-6.1: `gcloud essential-contacts compute --notification-categories=security --folder="$FLD_AGENTS_P_SA_PROD"` lists both groups.
 - [ ] FS-7.5: `SCC_TIER=PREMIUM/eu`, from two agreeing readings co-signed by IT security, the shell reading taken by an account holding an SCC role (path A: IT security; path B: `SA_1_ADMIN` under the live `fs-bootstrap-sccadmin` grant). No `PERMISSION_DENIED` was recorded as a reading.
 - [ ] FS-7.6: the role-based `bindings.role:serviceAgent` query returned the four activation service agents (Cloud Security Command Center, Cloud Security Compliance, Container Threat Detection, Data Security Posture Management), and the address-form cross-check result is recorded either way.
@@ -970,7 +979,8 @@ Google pages, all checked 2026-09-15:
 - https://docs.cloud.google.com/security-command-center/docs/service-tiers and https://docs.cloud.google.com/security-command-center/docs/migrate-standard-legacy — Standard-legacy and Standard tiers, automatic activation in `global`, deactivation after a later location policy (read 2026-10-01)
 - https://docs.cloud.google.com/sdk/gcloud/reference/organizations/remove-iam-policy-binding and https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/folders/remove-iam-policy-binding — `--all` removes bindings "irrespective of any conditions"; `--condition-from-file` takes a JSON or YAML file with `title`, `description` and `expression`
 - https://docs.cloud.google.com/resource-manager/reference/rest/v3/folders/testIamPermissions — the probe method of FS-1.2
-- https://docs.cloud.google.com/docs/quotas/set-quota-project — the quota-project caveat of FS-2.1
+- https://docs.cloud.google.com/docs/quotas/set-quota-project — the quota-project caveat of FS-2.1 and FS-6.1 (updated 2026-09-24, read 2026-10-01)
+- https://docs.cloud.google.com/resource-manager/reference/rest/v3/tagValues — `shortName` "Required. Immutable." (read 2026-10-01)
 - https://cloud.google.com/security-command-center/pricing — as verified by the review on 2026-09-15 (X-RQB-04)
 
 Design: [../02-landing-zone-and-tiers.md](../02-landing-zone-and-tiers.md) §2.1, §2.2, §3.6, §3.7; [../07-monitoring-detection-incident-response.md](../07-monitoring-detection-incident-response.md) §3; [../08-data-logging-retention-sovereignty.md](../08-data-logging-retention-sovereignty.md) R9, S11; [../12-open-decisions.md](../12-open-decisions.md) P11, P37, P38, P40, P94; [../10-eu-ai-act.md](../10-eu-ai-act.md) §5; [../11-tisax.md](../11-tisax.md) §13; [../../project-topology.md](../../project-topology.md); [../../wall-e/PREREQUISITES.md](../../wall-e/PREREQUISITES.md) §4.2; [README.md](README.md).

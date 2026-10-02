@@ -4,6 +4,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Last executed: never
+- Changed 2026-10-01: SB-1.1, SB-7.1, SB-7.4, SB-7.5 and SB-8.1 register a file with its SHA-256 instead of a directory or a build-log line (SB-7.1's summary, SB-7.4's reads file and SB-7.5's result file carry the hashes of the other files of their directory), so 42 GD-4.1 finds no hashless row and GD-3.4 can copy each; SB-7.4's row reads TISAX 5.2.1, 5.2.2, and its `ENT_PLATFORM_POLICY` grant is revoked once the VERIFY is read (SB-7.5 requests its own `ENT_FOLDER_ADMIN`).
 - Changed 2026-10-01: they/them throughout for the sandbox super admins, the platform owner and the second human; SB-8.2 writes the second human's `@login` from `identity/git-humans.yaml` into CODEOWNERS (16 RG-1.1: an email address cannot name a managed user account) and checks `codeowners/errors`.
 - Stage: review §2 stage 32, tenant half only, pulled before Eve so that nonprod Eve (24, 25, 28) and the Wall-E twin (37) have a tenant to act on. Runs after 17 (Tier R open), in parallel with 19, 20 and 22, and before 24. Decision 29 now reads "before the super-admin grant" (03 DC-4.7); in this set the sandbox also precedes Eve's identity file.
 - Step prefix: SB. Steps: 44. BLOCKED: SB-7.6 (the drift job does not exist, README B-02), SB-8.5 (the register CI rules R-02 and R-04 have no code, README B-03; the signed manual parse of SB-8.4 stands in). Gated **IRREVERSIBLE** steps: SB-4.3 (the security label on the sandbox `walle-operators@`), SB-6.1 (acceptance of the Google Cloud terms, which creates the sandbox Cloud organisation).
@@ -175,18 +176,20 @@ need PLATFORM_REPO_DIR BUILD_LOG_DIR SANDBOX_DOMAIN SANDBOX_SA_1_EMAIL SANDBOX_S
 penv_guard
 checkpoint SB-1.1 START
 git -C "$PLATFORM_REPO_DIR" pull --ff-only
+mkdir -p "$BUILD_LOG_DIR/evidence/21"
+{
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" WDEC-29 SD-29 D3 SD-02 SD-05 SD-06 SD-25 SD-27 SD-35 NAMES PPL-SB1 PPL-SB2
 grep -il "before the super-admin grant" "$PLATFORM_REPO_DIR"/decisions/*-sandbox-tenant.md
 awk -F'\t' '($2=="OP-6.5" || $2=="RG-2.6" || $2=="FM-10.3") && $3=="DONE" {print $2, $3}' "$BUILD_LOG_DIR/checkpoints.tsv"
 printf '%s\n' "$SANDBOX_SA_1_EMAIL" "$SANDBOX_SA_2_EMAIL" | grep -vc "@${SANDBOX_DOMAIN}\$"
 printf '%s\n' "$SANDBOX_SA_1_EMAIL" "$SANDBOX_SA_2_EMAIL" "$SECOND_HUMAN_EMAIL" | sort | uniq -d
 case "$SANDBOX_DOMAIN" in "$DOMAIN"|*".$DOMAIN") echo "STOP: sandbox domain is a production domain or subdomain";; *) echo "domain distinct";; esac
-mkdir -p "$BUILD_LOG_DIR/evidence/21"
+} 2>&1 | tee "$BUILD_LOG_DIR/evidence/21/SB-1.1-gates.txt"
 ```
 
 - **VERIFY:** `decision-need.sh` prints `SIGNED` for every id; the `grep -il` prints the sandbox-tenant record (the X-ORG-14 wording; "before Stage 1" alone is a stop); the three `DONE` lines print (13's OP-6.5, 16's RG-2.6, 17's Tier R record step); the count of addresses outside `SANDBOX_DOMAIN` is `0`; `uniq -d` prints nothing; `domain distinct`. The second human confirms, from 03's people records, that they hold neither sandbox role.
 - **ROLLBACK:** Read only. A failed check stops the file.
-- **EVIDENCE:** Checkpoint line with the decision commit ids. `evidence_add SB-1.1 gates E-03 1.4.1 "build-log:evidence/21"`.
+- **EVIDENCE:** Checkpoint line with the decision commit ids; the reads above, kept in one file and registered with its SHA-256: `evidence_add SB-1.1 gates E-03 1.4.1 "build-log:evidence/21/SB-1.1-gates.txt" "$BUILD_LOG_DIR/evidence/21/SB-1.1-gates.txt"`. A directory has no hash, so 42 GD-4.1 would list it as a gap and GD-3.4 could not copy it.
 
 ### SB-1.2 Confirm the order, the edition and the keys in hand
 
@@ -643,16 +646,19 @@ penv_guard
 checkpoint SB-7.1 START
 gcloud auth login "$SA_1_ADMIN" --no-launch-browser
 S="$BUILD_LOG_DIR/evidence/21/SB-7.1"; mkdir -p "$S"
+{
 for v in FLD_AGENTIC_PLATFORM FLD_AGENTS_P_NONPROD FLD_AGENTS_P_PROD FLD_AGENTS_P_SA_NONPROD FLD_AGENTS_P_SA_PROD FLD_CONTROLLERS_NONPROD FLD_CONTROLLERS_PROD FLD_IMPROVERS_NONPROD FLD_IMPROVERS_PROD; do
   gcloud org-policies describe iam.allowedPolicyMemberDomains --folder="$(eval echo \$$v)" --effective --format=json > "$S/$v.effective.json"
   printf '%s %s\n' "$v" "$(jq -c '[.spec.rules[]?.values.allowedValues[]?]' "$S/$v.effective.json")"
 done
 ls "$PLATFORM_REPO_DIR"/policies/org/*/iam.allowedPolicyMemberDomains.json
+(cd "$S" && shasum -a 256 ./*.effective.json)
+} 2>&1 | tee "$S/summary.txt"
 ```
 
 - **VERIFY:** Every folder prints `["<DIRECTORY_CUSTOMER_ID>"]` and nothing else; the `ls` lists only `policies/org/FLD_AGENTIC_PLATFORM/iam.allowedPolicyMemberDomains.json` (13 OP-6.5 removed the nonprod copy). Anything else means 13's state is not what this file builds on: stop.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** The directory, `evidence_add SB-7.1 b5-before - 5.2.2 "build-log:evidence/21/SB-7.1"`. They are the predecessors of SB-7.4.
+- **EVIDENCE:** The directory, registered through its summary, which lists the SHA-256 of each folder's JSON so that one registered hash covers them all: `evidence_add SB-7.1 b5-before - 5.2.2 "build-log:evidence/21/SB-7.1/summary.txt" "$S/summary.txt"`. The JSON files are the predecessors of SB-7.4.
 
 ### SB-7.2 Decide whether fld-improvers-nonprod joins
 
@@ -696,7 +702,7 @@ gh pr create --title "SB-7.3 B5 sandbox customer on nonprod twin folders" --body
 - **ACTION:**
 
 ```bash
-need ENT_PLATFORM_POLICY CICD_PROJECT CORE_PROJECT SANDBOX_CUSTOMER_ID DIRECTORY_CUSTOMER_ID
+need ENT_PLATFORM_POLICY CICD_PROJECT CORE_PROJECT SANDBOX_CUSTOMER_ID DIRECTORY_CUSTOMER_ID PLATFORM_REPO_DIR BUILD_LOG_DIR
 checkpoint SB-7.4 START
 git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
 source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
@@ -707,13 +713,15 @@ for T in FLD_AGENTS_P_NONPROD FLD_AGENTS_P_SA_NONPROD FLD_CONTROLLERS_NONPROD; d
 sleep 900
 for T in FLD_AGENTS_P_NONPROD FLD_AGENTS_P_SA_NONPROD FLD_CONTROLLERS_NONPROD FLD_IMPROVERS_NONPROD FLD_AGENTS_P_PROD FLD_AGENTS_P_SA_PROD FLD_CONTROLLERS_PROD FLD_IMPROVERS_PROD; do
   printf '%s %s\n' "$T" "$(gcloud org-policies describe iam.allowedPolicyMemberDomains --folder="$(eval echo \$$T)" --effective --format=json | jq -c '[.spec.rules[]?.values.allowedValues[]?] | sort')"
-done
+done 2>&1 | tee "$BUILD_LOG_DIR/evidence/21/SB-7.4-effective.txt"
+pam_record "$g" "$BUILD_LOG_DIR/evidence/21/SB-7.4-grant.json"
+(cd "$BUILD_LOG_DIR/evidence/21" && shasum -a 256 SB-7.4-grant.json) >> "$BUILD_LOG_DIR/evidence/21/SB-7.4-effective.txt"
 ```
 
-  Add `FLD_IMPROVERS_NONPROD` to the first loop only if SB-7.2 recorded `true`. The 15-minute wait is Google's propagation time for organisation policy changes. The grant stays active for SB-7.5 if both fit in its hour; otherwise revoke it now with `pam_revoke "$g"`.
+  Add `FLD_IMPROVERS_NONPROD` to the first loop only if SB-7.2 recorded `true`. The 15-minute wait is Google's propagation time for organisation policy changes. SB-7.5 does not use this grant: it requests its own `ENT_FOLDER_ADMIN`. Keep the grant only until the VERIFY below is read, because the ROLLBACK runs under it: when the VERIFY passes, revoke it at once with `pam_revoke "$g"`; when it fails, run the ROLLBACK first, then revoke it.
 - **VERIFY:** Three (or four) `APPLIED` lines from `op-set.sh`. The effective read prints both customer ids for each target nonprod folder, and only `DIRECTORY_CUSTOMER_ID` for every production folder and for a non-target nonprod folder. The predecessor files are under `policies/predecessors/<date>/`.
 - **ROLLBACK:** Under a grant: `gcloud org-policies delete iam.allowedPolicyMemberDomains --folder=<id>` for each target (the predecessor was "none", SB-7.1), then the effective read shows only the tenant customer again.
-- **EVIDENCE:** The applied files, predecessors and effective reads; the grant record `pam_record "$g" "$BUILD_LOG_DIR/evidence/21/SB-7.4-grant.json"`. `evidence_add SB-7.4 b5-sandbox-applied - 5.2.2 "build-log:evidence/21"`. TISAX 5.2.1.
+- **EVIDENCE:** The effective reads in `SB-7.4-effective.txt`, which ends with the SHA-256 of the grant record, so one registered hash covers both; the applied files and their predecessors are in `PLATFORM_REPO_DIR` (SB-7.3's merge commit, `policies/predecessors/<date>/`). `evidence_add SB-7.4 b5-sandbox-applied - "5.2.1, 5.2.2" "build-log:evidence/21/SB-7.4-effective.txt" "$BUILD_LOG_DIR/evidence/21/SB-7.4-effective.txt"`.
 
 ### SB-7.5 Prove admission on the nonprod folders and refusal on their production siblings
 
@@ -722,11 +730,12 @@ done
 - **ACTION:** A sandbox identity is bound, read back and removed on each target nonprod folder; the same binding is attempted on the production sibling and must be refused. The group form is tested on `fld-agents-p-sa-nonprod`, because the twin uses `walle-operators@SANDBOX_DOMAIN` as invoker and IAP audience (37).
 
 ```bash
-need ENT_FOLDER_ADMIN SANDBOX_SA_1_EMAIL SANDBOX_OPERATORS_GROUP FLD_AGENTS_P_NONPROD FLD_AGENTS_P_SA_NONPROD FLD_CONTROLLERS_NONPROD FLD_AGENTS_P_PROD FLD_AGENTS_P_SA_PROD FLD_CONTROLLERS_PROD
+need ENT_FOLDER_ADMIN CICD_PROJECT PLATFORM_REPO_DIR BUILD_LOG_DIR SANDBOX_DOMAIN SANDBOX_SA_1_EMAIL SANDBOX_OPERATORS_GROUP FLD_AGENTS_P_NONPROD FLD_AGENTS_P_SA_NONPROD FLD_CONTROLLERS_NONPROD FLD_AGENTS_P_PROD FLD_AGENTS_P_SA_PROD FLD_CONTROLLERS_PROD
 checkpoint SB-7.5 START
 source "$PLATFORM_REPO_DIR/pam/tools/pam.sh"
 g="$(pam_request "$ENT_FOLDER_ADMIN" "setup 21 SB-7.5 SD-25 admission proof" 3600)"; pam_wait "$g" ACTIVE
 E="$BUILD_LOG_DIR/evidence/21/SB-7.5"; mkdir -p "$E"
+{
 for pair in "FLD_AGENTS_P_NONPROD FLD_AGENTS_P_PROD" "FLD_AGENTS_P_SA_NONPROD FLD_AGENTS_P_SA_PROD" "FLD_CONTROLLERS_NONPROD FLD_CONTROLLERS_PROD"; do
   NV="${pair%% *}"; PV="${pair##* }"; N="$(eval echo \$$NV)"; P="$(eval echo \$$PV)"
   gcloud resource-manager folders add-iam-policy-binding "$N" --member="user:${SANDBOX_SA_1_EMAIL}" --role=roles/browser --condition=None > "$E/$NV.accept.txt" 2>&1; echo "$NV accept exit $?"
@@ -735,13 +744,19 @@ for pair in "FLD_AGENTS_P_NONPROD FLD_AGENTS_P_PROD" "FLD_AGENTS_P_SA_NONPROD FL
 done
 gcloud resource-manager folders add-iam-policy-binding "$FLD_AGENTS_P_SA_NONPROD" --member="group:${SANDBOX_OPERATORS_GROUP}" --role=roles/browser --condition=None > "$E/group.accept.txt" 2>&1; echo "group accept exit $?"
 gcloud resource-manager folders remove-iam-policy-binding "$FLD_AGENTS_P_SA_NONPROD" --member="group:${SANDBOX_OPERATORS_GROUP}" --role=roles/browser > "$E/group.remove.txt" 2>&1; echo "group remove exit $?"
-grep -l "do not belong to a permitted customer" "$E"/*.refuse.txt
+echo "refusals with the permitted-customer message: $(grep -l "do not belong to a permitted customer" "$E"/*.refuse.txt | wc -l | tr -d ' ') of 3"
+for v in FLD_AGENTS_P_NONPROD FLD_AGENTS_P_SA_NONPROD FLD_CONTROLLERS_NONPROD FLD_AGENTS_P_PROD FLD_AGENTS_P_SA_PROD FLD_CONTROLLERS_PROD; do
+  printf '%s sandbox members %s\n' "$v" "$(gcloud resource-manager folders get-iam-policy "$(eval echo \$$v)" --format=json | jq -r '.bindings[]?.members[]?' | grep -c "$SANDBOX_DOMAIN")"
+done
+} 2>&1 | tee "$E/result.txt"
+pam_record "$g" "$E/grant.json"
+(cd "$E" && shasum -a 256 ./*.accept.txt ./*.remove.txt ./*.refuse.txt ./grant.json) >> "$E/result.txt"
 pam_revoke "$g"; pam_wait "$g" REVOKED
 ```
 
-- **VERIFY:** Each `accept` and `remove` line prints `exit 0`; each `refuse` line prints a non-zero exit, and the `grep -l` lists all three `.refuse.txt` files (Google's error: `FAILED_PRECONDITION: One or more users named in the policy do not belong to a permitted customer`). Afterwards `gcloud resource-manager folders get-iam-policy <id> --format=json | jq -r '.bindings[].members[]' | grep -c "$SANDBOX_DOMAIN"` prints `0` on all six folders. An `exit 0` on any production sibling is a severity 1 (see "If something goes wrong"). The service-agent half of SD-25 is proven by the first sandbox sink writer grant in 24; if that grant is refused, 24 stops and SD-25 is amended (never a production-folder exception).
+- **VERIFY:** Each `accept` and `remove` line prints `exit 0`; each `refuse` line prints a non-zero exit, and the refusal line reads `3 of 3`: every `.refuse.txt` file carries Google's error (`FAILED_PRECONDITION: One or more users named in the policy do not belong to a permitted customer`). Afterwards every `sandbox members` line prints `0`, on all six folders. An `exit 0` on any production sibling is a severity 1 (see "If something goes wrong"). The service-agent half of SD-25 is proven by the first sandbox sink writer grant in 24; if that grant is refused, 24 stops and SD-25 is amended (never a production-folder exception).
 - **ROLLBACK:** Remove any binding that remains, under the same grant.
-- **EVIDENCE:** The directory, as `<date>-SB-7.5-b5-admission-proof-v1` (also to the witness `drills/`); the grant record. E-08. TISAX 4.1.3, 5.2.2.
+- **EVIDENCE:** `result.txt`, which ends with the SHA-256 of every output file and of the grant record, so one registered hash covers the directory: `evidence_add SB-7.5 b5-admission-proof E-08 "4.1.3, 5.2.2" "build-log:evidence/21/SB-7.5/result.txt" "$E/result.txt"`, which registers `<date>-SB-7.5-b5-admission-proof-v1`. The whole directory also goes to the witness `drills/` under that record id.
 
 ### SB-7.6 Add the sandbox folder values and identifiers to the drift inventory (BLOCKED)
 
@@ -764,18 +779,20 @@ pam_revoke "$g"; pam_wait "$g" REVOKED
 - **ACTION:** A project id is reserved in Google only at creation; here it is reserved in the signed names register and the variables file, so 23 and 37 create exactly these ids (with the signed fallback suffix if taken).
 
 ```bash
-need PLATFORM_REPO_DIR
+need PLATFORM_REPO_DIR BUILD_LOG_DIR
 checkpoint SB-8.1 START
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES
 penv_set WALLE_TWIN_PROJECT "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES WALLE_TWIN_PROJECT)"
 penv_set EVE_TWIN_PROJECT "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES EVE_TWIN_PROJECT)"
 for v in WALLE_TWIN_PROJECT EVE_TWIN_PROJECT; do printenv "$v" | grep -Eq '^[a-z][a-z0-9-]{4,28}[a-z0-9]$' && echo "$v form ok"; done
 [ "$WALLE_TWIN_PROJECT" != "${WALLE_PROJECT:-none}" ] && [ "$EVE_TWIN_PROJECT" != "${EVE_PROJECT:-none}" ] && [ "$WALLE_TWIN_PROJECT" != "$EVE_TWIN_PROJECT" ] && echo "distinct"
+mkdir -p "$BUILD_LOG_DIR/evidence/21"
+printf 'WALLE_TWIN_PROJECT %s\nEVE_TWIN_PROJECT %s\nnames record: repo:decisions@%s\n' "$WALLE_TWIN_PROJECT" "$EVE_TWIN_PROJECT" "$(git -C "$PLATFORM_REPO_DIR" log -n 1 --format=%h -- decisions)" > "$BUILD_LOG_DIR/evidence/21/SB-8.1-twin-project-ids.txt"
 ```
 
 - **VERIFY:** `SIGNED`; two `form ok` lines (6 to 30 characters, lowercase letters, digits and hyphens, starting with a letter, not ending with a hyphen); `distinct`. `need WALLE_TWIN_PROJECT EVE_TWIN_PROJECT` passes, so `twin_shell` can open (01).
 - **ROLLBACK:** A superseding NAMES record before 23 or 37 creates the project; `penv_set --force` with a build-log line.
-- **EVIDENCE:** Build-log line with the names record commit. E-05. TISAX 1.3.1.
+- **EVIDENCE:** The two ids and the names record commit, kept as a file so the row carries a SHA-256: `evidence_add SB-8.1 twin-project-ids E-05 1.3.1 "build-log:evidence/21/SB-8.1-twin-project-ids.txt" "$BUILD_LOG_DIR/evidence/21/SB-8.1-twin-project-ids.txt"`.
 
 ### SB-8.2 Commit the sandbox contract file
 

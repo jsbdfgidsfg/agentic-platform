@@ -5,6 +5,7 @@
 - Last reviewed: 2026-10-01
 - Changed on 2026-10-01: SD-01 carries `BOOTSTRAP_EXCEPTION_EXPIRY` and SD-16 carries `BILLING_ACCOUNT_ID` and `BOOTSTRAP_BILLING_EXPIRY` as Values; DC-9.11 creates and protects the build-log repository and sets `BUILD_LOG_REMOTE`; the `penv_set` open item is closed by 01.
 - Changed on 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (DC-9.11).
+- Changed on 2026-10-01: new step DC-4.9 signs P99 and P63, which gain rows in §11.5 and the tracker (04 PU-2.6 and PU-2.9 gate on them); DC-2.6's VERIFY is split, because the sandbox addresses can exist only after 04 PU-2.5; DC-3.1 says what happens when 2026-09-21 is missed; DC-1.2 has no witness; DC-7.1 fixes the formats of `BUSINESS_TZ` and `BUSINESS_HOURS`.
 - Stage: review §2 stage 1. Every later file gates on a row of this page.
 - Step prefix: `DC`.
 - Replaces: [../../wall-e/PREREQUISITES.md](../../wall-e/PREREQUISITES.md) §1 and §2 (the decision and people tables), the "Decisions that must be closed" tables of [../../eve/07-build-runbook.md](../../eve/07-build-runbook.md) and [../../mo/07-build-runbook.md](../../mo/07-build-runbook.md). Salvaged with corrections: D8 reads `eu` only (X-GE-13), D12 starts on day one in [02-toil-baseline.md](02-toil-baseline.md) (S084), D13 reads G1-G21 (S092). Not copied: decision 29 "before Stage 1" (X-ORG-14), decision 6 "at Stage 1" (X-RQB-01), P22 "Tier W" (S051), P52's 30 days as a value to set (X-GE-01).
@@ -19,7 +20,7 @@
 Three things, in this order:
 
 1. **A decision mechanism that later files can test.** Every decision the set needs is a Markdown record under `decisions/` in the platform repository, append-only, with a signature table whose rows each carry the SHA-256 of the record body the signer approved. Three small scripts (`tools/decision-check.sh`, `tools/decision-need.sh`, `tools/decision-value.sh`) let any later step refuse to run on an unsigned or altered record, and read a variable's value only from a signed record.
-2. **The signed decisions and the named people.** The checklist of §11, signed through the steps of §5 to §10: setup decisions SD-01 to SD-48, Wall-E D1-D8 and D10-D13, Eve E-1, E-2, E-14, E-16, E-18 and topology decision 44 or CC-33, Mo M-1, M-5, M-7 and the dataset names, platform P1, P10, P11, P13, P14, P22, P29, P31, P49, P52, P137, Wall-E decisions 6, 15 and 29, and the added rows (G3 roster reduction, names register, key table, the recipient of reports about the second human, the penetration-test window, the tabletop date). The data-protection letter goes out in week one. Twelve people are appointed with dates.
+2. **The signed decisions and the named people.** The checklist of §11, signed through the steps of §5 to §10: setup decisions SD-01 to SD-48, Wall-E D1-D8 and D10-D13, Eve E-1, E-2, E-14, E-16, E-18 and topology decision 44 or CC-33, Mo M-1, M-5, M-7 and the dataset names, platform P1, P10, P11, P13, P14, P22, P29, P31, P49, P52, P63, P99, P137, Wall-E decisions 6, 15 and 29, and the added rows (G3 roster reduction, names register, key table, the recipient of reports about the second human, the penetration-test window, the tabletop date). The data-protection letter goes out in week one. Twelve people are appointed with dates.
 3. **The platform repository on the git host** (once P22 is signed, SD-14): two human reviewers, code owners on the control files, administrators bound by the rules and audited, and the local history pushed with its review records.
 
 Where the records live, and why not in the wiki: the wiki is mirrored to Google Drive and holds no employee data beyond name, team and remit; the records carry work email addresses because CODEOWNERS, the roster and IAM need them. So the records are committed to `decisions/` in `PLATFORM_REPO_DIR` (local git until DC-9 pushes it). No procedure writes to `WIKI_DIR`. The two 2026-09-13 records already in the wiki's `decisions/` stay there as design records; the super-admin record is re-signed in [38-super-admin-gate-and-grant.md](38-super-admin-gate-and-grant.md).
@@ -132,7 +133,7 @@ echo "$(date -u +%FT%TZ) DC-1.1 done" >> "$BUILD_LOG_DIR/03-decisions-and-people
 
 #### DC-1.2 Write the three decision tools and prove they refuse
 
-- WHO: platform owner; **bootstrap reviewer**: the named second human of [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md) §2.1. §4 runs before §5, so neither `SECOND_HUMAN_EMAIL` nor `SECOND_OPERATOR_EMAIL` exists yet; 01's preconditions state that the second human is known by name before this page records the appointment, and that person reviews DC-1.2 and DC-1.3. The reliance on a person named but not yet appointed is the bootstrap deviation `BD-03-1`, opened in DC-9.1 with these two commits in its scope. From DC-2.1 the same person's appointment record exists and the reviewer of every later commit is the second operator (DC-2.4) or the second human.
+- WHO: platform owner; **bootstrap reviewer**: the named second human of [01-prerequisites-and-conventions.md](01-prerequisites-and-conventions.md) §2.1. §4 runs before §5, so neither `SECOND_HUMAN_EMAIL` nor `SECOND_OPERATOR_EMAIL` exists yet; 01's preconditions state that the second human is known by name before this page records the appointment, and that person reviews DC-1.2 and DC-1.3. The reliance on a person named but not yet appointed is the bootstrap deviation `BD-03-1`, opened in DC-9.1 with these two commits in its scope. From DC-2.1 the same person's appointment record exists and the reviewer of every later commit is the second operator (DC-2.4) or the second human. No witness: the bootstrap reviewer is not present for this step; they review its commit afterwards, in DC-1.3.
 - WHERE: shell with `~/.platform-env` sourced.
 - ACTION: name the bootstrap reviewer in this shell first; it is a plain shell variable, not a `penv_set` value, because it is a person's name and the variables file holds addresses only.
 
@@ -236,7 +237,7 @@ printf 'commit %s\nreviewer: %s\ndate: %s\nresult: approved\nevidence: %s-DC-1.3
 
 ```bash
 awk -F'|' 'NR>2 && NF>=7 {k=$2; gsub(/ /,"",k); print k}' "$PLATFORM_REPO_DIR/decisions/TRACKER.md" | sort | uniq -d
-for id in SD-01 SD-24 SD-48 D8 D13 WDEC-6 WDEC-29 E-16 TD-44 M-1 P22 P137 NAMES KEYS SH-REPORTS PPL-SH; do grep -q "^| $id |" "$PLATFORM_REPO_DIR/decisions/TRACKER.md" || echo "missing $id"; done
+for id in SD-01 SD-24 SD-48 D8 D13 WDEC-6 WDEC-29 E-16 TD-44 M-1 P22 P63 P99 P137 NAMES KEYS SH-REPORTS PPL-SH; do grep -q "^| $id |" "$PLATFORM_REPO_DIR/decisions/TRACKER.md" || echo "missing $id"; done
 test -f "$BUILD_LOG_DIR/reviews/$(git -C "$PLATFORM_REPO_DIR" rev-parse HEAD).md" && echo reviewed
 grep -q '<name, role>' "$BUILD_LOG_DIR/reviews/$(git -C "$PLATFORM_REPO_DIR" rev-parse HEAD).md" && echo "FAIL: the reviewer placeholder was written verbatim"
 ```
@@ -383,7 +384,9 @@ v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SB1 SANDBOX_SA_1_EMAIL) && 
 v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-SB2 SANDBOX_SA_2_EMAIL) && penv_set SANDBOX_SA_2_EMAIL "$v"
 ```
 
-- VERIFY: `tools/decision-need.sh PPL-SB1 PPL-SB2`; `need SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL`; `[ "$SANDBOX_SA_1_EMAIL" != "$SANDBOX_SA_2_EMAIL" ] && echo distinct`.
+- VERIFY, in two halves, because the addresses cannot exist while this file runs: `SANDBOX_DOMAIN` is set in 04 PU-2.5 and the accounts are created in 21.
+  - Now: `tools/decision-need.sh PPL-SB1 PPL-SB2` prints two `SIGNED` lines, and the two records name two different people. `SANDBOX_SA_1_EMAIL` and `SANDBOX_SA_2_EMAIL` stay `*tbd*`, so `need` fails on them; that is expected here. A file before 21 that needs these people (04 PU-0.1 and PU-2.5's seat count) reads them from the two signed records, never from the variables.
+  - After 04 PU-2.5 and before 21's first tenant step, once the superseding records are signed and the two lines above are run: `need SANDBOX_SA_1_EMAIL SANDBOX_SA_2_EMAIL`; `[ "$SANDBOX_SA_1_EMAIL" != "$SANDBOX_SA_2_EMAIL" ] && echo distinct`; both addresses end in `@$SANDBOX_DOMAIN`.
 - ROLLBACK: superseding record.
 - EVIDENCE: records. E-08; TISAX 1.1-1.2.
 
@@ -425,7 +428,7 @@ v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-MO MO_OWNER_EMAIL) && penv_
 
 - WHO: platform owner sends; DPO and HR receive; legal in copy.
 - WHERE: mail from `OWNER_DAILY_ACCOUNT`; record per DC-1.4 with required signatory PO only (it records that the letter left, not an answer).
-- ACTION: send by 2026-09-21 at the latest. The letter asks for a written answer on:
+- ACTION: send by 2026-09-21 at the latest. If that date is past and the letter has not left, send it the day this step runs; the D7-LETTER record then states the planned date (2026-09-21), the real date and the reason in its Context, and nothing else moves: the answer it asks for still gates 25 through SD-11 (DC-3.2) and Wall-E's Stage 1 entry in 39 through D7, so a late letter delays those two files, never the order of the build. The letter asks for a written answer on:
   1. Wall-E's processing (decisions 8 and 25; P129): autonomous administrative action on employee accounts, the organisation-level audit logs whose storage region cannot be chosen, the content log bucket and telemetry content.
   2. Eve's monitoring of named administrator accounts from Eve's first run (SD-11): purpose, detection of misuse of tenant-wide privilege; data, admin, login, token, SAML, groups and Reports activity metadata, no content; subjects, every account on the super-admin roster and every live admin-role holder; retention, `eve_workspace_*` at the value P13 sets and the witness copy; recipients, the second human, the security reviewer, the incident commander; never the subject.
   3. Retention floor and ceiling per store (P13, E-14, M-5) and conversation retention (P52), with the rule that the Gemini Enterprise baseline never lowers today's value.
@@ -437,7 +440,7 @@ v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" PPL-MO MO_OWNER_EMAIL) && penv_
 v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" D7-LETTER DPO_CONTACT) && penv_set DPO_CONTACT "$v"
 ```
 
-- VERIFY: `tools/decision-need.sh D7-LETTER`; the sent mail saved as `<date>-DC-3.1-d7-letter-v1` in the interim location; the record date is on or before 2026-09-21.
+- VERIFY: `tools/decision-need.sh D7-LETTER`; the sent mail saved as `<date>-DC-3.1-d7-letter-v1` in the interim location; the record date is on or before 2026-09-21, or the record's Context states the late date and its reason.
 - ROLLBACK: none needed; a correction is a second letter recorded the same way.
 - EVIDENCE: sent letter. E-12; TISAX 7.1.
 
@@ -579,6 +582,19 @@ v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" P13 IDENTITY_RETENTION_DAYS) &&
 - ROLLBACK: superseding record, possible only before the first lock (08 W-2, 14, 23). **The locks themselves are IRREVERSIBLE in their files and gated on this record.**
 - EVIDENCE: record. E-06, E-12; TISAX 5.2, 7.1.
 
+#### DC-4.9 Sign the paging tool and the device-posture licence count (P99, P63)
+
+- WHO: IT security signs P99; the platform owner and IT security sign P63; the platform owner drafts.
+- WHERE: record per DC-1.4 (`<date>-paging-tool-and-device-licences.md`, ids P99, P63).
+- ACTION: body:
+  - P99 ([../07-monitoring-detection-incident-response.md](../07-monitoring-detection-incident-response.md) §9.2): IT security states whether it operates an incident and on-call tool with 24x7 paging; if it does, that tool is used, otherwise PagerDuty is bought. The escalation ladder and acknowledgement targets of that section are adopted, each `Assumption:` value marked as such until the MDR contract fixes it.
+  - P63 ([../04-identity-and-privileged-access.md](../04-identity-and-privileged-access.md) §6.4): the Chrome Enterprise Premium licence count, one per operator and approver on the Tier W+ control surfaces, and the names it was counted from; `al-platform-operator-lite` stays the access level of every surface until the licences exist.
+
+  No Values. These two ids had no row in §11 before 2026-10-01, so 04 PU-0.1 printed a `GAP` line for them; a tracker written before that date gets the two rows under DC-1.3's rule, in a reviewed commit.
+- VERIFY: `tools/decision-need.sh P99 P63` prints two `SIGNED` lines. **04 PU-2.6 (P99) and PU-2.9 (P63) quote but commit no purchase until it does.**
+- ROLLBACK: superseding record before 04 commits either purchase.
+- EVIDENCE: record. E-11 (supplier file); TISAX 1.6, 4.1-4.2.
+
 ## 8. Names and keys: the permanent choices
 
 Project ids are permanent and are never reusable, even after deletion; key rings cannot be deleted and deleted key names cannot be reused; a BigQuery dataset's name and location cannot be changed after creation; a tag key's short name cannot be changed. Every create step for these in 09, 10, 11, 21, 22, 23 and 31 is **IRREVERSIBLE** as a name and runs only after `tools/decision-need.sh NAMES` (and `KEYS` for key rings) prints `SIGNED`.
@@ -691,14 +707,26 @@ grep -c 'eve-evidence-eu' "$rec"
   - E-18: thresholds of [../../eve/03-lld.md](../../eve/03-lld.md) are signed as **provisional** for 25 and 26, recalibrated from the sandbox drills (28) and at S2 through a reviewed change.
   - Decision 15 (WDEC-15): business-hours time zone and window for H-1.
 
-  Values: `BUSINESS_TZ`, `BUSINESS_HOURS` (or `*tbd*`, in which case H-1 runs flat windows).
+  Values: `BUSINESS_TZ`, `BUSINESS_HOURS` (or `*tbd*`, in which case H-1 runs flat windows), each in the one form its readers take:
+
+  | Variable | Form | Example | Read by |
+  |---|---|---|---|
+  | `BUSINESS_TZ` | a time-zone name from the tz database, as Cloud Scheduler's `--time-zone` takes it | `Europe/Paris` | 15 (the paging schedule and `oncall.yaml`), 25 EH-5.2 and 39 (`--time-zone`), 26 |
+  | `BUSINESS_HOURS` | `<first day>-<last day> HH:MM-HH:MM`: English three-letter day names, 24-hour local times in `BUSINESS_TZ`, end later than start, one window per day; public holidays are not modelled (*Assumption:* a holiday counts as a business day) | `Mon-Fri 08:00-18:00` | 15 (`oncall.yaml`, PS-5.4's out-of-hours drill) |
 
 ```bash
 v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-15 BUSINESS_TZ) && penv_set BUSINESS_TZ "$v"
 v=$("$PLATFORM_REPO_DIR/tools/decision-value.sh" WDEC-15 BUSINESS_HOURS) && penv_set BUSINESS_HOURS "$v"
 ```
 
-- VERIFY: `tools/decision-need.sh SD-10 SD-12 SD-03 SD-07 SD-08 SD-26 SD-31 SD-32 E-1 E-16 TD-44 CC-33 E-18 WDEC-15`; the record's signature table has a row `SH`. **23 refuses its first step without SD-10 and SD-12; 24 refuses its first step without SD-31, E-16 and TD-44.**
+- VERIFY: `tools/decision-need.sh SD-10 SD-12 SD-03 SD-07 SD-08 SD-26 SD-31 SD-32 E-1 E-16 TD-44 CC-33 E-18 WDEC-15`; the record's signature table has a row `SH`; both values in their form, or `*tbd*`:
+
+```bash
+case "$BUSINESS_TZ" in '*tbd*') echo "tz tbd: flat windows";; */*|UTC) test -f "/usr/share/zoneinfo/$BUSINESS_TZ" && echo "tz ok" || echo "FAIL: '$BUSINESS_TZ' is not a tz database name";; *) echo "FAIL: '$BUSINESS_TZ' is not a tz database name";; esac
+case "$BUSINESS_HOURS" in '*tbd*') echo "hours tbd: 15 PS-5.4 waits";; *) printf '%s\n' "$BUSINESS_HOURS" | grep -Eqx '(Mon|Tue|Wed|Thu|Fri|Sat|Sun)-(Mon|Tue|Wed|Thu|Fri|Sat|Sun) ([01][0-9]|2[0-3]):[0-5][0-9]-([01][0-9]|2[0-3]):[0-5][0-9]' && echo "hours ok" || echo "FAIL: '$BUSINESS_HOURS' is not <day>-<day> HH:MM-HH:MM";; esac
+```
+
+  Expect `tz ok` or `tz tbd`, and `hours ok` or `hours tbd`; a `FAIL` line means a superseding record before 15 runs. **23 refuses its first step without SD-10 and SD-12; 24 refuses its first step without SD-31, E-16 and TD-44.**
 - ROLLBACK: superseding record before 24's consent. The consent itself is irreversible in 24.
 - EVIDENCE: record. E-08; TISAX 1.5, 4.1-4.2.
 
@@ -842,7 +870,7 @@ awk -F'|' '/^## Values$/{s=1;next} /^## /{s=0} s && /\.md/ {x=$3; gsub(/[ `]/,""
 | D4 | Nine blast-radius rows and the two lists | 38: G7 | PO, SR or ITSEC, ISMS | wall-e-scope |
 | D5 | Second operator; IT security second approver | 30: operators group | ISMS, SO, PO | appointment-second-operator |
 | D6 | Inventory of other writers with owners | 39: Stage 0 record | PO, SR or ITSEC, ISMS | wall-e-scope |
-| D7 | Data-protection answer | letter by 2026-09-21 (DC-3.1); answer before 39's Stage 1 entry; SD-11 half before 25 | DPO, HR, LEGAL, PO | monitoring-of-administrators or d7-answer |
+| D7 | Data-protection answer | letter by 2026-09-21, or the day DC-3.1 runs with the late date recorded (DC-3.1); answer before 39's Stage 1 entry; SD-11 half before 25 | DPO, HR, LEGAL, PO | monitoring-of-administrators or d7-answer |
 | D8 | App location **`eu` only** | 05: location record | PO | gemini-app-location |
 | D10 | Operations per band A, B, C | before D2's final list | PO, SR or ITSEC, ISMS | wall-e-scope |
 | D11 | Stage 0 provisions only what Stage 0 uses | 30: first step | PO, SR or ITSEC, ISMS | wall-e-scope |
@@ -887,13 +915,15 @@ awk -F'|' '/^## Values$/{s=1;next} /^## /{s=0} s && /\.md/ {x=$3; gsub(/[ `]/,""
 | P31 | Billing account and its administrator | 07: first step | FIN, BA, PO | billing-scc-and-siem |
 | P49 | Gemini Enterprise administration model | 12: `ent-ge-admin` | PO, ITSEC, ISMS | platform-model-and-privilege |
 | P52 | Conversation retention: **never lowered by the baseline**; no value set from 30 days | 19: retention step | DPO, PO, MOO, SH, HR | retention |
+| P63 | Chrome Enterprise Premium licence count, one per operator and approver (DC-4.9) | 04: PU-2.9 commitment | PO, ITSEC | paging-tool-and-device-licences |
+| P99 | On-call tool with 24x7 paging, escalation ladder and targets (DC-4.9) | 04: PU-2.6 commitment; 15: part A | ITSEC | paging-tool-and-device-licences |
 | P137 | Five humans at the grant (§5, DC-2.8) | 30 (three at Tier W); 38 (five) | ISMS, ITSEC, PO | separation-and-count |
 
 ### 11.6 Added rows
 
 | Id | Decision | Close before (file: step) | Signatories | Record slug |
 |---|---|---|---|---|
-| D7-LETTER | Letter sent in week one | by 2026-09-21 | PO | d7-letter |
+| D7-LETTER | Letter sent in week one | by 2026-09-21; if missed, the day DC-3.1 runs, the late date and reason in the record | PO | d7-letter |
 | G3-ROSTER | Every super admin other than `sa-1-admin@`, `sa-2-admin@` moved to a delegated role | 06: reduction step | ITSEC, PO, SH | roster-reduction-and-custody |
 | NAMES | Project ids, datasets, buckets, OU and app names | 09 (tag keys), 10, 11, 21, 22, 23, 31: every IRREVERSIBLE naming step | PO, SH, MOO, WA1, WA2, ITSEC | names-register |
 | KEYS | Key table with `eve-eu` | 11 and 23: ring creates | PO, SH, ITSEC | key-table |
@@ -1365,7 +1395,8 @@ need BUILD_LOG_REMOTE
 
 - [ ] `tools/decision-check.sh decisions/20*.md` prints only `OK` lines (every record parses, every signature matches).
 - [ ] `tools/decision-need.sh` over the ids gating 04 to 09 prints `SIGNED` for each: `D7-LETTER PPL-SH E-2 PPL-IC SH-REPORTS PPL-WA1 PPL-WA2 PPL-BA SD-01 SD-04 SD-12 SD-13 SD-14 SD-15 SD-16 SD-17 SD-21 SD-27 SD-28 SD-29 SD-30 SD-38 SD-45 D8 P1 P10 P11 P14 P22 P31 WDEC-29 G3-ROSTER NAMES`.
-- [ ] The D7 letter left on or before 2026-09-21.
+- [ ] The D7 letter left on or before 2026-09-21, or its record states the late date and the reason (DC-3.1).
+- [ ] `tools/decision-need.sh P99 P63` prints `SIGNED` for each before 04 commits the paging tool (PU-2.6) or the licences (PU-2.9); until then those two rows are quoted only.
 - [ ] `need MODEL_ID` is expected to fail until DC-8.3; every other variable in §14's list is set or deliberately `*tbd*` with its tracker row open.
 - [ ] `BUILD_LOG_REMOTE` is set and its `main` refuses force-push and deletion (DC-9.11).
 - [ ] `PLATFORM_REPO_REMOTE`, `GIT_ORG` and `PLATFORM_REPO_SLUG` are set; DC-9.4's `codeowners/errors` length is `0`; DC-9.6's verify JSON matches; DC-9.7's refusals are recorded.
@@ -1385,7 +1416,7 @@ need BUILD_LOG_REMOTE
 | `SECURITY_REVIEWER_EMAIL`, `VALIDATOR_CUSTODIAN_EMAIL` | 11, 24, 26, 31, 38, 40 | `*tbd*` stops the custodian part and the P-SA production entitlement |
 | `SECOND_OPERATOR_EMAIL`, `BLIND_GRADER_EMAIL` | 02, 30, 39, 40 | empty at 30 |
 | `WITNESS_ADMIN_1_EMAIL`, `WITNESS_ADMIN_2_EMAIL` | 08, 27 | empty |
-| `SANDBOX_SA_1_EMAIL`, `SANDBOX_SA_2_EMAIL` | 21, 24, 37 | empty at 21 |
+| `SANDBOX_SA_1_EMAIL`, `SANDBOX_SA_2_EMAIL` | 21, 24, 37 | empty at 21; `*tbd*` until 04 PU-2.5 sets `SANDBOX_DOMAIN` and a superseding record adds the addresses (DC-2.6). 04 reads the two people from the signed PPL-SB1 and PPL-SB2 records, not from these variables |
 | `BILLING_ADMIN_EMAIL` | 07, 14 | empty |
 | `MO_OWNER_EMAIL` | 22, 29, 40 | empty |
 | `DPO_CONTACT` | 19, 25 | empty |
@@ -1394,7 +1425,7 @@ need BUILD_LOG_REMOTE
 | `GIT_HOST`, `GIT_OIDC_ISSUER`, `PLATFORM_REPO_REMOTE` | 06, 10, 13, 15, 16 | empty; 06 and 16 also check that `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `ONCALL_FILE` and the ladder sit under `/roster/`, `/control-groups/`, `/oncall/`, `/ladder/` so CODEOWNERS covers them |
 | `SIEM_KIND`, `SCC_BILLING_MODEL` | 04, 09, 15 | not one of the listed values |
 | `EVIDENCE_RETENTION_DAYS`, `IDENTITY_RETENTION_DAYS` | 08, 14, 23 | not an integer at a lock |
-| `BUSINESS_TZ`, `BUSINESS_HOURS` | 25 | `*tbd*` means flat windows, recorded |
+| `BUSINESS_TZ`, `BUSINESS_HOURS` | 15, 25, 26, 39 | not in DC-7.1's form (a tz database name; `<day>-<day> HH:MM-HH:MM`); `*tbd*` means flat windows, recorded |
 | `MO_METRICS_DS`, `MO_ARCHIVE_DS`, `MO_PRIVATE_DS`, `MO_VIEWS_DS` | 22, 29, 36, 40 | differ from NAMES |
 | `EVE_EVIDENCE_LOCATION` | 23 | not `europe-west1` |
 | `MODEL_ID` | 35, 40 | empty or a 2.5 model |
@@ -1445,6 +1476,7 @@ Deferred: none. The executing halves of these findings are in the gated files (0
 | `GET /repos/{owner}/{repo}/codeowners/errors` takes a `ref` query parameter (branch, tag or commit; default the default branch) and returns an `errors` array with `line`, `kind` and `message` | GitHub REST "List CODEOWNERS errors" (read 2026-09-16) |
 | The `in:email` qualifier exists in user search; searching by email domain is refused for privacy and the examples match public profile addresses only. Assumption: an address the account keeps private returns no match, so a `total_count` of `0` proves nothing and the owner's own confirmation is required | GitHub Docs "Searching users" (read 2026-09-16) |
 | `gh repo create` flags | GitHub CLI manual |
+| Cloud Scheduler's `--time-zone` takes a time-zone name from the tz database (`utc` for UTC), default `Etc/UTC`: the form of `BUSINESS_TZ` | gcloud reference, `gcloud scheduler jobs create http` (read 2026-10-01) |
 | Audit events `protected_branch.policy_override` and related; `GET /orgs/{org}/audit-log` needs an organisation owner | GitHub Enterprise Cloud audit-log events; REST "Get the audit log for an organization" |
 | GitLab protected-branch and approval attributes | GitLab API "Protected branches", "Merge request approvals" |
 

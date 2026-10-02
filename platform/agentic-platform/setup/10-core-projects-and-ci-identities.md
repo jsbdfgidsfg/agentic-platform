@@ -11,6 +11,7 @@
 - Closes: S001 (core-project half), S006 (build-location half), S019, S022, S049 (`factory-groups@` half), S051 (WIF half), S130, X-RQB-03 (core-project half), S018 (recorded-exception half). See "Findings" at the end.
 - 2026-10-01: CP-1.8 creates `_Trace` with the GA `gcloud observability buckets create` (REST POST kept as fallback) and reads it back with the GA `list`; `cloudkms` added to `LOGGING_PROJECT`'s row for 14's dataset keys; CP-5.6's `exists_or_pending` call given its three arguments; pronouns made neutral.
 - 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (CP-1.12, CP-8.2).
+- 2026-10-01: `FLD_AGENTIC_PLATFORM` added to CP-0.1's `need` line and to the file-09 precondition, since CP-0.1's VERIFY reads it; `--project="$CICD_PROJECT"` added to every `gcloud storage` command (CP-2.1, CP-2.2, CP-3.2, CP-5.2, their VERIFY and ROLLBACK lines), to CP-3.2's project grant and to CP-3.5's image list.
 
 ## What this part builds
 
@@ -54,7 +55,7 @@ flowchart TD
 
 ## Preconditions
 
-- [ ] File 09 is complete: `FLD_PLATFORM_CORE`, `TAG_KEY_TIER`, `TAG_KEY_TISAX` are set; the tag values `agp-tier=core` (on `fld-platform-core`) and `agp-tisax-scope=in` (on `fld-agentic-platform`) are bound; the observability default storage location `europe-west1` is set on `fld-agentic-platform`; no Cloud Logging folder default storage location is set.
+- [ ] File 09 is complete: `FLD_AGENTIC_PLATFORM`, `FLD_PLATFORM_CORE`, `TAG_KEY_TIER`, `TAG_KEY_TISAX` are set; the tag values `agp-tier=core` (on `fld-platform-core`) and `agp-tisax-scope=in` (on `fld-agentic-platform`) are bound; the observability default storage location `europe-west1` is set on `fld-agentic-platform`; no Cloud Logging folder default storage location is set.
 - [ ] File 07 is complete: `BILLING_ACCOUNT_ID` and `BILLING_CURRENCY` are set; `sa-1-admin@` holds Billing Account User and Billing Account Costs Manager on that account only; the project-quota request of BA-6 is filed (about 20 projects) or approved.
 - [ ] File 06 is complete: `SA_1_ADMIN`, `SA_2_ADMIN`, `GRP_PLATFORM_OWNERS`, `GRP_PLATFORM_SECURITY`, `ROSTER_FILE` and `BOOTSTRAP_EXCEPTION_EXPIRY` are set; `sa-1-admin@` holds Organization Administrator and Project Creator at the organisation under the dated exception, and the exception has not expired.
 - [ ] File 03 has signed: the topology §6 names record with the five core project ids (the gate of every **IRREVERSIBLE** create in CP-1.1); P22 and SD-14 (git host), with `GIT_HOST`, `GIT_OIDC_ISSUER` and `PLATFORM_REPO_REMOTE` set and the repository created with branch protection and CODEOWNERS (the second human a required reviewer on `ROSTER_FILE`); SD-01, SD-16, SD-17, SD-18 and SD-34; `SECOND_HUMAN_EMAIL` and `BILLING_ADMIN_EMAIL` named.
@@ -90,7 +91,7 @@ checkpoint CP-0.1 START
 penv_guard
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" NAMES SD-01 SD-14 SD-16 SD-17 SD-18 SD-34 P22
 for v in CICD_PROJECT CORE_PROJECT LOGGING_PROJECT KMS_PROJECT VALIDATOR_PROJECT TF_STATE_BUCKET; do printf '%s=%s\n' "$v" "$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES "$v")"; done
-need PLATFORM_ENV_FILE ORG_ID REGION FLD_PLATFORM_CORE TAG_KEY_TIER TAG_KEY_TISAX BILLING_ACCOUNT_ID BILLING_CURRENCY SA_1_ADMIN SA_2_ADMIN GRP_PLATFORM_OWNERS GRP_PLATFORM_SECURITY ROSTER_FILE BOOTSTRAP_EXCEPTION_EXPIRY GIT_HOST GIT_OIDC_ISSUER PLATFORM_REPO_REMOTE PLATFORM_REPO_DIR BUILD_LOG_DIR EVIDENCE_INTERIM_LOCATION EVIDENCE_REGISTER DEVIATION_REGISTER SECOND_HUMAN_EMAIL BILLING_ADMIN_EMAIL
+need PLATFORM_ENV_FILE ORG_ID REGION FLD_AGENTIC_PLATFORM FLD_PLATFORM_CORE TAG_KEY_TIER TAG_KEY_TISAX BILLING_ACCOUNT_ID BILLING_CURRENCY SA_1_ADMIN SA_2_ADMIN GRP_PLATFORM_OWNERS GRP_PLATFORM_SECURITY ROSTER_FILE BOOTSTRAP_EXCEPTION_EXPIRY GIT_HOST GIT_OIDC_ISSUER PLATFORM_REPO_REMOTE PLATFORM_REPO_DIR BUILD_LOG_DIR EVIDENCE_INTERIM_LOCATION EVIDENCE_REGISTER DEVIATION_REGISTER SECOND_HUMAN_EMAIL BILLING_ADMIN_EMAIL
 test -f "$PLATFORM_ENV_FILE" || { echo "PLATFORM_ENV_FILE does not point at a file: stop"; false; }
 test -z "$(gcloud config get project 2>/dev/null)" || { echo "a default project is set: stop"; false; }
 test "$(gcloud config get account 2>/dev/null)" = "$SA_1_ADMIN" || { echo "not signed in as sa-1-admin@: stop"; false; }
@@ -506,19 +507,19 @@ After row 5, write `checkpoint CP-1 DONE - - "five core projects"`.
 need CICD_PROJECT REGION
 TF_BUCKET="$("$PLATFORM_REPO_DIR/tools/decision-value.sh" NAMES TF_STATE_BUCKET)"
 gcloud storage buckets create "$TF_BUCKET" --project="$CICD_PROJECT" --location="$REGION" --uniform-bucket-level-access --public-access-prevention --soft-delete-duration=30d
-gcloud storage buckets update "$TF_BUCKET" --versioning
+gcloud storage buckets update "$TF_BUCKET" --versioning --project="$CICD_PROJECT"
 penv_set TF_STATE_BUCKET "$TF_BUCKET"
 ```
 
-  Flags as in the `gcloud storage buckets create` reference and the versioning, public access prevention and soft delete pages (read 2026-09-15); versioning is set with `update --versioning`, since `create` has no versioning flag. 30 days of soft delete matches 09 §3.4's R-D recovery (Assumption: 30 days; 09 names soft delete without a duration). No CMEK: 08 S22 gives the state bucket no key requirement, and no key exists before 11. The bucket name is the NAMES value (03 DC-5.1; *Assumption:* signed in the form `gs://<CICD_PROJECT>-tf-state`, so it cannot collide with another organisation's bucket). A bucket name already taken fails the create with nothing made; the NAMES record's fallback rule then applies.
+  Flags as in the `gcloud storage buckets create` reference and the versioning, public access prevention and soft delete pages (read 2026-09-15); versioning is set with `update --versioning`, since `create` has no versioning flag. Every `gcloud storage` command this file runs from the platform owner's shell passes `--project="$CICD_PROJECT"` (01's rule that every gcloud command names its scope): `--project` is one of the flags "available to all commands" (`gcloud storage cp` and `gcloud storage buckets add-iam-policy-binding` references, read 2026-10-01), and the bucket itself is still named by its URL. 30 days of soft delete matches 09 §3.4's R-D recovery (Assumption: 30 days; 09 names soft delete without a duration). No CMEK: 08 S22 gives the state bucket no key requirement, and no key exists before 11. The bucket name is the NAMES value (03 DC-5.1; *Assumption:* signed in the form `gs://<CICD_PROJECT>-tf-state`, so it cannot collide with another organisation's bucket). A bucket name already taken fails the create with nothing made; the NAMES record's fallback rule then applies.
 - **VERIFY:**
 
 ```bash
-gcloud storage buckets describe "$TF_STATE_BUCKET" --format="default(location,uniform_bucket_level_access,public_access_prevention,versioning_enabled,soft_delete_policy)"
+gcloud storage buckets describe "$TF_STATE_BUCKET" --project="$CICD_PROJECT" --format="default(location,uniform_bucket_level_access,public_access_prevention,versioning_enabled,soft_delete_policy)"
 ```
 
   `location: EUROPE-WEST1`; `uniform_bucket_level_access: true`; `public_access_prevention: enforced`; `versioning_enabled: true`; a soft delete policy of 2592000 seconds.
-- **ROLLBACK:** `gcloud storage buckets delete "$TF_STATE_BUCKET"` while empty. A deleted bucket name can be claimed by anyone, so do not delete it once 17 refers to it.
+- **ROLLBACK:** `gcloud storage buckets delete "$TF_STATE_BUCKET" --project="$CICD_PROJECT"` while empty. A deleted bucket name can be claimed by anyone, so do not delete it once 17 refers to it.
 - **EVIDENCE:** The describe output as `<date>-CP-2.1-tf-state-bucket-v1`. TISAX 5.3 (continuity), 7.1 (residency). EU AI Act E-05.
 
 ### CP-2.2 Test 09 §3.4's retention policy, then clear it
@@ -528,23 +529,23 @@ gcloud storage buckets describe "$TF_STATE_BUCKET" --format="default(location,un
 - **ACTION:**
 
 ```bash
-need TF_STATE_BUCKET
-gcloud storage buckets update "$TF_STATE_BUCKET" --retention-period=30d
-printf 'v1\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate"
-printf 'v2\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate"
-printf 'lock\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tflock"
-gcloud storage rm "${TF_STATE_BUCKET}/cp-2-2-test/default.tflock"
-gcloud storage ls --all-versions "${TF_STATE_BUCKET}/cp-2-2-test/"
-gcloud storage buckets update "$TF_STATE_BUCKET" --clear-retention-period
+need TF_STATE_BUCKET CICD_PROJECT
+gcloud storage buckets update "$TF_STATE_BUCKET" --retention-period=30d --project="$CICD_PROJECT"
+printf 'v1\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate" --project="$CICD_PROJECT"
+printf 'v2\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate" --project="$CICD_PROJECT"
+printf 'lock\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tflock" --project="$CICD_PROJECT"
+gcloud storage rm "${TF_STATE_BUCKET}/cp-2-2-test/default.tflock" --project="$CICD_PROJECT"
+gcloud storage ls --all-versions "${TF_STATE_BUCKET}/cp-2-2-test/" --project="$CICD_PROJECT"
+gcloud storage buckets update "$TF_STATE_BUCKET" --clear-retention-period --project="$CICD_PROJECT"
 ```
 
   Read the last line before running the block: **the step ends with no retention policy on the state bucket, and that is the intended end state, not a fallback.** 09 §3.4 asks for "a retention policy (unlocked, 30 days — locking would block state rewrites)". Its reason is wrong twice over. Google's Bucket Lock page (read 2026-09-15) says that under a retention policy, locked or not, "Attempts to delete or replace objects whose age is less than the retention period fail with a `403 - retentionPolicyNotMet` error" — so the documented outcome of lines 3 and 5 of the block (the replace of `default.tfstate` and the delete of a seconds-old `default.tflock`) is **failure**, and an unlocked policy blocks exactly what a locked one blocks. The same page's versioning sentence — "In buckets that use Object Versioning, a live object version that has a retention expiration date in the future can still be made noncurrent" — covers only the noncurrent transition, and is the one reason the two operations might instead succeed here. Rather than leave a policy in place whose behaviour under Terraform is settled by a sentence that could be read either way, the step runs the test for the record and then clears the policy, so that every state write from 17 onwards is protected by versioning plus the 30-day soft delete of CP-2.1 and by nothing that can refuse a write. **This policy is never locked, and never re-applied.**
 - **VERIFY:** The two writes of `v1` and of `default.tflock` succeed (new objects, not replacements). The **documented result** of the replace (`v2`) and of the `rm` is `403 - retentionPolicyNotMet`; record whichever occurs verbatim. Then, after the last line:
 
 ```bash
-gcloud storage buckets describe "$TF_STATE_BUCKET" --format="default(retention_policy,versioning_enabled,soft_delete_policy)"
-printf 'v3\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate"
-gcloud storage rm "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate"
+gcloud storage buckets describe "$TF_STATE_BUCKET" --project="$CICD_PROJECT" --format="default(retention_policy,versioning_enabled,soft_delete_policy)"
+printf 'v3\n' | gcloud storage cp - "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate" --project="$CICD_PROJECT"
+gcloud storage rm "${TF_STATE_BUCKET}/cp-2-2-test/default.tfstate" --project="$CICD_PROJECT"
 ```
 
   `retention_policy` is absent or empty; `versioning_enabled: true`; the soft delete policy is 2592000 seconds. The post-clear replace and delete both succeed — that is the proof that Terraform's state rewrite and lock-file delete work on this bucket. Pass condition: the bucket ends with versioning and soft delete and **no** retention policy, and the two post-clear operations succeeded. Record which of the two branches the in-policy test took:
@@ -599,9 +600,9 @@ penv_set SA_CI_BUILD "platform-build@${CICD_PROJECT}.iam.gserviceaccount.com"
 need CICD_PROJECT REGION SA_CI_BUILD
 STAGING="gs://${CICD_PROJECT}_${REGION}_cloudbuild"
 gcloud storage buckets create "$STAGING" --project="$CICD_PROJECT" --location="$REGION" --uniform-bucket-level-access --public-access-prevention
-gcloud storage buckets add-iam-policy-binding "$STAGING" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/storage.objectUser"
+gcloud storage buckets add-iam-policy-binding "$STAGING" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/storage.objectUser" --project="$CICD_PROJECT"
 gcloud artifacts repositories add-iam-policy-binding platform --location="$REGION" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/artifactregistry.writer" --project="$CICD_PROJECT"
-gcloud projects add-iam-policy-binding "$CICD_PROJECT" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/logging.logWriter"
+gcloud projects add-iam-policy-binding "$CICD_PROJECT" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/logging.logWriter" --project="$CICD_PROJECT"
 ```
 
   The bucket name is the one Cloud Build uses for **source staging** with `REGIONAL_USER_OWNED_BUCKET`: "`gs://[PROJECT_ID]_[builds/region]_cloudbuild/source`" (`gcloud builds submit` reference, read 2026-09-15). Pre-creating it keeps its location and settings ours. A user-specified build account needs `logging.logWriter` to write build logs (configure-user-specified-service-accounts page, read 2026-09-15), and Storage access to the staged source (S022 verdict). `artifactregistry.writer` is granted on the `platform` repository only, never on the project (09 §1.3 "writers").
@@ -609,21 +610,21 @@ gcloud projects add-iam-policy-binding "$CICD_PROJECT" --member="serviceAccount:
   The same flag also changes the **logs** default, to a different bucket: "`gs://[PROJECT_NUMBER]-[builds/region]-cloudbuild-logs`" (same reference). This file's builds set `options.logging: CLOUD_LOGGING_ONLY` (CP-3.4, CP-3.5), so logs go to Cloud Logging and that bucket should never be needed. If CP-3.5's bucket list shows it anyway, it is Cloud Build's, not a US bucket, and it is regional: accept it, and grant the build identity access to it so a build cannot fail on log upload:
 
 ```bash
-gcloud storage buckets add-iam-policy-binding "gs://${CICD_PROJECT_NUMBER}-${REGION}-cloudbuild-logs" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/storage.objectUser"
+gcloud storage buckets add-iam-policy-binding "gs://${CICD_PROJECT_NUMBER}-${REGION}-cloudbuild-logs" --member="serviceAccount:${SA_CI_BUILD}" --role="roles/storage.objectUser" --project="$CICD_PROJECT"
 ```
 
   Run that only if the bucket exists (`need CICD_PROJECT_NUMBER` first, from CP-1.2), and record it in `BD-10-7`.
 - **VERIFY:**
 
 ```bash
-gcloud storage buckets describe "$STAGING" --format="default(location,uniform_bucket_level_access,public_access_prevention)"
-gcloud storage buckets get-iam-policy "$STAGING" --format=json | jq -r '.bindings[] | select(.members[] | contains("platform-build@")) | .role'
+gcloud storage buckets describe "$STAGING" --project="$CICD_PROJECT" --format="default(location,uniform_bucket_level_access,public_access_prevention)"
+gcloud storage buckets get-iam-policy "$STAGING" --project="$CICD_PROJECT" --format=json | jq -r '.bindings[] | select(.members[] | contains("platform-build@")) | .role'
 gcloud artifacts repositories get-iam-policy platform --location="$REGION" --project="$CICD_PROJECT" --format=json | jq -r '.bindings[] | select(.members[] | contains("platform-build@")) | .role'
 gcloud projects get-iam-policy "$CICD_PROJECT" --flatten="bindings[].members" --filter="bindings.members:${SA_CI_BUILD}" --format="value(bindings.role)"
 ```
 
   `EUROPE-WEST1`, uniform access true, public access prevention enforced; then `roles/storage.objectUser`, `roles/artifactregistry.writer`, and exactly `roles/logging.logWriter` at project level.
-- **ROLLBACK:** The matching `remove-iam-policy-binding` commands; `gcloud storage buckets delete "$STAGING"` while empty.
+- **ROLLBACK:** The matching `remove-iam-policy-binding` commands; `gcloud storage buckets delete "$STAGING" --project="$CICD_PROJECT"` while empty.
 - **EVIDENCE:** The four outputs as `<date>-CP-3.2-build-grants-v1`. TISAX 4.2.1 (least privilege), 7.1.
 
 ### CP-3.3 Read the Cloud Build defaults and confirm the Compute Engine default account cannot be used
@@ -703,7 +704,7 @@ printf 'BUILD_ID=%s\n' "$BUILD_ID"
 need BUILD_ID
 gcloud builds describe "$BUILD_ID" --region="$REGION" --project="$CICD_PROJECT" --format="yaml(id,status,serviceAccount,options.logging,source.storageSource.bucket,results.images)"
 gcloud storage buckets list --project="$CICD_PROJECT" --format="value(name,location)"
-gcloud artifacts docker images list "$AR_PLATFORM" --include-tags --format="value(package,tags,version)"
+gcloud artifacts docker images list "$AR_PLATFORM" --include-tags --project="$CICD_PROJECT" --format="value(package,tags,version)"
 ```
 
   `id` equals the `BUILD_ID` the submit printed; `status: SUCCESS`; `serviceAccount` ends `serviceAccounts/platform-build@<CICD_PROJECT>.iam.gserviceaccount.com`; logging `CLOUD_LOGGING_ONLY`; the source bucket is `<CICD_PROJECT>_europe-west1_cloudbuild`; the image is listed.
@@ -826,7 +827,7 @@ penv_set SA_FACTORY_APPLY "factory-apply@${CICD_PROJECT}.iam.gserviceaccount.com
 ```bash
 need SA_FACTORY_APPLY CICD_PROJECT CICD_PROJECT_NUMBER TF_STATE_BUCKET WIF_REPO_ID
 gcloud iam service-accounts add-iam-policy-binding "$SA_FACTORY_APPLY" --role="roles/iam.workloadIdentityUser" --member="principalSet://iam.googleapis.com/projects/${CICD_PROJECT_NUMBER}/locations/global/workloadIdentityPools/wif-factory/attribute.repository_id/${WIF_REPO_ID}" --project="$CICD_PROJECT"
-gcloud storage buckets add-iam-policy-binding "$TF_STATE_BUCKET" --member="serviceAccount:${SA_FACTORY_APPLY}" --role="roles/storage.objectAdmin"
+gcloud storage buckets add-iam-policy-binding "$TF_STATE_BUCKET" --member="serviceAccount:${SA_FACTORY_APPLY}" --role="roles/storage.objectAdmin" --project="$CICD_PROJECT"
 ```
 
   The `principalSet` form and role are those of the deployment-pipelines page (read 2026-09-15). The provider's condition already refuses other repositories and branches; the principal set narrows the grant to the same repository id a second time. `roles/storage.objectAdmin` on the state bucket is 02 §3.4's routine-identity row. Nothing else is granted now (see "Deferred halves" for the folder roles and `roles/cloudbuild.builds.builder`).
@@ -834,7 +835,7 @@ gcloud storage buckets add-iam-policy-binding "$TF_STATE_BUCKET" --member="servi
 
 ```bash
 gcloud iam service-accounts get-iam-policy "$SA_FACTORY_APPLY" --project="$CICD_PROJECT" --format=json | jq -r '.bindings[] | "\(.role) \(.members[])"'
-gcloud storage buckets get-iam-policy "$TF_STATE_BUCKET" --format=json | jq -r '.bindings[] | select(.members[] | contains("factory-apply@")) | .role'
+gcloud storage buckets get-iam-policy "$TF_STATE_BUCKET" --project="$CICD_PROJECT" --format=json | jq -r '.bindings[] | select(.members[] | contains("factory-apply@")) | .role'
 ```
 
   Exactly one binding on the account: `roles/iam.workloadIdentityUser` for the repository principal set. Exactly `roles/storage.objectAdmin` on the bucket.
@@ -1190,7 +1191,7 @@ No finding assigned to this file is deferred.
 
 ## Sources
 
-Read on 2026-09-15: [gcloud projects create](https://docs.cloud.google.com/sdk/gcloud/reference/projects/create); [Resource Manager v3 Project resource](https://docs.cloud.google.com/resource-manager/reference/rest/v3/projects); [Create and manage projects](https://docs.cloud.google.com/resource-manager/docs/creating-managing-projects); [Project liens](https://docs.cloud.google.com/resource-manager/docs/project-liens); [gcloud billing projects link](https://docs.cloud.google.com/sdk/gcloud/reference/billing/projects/link); [gcloud resource-manager tags bindings list](https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/tags/bindings/list); [Regionalize your project's logs](https://docs.cloud.google.com/logging/docs/regionalized-logs); [gcloud logging buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/buckets/create); [Default resource settings for Logging](https://docs.cloud.google.com/logging/docs/default-settings); [Create observability buckets](https://docs.cloud.google.com/trace/docs/create-observability-buckets); [Observability API](https://docs.cloud.google.com/stackdriver/docs/reference/observability/api/rest); [Method: projects.locations.buckets.create](https://docs.cloud.google.com/stackdriver/docs/reference/observability/api/rest/v1/projects.locations.buckets/create); [gcloud observability buckets](https://docs.cloud.google.com/sdk/gcloud/reference/observability/buckets) (GA create, describe, list, update; updated 2026-09-22, read 2026-10-01); [gcloud services disable](https://docs.cloud.google.com/sdk/gcloud/reference/services/disable); [Enabled services (default-enabled list)](https://docs.cloud.google.com/service-usage/docs/enabled-service); [Create a key ring](https://docs.cloud.google.com/kms/docs/create-key-ring); [Enable Autokey](https://docs.cloud.google.com/kms/docs/enable-autokey); [gcloud billing budgets create](https://docs.cloud.google.com/sdk/gcloud/reference/billing/budgets/create); [gcloud topic filters](https://docs.cloud.google.com/sdk/gcloud/reference/topic/filters); [gcloud essential-contacts create](https://docs.cloud.google.com/sdk/gcloud/reference/essential-contacts/create); [gcloud storage buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/create); [gcloud storage buckets update](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/update); [Object versioning](https://docs.cloud.google.com/storage/docs/using-object-versioning); [Public access prevention](https://docs.cloud.google.com/storage/docs/using-public-access-prevention); [Uniform bucket-level access](https://docs.cloud.google.com/storage/docs/using-uniform-bucket-level-access); [Soft delete](https://docs.cloud.google.com/storage/docs/use-soft-delete); [Bucket Lock](https://docs.cloud.google.com/storage/docs/bucket-lock); [Use retention policies](https://docs.cloud.google.com/storage/docs/using-bucket-lock); [gcloud artifacts repositories create](https://docs.cloud.google.com/sdk/gcloud/reference/artifacts/repositories/create); [Cloud Build default service account change](https://docs.cloud.google.com/build/docs/cloud-build-service-account-updates); [gcloud builds get-default-service-account](https://docs.cloud.google.com/sdk/gcloud/reference/builds/get-default-service-account); [gcloud builds submit](https://docs.cloud.google.com/sdk/gcloud/reference/builds/submit); [Configure user-specified service accounts](https://docs.cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts); [Workload Identity Federation with deployment pipelines](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines); [gcloud iam workload-identity-pools providers create-oidc](https://docs.cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/providers/create-oidc); [gcloud iam workload-identity-pools create-cred-config](https://docs.cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/create-cred-config); [GitHub Actions OIDC reference](https://docs.github.com/en/actions/reference/security/oidc); [GitLab ID token authentication](https://docs.gitlab.com/ci/secrets/id_token_authentication/); [google-github-actions/auth](https://github.com/google-github-actions/auth); [Assign specific admin roles (Workspace Admin Help)](https://knowledge.workspace.google.com/admin/users/assign-specific-admin-roles). Cited through the design pages and review verdicts, not re-read here: the Resource Manager access-control page (creator receives Owner, S018), the storage-overview page (Cloud Run spans and `_Trace`, X-RQB-03), 07's billing sources.
+Read on 2026-09-15: [gcloud projects create](https://docs.cloud.google.com/sdk/gcloud/reference/projects/create); [Resource Manager v3 Project resource](https://docs.cloud.google.com/resource-manager/reference/rest/v3/projects); [Create and manage projects](https://docs.cloud.google.com/resource-manager/docs/creating-managing-projects); [Project liens](https://docs.cloud.google.com/resource-manager/docs/project-liens); [gcloud billing projects link](https://docs.cloud.google.com/sdk/gcloud/reference/billing/projects/link); [gcloud resource-manager tags bindings list](https://docs.cloud.google.com/sdk/gcloud/reference/resource-manager/tags/bindings/list); [Regionalize your project's logs](https://docs.cloud.google.com/logging/docs/regionalized-logs); [gcloud logging buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/buckets/create); [Default resource settings for Logging](https://docs.cloud.google.com/logging/docs/default-settings); [Create observability buckets](https://docs.cloud.google.com/trace/docs/create-observability-buckets); [Observability API](https://docs.cloud.google.com/stackdriver/docs/reference/observability/api/rest); [Method: projects.locations.buckets.create](https://docs.cloud.google.com/stackdriver/docs/reference/observability/api/rest/v1/projects.locations.buckets/create); [gcloud observability buckets](https://docs.cloud.google.com/sdk/gcloud/reference/observability/buckets) (GA create, describe, list, update; updated 2026-09-22, read 2026-10-01); [gcloud services disable](https://docs.cloud.google.com/sdk/gcloud/reference/services/disable); [Enabled services (default-enabled list)](https://docs.cloud.google.com/service-usage/docs/enabled-service); [Create a key ring](https://docs.cloud.google.com/kms/docs/create-key-ring); [Enable Autokey](https://docs.cloud.google.com/kms/docs/enable-autokey); [gcloud billing budgets create](https://docs.cloud.google.com/sdk/gcloud/reference/billing/budgets/create); [gcloud topic filters](https://docs.cloud.google.com/sdk/gcloud/reference/topic/filters); [gcloud essential-contacts create](https://docs.cloud.google.com/sdk/gcloud/reference/essential-contacts/create); [gcloud storage buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/create); [gcloud storage buckets update](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/update); [gcloud storage cp](https://docs.cloud.google.com/sdk/gcloud/reference/storage/cp) and [gcloud storage buckets add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/add-iam-policy-binding) (gcloud-wide `--project`, read 2026-10-01); [Object versioning](https://docs.cloud.google.com/storage/docs/using-object-versioning); [Public access prevention](https://docs.cloud.google.com/storage/docs/using-public-access-prevention); [Uniform bucket-level access](https://docs.cloud.google.com/storage/docs/using-uniform-bucket-level-access); [Soft delete](https://docs.cloud.google.com/storage/docs/use-soft-delete); [Bucket Lock](https://docs.cloud.google.com/storage/docs/bucket-lock); [Use retention policies](https://docs.cloud.google.com/storage/docs/using-bucket-lock); [gcloud artifacts repositories create](https://docs.cloud.google.com/sdk/gcloud/reference/artifacts/repositories/create); [Cloud Build default service account change](https://docs.cloud.google.com/build/docs/cloud-build-service-account-updates); [gcloud builds get-default-service-account](https://docs.cloud.google.com/sdk/gcloud/reference/builds/get-default-service-account); [gcloud builds submit](https://docs.cloud.google.com/sdk/gcloud/reference/builds/submit); [Configure user-specified service accounts](https://docs.cloud.google.com/build/docs/securing-builds/configure-user-specified-service-accounts); [Workload Identity Federation with deployment pipelines](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines); [gcloud iam workload-identity-pools providers create-oidc](https://docs.cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/providers/create-oidc); [gcloud iam workload-identity-pools create-cred-config](https://docs.cloud.google.com/sdk/gcloud/reference/iam/workload-identity-pools/create-cred-config); [GitHub Actions OIDC reference](https://docs.github.com/en/actions/reference/security/oidc); [GitLab ID token authentication](https://docs.gitlab.com/ci/secrets/id_token_authentication/); [google-github-actions/auth](https://github.com/google-github-actions/auth); [Assign specific admin roles (Workspace Admin Help)](https://knowledge.workspace.google.com/admin/users/assign-specific-admin-roles). Cited through the design pages and review verdicts, not re-read here: the Resource Manager access-control page (creator receives Owner, S018), the storage-overview page (Cloud Run spans and `_Trace`, X-RQB-03), 07's billing sources.
 
 ## Related
 

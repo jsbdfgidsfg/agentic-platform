@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-10-01
+- Last reviewed: 2026-10-02
+- 2026-10-02: after this recheck, turning setup files 01 to 21 and 42 into a script ([setup/automation/](setup/automation/README.md)) found further defects in those files (a record no step registered, STOPs with no resume point, commands missing required flags, deviation rows appended after the Closures table); 175 corrections were made in the files themselves. They are not rows of §7.
 - Maturity: review, complete 2026-10-01. It records the recheck of the whole documentation of
   the secure agentic platform — the design pages 00–14, the register, the brief, the three agent
   sets, the full build, the proof of value, the three-day build, the plain-words set, the

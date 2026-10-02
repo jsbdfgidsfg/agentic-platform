@@ -12,6 +12,7 @@
 - Closes: S055 for its validator-custodian half; X-GE-05 for its key half. See "Findings" at the end.
 - 2026-10-01: KV-1.1 and KV-1.2 aligned with 10 (`cloudkms` is already on every row that needs it; this file never enables an API); deviation lines rewritten as rows `BD-11-1` to `BD-11-4` in 01's register format; `exists_or_pending` calls given three arguments (KV-4.3, KV-5.5, KV-8.10, KV-8.11); KV-6.3's rollback writes `DISABLED`; KV-6.4 removes by condition instead of `--all`; KV-1.3, KV-7.1 and KV-8.12 write their files with here-documents and push named branches; KV-9.2 ends with 01's `sitting_end`; pronouns made neutral; KV-2.3 and the hand-over row for 42 say that 42 GD-3.1's evidence bucket takes its own Autokey key handle `kh-platform-evidence`, so `KEY_PLATFORM_LOGS` keeps the Logging service account as its sole Encrypter/Decrypter.
 - 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (KV-1.3, KV-4.4, KV-6.2, KV-8.1).
+- 2026-10-01: `KEY_TABLE_RECORD` is read from the `KEYS` row of 03's tracker in KV-0.1 and KV-1.3, never typed; KV-4.1 checks `GE_LOCATION` in its ACTION; KV-6.1's VERIFY reads the project by number, as its ACTION and ROLLBACK do; the VERIFY fences of KV-6.3 and KV-6.4 derive `AK_FOLDERS` themselves; section 8 says once how a BLOCKED step is recorded; KV-8.10's role-45 edit is a separate block guarded by `need GRADER_SA`.
 
 ## What this part builds
 
@@ -65,7 +66,7 @@ flowchart LR
 - [ ] File 09 is complete: `FLD_PLATFORM_CORE`, `FLD_AGENTS_W`, `FLD_AGENTS_P`, `FLD_CONTROLLERS` and `FLD_IMPROVERS` are set (the five Autokey folders of KV-6), and `FLD_AGENTS_R` is set as well — KV-6.3's VERIFY reads it to prove that the folder which must **not** have Autokey has none.
 - [ ] File 06: `SA_1_ADMIN` holds the dated organisation exception, and `BOOTSTRAP_EXCEPTION_EXPIRY` is after today.
 - [ ] File 05: `GEMINI_PROJECT_NUMBER` is recorded (for KV-4.3).
-- [ ] File 03 has merged the **signed key table**: 09 §2.4 with ring names, locations and protection levels. It must carry the amendments this file needs: `gemini-cmek` rotation manual; two attestor keys and their two attestors; the five Autokey folders; and no third-party-connector keys unless a third-party connector is in scope. Its path in `PLATFORM_REPO_REMOTE` goes into the shell as `KEY_TABLE_RECORD` for the sitting. Every ring create is gated on it.
+- [ ] File 03 has merged the **signed key table**: 09 §2.4 with ring names, locations and protection levels. It must carry the amendments this file needs: `gemini-cmek` rotation manual; two attestor keys and their two attestors; the five Autokey folders; and no third-party-connector keys unless a third-party connector is in scope. 03's tracker names the record in the `Record` column of its `KEYS` row; KV-0.1 and KV-1.3 read the path from there as `KEY_TABLE_RECORD`. Every ring create is gated on it.
 - [ ] File 03 has merged the signed topology names (key-ring and dataset names are permanent).
 - [ ] For section 8 only: 03 has named `SECURITY_REVIEWER_EMAIL` and `VALIDATOR_CUSTODIAN_EMAIL` (neither `*tbd*`). E-21 is signed for KV-8.7, and the `grades_eve` schema file is committed for KV-8.9.
 - [ ] File 01's helpers `penv_set`, `need` and `exists_or_pending` exist; `DEVIATION_REGISTER`, `EVIDENCE_REGISTER`, `BUILD_LOG_DIR`, `PLATFORM_REPO_DIR` and `EVIDENCE_INTERIM_LOCATION` are set.
@@ -101,10 +102,13 @@ mkdir -p "$BUILD_LOG_DIR/records"
 test -z "$(gcloud config get project 2>/dev/null)" || { echo "a default project is set: stop"; false; }
 test "$(gcloud config get account 2>/dev/null)" = "$SA_1_ADMIN" || { echo "not signed in as SA_1_ADMIN: stop"; false; }
 test "$(date -u +%F)" \< "$BOOTSTRAP_EXCEPTION_EXPIRY" || { echo "bootstrap exception expired: stop, re-sign SD-01 in 03"; false; }
-KEY_TABLE_RECORD="<path of the signed key table in the platform repository, from 03>"
 git -C "$PLATFORM_REPO_DIR" fetch origin
+KEY_TABLE_RECORD="decisions/$(git -C "$PLATFORM_REPO_DIR" show origin/main:decisions/TRACKER.md | awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="KEYS") {r=$4; gsub(/ /,"",r); print r}}' | head -n 1)"
+case "$KEY_TABLE_RECORD" in decisions/|*tbd*) echo "03's tracker names no signed KEYS record: stop"; false;; esac
 git -C "$PLATFORM_REPO_DIR" cat-file -e "origin/main:${KEY_TABLE_RECORD}" && echo "key table merged"
 ```
+
+  `KEY_TABLE_RECORD` is read from the `Record` column of the `KEYS` row of `decisions/TRACKER.md` on `origin/main`, as 03 DC-5.2's VERIFY reads it; it is never typed. It is a shell value of this sitting, not a variable of `~/.platform-env`: KV-1.3 reads it again the same way, so a resumed sitting needs nothing retyped, and an amended key table is picked up from its new tracker row.
 
 - **VERIFY:** Every test passes and `key table merged` is printed. `REGION` is `europe-west1` and `BQ_LOCATION` is `EU` (plan §5). If any line fails, stop the sitting; nothing has been changed.
 - **ROLLBACK:** Nothing changed.
@@ -161,8 +165,10 @@ unset TOKEN_HDR
 - **ACTION:** Write `bootstrap/expected/11-keys.yaml` with the rows of this file's "What this part builds" table: for each, the resource name, location, protection level, purpose, algorithm, rotation, labels and IAM members, as sections 2 to 8 create them. Commit it on a branch from an updated `main`, then open the pull request.
 
 ```bash
-need KMS_PROJECT CICD_PROJECT VALIDATOR_PROJECT KEY_TABLE_RECORD
 git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
+KEY_TABLE_RECORD="decisions/$(git -C "$PLATFORM_REPO_DIR" show origin/main:decisions/TRACKER.md | awk -F'|' '{k=$2; gsub(/ /,"",k); if (k=="KEYS") {r=$4; gsub(/ /,"",r); print r}}' | head -n 1)"
+case "$KEY_TABLE_RECORD" in decisions/|*tbd*) KEY_TABLE_RECORD="";; esac
+need KMS_PROJECT CICD_PROJECT VALIDATOR_PROJECT KEY_TABLE_RECORD
 git -C "$PLATFORM_REPO_DIR" switch -c bootstrap/11-keys
 mkdir -p "$PLATFORM_REPO_DIR/bootstrap/expected"
 cat > "$PLATFORM_REPO_DIR/bootstrap/expected/11-keys.yaml" <<YAML
@@ -306,7 +312,11 @@ This section makes the key only. Registering it as the app's `CmekConfig` is a s
 - **WHERE:** Shell.
 - **ACTION:**
 
+  First the app location: an EU app needs a `europe` multi-region key, so the ring is made only when `GE_LOCATION` (01) is `eu`. File 05 has already checked that the live app's location equals it.
+
 ```bash
+need GE_LOCATION KMS_PROJECT
+test "$GE_LOCATION" = eu || { echo "GE_LOCATION is not eu: stop, an EU app needs a europe key (05, SD-21)"; false; }
 gcloud kms keyrings create gemini --location=europe --project="$KMS_PROJECT"
 penv_set KR_GEMINI "projects/${KMS_PROJECT}/locations/europe/keyRings/gemini"
 ```
@@ -319,7 +329,7 @@ gcloud kms keyrings describe gemini --location=europe --project="$KMS_PROJECT" -
 
   The printed name equals `KR_GEMINI`.
 
-- **ROLLBACK:** **IRREVERSIBLE.** Confirm first that `GE_LOCATION` is `eu` (file 05 recorded `GEMINI_APP_LOCATION`). For an EU app Google requires "a multi-region symmetric Cloud KMS key" with location `europe` (Gemini Enterprise CMEK page, updated 2026-09-03). Gate: the signed key table row `gemini` (KV-0.1). Handoff to file 13: the value group `in:eu-locations` lists `EU`, `eu`, `eur3`, `eur4`, `eur8` and `europe-west` but not `europe` (resource-locations page, updated 2026-09-09). A `gcp.resourceLocations` policy built only from that group would refuse later KMS resources in `europe`: Eve's `eve-eu` ring (23) and Autokey keys for EU datasets.
+- **ROLLBACK:** **IRREVERSIBLE**, hence the `GE_LOCATION` test in the ACTION. For an EU app Google requires "a multi-region symmetric Cloud KMS key" with location `europe` (Gemini Enterprise CMEK page, updated 2026-09-03). Gate: the signed key table row `gemini` (KV-0.1). Handoff to file 13: the value group `in:eu-locations` lists `EU`, `eu`, `eur3`, `eur4`, `eur8` and `europe-west` but not `europe` (resource-locations page, updated 2026-09-09). A `gcp.resourceLocations` policy built only from that group would refuse later KMS resources in `europe`: Eve's `eve-eu` ring (23) and Autokey keys for EU datasets.
 - **EVIDENCE:** Output as `<date>-KV-4.1-kr-gemini-v1`. TISAX 5.1.1, 7.1 (residency). EU AI Act E-05.
 
 ### KV-4.2 Create the HSM key `gemini-cmek`, manual rotation
@@ -549,7 +559,7 @@ gcloud beta services identity create --service=cloudkms.googleapis.com --project
 gcloud projects add-iam-policy-binding "$KMS_PROJECT_NUMBER" --role=roles/cloudkms.admin --member="serviceAccount:service-${KMS_PROJECT_NUMBER}@gcp-sa-cloudkms.iam.gserviceaccount.com" --condition=None
 ```
 
-- **VERIFY:** `gcloud projects get-iam-policy "$KMS_PROJECT" --format=json | jq -c '.bindings[] | select(.role=="roles/cloudkms.admin")'` shows that service agent as the only member of `roles/cloudkms.admin`. A human member here fails the step. The creator's Owner stays until 12 and is recorded; no human is given `cloudkms.admin`.
+- **VERIFY:** `gcloud projects get-iam-policy "$KMS_PROJECT_NUMBER" --format=json | jq -c '.bindings[] | select(.role=="roles/cloudkms.admin")'` shows that service agent as the only member of `roles/cloudkms.admin`. A human member here fails the step. The creator's Owner stays until 12 and is recorded; no human is given `cloudkms.admin`. ACTION, VERIFY and ROLLBACK all name the project by its number, because the Autokey enable page writes both commands with `PROJECT_NUMBER` (updated 2026-09-30, read 2026-10-01) and `gcloud projects get-iam-policy` takes the "ID or number" of the project (gcloud reference, read 2026-10-01).
 - **ROLLBACK:** `gcloud projects remove-iam-policy-binding "$KMS_PROJECT_NUMBER" --role=roles/cloudkms.admin --member="serviceAccount:service-${KMS_PROJECT_NUMBER}@gcp-sa-cloudkms.iam.gserviceaccount.com" --condition=None`, and only before any Autokey key exists.
 - **EVIDENCE:** Binding JSON as `<date>-KV-6.1-kms-agent-v1`. TISAX 4.2.1, 5.1.1.
 
@@ -559,7 +569,7 @@ gcloud projects add-iam-policy-binding "$KMS_PROJECT_NUMBER" --role=roles/cloudk
 - **WHERE:** Shell.
 - **ACTION:**
 
-  `AK_FOLDERS` is **derived from the five `need`-checked variables at the start of every step that uses it** (KV-6.2, KV-6.3, KV-6.4 and KV-9.1), never carried between steps. A sitting cut between KV-6.2 and KV-6.4 would otherwise resume with an empty `AK_FOLDERS`, and KV-6.4 would remove nothing while its VERIFY passed over an empty list — leaving a standing `roles/cloudkms.autokeyAdmin` on five folders that the step claimed to have removed.
+  `AK_FOLDERS` is **derived from the five `need`-checked variables at the start of every fence that uses it** (KV-6.2, KV-6.3 and KV-6.4, ACTION and VERIFY, and KV-9.1), never carried between steps or fences. A sitting cut between KV-6.2 and KV-6.4 would otherwise resume with an empty `AK_FOLDERS`, and KV-6.4 would remove nothing while its VERIFY passed over an empty list — leaving a standing `roles/cloudkms.autokeyAdmin` on five folders that the step claimed to have removed.
 
   Every derivation is followed by the same assertion that the list holds exactly five entries. Run section 6 in **bash** (the fences are bash): the `for F in $AK_FOLDERS` loops rely on word splitting, which zsh does not do on an unquoted parameter. The assertion fails closed under a shell that does not split — the step stops rather than configuring one folder and reporting five.
 
@@ -597,13 +607,16 @@ done
 - **VERIFY:**
 
 ```bash
+need FLD_PLATFORM_CORE FLD_AGENTS_W FLD_AGENTS_P FLD_CONTROLLERS FLD_IMPROVERS FLD_AGENTS_R KMS_PROJECT VALIDATOR_PROJECT LOGGING_PROJECT
+AK_FOLDERS="$FLD_PLATFORM_CORE $FLD_AGENTS_W $FLD_AGENTS_P $FLD_CONTROLLERS $FLD_IMPROVERS"
+test "$(printf '%s\n' $AK_FOLDERS | wc -l | tr -d ' ')" -eq 5 || { echo "AK_FOLDERS is not five folders: stop"; false; }
 test "$(for F in $AK_FOLDERS; do gcloud kms autokey-config describe --folder="$F" --billing-project="$KMS_PROJECT" --format="value(keyProject)"; done | grep -c "projects/${KMS_PROJECT}$")" -eq 5
 for F in $AK_FOLDERS; do gcloud kms autokey-config describe --folder="$F" --billing-project="$KMS_PROJECT" --format="yaml(name,keyProject,keyProjectResolutionMode,state)"; done
 gcloud kms autokey-config show-effective-config --project="$VALIDATOR_PROJECT" --billing-project="$KMS_PROJECT"
 gcloud kms autokey-config show-effective-config --project="$LOGGING_PROJECT" --billing-project="$KMS_PROJECT"
 ```
 
-  The first line asserts a count of exactly **five** folders naming `KMS_PROJECT`, so the check cannot pass over a short or empty `AK_FOLDERS`. Each folder shows `keyProject: projects/<KMS_PROJECT>` and `DEDICATED_KEY_PROJECT`. The effective configuration of `VALIDATOR_PROJECT` and `LOGGING_PROJECT` names `KMS_PROJECT`. Also check a folder that must not have it: `gcloud kms autokey-config describe --folder="$FLD_AGENTS_R" --billing-project="$KMS_PROJECT"` shows no key project. Google allows the key project inside the folder it serves ("The key project can be created inside the same folder where you plan to enable Autokey"), provided it holds no other resources. `KMS_PROJECT` holds keys only (KV-1.1).
+  The fence derives `AK_FOLDERS` itself, as the ACTION does, so it can be run alone after a cut sitting. The count line asserts exactly **five** folders naming `KMS_PROJECT`, so the check cannot pass over a short or empty `AK_FOLDERS`. Each folder shows `keyProject: projects/<KMS_PROJECT>` and `DEDICATED_KEY_PROJECT`. The effective configuration of `VALIDATOR_PROJECT` and `LOGGING_PROJECT` names `KMS_PROJECT`. Also check a folder that must not have it: `gcloud kms autokey-config describe --folder="$FLD_AGENTS_R" --billing-project="$KMS_PROJECT"` shows no key project. Google allows the key project inside the folder it serves ("The key project can be created inside the same folder where you plan to enable Autokey"), provided it holds no other resources. `KMS_PROJECT` holds keys only (KV-1.1).
 - **ROLLBACK:** Per folder, only before any key handle exists in that folder: write a file holding `name: folders/<F>/autokeyConfig` and `keyProjectResolutionMode: DISABLED` with no `keyProject`, run `gcloud kms autokey-config update <file> --billing-project="$KMS_PROJECT"`, and read back `state` and `keyProjectResolutionMode` with `gcloud kms autokey-config describe --folder=<F> --billing-project="$KMS_PROJECT"`. The API's modes are `DEDICATED_KEY_PROJECT`, `RESOURCE_PROJECT` and `DISABLED` (AutokeyConfig REST reference, updated 2026-08-04, read 2026-10-01); leaving the mode unset does not disable Autokey. The console **Manage > Disable** is the alternative. Existing Autokey keys stay in force either way.
 - **EVIDENCE:** Describe and effective-config output as `<date>-KV-6.3-autokey-config-v1`. TISAX 5.1.1. EU AI Act E-05. The `UpdateAutokeyConfig` Admin Activity entries (method `google.cloud.kms.v1.AutokeyAdmin.UpdateAutokeyConfig`, Cloud KMS audit logging page) are the Google-side record.
 
@@ -629,11 +642,13 @@ done
 - **VERIFY:** The check counts results; it does not loop over a list that may be empty. A vacuous pass here would leave a standing `roles/cloudkms.autokeyAdmin` on five folders that this step claims to have removed.
 
 ```bash
+need FLD_PLATFORM_CORE FLD_AGENTS_W FLD_AGENTS_P FLD_CONTROLLERS FLD_IMPROVERS
+AK_FOLDERS="$FLD_PLATFORM_CORE $FLD_AGENTS_W $FLD_AGENTS_P $FLD_CONTROLLERS $FLD_IMPROVERS"
 test "$(for F in $AK_FOLDERS; do gcloud resource-manager folders get-iam-policy "$F" --format=json | jq '[.bindings[]? | select(.role=="roles/cloudkms.autokeyAdmin")] | length'; done | grep -cx 0)" -eq 5
 for F in $AK_FOLDERS; do printf '%s ' "$F"; gcloud resource-manager folders get-iam-policy "$F" --format=json | jq '[.bindings[]? | select(.role=="roles/cloudkms.autokeyAdmin")] | length'; done
 ```
 
-  The first command must exit `0`: **exactly five** folders each returning a zero count. Five zeroes, no more and no fewer. The second prints them against their folder ids for the record. A non-zero count means a binding without the `kv-6-2-autokey-bootstrap` condition exists: it was not made by KV-6.2, so it is not removed here; record it and report it to the second human. Then close `BD-11-3` under the register's Closures with the time. The removal passes the exact condition back with `--condition-from-file`, as 09 FS-8.1 does; `--all` is never used, because it would also strip an unconditional binding of the same role.
+  The fence derives `AK_FOLDERS` itself, as the ACTION does. The `test` line must exit `0`: **exactly five** folders each returning a zero count. Five zeroes, no more and no fewer. The last line prints them against their folder ids for the record. A non-zero count means a binding without the `kv-6-2-autokey-bootstrap` condition exists: it was not made by KV-6.2, so it is not removed here; record it and report it to the second human. Then close `BD-11-3` under the register's Closures with the time. The removal passes the exact condition back with `--condition-from-file`, as 09 FS-8.1 does; `--all` is never used, because it would also strip an unconditional binding of the same role.
 - **ROLLBACK:** None needed. A later Autokey change goes through `ENT_FOLDER_ADMIN` (12). If the assertion fails, re-run the ACTION for the folders still showing a binding before closing the sitting; the conditional binding also expires on its own four hours after KV-6.2.
 - **EVIDENCE:** The five folder-and-zero lines as `<date>-KV-6.4-autokey-admin-removed-v1`. TISAX 4.1.3 (revocation).
 
@@ -710,7 +725,7 @@ for P in "$KMS_PROJECT" "$CICD_PROJECT"; do gcloud logging read 'protoPayload.se
 
 ## 8. The validator custodian (M8)
 
-**BLOCKED (person, B-13) until 03 names `SECURITY_REVIEWER_EMAIL` and `VALIDATOR_CUSTODIAN_EMAIL`.** Every step of this section checks both at its start and writes a `BLOCKED` checkpoint otherwise. If it runs after file 12, the creator's Owner is gone. The platform owner then works through a grant on `ENT_PROJECT_REPAIR_CORE`, approved by the second human, as file 12 shows. The design this section builds: the custodian re-derives every number a promotion or a Mo proposal cites, from dataset-level reads, with "no binding of any kind in any agent project or in `MO_PROJECT`" (HLD §12.4). Numbers about Eve come from `grades_eve` in `eve_grades` (HLD §13.3; E-21). The approval surface writes the grades; no Eve, Mo or Wall-E enforcement identity writes them (topology row 45).
+**BLOCKED (person, B-13) until 03 names `SECURITY_REVIEWER_EMAIL` and `VALIDATOR_CUSTODIAN_EMAIL`.** How a step of this section is recorded while they are unnamed, said once for all twelve: before each step, the platform owner runs `need SECURITY_REVIEWER_EMAIL VALIDATOR_CUSTODIAN_EMAIL`. If it prints a `MISSING` line, the step is not run: they write `checkpoint KV-8.n BLOCKED - - "B-13"` for it and go on, and section 9 runs. The `need` lines inside the fences are guards for a run that has begun; they only stop, and they never write a checkpoint. If it runs after file 12, the creator's Owner is gone. The platform owner then works through a grant on `ENT_PROJECT_REPAIR_CORE`, approved by the second human, as file 12 shows. The design this section builds: the custodian re-derives every number a promotion or a Mo proposal cites, from dataset-level reads, with "no binding of any kind in any agent project or in `MO_PROJECT`" (HLD §12.4). Numbers about Eve come from `grades_eve` in `eve_grades` (HLD §13.3; E-21). The approval surface writes the grades; no Eve, Mo or Wall-E enforcement identity writes them (topology row 45).
 
 ### KV-8.1 Record the security reviewer's ownership of `VALIDATOR_PROJECT` and check separation
 
@@ -887,13 +902,19 @@ bq mk --table --schema="$SCHEMA" --description="Human grades of Eve verdicts (E-
 
 - **WHO:** Platform owner on the custodian's resources; the security reviewer approves.
 - **WHERE:** Shell.
-- **ACTION:** The grading identity is the approval surface's service account, whose name is *tbd* and which file 33 creates in `WALLE_PROJECT` for Wall-E. Until then the grant prints PENDING. When it exists, apply the KV-8.8 edit with the custom role:
+- **ACTION:** The grading identity is the approval surface's service account, whose name is *tbd* and which file 33 creates in `WALLE_PROJECT` for Wall-E. Until then the grant is recorded as PENDING, and this is the whole ACTION:
 
 ```bash
 exists_or_pending --pending "serviceAccount:grading identity named in 33" KV-8.10 "11 KV-8.10 row 45 ROLE_GRADER_INSERT on eve_grades (after 33)"
+```
+
+  Only after file 33 has created the identity, set `GRADER_SA` in the shell to the email 33 records for it, and apply the KV-8.8 edit with the custom role. The `need` line stops the block while `GRADER_SA` is unset:
+
+```bash
+need GRADER_SA ROLE_GRADER_INSERT VALIDATOR_PROJECT
 DS_BEFORE="$(mktemp)"; DS_EDIT="$(mktemp)"; DS_AFTER="$(mktemp)"
 bq show --format=prettyjson "${VALIDATOR_PROJECT}:eve_grades" > "$DS_BEFORE"
-jq --arg sa "<grading identity from 33>" --arg role "$ROLE_GRADER_INSERT" '.access += [{"role":$role,"userByEmail":$sa}]' "$DS_BEFORE" > "$DS_EDIT"
+jq --arg sa "$GRADER_SA" --arg role "$ROLE_GRADER_INSERT" '.access += [{"role":$role,"userByEmail":$sa}]' "$DS_BEFORE" > "$DS_EDIT"
 ```
 
   Then run `bq update --source`, read back and diff, as in KV-8.8. Wall-E's own `SETUP.md` Phase 8.4 used the same access-array entry with a project custom role path. `Assumption:` BigQuery accepts it here too, and the read-back proves it. The console path **BigQuery > Explorer > dataset > Sharing > Permissions > Add principal**, which lists "a predefined role or a custom role" (BigQuery IAM page, updated 2026-09-03), is the fallback.

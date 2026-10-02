@@ -11,6 +11,7 @@
 - Closes: S001 (the policy, deny and PAB half), S006 (the folder allow-list half), S072 (the platform half), S119 (the allow-list half), X-RQB-04 (the folder-scoped SCC check). See "Findings".
 - 2026-10-01: `op-set.sh` compares the read-back semantically and checks a project policy's name against the project number; Agent Registry writes are now deniable and are added to `deny-core-agents`; the troubleshooter helpers probe the `beta` command and fall back to the v3beta REST call; OP-1.4 searches project targets with `--project` and the project number; OP-1.1 and OP-1.2 run under an `ENT_PROJECT_REPAIR_CORE` grant for the quota project; every `gcloud pam` call passes `--billing-project`; OP-0.1 uses `decision-need.sh`; PAB enforcement version 4 is today's default; three Unverified rows closed; the allow-lists section states what P206 holds here (the registry fence, not the lists, since Agent Registry is not governed by `gcp.restrictServiceUsage`, page updated 2026-09-30); the hand-over row for 16 carries OP-2.5's PAM service-agent assertion.
 - 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (OP-5.1, OP-9.1, OP-9.2).
+- 2026-10-01: the B19 parameter is kept as `B19_PARAM` (OP-1.2, OP-2.3); `policies/HELD.md` has its text (OP-2.1); the hand-saved Google lists are read as the newest saved, not today's (OP-2.4 to OP-2.6); OP-3.1's VERIFY reads each constraint by name; OP-1.1 and OP-8.1 register a `SHA256SUMS` file and OP-8.5b its record, so each evidence row carries a hash; OP-8.4 stops after `KMS_PROJECT` for the core checks; no `--quiet` on the deletes of OP-8.5b and OP-9.1.
 
 ## What this part builds
 
@@ -297,13 +298,14 @@ test "$NONORG" -eq 0 || { echo "STOP: a folder or core project already holds a p
 test "$ORGLOC" -eq 0 || { echo "STOP: a gcp.resourceLocations policy already exists (SD-15 order broken)"; false; }
 echo "policies found: $FOUND"
 unset TOKEN_HDR
+SUMS="$(cd "$S" && shasum -a 256 -- *.json all-policy-names.txt)"; printf '%s\n' "$SUMS" > "$S/SHA256SUMS"
 ```
 
   The five core projects are read through the same REST call as the folders, so every file has the shape `{"policies":[...]}`; `gcloud org-policies list --format=json` returns a bare array and cannot be indexed with `.policies`, which would have made the five project files silently contribute nothing to the stop check and unusable as day-0 predecessors. `--fail-with-body` makes an HTTP error a non-zero exit instead of an empty result.
 
 - **VERIFY:** No `READ-ERROR` line and no `STOP:` line. 23 files exist (organisation, 22 folders) plus the five project files; the folder and project files hold no policy (09 and 10 created none). The organisation file lists what the organisation already has. Read especially `iam.allowedPolicyMemberDomains`, `iam.automaticIamGrantsForDefaultServiceAccounts`, `iam.disableServiceAccountKeyCreation`, `storage.uniformBucketLevelAccess` and `essentialcontacts.allowedContactDomains`: organisations created on or after 2024-05-03 have these as a security baseline (constraints reference, updated 2026-09-14). Write them into the build log. Either `STOP:` line ends the file: SD-15's order is then already broken, and IT security re-reads SCC before anything else.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** The directory, registered: `evidence_add OP-1.1 policy-snapshot E-05 5.2.1 "build-log:records/<dir>"`. These files are the day-0 predecessors. TISAX 5.2.1, 1.5.1.
+- **EVIDENCE:** The directory, registered through its `SHA256SUMS` file, which holds the hash of every file in it, so the register row carries a hash (42 GD-4.1 lists a file-shaped location with none): `evidence_add OP-1.1 policy-snapshot E-05 5.2.1 "build-log:records/<dir>/SHA256SUMS" "$S/SHA256SUMS"`. These files are the day-0 predecessors. TISAX 5.2.1, 1.5.1.
 
 ### OP-1.2 Read the constraint catalogue from Google, and stop on any mismatch
 
@@ -320,7 +322,7 @@ done
 ```
 
   If the response carries `nextPageToken`, repeat with `&pageToken=<token>` into a second file and include it in the loop.
-- **VERIFY:** Every line prints, none `NOT-LISTED`. `dryRun=true` for exactly B2, B3, B7, B14, B15, B19 and B22 of the list, `dryRun=false` for the rest. B14 shows `params=allowedDomains`. B19 shows exactly one parameter name: write it into the build log as a `checkpoint OP-1.2 DONE - - "B19 parameter <name>"` note (it is not a variable of plan §5) and use it in OP-2.3. The `type` column is informational: the API may describe a managed constraint through another field. **Stop** on any `dryRun` or `params` difference from "The constraint plan": the plan is then out of date, and a pull request against this page comes first.
+- **VERIFY:** Every line prints, none `NOT-LISTED`. `dryRun=true` for exactly B2, B3, B7, B14, B15, B19 and B22 of the list, `dryRun=false` for the rest. B14 shows `params=allowedDomains`. B19 shows exactly one parameter name: keep it with `penv_set B19_PARAM "<name>"`, so that OP-2.3 reads it in any later sitting, and write it into the build log as a `checkpoint OP-1.2 DONE - - "B19 parameter <name>"` note. `B19_PARAM` is not a variable of plan §5; only this file reads it. The `type` column is informational: the API may describe a managed constraint through another field. **Stop** on any `dryRun` or `params` difference from "The constraint plan": the plan is then out of date, and a pull request against this page comes first.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** `evidence_add OP-1.2 constraint-catalogue E-05 5.2.1 "build-log:records/<file>" "$C"`. TISAX 5.2.1.
 
@@ -432,11 +434,17 @@ pol "policies/org/FLD_PLATFORM_CORE/run.allowedBinaryAuthorizationPolicies.json"
 PROBE="agp-imp-opprobe-nonprod"
 pol "policies/probe/run.allowedVPCEgress.json" "projects/$PROBE/policies/run.allowedVPCEgress" '{"rules":[{"values":{"allowedValues":["private-ranges-only"]}}]}'
 pol "policies/probe/run.allowedBinaryAuthorizationPolicies.json" "projects/$PROBE/policies/run.allowedBinaryAuthorizationPolicies" '{"rules":[{"values":{"allowedValues":["default"]}}]}'
+cat > policies/HELD.md <<'HELD'
+# Held constraints (setup 13 OP-2.1)
+
+- B16 `constraints/run.allowedIngress`: held until P3. 18 records P3; 35 applies it with CC-4.
+- B20 `constraints/gcp.restrictNonCmekServices` and `constraints/gcp.restrictCmekCryptoKeyProjects`: held until P12. 42 applies them only after a dated P12 decision.
+HELD
 ls policies/org/*/ policies/probe/ | head -60
 ```
 
-  Value forms: `in:` value groups and `is:` values for `gcp.resourceLocations` (defining-locations page); `denyAll`, `enforce`, `allowedValues` in the policy JSON of the `set-policy` reference and the organization-policy REST reference; `HSM` and `in:30d` on the Cloud KMS constraint rows, `private-ranges-only` and `default` on the Cloud Run rows of the constraints reference (all read 2026-09-15). B16 and B20 get no file, only `policies/HELD.md` naming P3 and P12.
-- **VERIFY:** `jq -e . policies/org/*/*.json policies/probe/*.json >/dev/null && echo json-ok`; 13 files under each of the two platform-wide folders, 2 under each of the six tier folders, 1 under `FLD_PLATFORM_CORE`, 2 under `policies/probe/` (the probe project of §5, whose id is fixed here so its policies are reviewed with the rest).
+  Value forms: `in:` value groups and `is:` values for `gcp.resourceLocations` (defining-locations page); `denyAll`, `enforce`, `allowedValues` in the policy JSON of the `set-policy` reference and the organization-policy REST reference; `HSM` and `in:30d` on the Cloud KMS constraint rows, `private-ranges-only` and `default` on the Cloud Run rows of the constraints reference (all read 2026-09-15). B16 and B20 get no policy file, only `policies/HELD.md`, written above, naming P3 and P12 and the files that apply them.
+- **VERIFY:** `jq -e . policies/org/*/*.json policies/probe/*.json >/dev/null && echo json-ok`; `grep -c '^- B' policies/HELD.md` prints `2`; 13 files under each of the two platform-wide folders, 2 under each of the six tier folders, 1 under `FLD_PLATFORM_CORE`, 2 under `policies/probe/` (the probe project of §5, whose id is fixed here so its policies are reviewed with the rest).
 - **ROLLBACK:** `git -C "$PLATFORM_REPO_DIR" checkout -- policies` before the pull request.
 - **EVIDENCE:** Part of the OP-2.6 merge commit. TISAX 5.2.1.
 
@@ -469,11 +477,11 @@ dry "$P/gcp.restrictTLSVersion.json" "folders/$FLD_AGENTIC_PLATFORM/policies/gcp
 
 - **WHO:** Platform owner.
 - **WHERE:** `PLATFORM_REPO_DIR`.
-- **ACTION:** Use the one parameter name OP-1.2 printed for `iam.managed.workloadIdentityPoolProviders`. The constraints reference describes the values as "specified by URI/URLs"; the issuer is the value 10 CP-4.3 passed to `--issuer-uri`, character for character (including a trailing slash, if any).
+- **ACTION:** Use the one parameter name OP-1.2 printed for `iam.managed.workloadIdentityPoolProviders`, kept there as `B19_PARAM`. The constraints reference describes the values as "specified by URI/URLs"; the issuer is the value 10 CP-4.3 passed to `--issuer-uri`, character for character (including a trailing slash, if any).
 
 ```bash
 cd "$PLATFORM_REPO_DIR"
-B19_PARAM="<the single parameter name printed by OP-1.2>"
+need B19_PARAM
 ISSUER_IN_PROVIDER="$(gcloud iam workload-identity-pools providers describe "${WIF_PROVIDER##*/}" --workload-identity-pool=wif-factory --location=global --project="$CICD_PROJECT" --format='value(oidc.issuerUri)')"
 test "$ISSUER_IN_PROVIDER" = "$GIT_OIDC_ISSUER" && echo issuer-match
 mkdir -p policies/dryrun/FLD_PLATFORM_CORE
@@ -514,10 +522,11 @@ mkdir -p policies/dryrun/FLD_AGENTS_X
 jq -n --arg name "folders/$FLD_AGENTS_X/policies/gcp.restrictServiceUsage" '{name:$name, dryRunSpec:{rules:[{denyAll:true}]}}' > policies/dryrun/FLD_AGENTS_X/gcp.restrictServiceUsage.json
 ```
 
-  Then check every value against Google's list. Save the page's value list once, by hand, as `policies/tools/restrict-services-supported-<date>.txt` (one `*.googleapis.com` per line, from the "Services that support restricting service usage" reference, updated 2026-09-09), and run:
+  Then check every value against Google's list. Save the page's value list once, by hand, as `policies/tools/restrict-services-supported-<date>.txt`, `<date>` being the day it is saved (one `*.googleapis.com` per line, from the "Services that support restricting service usage" reference, updated 2026-09-09), and run the check against the newest list saved, so that a re-run on a later day reads the same file:
 
 ```bash
-SUP="policies/tools/restrict-services-supported-$(date -u +%Y-%m-%d).txt"
+SUP="$(ls policies/tools/restrict-services-supported-*.txt 2>/dev/null | sort | tail -1)"
+test -s "$SUP" || { echo "STOP: save the supported-services list first"; false; }
 jq -r '.dryRunSpec.rules[].values.allowedValues[]?' policies/dryrun/*/gcp.restrictServiceUsage.json | sort -u | while read -r s; do grep -qx "$s" "$SUP" || echo "NOT-GOVERNED $s"; done
 ```
 
@@ -621,7 +630,7 @@ jq -n --arg f "//cloudresourcemanager.googleapis.com/folders/$FLD_AGENTIC_PLATFO
 - **VERIFY:** `jq -e . policies/deny/*.json policies/pab/*.json >/dev/null && echo json-ok`; `yq`-free check of the custom constraints: `grep -c '^name: organizations/' policies/custom/*.yaml` prints `1` per file. Then, with Google's deny-support list already saved as OP-2.6 describes, run OP-2.6's `NOT-DENIABLE` loop here, before the branch is pushed:
 
 ```bash
-DS="policies/tools/deny-supported-$(date -u +%Y-%m-%d).txt"
+DS="$(ls policies/tools/deny-supported-*.txt 2>/dev/null | sort | tail -1)"
 test -s "$DS" || { echo "STOP: save the deny-supported list first (OP-2.6)"; false; }
 jq -r '.rules[].denyRule.deniedPermissions[]' policies/deny/*.json | sort -u | while read -r p; do grep -qxF "$p" "$DS" || echo "NOT-DENIABLE $p"; done
 ```
@@ -634,11 +643,11 @@ jq -r '.rules[].denyRule.deniedPermissions[]' policies/deny/*.json | sort -u | w
 
 - **WHO:** Platform owner opens; the required reviewers (the second human; the security reviewer where appointed) review and merge. The platform owner never merges.
 - **WHERE:** `PLATFORM_REPO_DIR` and the git host.
-- **ACTION:** Save Google's deny-supported permission list once, by hand, as `policies/tools/deny-supported-<date>.txt` (one permission per line from the "Permissions supported in deny policies" page). Then:
+- **ACTION:** Save Google's deny-supported permission list once, by hand, as `policies/tools/deny-supported-<date>.txt`, `<date>` being the day it is saved (one permission per line from the "Permissions supported in deny policies" page; a list saved before 2026-09-29 lacks the Agent Registry names and must be saved again). The check reads the newest list saved, so a re-run on a later day reads the same file. Then:
 
 ```bash
 cd "$PLATFORM_REPO_DIR"
-DS="policies/tools/deny-supported-$(date -u +%Y-%m-%d).txt"
+DS="$(ls policies/tools/deny-supported-*.txt 2>/dev/null | sort | tail -1)"
 test -s "$DS" || { echo "STOP: deny-supported list missing"; false; }
 jq -r '.rules[].denyRule.deniedPermissions[]' policies/deny/*.json | sort -u | while read -r p; do grep -qxF "$p" "$DS" || echo "NOT-DENIABLE $p"; done > /tmp/op-notdeniable.txt
 cat /tmp/op-notdeniable.txt
@@ -671,7 +680,7 @@ for f in policies/custom/*.yaml; do gcloud org-policies set-custom-constraint "$
 gcloud org-policies list-custom-constraints --organization="$ORG_ID" --format="value(name)"
 ```
 
-- **VERIFY:** The list shows `custom.runBinaryAuthorizationRequired`, `custom.agpProjectIdPrefix` and `custom.fldFolderNaming`. A constraint definition enforces nothing until a policy uses it.
+- **VERIFY:** The list shows `custom.runBinaryAuthorizationRequired`, `custom.agpProjectIdPrefix` and `custom.fldFolderNaming`, and each of the three `describe-custom-constraint` reads of EVIDENCE exits 0: a read by name is the proof, the listing is for the eye. A constraint definition enforces nothing until a policy uses it.
 - **ROLLBACK:** `gcloud org-policies delete-custom-constraint custom.<name> --organization="$ORG_ID"`, after deleting any policy that uses it.
 - **EVIDENCE:** `gcloud org-policies describe-custom-constraint custom.<name> --organization="$ORG_ID" --format=json` for each, saved as `<date>-OP-3.1-custom-constraints-v1.json`. TISAX 5.2.1.
 
@@ -1321,12 +1330,13 @@ done
 jq -r '.[] | [(.resource.labels.project_id // "folder"), .protoPayload.serviceName, .protoPayload.methodName] | @tsv' "$V"/*.json | sort | uniq -c | sort -rn > "$V/summary.tsv"
 cat "$V/summary.tsv"
 for p in CICD_PROJECT CORE_PROJECT LOGGING_PROJECT KMS_PROJECT VALIDATOR_PROJECT; do gcloud services list --enabled --project="$(eval echo \$$p)" --format="value(config.name)" > "$V/enabled-$p.txt"; done
+SUMS="$(cd "$V" && shasum -a 256 -- *.json summary.tsv enabled-*.txt)"; printf '%s\n' "$SUMS" > "$V/SHA256SUMS"
 ```
 
   If 14's platform log view exists by now, run the same filter once against it as a cross-check.
 - **VERIFY:** `summary.tsv` exists. Every row is one of: the probe project's expected entries (`compute`, `cloudkms` on `agp-imp-opprobe-nonprod`); or an entry needing a decision. Also compare each `enabled-*.txt` with the core allow-list: an enabled, governed service missing from the list (for example a dependency 10 CP-1.6 enabled implicitly) needs a decision too.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** `evidence_add OP-8.1 dryrun-violations E-05 1.5.1 "build-log:records/<dir>"`. TISAX 1.5.1, 5.2.4.
+- **EVIDENCE:** The directory, registered through its `SHA256SUMS` file as in OP-1.1: `evidence_add OP-8.1 dryrun-violations E-05 1.5.1 "build-log:records/<dir>/SHA256SUMS" "$V/SHA256SUMS"`. TISAX 1.5.1, 5.2.4.
 
 ### OP-8.2 Decide each violation, and merge the enforcement files
 
@@ -1378,15 +1388,24 @@ echo "APPLIED-COUNT $n"
 ```bash
 cd "$PLATFORM_REPO_DIR"
 n=0
-for T in FLD_AGENTS_X FLD_IMPROVERS FLD_AGENTS_R FLD_AGENTS_R_NONPROD FLD_AGENTS_W FLD_AGENTS_P FLD_AGENTS_P_SA FLD_CONTROLLERS KMS_PROJECT FLD_PLATFORM_CORE; do
+for T in FLD_AGENTS_X FLD_IMPROVERS FLD_AGENTS_R FLD_AGENTS_R_NONPROD FLD_AGENTS_W FLD_AGENTS_P FLD_AGENTS_P_SA FLD_CONTROLLERS KMS_PROJECT; do
   policies/tools/op-set.sh "policies/org/$T/gcp.restrictServiceUsage.json" || { echo "STOP at $T (exit $?)"; break; }
   n=$((n+1))
 done
 echo "APPLIED-COUNT $n"
 ```
 
-  After `KMS_PROJECT` and again after `fld-platform-core`: re-run 10's `wif-smoke`, list keys in `KMS_PROJECT` (`gcloud kms keyrings list --location="$REGION" --project="$KMS_PROJECT"`) and run op-deny-probe's `INSIDE` step.
-- **VERIFY:** `APPLIED-COUNT 10` and no `STOP at` line: the order is least exposed folder first, and `KMS_PROJECT` and `fld-platform-core` last, so a break leaves the core untouched. The core checks pass. Any live refusal of a platform service rolls back that one folder at once (below) and returns to OP-8.2.
+  **STOP** here, with `APPLIED-COUNT 9`, before `fld-platform-core`: re-run 10's `wif-smoke`, list key rings in `KMS_PROJECT` (`gcloud kms keyrings list --location="$REGION" --project="$KMS_PROJECT"`) and run op-deny-probe's `INSIDE` step. Continue only when all three succeed; a live refusal of a platform service rolls `KMS_PROJECT` back (below) and returns to OP-8.2, with `fld-platform-core` untouched. Then the last folder:
+
+```bash
+cd "$PLATFORM_REPO_DIR"
+n=0
+if policies/tools/op-set.sh policies/org/FLD_PLATFORM_CORE/gcp.restrictServiceUsage.json; then n=1; else echo "STOP at FLD_PLATFORM_CORE (exit $?)"; fi
+echo "APPLIED-COUNT $n"
+```
+
+  and the same three core checks once more.
+- **VERIFY:** `APPLIED-COUNT 9` at the stop and `APPLIED-COUNT 1` after the last folder (ten in all), and no `STOP at` line: the order is least exposed folder first, and `KMS_PROJECT` and `fld-platform-core` last, with the core checks between them, so a break leaves the core untouched. The core checks succeed both times. Any live refusal of a platform service rolls back that one folder at once (below) and returns to OP-8.2.
 - **ROLLBACK:** `op-set.sh` on the folder's predecessor file (its dry-run form). This is also K7's KF-1 lever in reverse: the committed files are the pre-written policies 18 uses.
 - **EVIDENCE:** `<date>-OP-8.4-enforced-allowlists-v1` with the between-folder log reads. TISAX 1.3.3, 5.2.2.
 
@@ -1418,15 +1437,15 @@ IA="op-probe@${PROBE}.iam.gserviceaccount.com"
 gcloud iam service-accounts keys list --iam-account="$IA" --managed-by=user --project="$PROBE" --format="value(name,validAfterTime)"
 for k in $(gcloud iam service-accounts keys list --iam-account="$IA" --managed-by=user --project="$PROBE" --format="value(name)"); do
   echo "DESTROYING ${k##*/}"
-  gcloud iam service-accounts keys delete "${k##*/}" --iam-account="$IA" --project="$PROBE" --quiet
+  gcloud iam service-accounts keys delete "${k##*/}" --iam-account="$IA" --project="$PROBE"
 done
 gcloud iam service-accounts keys list --iam-account="$IA" --managed-by=user --project="$PROBE" --format="value(name)"
 ```
 
-  Only `--managed-by=user` keys are touched: Google-managed keys are not user credentials and cannot be deleted. The key id is recorded; the key material never existed outside `/dev/null`.
-- **VERIFY:** The second listing prints nothing: no user-managed key remains on `op-probe@`. If the first listing was already empty, B2 refused the creation and this step records that, which is the expected result. **If a `keys delete` fails for any reason, the probe project is deleted in this same sitting** — run OP-9.1's `gcloud projects delete "$PROBE" --quiet` immediately rather than leave a throwaway project holding a live credential, and record that §8's remaining probe tests are done on a fresh probe or not at all.
+  Only `--managed-by=user` keys are touched: Google-managed keys are not user credentials and cannot be deleted. The key id is recorded; the key material never existed outside `/dev/null`. No `--quiet`, here or in OP-9.1: that flag disables every interactive prompt, using the default answer or raising an error (gcloud global flags reference, updated 2026-09-22, read 2026-10-01), so a delete that asks is answered by the platform owner, who reads the id first.
+- **VERIFY:** The second listing prints nothing: no user-managed key remains on `op-probe@`. If the first listing was already empty, B2 refused the creation and this step records that, which is the expected result. **If a `keys delete` fails for any reason, the probe project is deleted in this same sitting** — run OP-9.1's `gcloud projects delete "$PROBE"` immediately rather than leave a throwaway project holding a live credential, and record that §8's remaining probe tests are done on a fresh probe or not at all.
 - **ROLLBACK:** None, and none wanted: a deleted service-account key cannot be restored, which is the point. Deleting a key that OP-8.5 created breaks nothing, because no system was ever given it.
-- **EVIDENCE:** Both listings and every `DESTROYING <key id>` line as `<date>-OP-8.5b-probe-key-destroyed-v1.txt`, registered: `evidence_add OP-8.5b probe-key-destroyed E-05 4.1.1 "build-log:records/<file>"`. The record names the key id that was created and destroyed, or states that none was created. TISAX 4.1.1, 4.1.3, 5.1.2.
+- **EVIDENCE:** Both listings and every `DESTROYING <key id>` line as `<date>-OP-8.5b-probe-key-destroyed-v1.txt`, registered: `evidence_add OP-8.5b probe-key-destroyed E-05 4.1.1 "build-log:records/<file>" "<file>"`. The record names the key id that was created and destroyed, or states that none was created. TISAX 4.1.1, 4.1.3, 5.1.2.
 
 ### OP-8.6 Read the effective baseline on every folder
 
@@ -1468,13 +1487,13 @@ echo "still-dry $(grep -c '"dry":true' "$X")"
 
 ```bash
 gcloud iam service-accounts remove-iam-policy-binding "op-probe-target@${CORE_PROJECT}.iam.gserviceaccount.com" --member="serviceAccount:${SA_FACTORY_APPLY}" --role="roles/iam.serviceAccountTokenCreator" --project="$CORE_PROJECT"
-gcloud iam service-accounts delete "op-probe-target@${CORE_PROJECT}.iam.gserviceaccount.com" --project="$CORE_PROJECT" --quiet
+gcloud iam service-accounts delete "op-probe-target@${CORE_PROJECT}.iam.gserviceaccount.com" --project="$CORE_PROJECT"
 gcloud storage rm --recursive "gs://${CORE_PROJECT}-op-probe"
-gcloud projects delete "$PROBE" --quiet
+gcloud projects delete "$PROBE"
 gcloud services disable policytroubleshooter.googleapis.com --project="$CORE_PROJECT"
 ```
 
-  Remove `.github/workflows/op-deny-probe.yml` (or the GitLab job) by pull request. `gcloud projects delete` marks the project for deletion; it can be restored for 30 days (create-and-manage projects page, read 2026-09-15). Keep `policytroubleshooter` enabled instead if 16 or 42 will use it; record which.
+  No `--quiet` (OP-8.5b): where gcloud asks, the platform owner reads the name and answers. Remove `.github/workflows/op-deny-probe.yml` (or the GitLab job) by pull request. `gcloud projects delete` marks the project for deletion; it can be restored for 30 days (create-and-manage projects page, read 2026-09-15). Keep `policytroubleshooter` enabled instead if 16 or 42 will use it; record which.
 - **VERIFY:** `gcloud projects describe "$PROBE" --format="value(lifecycleState)"` prints `DELETE_REQUESTED`; `gcloud iam service-accounts list --project="$CORE_PROJECT" --format="value(email)" | grep -c op-probe` prints `0`; the bucket is gone; the workflow file is absent on `main`. The deny and PAB policies stay: they no longer have a probe principal to deny, which is expected.
 - **ROLLBACK:** `gcloud projects undelete "$PROBE"` within 30 days if a proof must be repeated.
 - **EVIDENCE:** Output as `<date>-OP-9.1-probes-removed-v1`; closure line for BD-13-1 in `DEVIATION_REGISTER`'s Closures table, written once VERIFY passes with `bd_close BD-13-1 "withdrawal: probe project deleted in 13 OP-9.1" "13 OP-9.1 VERIFY"`. TISAX 4.2.1, 1.4.1.
@@ -1596,7 +1615,7 @@ sitting_end
 
 Google pages, all read on 2026-09-15 (last-updated dates as shown on the page): [Organization policy dry run](https://docs.cloud.google.com/resource-manager/docs/organization-policy/dry-run-policy) (2026-09-09); [Organization policy constraints reference](https://docs.cloud.google.com/organization-policy/reference/org-policy-constraints) (2026-09-14); [Restricting resource service usage](https://docs.cloud.google.com/resource-manager/docs/organization-policy/restricting-resources) (2026-09-09); [Services supported by restrict service usage](https://docs.cloud.google.com/organization-policy/reference/restrict-services-supported-services) (2026-09-09); [Restricting resource locations](https://docs.cloud.google.com/resource-manager/docs/organization-policy/defining-locations) (2026-09-09); [Restricting identities by domain](https://docs.cloud.google.com/resource-manager/docs/organization-policy/restricting-domains); [Creating and managing organization policies](https://docs.cloud.google.com/resource-manager/docs/organization-policy/using-constraints) (2026-09-09); [gcloud org-policies set-policy](https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/set-policy); [Organization Policy API v2 policies](https://docs.cloud.google.com/resource-manager/docs/reference/orgpolicy/rest/v2/organizations.policies) and [ListConstraintsResponse](https://docs.cloud.google.com/resource-manager/docs/reference/orgpolicy/rest/v2/ListConstraintsResponse); [Creating custom constraints](https://docs.cloud.google.com/organization-policy/create-custom-constraints) (2026-09-09); [Resource Manager custom constraints](https://docs.cloud.google.com/resource-manager/docs/custom-constraints); [Cloud Run custom constraints](https://docs.cloud.google.com/run/docs/securing/custom-constraints) (2026-09-01); [Binary Authorization for Cloud Run](https://docs.cloud.google.com/binary-authorization/docs/run/enabling-binauthz-cloud-run) (2026-09-03); [Deny access](https://docs.cloud.google.com/iam/docs/deny-access) (2026-09-14); [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support) (2026-09-14); [Principal identifiers](https://docs.cloud.google.com/iam/docs/principal-identifiers) (2026-09-14); [Principals overview](https://docs.cloud.google.com/iam/docs/principals-overview) (2026-09-14); [Principal Access Boundary policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies) (2026-09-14); [Create and apply PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-create) (2026-09-14); [View PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-view) and [Remove PAB policies](https://docs.cloud.google.com/iam/docs/principal-access-boundary-policies-remove) (2026-09-14); [PAB enforcement versions](https://docs.cloud.google.com/iam/docs/pab-blocked-permissions) (2026-09-14); [gcloud iam policy-bindings create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/create); [gcloud iam principal-access-boundary-policies update](https://docs.cloud.google.com/sdk/gcloud/reference/iam/principal-access-boundary-policies/update); [IAM conditions attribute reference](https://docs.cloud.google.com/iam/docs/conditions-attribute-reference); [IAM roles: iam](https://docs.cloud.google.com/iam/docs/roles-permissions/iam); [Policy Troubleshooter: troubleshoot access](https://docs.cloud.google.com/policy-intelligence/docs/troubleshoot-access); [gcloud policy-intelligence troubleshoot-policy iam](https://docs.cloud.google.com/sdk/gcloud/reference/policy-intelligence/troubleshoot-policy/iam); [gcloud pam grants create](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/create), [search](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/search), [approve](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/approve), [revoke](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/revoke) and the [subcommand list](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants) (no `withdraw`); [gcloud iam policy-bindings search-target-policy-bindings](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/search-target-policy-bindings); [gcloud org-policies describe](https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/describe); [gcloud storage buckets update](https://docs.cloud.google.com/sdk/gcloud/reference/storage/buckets/update); [gcloud iam service-accounts keys list](https://docs.cloud.google.com/sdk/gcloud/reference/iam/service-accounts/keys/list) and [delete](https://docs.cloud.google.com/sdk/gcloud/reference/iam/service-accounts/keys/delete); [Cloud Run with VPC Service Controls](https://docs.cloud.google.com/run/docs/securing/using-vpc-service-controls); [SCC data residency](https://docs.cloud.google.com/security-command-center/docs/data-residency-support) (2026-09-14); [SCC activation overview](https://docs.cloud.google.com/security-command-center/docs/activate-scc-overview) (2026-09-14); [gcloud scc manage services describe](https://docs.cloud.google.com/sdk/gcloud/reference/scc/manage/services/describe); [gcloud scc findings list](https://docs.cloud.google.com/sdk/gcloud/reference/scc/findings/list); [gcloud kms keys create](https://docs.cloud.google.com/sdk/gcloud/reference/kms/keys/create); [Agent Gateway set-up, Required APIs](https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/set-up-agent-gateway); [Manage workload identity pools and providers](https://docs.cloud.google.com/iam/docs/manage-workload-identity-pools-providers).
 
-Read on 2026-10-01: [Organization Policy API v2 `organizations.policies`](https://docs.cloud.google.com/resource-manager/docs/reference/orgpolicy/rest/v2/organizations.policies) (2026-07-22; responses name projects by number); [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support) (2026-09-29; Agent Registry listed); [Services supported by restrict service usage](https://docs.cloud.google.com/organization-policy/reference/restrict-services-supported-services) (2026-09-30; no `agentregistry`); [Policy Troubleshooter: troubleshoot access](https://docs.cloud.google.com/policy-intelligence/docs/troubleshoot-access) (2026-09-30); [Policy Troubleshooter v3beta `iam.troubleshoot`](https://docs.cloud.google.com/policy-intelligence/docs/reference/policytroubleshooter/rest/v3beta/iam/troubleshoot) (2026-09-30; deny and PAB enum values); [gcloud beta policy-intelligence](https://docs.cloud.google.com/sdk/gcloud/reference/beta/policy-intelligence) (2026-05-27); [gcloud iam policy-bindings search-target-policy-bindings](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/search-target-policy-bindings) (2026-05-27; `--project` parent, project number target); [gcloud iam policy-bindings create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/create) (2026-08-04; project parent); [PAB enforcement versions](https://docs.cloud.google.com/iam/docs/pab-blocked-permissions) (2026-09-25; default 4); [PAM permissions and setup](https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup) (2026-09-24; service agent in deny `exceptionPrincipals`); [Set the quota project](https://docs.cloud.google.com/docs/quotas/set-quota-project) (`serviceusage.services.use`).
+Read on 2026-10-01: [Organization Policy API v2 `organizations.policies`](https://docs.cloud.google.com/resource-manager/docs/reference/orgpolicy/rest/v2/organizations.policies) (2026-07-22; responses name projects by number); [Permissions supported in deny policies](https://docs.cloud.google.com/iam/docs/deny-permissions-support) (2026-09-29; Agent Registry listed); [Services supported by restrict service usage](https://docs.cloud.google.com/organization-policy/reference/restrict-services-supported-services) (2026-09-30; no `agentregistry`); [Policy Troubleshooter: troubleshoot access](https://docs.cloud.google.com/policy-intelligence/docs/troubleshoot-access) (2026-09-30); [Policy Troubleshooter v3beta `iam.troubleshoot`](https://docs.cloud.google.com/policy-intelligence/docs/reference/policytroubleshooter/rest/v3beta/iam/troubleshoot) (2026-09-30; deny and PAB enum values); [gcloud beta policy-intelligence](https://docs.cloud.google.com/sdk/gcloud/reference/beta/policy-intelligence) (2026-05-27); [gcloud iam policy-bindings search-target-policy-bindings](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/search-target-policy-bindings) (2026-05-27; `--project` parent, project number target); [gcloud iam policy-bindings create](https://docs.cloud.google.com/sdk/gcloud/reference/iam/policy-bindings/create) (2026-08-04; project parent); [PAB enforcement versions](https://docs.cloud.google.com/iam/docs/pab-blocked-permissions) (2026-09-25; default 4); [PAM permissions and setup](https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup) (2026-09-24; service agent in deny `exceptionPrincipals`); [Set the quota project](https://docs.cloud.google.com/docs/quotas/set-quota-project) (`serviceusage.services.use`); [gcloud reference, global flags](https://docs.cloud.google.com/sdk/gcloud/reference) (2026-09-22; `--quiet` disables all interactive prompts).
 
 ## Related
 

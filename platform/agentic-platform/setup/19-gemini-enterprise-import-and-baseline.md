@@ -13,6 +13,7 @@
 - Every command, flag, field, role, constraint and console path was read on Google's pages on 2026-09-15, and the `org-policies set-policy`, `pam grants`, `pam entitlements`, `logging read` and dry-run-audit pages were re-read on 2026-09-16 after the setup-procedure review (§10). Nothing was run against the live tenant while writing. What could not be verified is listed at the end of §10 and marked `Assumption:` at its step.
 - Changed 2026-10-01: every PAM call passes `--billing-project="$CICD_PROJECT"` (12's quota-project rule) and `pam_active` waits for `ACTIVE`; GE-2.1 writes 17 FM-6.1's run spec `factory/runs/gemini-prod.json`, the one manifest, and GE-2.7, GE-3.11 and GE-8.4 run 17's `tools/fm-zero-diff.py` on it; `ent-project-repair-tenant-app` gains the second human as approver (GE-2.3); date arithmetic is portable (BSD and GNU); GE-4.4 names `discoveryengine.managed.disableCustomMcpServerConnector`; GE-7.1 and GE-7.2 record Google's advice against template logging for Gemini Enterprise as deviation BD-19-2 with an IAM check, and GE-7.2 asserts the enforcement type.
 - Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (GE-2.2, GE-2.6, GE-7.2, GE-8.4).
+- Changed 2026-10-01: GE-0.2 saves `GE_TEST_USER` with `penv_set` and no longer writes an empty `GE_CHANGE_NOTICE_DATE`; GE-2.1 writes the `pending` and `made_elsewhere` lines in 17 FM-1.1's shapes, so GE-2.7, GE-3.11 and GE-8.4 decide on the checker's exit status and a `FAIL` is a stop, never accepted by eye; GE-5.9 revises the spec's `allowed_human_members`; GE-3.12 revokes from `grants list`, not from GE-3.10's shell variables; the evidence-bucket reads take the bucket id from `LOG_BUCKET_EVIDENCE`; GE-5.7 records `DONE` in both branches; GE-6.6's guard writes `GE_RETENTION_TARGET` with `--force` and reads it back; every `build-log:` and `repo:` evidence row names its file, so 42 GD-4.1 can hash it; 17 and 20 now use `ENT_PROJECT_REPAIR_TENANT_APP`, so the rename rows of §8 are closed.
 - Review findings closed in this revision: R2-19-01 to R2-19-12 in §9 (one blocking, five major, two medium, four minor), including the `--update-mask` values that would have failed every organisation-policy write, the unproven dry-run gate, the scraped allow-list, and the unwitnessed changes to the live assistant and to live data stores.
 
 ---
@@ -66,7 +67,7 @@ flowchart TD
 - [ ] File [11](11-keys-and-validator-custodian.md): `KEY_GEMINI_CMEK` (HSM, `europe`, no rotation period), and KV-4.3's two service-agent grants `DONE` or PENDING.
 - [ ] File `12-privileged-access-catalogue.md`: `ENT_GE_ADMIN` (activation without approval, justification required, 1 h, requester `ge-admins@`, SD-19), `ENT_PROJECT_MOVE_SRC` (on `GE_CURRENT_PARENT`), `ENT_PROJECT_MOVE_DST` (on `FLD_GEMINI_ENTERPRISE`), `ENT_PLATFORM_POLICY`, `ENT_FOLDER_ADMIN`; the approver named on each entitlement is appointed.
 - [ ] File `13-organisation-policies-deny-and-pab.md`: the `fld-gemini-enterprise` policy files committed, with their saved predecessors, including the design `gcp.restrictServiceUsage` list and the two managed constraints. This file amends three of them.
-- [ ] File `14-central-logging-and-billing-export.md`: `S-folder` intercepting the audit families on `fld-agentic-platform`; the folder `auditConfigs` for `discoveryengine.googleapis.com` `DATA_READ` and `DATA_WRITE`.
+- [ ] File `14-central-logging-and-billing-export.md`: `LOG_BUCKET_EVIDENCE` (the full name of `platform-evidence-logs` in `LOGGING_PROJECT`, `REGION`); `S-folder` intercepting the audit families on `fld-agentic-platform`; the folder `auditConfigs` for `discoveryengine.googleapis.com` `DATA_READ` and `DATA_WRITE`.
 - [ ] File `15-pager-siem-and-detections.md` part A: the paging route exists, so the `MoveProject` and org-policy write alerts reach someone during the window.
 - [ ] File `17-factory-module-equivalents-and-tier-r-gate.md`: the FM-TENANT-APP hand procedure, the zero-diff checker, `TIER_R_RECORD`.
 - [ ] File [03](03-decisions-and-people.md): SD-13, SD-19, SD-20, SD-21 signed or recorded as pending with this file named; P48, P52, P53, P55, P58 rows present; `DPO_CONTACT`, `SECOND_HUMAN_EMAIL` set.
@@ -218,7 +219,7 @@ checkpoint GE-0.1 DONE
 - **WHERE:** shell.
 - **ACTION:**
 ```bash
-need GEMINI_PROJECT GEMINI_PROJECT_NUMBER GEMINI_APP_ID GEMINI_APP_LOCATION GE_EDITION GE_CURRENT_PARENT GE_RETENTION_CURRENT_DAYS GE_INVENTORY_DIR FLD_GEMINI_ENTERPRISE GRP_GE_ADMINS GRP_GE_USERS KEY_GEMINI_CMEK ENT_GE_ADMIN ENT_PROJECT_MOVE_SRC ENT_PROJECT_MOVE_DST ENT_PLATFORM_POLICY ENT_FOLDER_ADMIN LOGGING_PROJECT CORE_PROJECT CICD_PROJECT TIER_R_RECORD REGISTER_PATH DPO_CONTACT
+need GEMINI_PROJECT GEMINI_PROJECT_NUMBER GEMINI_APP_ID GEMINI_APP_LOCATION GE_EDITION GE_CURRENT_PARENT GE_RETENTION_CURRENT_DAYS GE_INVENTORY_DIR FLD_GEMINI_ENTERPRISE GRP_GE_ADMINS GRP_GE_USERS KEY_GEMINI_CMEK ENT_GE_ADMIN ENT_PROJECT_MOVE_SRC ENT_PROJECT_MOVE_DST ENT_PLATFORM_POLICY ENT_FOLDER_ADMIN LOGGING_PROJECT CORE_PROJECT CICD_PROJECT TIER_R_RECORD REGISTER_PATH DPO_CONTACT LOG_BUCKET_EVIDENCE
 test "$GEMINI_APP_LOCATION" = eu || echo "STOP: app location is not eu"
 facts="$(ls -t "$GE_INVENTORY_DIR"/*-GI-10.2-facts-v*.md | head -1)"
 grep -E '^(ORG|LOCATION|SECOND-APP|EDITION): ' "$facts"
@@ -226,20 +227,20 @@ grep -qE '^(ORG|LOCATION|SECOND-APP|EDITION): STOP' "$facts" && echo "STOP: inve
 grep -E 'GI-(1\.5|5\.3|6\.2)	PENDING' "$BUILD_LOG_DIR/checkpoints.tsv" "$BUILD_LOG_DIR/05-gemini-enterprise-inventory.log" 2>/dev/null
 test -s "$TIER_R_RECORD" && echo "Tier R record present"
 find "$GE_INVENTORY_DIR" -name '*-GI-2.2-engine-v*.json' -mtime -30 | head -1
-GE_TEST_USER="<non-admin colleague's email, read from the agreement mail>"
+penv_set GE_TEST_USER "<non-admin colleague's email, read from the agreement mail>"
 penv_set GE_WITNESS "<the security reviewer's account, or the second human's, from SECOND_HUMAN_EMAIL>"
 penv_set GE_ROLLBACK_OPERATOR "<a second ge-admins@ member, not the operator and not the witness>"
-penv_set GE_CHANGE_NOTICE_DATE ""   # set in GE-3.8 / GE-6.6 when the notice is sent
 test "$GE_WITNESS" != "$SA_1_ADMIN" || echo "STOP: the witness cannot be the operator"
 test "$GE_ROLLBACK_OPERATOR" != "$SA_1_ADMIN" || echo "STOP: the rollback operator cannot be the operator"
+test "$GE_TEST_USER" != "$SA_1_ADMIN" || echo "STOP: the colleague cannot be the operator"
 gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json | jq -r --arg u "user:$GE_TEST_USER" '.bindings[] | select(.members | index($u)) | .role'
 gcloud identity groups memberships check-transitive-membership --group-email="$GRP_GE_ADMINS" --member-email="$GE_TEST_USER" --format='value(hasMembership)'
 checkpoint GE-0.2 DONE - - "colleague named in records/19-people.md"
 ```
 If the `find` line prints nothing, the inventory is older than 30 days: re-run GI-2.2, GI-3.1, GI-3.2, GI-5.1 and GI-5.2 of file 05 before continuing (file 05 §8 rule).
-- **VERIFY:** no `STOP` line; the `grep` for PENDING prints nothing; 'Tier R record present'; the colleague holds no project role (empty output) and `hasMembership` is `False`; `need GE_WITNESS GE_ROLLBACK_OPERATOR` passes and both differ from `SA_1_ADMIN` and from each other.
+- **VERIFY:** no `STOP` line; the `grep` for PENDING prints nothing; 'Tier R record present'; the colleague holds no project role (empty output) and `hasMembership` is `False`; `need GE_TEST_USER GE_WITNESS GE_ROLLBACK_OPERATOR` passes, so the colleague's address is there in every later sitting (GE-3.9, GE-3.11, GE-5.6, GE-6.13, GE-7.5 name it); the witness and the rollback operator differ from `SA_1_ADMIN` and from each other. `GE_CHANGE_NOTICE_DATE` is not written here: `penv_set` refuses an empty value, and GE-3.8 sets it when the notice is sent.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** the colleague's, the witness's and the rollback operator's name, team and date of agreement in `records/19-people.md` of the build log (name, team and remit only); `evidence_add GE-0.2 entry-gate E-05 5.2.1 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** the colleague's, the witness's and the rollback operator's name, team and date of agreement in `records/19-people.md` of the build log (name, team and remit only); `evidence_add GE-0.2 entry-gate E-05 5.2.1 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`.
 
 #### GE-0.3 Create the working directory and helpers
 
@@ -304,7 +305,16 @@ jq --arg pid "$GEMINI_PROJECT" --arg d "$DOMAIN" '.module = "tenant-app" | .crea
   | .labels = {agent: "tenant-app", owner: "ge-admins", tier: "ge", env: "prod", data_class: "<from register row>", ai_act_class: "<from register row>", recovery_class: "<from register row>", cost_centre: "<from register row>", created_by: "bootstrap-hand", factory_run: "dev-19-tenant-gemini-prod"}
   | .essential_contacts = [{email: ("platform-security@" + $d), categories: ["SECURITY", "TECHNICAL"]}, {email: ("platform-owners@" + $d), categories: ["TECHNICAL"]}]
   | .entitlements = ["ent-project-repair-tenant-app"] | .pab_bindings = [] | .deny_entries = [] | .lien = false
-  | .project_floor = {applies: false, reason: "the tenant app is a live service; its Model Armor posture is the template pair and app-level settings of 19 GE-7, not a floor written by an import", vertex_ai: false}' \
+  | .project_floor = {applies: false, reason: "the tenant app is a live service; its Model Armor posture is the template pair and app-level settings of 19 GE-7, not a floor written by an import", vertex_ai: false}
+  | .made_elsewhere = [{item: "Model Armor for the tenant app (template pair ge-console-standard, FAIL_CLOSED)", file: "19", step: "GE-7"}]
+  | .pending = [
+      {check: "services.subset_of_folder_allowlist", reason: "the fld-gemini-enterprise allow-list is decided in 19 GE-3.1 and set in GE-3.5", owner: "platform owner", rerun_in: "19 GE-3.11"},
+      {check: "project.parent", reason: "the move is 19 GE-3.10", owner: "platform owner", rerun_in: "19 GE-3.11"},
+      {check: "project.labels", reason: "the labels are set with the move in 19 GE-3.10", owner: "platform owner", rerun_in: "19 GE-3.11"},
+      {check: "tags.effective", reason: "agp-tier=ge is inherited from fld-gemini-enterprise after the move in 19 GE-3.10", owner: "platform owner", rerun_in: "19 GE-3.11"},
+      {check: "iam.no_human_or_basic_role", reason: "standing human roles are removed one at a time in 19 GE-5.8 and the spec revised in GE-5.9", owner: "platform owner", rerun_in: "19 GE-5.9"},
+      {check: "budget.tier_default", reason: "licence-driven, *tbd* (02 section 2.2)", owner: "platform owner", rerun_in: "the budget decision of 02 section 2.2"},
+      {check: "budget", reason: "licence-driven, *tbd* (02 section 2.2)", owner: "platform owner", rerun_in: "the budget decision of 02 section 2.2"}]' \
   "$PLATFORM_REPO_DIR/factory/runs/_template.json" > "$S"
 git -C "$PLATFORM_REPO_DIR" checkout -b setup-19-tenant-app-manifest
 git -C "$PLATFORM_REPO_DIR" add factory/runs/gemini-prod.json
@@ -312,10 +322,10 @@ git -C "$PLATFORM_REPO_DIR" commit -m "19 GE-2.1 tenant-app manifest (import)"
 git -C "$PLATFORM_REPO_DIR" push -u origin setup-19-tenant-app-manifest
 checkpoint GE-2.1 START
 ```
-Then fill the remaining keys exactly as 17 FM-6.1 lists them (`services` from the inventory with each outside the `fld-gemini-enterprise` allow-list in `pending`, `budget` 0 with its reason and a `pending` line, `allowed_human_members` from the inventory, the `made_elsewhere` line for GE-7, the register row and commit) and replace each `<from register row>` with the row's value before committing. The spec is the one manifest: GE-2.7, GE-3.10, GE-3.11 and GE-8.4 read it.
+Then fill the remaining keys exactly as 17 FM-6.1 lists them (`services`: the inventory's enabled services plus GE-2.4's four additive ones, so that `services.exact` holds after GE-2.4; `budget` 0 with its reason; `allowed_human_members` from the inventory; the register row and commit) and replace each `<from register row>` with the row's value before committing. The shapes are 17 FM-1.1's, and the checker refuses anything else: each `made_elsewhere` entry is `{"item", "file", "step"}`, each `pending` entry `{"check", "reason", "owner", "rerun_in"}`, where `check` is the checker's own check name. The `pending` lines above are the import's expected differences; a check another file brings to pass (for example 17 FM-6.4's regional `_Default` route, after the move) is one more `pending` line naming that file and step. A pending check that already passes reads `PASS`, so a line can stay until the step that revises the spec removes it. The spec is the one manifest: GE-2.7, GE-3.10, GE-3.11, GE-5.9 and GE-8.4 read it.
 - **VERIFY:** the pull request is merged by two human reviewers; `grep -c '<' "$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json"` prints `0` after the merge; `python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" inputs "$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json" --accept-pending` exits `0` (17 FM-6.1's VERIFY); `checkpoint GE-2.1 DONE`.
 - **ROLLBACK:** revert the merge commit; nothing in the cloud has changed.
-- **EVIDENCE:** `repo:factory/runs/gemini-prod.json@<commit>`; `evidence_add GE-2.1 tenant-app-manifest E-05 1.3.1 "repo:factory/runs/gemini-prod.json@<commit>"`.
+- **EVIDENCE:** `repo:factory/runs/gemini-prod.json@<commit>`; `evidence_add GE-2.1 tenant-app-manifest E-05 1.3.1 "repo:factory/runs/gemini-prod.json@<commit>" "$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json"`.
 
 #### GE-2.2 Open the deviation-register row
 
@@ -340,11 +350,9 @@ checkpoint GE-2.2 DONE - "build-log:registers/bootstrap-deviation-register.md"
 generator derives the id from the register `agent_id`, and this project's register row is
 `agent_id: tenant-app` (§2), so the generated pair is the id `ent-project-repair-tenant-app` and the
 variable `ENT_PROJECT_REPAIR_TENANT_APP`. That is the canonical name for this file, for file 12's
-catalogue and for file 20. 17's FM-6.2 heading writes it as `ENT_PROJECT_REPAIR_GEMINI`, which its
-own generator would not produce, and file 20 carries a fallback
-`ENT_REPAIR="${ENT_PROJECT_REPAIR_TENANT_APP:-$ENT_PROJECT_REPAIR_GEMINI}"`; both are corrections
-owned by those files and are in §8's hand-forward rows. **Nothing here creates a second
-entitlement:** the precondition below refuses to run if either id already exists, and reads the
+catalogue and for file 20; 17's FM-6.2 and file 20 use it too. An earlier draft of 17 named it
+`ENT_PROJECT_REPAIR_GEMINI`, so a project set up from that draft may hold `ent-project-repair-gemini`.
+**Nothing here creates a second entitlement:** the precondition below refuses to run if either id already exists, and reads the
 existing one back instead, so 17 and 19 in either order leave exactly one.
 
 - **PRECONDITION:**
@@ -352,10 +360,10 @@ existing one back instead, so 17 and 19 in either order leave exactly one.
 need GEMINI_PROJECT GRP_PLATFORM_OWNERS SA_2_ADMIN SECOND_HUMAN_EMAIL CICD_PROJECT
 gcloud pam entitlements list --billing-project="$CICD_PROJECT" --project="$GEMINI_PROJECT" --location=global --format='value(name)' | sed 's|.*/||' | grep -E '^ent-project-repair-(tenant-app|gemini)$' || echo "none yet"
 ```
-If it printed `ent-project-repair-gemini`, FM-6.2 ran first under its heading's name: do not create a
-second one. Record the id it made, set `penv_set ENT_PROJECT_REPAIR_TENANT_APP
-"projects/${GEMINI_PROJECT}/locations/global/entitlements/ent-project-repair-gemini"`, raise the
-rename against file 17 (§8), skip to this step's VERIFY, and note the deviation in BD-19-1. If it
+If it printed `ent-project-repair-gemini`, FM-6.2 ran first under the earlier draft's name: do not
+create a second one. Record the id it made, set `penv_set ENT_PROJECT_REPAIR_TENANT_APP
+"projects/${GEMINI_PROJECT}/locations/global/entitlements/ent-project-repair-gemini"`, skip to this
+step's VERIFY, and note the deviation in BD-19-1. If it
 printed `ent-project-repair-tenant-app`, skip the create and go to VERIFY. If it printed `none yet`,
 run the ACTION.
 
@@ -434,7 +442,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 ```
 - **VERIFY:** `gcloud essential-contacts list --project="$GEMINI_PROJECT" --format='value(email,notificationCategorySubscriptions)'` shows both rows; contacts that existed before are still listed; `checkpoint GE-2.5 DONE`.
 - **ROLLBACK:** `gcloud essential-contacts delete <contact id> --project="$GEMINI_PROJECT"` for a contact this step created.
-- **EVIDENCE:** `evidence_add GE-2.5 essential-contacts E-05 1.3.1 "build-log:ge-baseline/<file>"`.
+- **EVIDENCE:** `evidence_add GE-2.5 essential-contacts E-05 1.3.1 "build-log:ge-baseline/<file>" "$(ge_latest "$GE_DIR" GE-2.5-contacts-before json)"`.
 
 #### GE-2.6 Import the project into Terraform state
 
@@ -456,14 +464,15 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 
 - **WHO:** platform owner. Solo.
 - **WHERE:** shell.
-- **ACTION:** run file 17's checker against the manifest. Before the move the expected differences are exactly: `parent` (still `GE_CURRENT_PARENT`), `labels` (set in GE-3.10), `restrict_service_usage` (GE-3), bindings (GE-5).
+- **ACTION:** run file 17's checker against the manifest. Before the move the expected differences are exactly the `pending` lines GE-2.1 wrote: `project.parent` (still `GE_CURRENT_PARENT`), `project.labels` and `tags.effective` (GE-3.10), `iam.no_human_or_basic_role` (GE-5), and the budget.
 ```bash
+test -f "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" || echo "STOP: tools/fm-zero-diff.py is not on main: 17 FM-1.2 merges it (section 2)"
 f="$(ge_file GE-2.7 zero-diff-before-move json)"
 python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" live "$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json" --report "$f" --accept-pending; echo "exit $?"
-jq . "$f"
+jq -r '.results[] | select(.status != "PASS") | "\(.status) \(.check) \(.pending.owner // "") \(.pending.rerun_in // "")"' "$f"
 ```
-The checker is 17 FM-1.2's `tools/fm-zero-diff.py` in `live` mode on 17 FM-6.1's run spec (GE-2.1); the expected differences are `pending` lines in the spec. If file 17's checker is itself BLOCKED, run its manual equivalent: `gcloud projects describe`, `gcloud services list --enabled`, `gcloud essential-contacts list`, `gcloud pam entitlements list --billing-project="$CICD_PROJECT" --project --location=global`, each compared by eye with the manifest and written to `$f`.
-- **VERIFY:** every difference in `$f` is one of the four expected; any other is a stop and a fix before GE-3; `checkpoint GE-2.7 DONE`.
+The checker is 17 FM-1.2's `tools/fm-zero-diff.py` in `live` mode on 17 FM-6.1's run spec (GE-2.1), a precondition of this file (§2). With `--accept-pending` it exits `0` only when every check is `PASS` or `PENDING` (17 FM-1.2), so the exit status is the verdict: nothing is accepted by eye.
+- **VERIFY:** `exit 0`, and every line the `jq` prints is a `PENDING` with an owner and a re-run file. A `FAIL` is a stop: repair it before GE-3 (under `ENT_PROJECT_REPAIR_TENANT_APP` for an in-project item), or, if the difference is expected, add it to the spec as a `pending` line by pull request (GE-2.1's shape and review), then re-run; `checkpoint GE-2.7 DONE`.
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `$f` referenced in BD-19-1's checker column; `evidence_add GE-2.7 zero-diff-before-move E-05 5.2.1 "build-log:ge-baseline/<file>" "$f"`.
 
@@ -552,7 +561,7 @@ git -C "$PLATFORM_REPO_DIR" push -u origin setup-19-rsu-union
 ```
 - **VERIFY:** the merged file lists exactly the lines of `allow-list-final`; `diff` against the predecessor shows only additions and signed drops; `checkpoint GE-3.2 DONE`.
 - **ROLLBACK:** revert the merge; nothing is applied yet.
-- **EVIDENCE:** the merge commit; `evidence_add GE-3.2 folder-rsu-file E-05 5.2.1 "repo:<path>@<commit>"`. The 02 §4.2 row correction is a design edit owned by the platform owner (§9).
+- **EVIDENCE:** the merge commit; `evidence_add GE-3.2 folder-rsu-file E-05 5.2.1 "repo:policies/folders/fld-gemini-enterprise/gcp.restrictServiceUsage.yaml@<commit>" "$p"`. The 02 §4.2 row correction is a design edit owned by the platform owner (§9).
 
 #### GE-3.3 Apply the union as a project-level dry run
 
@@ -645,7 +654,7 @@ No `--update-mask` flag: the committed file carries only `spec:`, so `set-policy
 `policy.spec` (§4 'Organisation-policy writes').
 - **VERIFY:** the empty-list guard printed `guard OK` and the `projects list` line printed nothing before the set; `gcloud org-policies describe gcp.restrictServiceUsage --folder="$FLD_GEMINI_ENTERPRISE" --format=json | jq '.spec.rules[0].values.allowedValues | sort'` equals `sort "$(ge_latest "$GE_DIR" GE-3.1-allow-list-final txt)"` as JSON, and `jq '.spec.rules[0].values.allowedValues | length'` is the same number the guard printed, not `0` or `null`; `checkpoint GE-3.5 DONE`.
 - **ROLLBACK:** `gcloud org-policies set-policy <folder-rsu-live-before file>` under the same entitlement (the saved file carries only `spec:`, so the default mask applies); if the before file recorded no policy, `gcloud org-policies delete gcp.restrictServiceUsage --folder="$FLD_GEMINI_ENTERPRISE"`. No project is affected while the folder is empty.
-- **EVIDENCE:** `evidence_add GE-3.5 folder-rsu-live E-05 5.2.1 "build-log:ge-baseline/<folder-policies file>"`.
+- **EVIDENCE:** `evidence_add GE-3.5 folder-rsu-live E-05 5.2.1 "build-log:ge-baseline/<folder-policies file>" "$(ge_latest "$GE_DIR" GE-3.5-folder-policies json)"`.
 
 #### GE-3.6 Analyse the move
 
@@ -688,7 +697,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 ```
 - **VERIFY:** every row has a decision; for each re-grant row, `gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json | jq -r --arg r "<role>" --arg m "<member>" '.bindings[] | select(.role==$r) | .members | index($m) != null'` prints `true`; every drop has a signature in the table; `checkpoint GE-3.7 DONE`.
 - **ROLLBACK:** `gcloud projects remove-iam-policy-binding "$GEMINI_PROJECT" --member="<member>" --role="<role>"` for a re-grant made here.
-- **EVIDENCE:** the table and `project-iam-before`; `evidence_add GE-3.7 lost-roles E-06 4.1.3 "build-log:ge-baseline/<table>"`.
+- **EVIDENCE:** the table and `project-iam-before`; `evidence_add GE-3.7 lost-roles E-06 4.1.3 "build-log:ge-baseline/<table>" "$(ge_latest "$GE_DIR" GE-3.7-lost-roles md)"`.
 
 #### GE-3.8 Announce the change window
 
@@ -716,9 +725,9 @@ gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json > "$(ge_file GE-3
 gcloud projects describe "$GEMINI_PROJECT" --format='value(parent.type,parent.id)'
 ```
 The colleague asks the assistant one fixed test question (`What is Gemini Enterprise?`) and says whether an answer came back, without sharing the text.
-- **VERIFY:** the parent equals `GE_CURRENT_PARENT`; the colleague reports an answer; the three files hold an `etag` or `name`; `checkpoint GE-3.9 DONE - "$GE_TEST_USER"`.
+- **VERIFY:** the parent equals `GE_CURRENT_PARENT`; the colleague reports an answer; the three files hold an `etag` or `name`; `checkpoint GE-3.9 DONE - "$GE_TEST_USER"` (saved in GE-0.2, so a new shell still has it).
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GE-3.9 before-move-state E-06 4.1.3 "build-log:ge-baseline/<files>"`.
+- **EVIDENCE:** `evidence_add GE-3.9 before-move-state E-06 4.1.3 "build-log:ge-baseline/<engine-before-move>" "$(ge_latest "$GE_DIR" GE-3.9-engine-before-move json)"`; the two IAM reads sit beside it.
 
 #### GE-3.10 Move the project under the `ent-project-move` pair
 
@@ -737,7 +746,7 @@ gcloud projects update "$GEMINI_PROJECT" --update-labels="$(jq -r '.labels | to_
 Without `yq` (§2), type the label list from the manifest. The label update uses `resourcemanager.projects.update`, which `roles/resourcemanager.projectMover` carries (move-project page); if refused, it runs under `ENT_PROJECT_REPAIR_TENANT_APP` in GE-3.11 with a note.
 - **VERIFY:** the `describe` prints `folder` and `FLD_GEMINI_ENTERPRISE`; `gcloud projects describe "$GEMINI_PROJECT" --format=json | jq .labels` equals the manifest's labels; `checkpoint GE-3.10 DONE - - "grants $G_SRC $G_DST"`.
 - **ROLLBACK:** within the same grants, `gcloud beta projects move "$GEMINI_PROJECT" --folder=<old folder id>` or `--organization=<ORG_ID>` as `GE_CURRENT_PARENT` reads; both entitlements are on the two parents, and Resource Manager allows a second move. Then re-run GE-3.9's reads and the colleague's question.
-- **EVIDENCE:** the two grant names and the describe output; `evidence_add GE-3.10 project-move E-06 4.1.3 "build-log:checkpoints.tsv"`; the PAM grant records are in the organisation's audit logs (E-06, 5.2.4).
+- **EVIDENCE:** the two grant names and the describe output; `evidence_add GE-3.10 project-move E-06 4.1.3 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`; the PAM grant records are in the organisation's audit logs (E-06, 5.2.4).
 
 #### GE-3.11 Verify the app after the move
 
@@ -749,16 +758,18 @@ gcloud org-policies describe gcp.restrictServiceUsage --project="$GEMINI_PROJECT
 ge_call GET "$GE_APP" > "$(ge_file GE-3.11 engine-after-move json)"
 diff <(jq -S 'del(.updateTime)' "$(ge_latest "$GE_DIR" GE-3.9-engine-before-move json)") <(jq -S 'del(.updateTime)' "$(ge_latest "$GE_DIR" GE-3.11-engine-after-move json)")
 t0="$(date -u -v-15M +%FT%TZ 2>/dev/null || date -u -d '-15 minutes' +%FT%TZ)"
-gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND protoPayload.methodName:\"StreamAssist\" AND resource.labels.project_id=\"${GEMINI_PROJECT}\" AND timestamp>=\"${t0}\"" --project="$LOGGING_PROJECT" --bucket=platform-evidence-logs --location="$REGION" --view=_AllLogs --limit=5 --format='value(timestamp,protoPayload.methodName)'
+gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND protoPayload.methodName:\"StreamAssist\" AND resource.labels.project_id=\"${GEMINI_PROJECT}\" AND timestamp>=\"${t0}\"" --project="$LOGGING_PROJECT" --bucket="${LOG_BUCKET_EVIDENCE##*/}" --location="$REGION" --view=_AllLogs --limit=5 --format='value(timestamp,protoPayload.methodName)'
 GRANT="$(pam_grant "$ENT_PLATFORM_POLICY" 1800s "setup 19 GE-3.11 remove project dry-run policy after move")"; pam_active "$GRANT"
 gcloud org-policies delete gcp.restrictServiceUsage --project="$GEMINI_PROJECT"
 gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE-3.11 done"
-python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" live "$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json" --report "$(ge_file GE-3.11 zero-diff-after-move json)" --accept-pending
+z="$(ge_file GE-3.11 zero-diff-after-move json)"
+python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" live "$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json" --report "$z" --accept-pending; echo "exit $?"
+jq -r '.results[] | select(.status != "PASS") | "\(.status) \(.check) \(.pending.owner // "") \(.pending.rerun_in // "")"' "$z"
 ```
-The colleague asks the test question again, and again 10 minutes later. `Assumption:` `platform-evidence-logs` and its location are file 14's names (`LOG_BUCKET_EVIDENCE`); if 14 used others, read them from that variable.
-- **VERIFY:** the effective allow-list length equals `allow-list-final`; the engine diff is empty; at least one `StreamAssist` entry from the colleague's questions appears in `LOGGING_PROJECT` (the folder sink now intercepts the project's audit families); both of the colleague's questions get answers; the zero-diff output leaves only `bindings` (GE-5) as expected differences; `checkpoint GE-3.11 DONE - "$GE_TEST_USER"`.
+The colleague asks the test question again, and again 10 minutes later. `LOG_BUCKET_EVIDENCE` holds the bucket's full name (14 CL-2.3), and `gcloud logging read` takes the bucket **id** with `--location` and `--view` ('Id of the log bucket', gcloud reference, updated 2026-09-15, read 2026-10-01), so the id is the name's last segment.
+- **VERIFY:** the effective allow-list length equals `allow-list-final`; the engine diff is empty; at least one `StreamAssist` entry from the colleague's questions appears in `LOGGING_PROJECT` (the folder sink now intercepts the project's audit families); both of the colleague's questions get answers; the checker prints `exit 0` and its only non-`PASS` lines are `PENDING` with an owner and a re-run file (after the move that leaves `iam.no_human_or_basic_role` for GE-5.9 and the budget). A `FAIL` is a stop: repair it under `ENT_PROJECT_REPAIR_TENANT_APP` (in-project items) and re-run the checker; a difference is never accepted by eye; `checkpoint GE-3.11 DONE - "$GE_TEST_USER"`.
 - **ROLLBACK:** if the colleague gets no answer: GE-3.10's rollback move in the same window, then investigate from `analyze-move` and the dry-run log.
-- **EVIDENCE:** `evidence_add GE-3.11 after-move-verify E-06 5.2.4 "build-log:ge-baseline/<files>"`.
+- **EVIDENCE:** `evidence_add GE-3.11 after-move-verify E-06 5.2.4 "build-log:ge-baseline/<zero-diff-after-move>" "$z"`; the engine read sits beside it.
 
 #### GE-3.12 Close the window and retire the move entitlements
 
@@ -766,20 +777,23 @@ The colleague asks the test question again, and again 10 minutes later. `Assumpt
 - **WHERE:** shell; the communication channel.
 - **ACTION:**
 ```bash
-pam_revoke "$G_SRC" "GE-3 window closed"
-pam_revoke "$G_DST" "GE-3 window closed"
-for e in "$ENT_PROJECT_MOVE_SRC" "$ENT_PROJECT_MOVE_DST"; do gcloud pam grants list --billing-project="$CICD_PROJECT" --entitlement="$e" --filter='state=ACTIVE OR state=APPROVAL_AWAITED' --format='value(name)'; done
+for e in "$ENT_PROJECT_MOVE_SRC" "$ENT_PROJECT_MOVE_DST"; do for g in $(gcloud pam grants list --billing-project="$CICD_PROJECT" --entitlement="$e" --filter='state=ACTIVE' --format='value(name)'); do pam_revoke "$g" "GE-3 window closed"; done; done
+for e in "$ENT_PROJECT_MOVE_SRC" "$ENT_PROJECT_MOVE_DST"; do gcloud pam grants list --billing-project="$CICD_PROJECT" --entitlement="$e" --filter='state=ACTIVE OR state=APPROVAL_AWAITED OR state=SCHEDULED OR state=ACTIVATING' --format='value(name)'; done
 gcloud pam entitlements delete --billing-project="$CICD_PROJECT" "$ENT_PROJECT_MOVE_SRC" --async --format='value(name)'
 gcloud pam entitlements delete --billing-project="$CICD_PROJECT" "$ENT_PROJECT_MOVE_DST" --async --format='value(name)'
 for e in "$ENT_PROJECT_MOVE_SRC" "$ENT_PROJECT_MOVE_DST"; do gcloud pam entitlements describe --billing-project="$CICD_PROJECT" "$e" --format='value(state)' 2>&1 | tail -1; done
 printf '%s\tGEMINI_PROJECT parent\tmoved from %s to folders/%s by 19 GE-3.10; GE_CURRENT_PARENT keeps the pre-move value\n' "$(date -u +%F)" "$GE_CURRENT_PARENT" "$FLD_GEMINI_ENTERPRISE" >> "$BUILD_LOG_DIR/variables-changes.tsv"
 ```
-Send the 'window closed' note to users and the desk. The `grants list` line must print nothing for
-either entitlement before the deletes: `gcloud pam entitlements delete` documents 'This command can
-fail for the following reasons: There are non-terminal grants under the entitlement.'
+Send the 'window closed' note to users and the desk. The grants are found with `grants list`, which
+lists every grant on an entitlement (gcloud reference, updated 2026-05-27, read 2026-10-01), not
+from GE-3.10's `G_SRC` and `G_DST`, which a new shell has lost. Only an active grant can be revoked
+(PAM revoke page, updated 2026-09-24, read 2026-10-01); a grant still awaiting approval or scheduled
+is withdrawn by its requester (PAM withdraw page, same dates). The second `grants list` line must
+print nothing for either entitlement before the deletes: `gcloud pam entitlements delete` documents
+'This command can fail for the following reasons: There are non-terminal grants under the entitlement.'
 - **VERIFY:** deletion is a long-running operation, so the entitlement stays readable in state `DELETING` until it completes and only then answers `NOT_FOUND` — do **not** re-run the delete because `describe` still returns the entitlement. Immediately after the ACTION, the `for` loop prints `DELETING` for both; the next business day (or after `gcloud pam operations describe <the fully specified operation name the --async delete printed>` reports `done: true`), `gcloud pam entitlements describe --billing-project="$CICD_PROJECT" "$ENT_PROJECT_MOVE_SRC"` returns `NOT_FOUND`, same for DST (04 §5.2: 'the entitlement is deleted after the import'). Also: `GE_CURRENT_PARENT` is unchanged (it means the parent before the move, plan §5) and `variables-changes.tsv` records the move; `checkpoint GE-3.12 DONE` is written only after both read `NOT_FOUND`, with `checkpoint GE-3.12 PENDING - - "deletes in DELETING, re-read <date>"` until then.
 - **ROLLBACK:** recreate the two entitlements from file 12's committed files if a move back is ever needed.
-- **EVIDENCE:** `evidence_add GE-3.12 move-window-closed E-05 5.2.1 "build-log:checkpoints.tsv"`; BD-19-1 gains the move date in a closure-free note line under the register.
+- **EVIDENCE:** `evidence_add GE-3.12 move-window-closed E-05 5.2.1 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`; BD-19-1 gains the move date in a closure-free note line under the register.
 
 ### GE-4 Connector constraints, refused provisions and audit configuration
 
@@ -799,7 +813,7 @@ fail for the following reasons: There are non-terminal grants under the entitlem
 The managed constraints act only at provisioning, so a store left in place keeps running (organisation-policy overview: new policies are 'usually not retroactive').
 - **VERIFY:** the console's Data stores list, re-read with GI-7.2's command into `$(ge_file GE-4.1 datastores-after json)`, contains every 'keep' row and no 'remove' row, and contains no store that was on neither list; `checkpoint GE-4.1 DONE - "$GE_WITNESS" - "<n> deleted, <n> kept"`.
 - **ROLLBACK:** none for a deletion (bold rule above); a pull request is reverted. If the after-list shows a 'keep' store missing, the wrong row was deleted: raise it at once as an incident under file 15's route, tell the store's owner, and re-index from the source system — the store is rebuilt, not restored.
-- **EVIDENCE:** agreements, the after-list, and, per deletion, the store name and id the witness read aloud with the witness's name and the time, in `records/19-people.md`; `evidence_add GE-4.1 datastore-decisions E-11 6.1.1 "build-log:ge-baseline/<file>"`; `evidence_add GE-4.1 datastore-deletions-witnessed E-11 6.1.1 "build-log:records/19-people.md"`.
+- **EVIDENCE:** agreements, the after-list, and, per deletion, the store name and id the witness read aloud with the witness's name and the time, in `records/19-people.md`; `evidence_add GE-4.1 datastore-decisions E-11 6.1.1 "build-log:ge-baseline/<datastores-after>" "$(ge_latest "$GE_DIR" GE-4.1-datastores-after json)"`; `evidence_add GE-4.1 datastore-deletions-witnessed E-11 6.1.1 "build-log:records/19-people.md" "$BUILD_LOG_DIR/records/19-people.md"`.
 
 #### GE-4.2 Write `allowedDataSources` in its page's `enforcedProjects` form
 
@@ -827,7 +841,7 @@ No `--update-mask`: the file carries only `spec:`, so `set-policy` defaults to `
 `Assumption:` the register file's shape is `sources: [{id: ..., supplier_row: ...}]`; use the shape file 16 fixed.
 - **VERIFY:** `gcloud org-policies describe discoveryengine.managed.allowedDataSources --project="$GEMINI_PROJECT" --effective --format=json | jq '.spec.rules[0].parameters'` shows the list and `projects/<GEMINI_PROJECT>/`; the proof is GE-4.6; `checkpoint GE-4.2 DONE`.
 - **ROLLBACK:** `gcloud org-policies set-policy <ads-live-before file>` (or `gcloud org-policies delete discoveryengine.managed.allowedDataSources --folder="$FLD_GEMINI_ENTERPRISE"` if none existed) under the same entitlement.
-- **EVIDENCE:** `evidence_add GE-4.2 allowed-data-sources E-11 6.1.1 "repo:<path>@<commit>"`.
+- **EVIDENCE:** `evidence_add GE-4.2 allowed-data-sources E-11 6.1.1 "repo:policies/folders/fld-gemini-enterprise/discoveryengine.managed.allowedDataSources.yaml@<commit>" "$p"`.
 
 #### GE-4.3 Write `allowedEgressFqdns` in its page's `enforcedProjects` form
 
@@ -847,7 +861,7 @@ git -C "$PLATFORM_REPO_DIR" push -u origin setup-19-ge-constraints
 If no supplier row declares an FQDN, the `allowedEgressFqdns` list is empty; if `set-policy` refuses an empty list parameter, record Google's error text and write one FQDN that no connector uses (`ge-egress-none.invalid`), with the reason in the commit message. After merge, set it as in GE-4.2 — `gcloud org-policies set-policy "$p"`, no `--update-mask` flag, because the file carries only `spec:` (§4) — under a new `ENT_PLATFORM_POLICY` grant, saving `aef-live-before` first and revoking the grant with `pam_revoke "$GRANT" "GE-4.3 done"` at the end.
 - **VERIFY:** `gcloud org-policies describe discoveryengine.managed.allowedEgressFqdns --project="$GEMINI_PROJECT" --effective --format=json | jq '.spec.rules[0].parameters.enforcedProjects'` prints `["<GEMINI_PROJECT_NUMBER>"]`; the proof is GE-4.7; `checkpoint GE-4.3 DONE`.
 - **ROLLBACK:** set the saved `aef-live-before` file, or delete the folder policy if none existed.
-- **EVIDENCE:** `evidence_add GE-4.3 allowed-egress-fqdns E-11 6.1.1 "repo:<path>@<commit>"`.
+- **EVIDENCE:** `evidence_add GE-4.3 allowed-egress-fqdns E-11 6.1.1 "repo:policies/folders/fld-gemini-enterprise/discoveryengine.managed.allowedEgressFqdns.yaml@<commit>" "$p"`.
 
 #### GE-4.4 Read the custom-MCP block and the ACL constraint
 
@@ -862,7 +876,7 @@ jq '{live: .spec, dry: .dryRunSpec}' "$(ge_latest "$GE_DIR" GE-4.4-acl-constrain
 ```
 - **VERIFY:** the custom-MCP constraint is enforced for the project; `custom.geDataStoreAclRequired` has a `dryRunSpec` and no enforcing `spec` (file 13, P48); `checkpoint GE-4.4 DONE - - "MCP constraint id $MCP_CONSTRAINT"`.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GE-4.4 mcp-and-acl-constraints E-11 6.1.1 "build-log:ge-baseline/<files>"`; the constraint id is written into file 03's P58 row as a design fact, and 03 §3 and §12 use the same id.
+- **EVIDENCE:** `evidence_add GE-4.4 mcp-and-acl-constraints E-11 6.1.1 "build-log:ge-baseline/<custom-mcp-effective>" "$(ge_latest "$GE_DIR" GE-4.4-custom-mcp-effective json)"`, the ACL read beside it; the constraint id is written into file 03's P58 row as a design fact, and 03 §3 and §12 use the same id.
 
 #### GE-4.5 Create the throwaway app
 
@@ -883,7 +897,7 @@ b="$(ge_file GE-4.5 throwaway-iam json)"
 ge_call GET "${GE_API}/collections/default_collection/engines/${GE_THROWAWAY_APP_ID}:getIamPolicy" | jq --arg g "group:$GRP_GE_ADMINS" '{policy: {etag: .etag, bindings: ((.bindings // []) + [{role: "roles/discoveryengine.agentspaceUser", members: [$g]}])}}' > "$b"
 ge_call POST "${GE_API}/collections/default_collection/engines/${GE_THROWAWAY_APP_ID}:setIamPolicy" "$b"
 a="$(ge_file GE-4.5 create-engine-audit json)"
-gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND protoPayload.methodName:\"CreateEngine\" AND resource.labels.project_id=\"${GEMINI_PROJECT}\" AND timestamp>=\"${T0}\"" --project="$LOGGING_PROJECT" --bucket=platform-evidence-logs --location="$REGION" --view=_AllLogs --format=json > "$a"
+gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND protoPayload.methodName:\"CreateEngine\" AND resource.labels.project_id=\"${GEMINI_PROJECT}\" AND timestamp>=\"${T0}\"" --project="$LOGGING_PROJECT" --bucket="${LOG_BUCKET_EVIDENCE##*/}" --location="$REGION" --view=_AllLogs --format=json > "$a"
 jq -r '.[] | [.timestamp, .protoPayload.methodName, .protoPayload.authenticationInfo.principalEmail] | @tsv' "$a"
 gcloud pam grants describe --billing-project="$CICD_PROJECT" "$GRANT" --format='value(createTime,requestedDuration,state)'
 pam_revoke "$GRANT" "GE-4.5 done"
@@ -903,7 +917,7 @@ ge_call GET "${GE_API}/collections/default_collection/dataStores" | jq -r '.data
 delete it at once (**Delete** in the console; it holds no data), then switch GE-4.2's `enforcedProjects` value to `projects/<GEMINI_PROJECT_NUMBER>/` in a new commit and grant, and retry.
 - **VERIFY:** the console shows `Operation denied by org policy` naming `discoveryengine.managed.allowedDataSources` (data-sources page's verify); the form that worked is written into P48's row; `checkpoint GE-4.6 DONE - - "form: <id or number>"`.
 - **ROLLBACK:** delete a created test store; restore GE-4.2's first form if the second also fails, and record both failures as a stop for Tier C (file 20).
-- **EVIDENCE:** a dated screenshot of the refusal `screencapture -i "$(ge_file GE-4.6 refusal-data-source png)"`; `evidence_add GE-4.6 refused-data-source E-15 5.2.6 "build-log:ge-baseline/<png>"`.
+- **EVIDENCE:** a dated screenshot of the refusal `screencapture -i "$(ge_file GE-4.6 refusal-data-source png)"`; `evidence_add GE-4.6 refused-data-source E-15 5.2.6 "build-log:ge-baseline/<png>" "$(ge_latest "$GE_DIR" GE-4.6-refusal-data-source png)"`.
 
 #### GE-4.7 Prove `allowedEgressFqdns` by a refused provision
 
@@ -927,7 +941,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 If the form cannot reach the create call without a real third-party credential, stop the test: record 'egress refusal not provable without a supplier credential' (§9 remainder of X-GE-10).
 - **VERIFY:** the console shows `Operation denied by org policy` naming `discoveryengine.managed.allowedEgressFqdns`, or the recorded 'not provable' line; the project-level policy is gone and the effective list does not contain `TEST_SOURCE` (`null`); `checkpoint GE-4.7 DONE`.
 - **ROLLBACK:** the `delete` line is the rollback and runs in every case; a created test store is deleted in the console.
-- **EVIDENCE:** the screenshot and the two policy reads; `evidence_add GE-4.7 refused-egress E-15 5.2.6 "build-log:ge-baseline/<png>"`.
+- **EVIDENCE:** the screenshot and the two policy reads; `evidence_add GE-4.7 refused-egress E-15 5.2.6 "build-log:ge-baseline/<png>" "<the screenshot file, or the policy read that records 'not provable'>"`.
 
 #### GE-4.8 Add `ADMIN_READ` and `DATA_READ` for `discoveryengine` on the project
 
@@ -946,7 +960,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 ```
 - **VERIFY:** the `diff` shows only the `discoveryengine.googleapis.com` audit block; `jq -S '.bindings' ` of `project-iam-before` equals that of `project-iam-after`; the after file's audit block lists `ADMIN_READ` and `DATA_READ` (and any existing `exemptedMembers` unchanged); `checkpoint GE-4.8 DONE`.
 - **ROLLBACK:** read the current policy (new etag), replace its `auditConfigs` with those of `project-iam-before`, and `set-iam-policy`; bindings are never taken from the old file.
-- **EVIDENCE:** before, new and after files; `evidence_add GE-4.8 discoveryengine-audit-config E-06 5.2.4 "build-log:ge-baseline/<after>"`.
+- **EVIDENCE:** before, new and after files; `evidence_add GE-4.8 discoveryengine-audit-config E-06 5.2.4 "build-log:ge-baseline/<after>" "$(ge_latest "$GE_DIR" GE-4.8-project-iam-after json)"`.
 
 #### GE-4.9 Verify the admin-read and request entries reach `LOGGING_PROJECT`
 
@@ -960,7 +974,7 @@ ge_call GET "$GE_APP" > /dev/null
 The colleague asks the test question. After 10 minutes:
 ```bash
 f="$(ge_file GE-4.9 audit-entries json)"
-gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND resource.labels.project_id=\"${GEMINI_PROJECT}\" AND timestamp>=\"${t0}\"" --project="$LOGGING_PROJECT" --bucket=platform-evidence-logs --location="$REGION" --view=_AllLogs --format=json > "$f"
+gcloud logging read "protoPayload.serviceName=\"discoveryengine.googleapis.com\" AND resource.labels.project_id=\"${GEMINI_PROJECT}\" AND timestamp>=\"${t0}\"" --project="$LOGGING_PROJECT" --bucket="${LOG_BUCKET_EVIDENCE##*/}" --location="$REGION" --view=_AllLogs --format=json > "$f"
 jq -r '.[] | [.logName, .protoPayload.methodName] | @tsv' "$f" | sort | uniq -c
 ```
 - **VERIFY:** a `data_access` entry whose method ends in `GetEngine` (from the GET) and one whose method contains `StreamAssist` (from the colleague) are listed; `checkpoint GE-4.9 DONE`.
@@ -1020,7 +1034,7 @@ wc -l < "$L"
 ```
 - **VERIFY:** the target count equals |A| plus the included part of B; the out-of-domain count is `0`, or each out-of-domain address is explained in the decision record (security groups admit only principals of the organisation's customer); `checkpoint GE-5.2 DONE - - "target count <n>"`.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** counts and SHA-256 of the three restricted files in `$(ge_file GE-5.2 counts md)`; the decision record (E-03, 1.4.1); `evidence_add GE-5.2 ge-users-population E-06 4.1.3 "build-log:ge-baseline/<counts>"`.
+- **EVIDENCE:** counts and SHA-256 of the three restricted files in `$(ge_file GE-5.2 counts md)`; the decision record (E-03, 1.4.1); `evidence_add GE-5.2 ge-users-population E-06 4.1.3 "build-log:ge-baseline/<counts>" "$(ge_latest "$GE_DIR" GE-5.2-counts md)"`.
 
 #### GE-5.3 Fill `ge-users@` and count it
 
@@ -1040,7 +1054,7 @@ wc -l < "$L"; wc -l < "$got"; wc -l < "$fail"; comm -23 "$L" "$got" | wc -l
 ```
 - **VERIFY:** the group's labels include `cloudidentity.googleapis.com/groups.security` (06); `comm -23 "$L" "$got" | wc -l` prints `0`; the failures file is empty, or each failure is a suspended or deleted account written as such in the counts file; the member count equals the target count less the explained failures; `checkpoint GE-5.3 DONE - - "members <n>"`.
 - **ROLLBACK:** `gcloud identity groups memberships delete --group-email="$GRP_GE_USERS" --member-email=<m>` for members this step added (the group gives no access until GE-5.5).
-- **EVIDENCE:** counts and hashes appended to the GE-5.2 counts file; `evidence_add GE-5.3 ge-users-filled E-06 4.1.3 "build-log:ge-baseline/<counts>"`.
+- **EVIDENCE:** counts and hashes appended to the GE-5.2 counts file; `evidence_add GE-5.3 ge-users-filled E-06 4.1.3 "build-log:ge-baseline/<counts>" "$(ge_latest "$GE_DIR" GE-5.2-counts md)"`.
 
 #### GE-5.4 Grant the Restricted User role to `ge-users@` on the project
 
@@ -1055,7 +1069,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 ```
 - **VERIFY:** `jq -r '.bindings[] | select(.role=="roles/discoveryengine.agentspaceRestrictedUser") | .members[]' "$(ge_latest "$GE_DIR" GE-5.4-project-iam-after json)"` includes `group:<GRP_GE_USERS>`; every other binding is identical to the before file; `checkpoint GE-5.4 DONE`.
 - **ROLLBACK:** `gcloud projects remove-iam-policy-binding "$GEMINI_PROJECT" --member="group:${GRP_GE_USERS}" --role=roles/discoveryengine.agentspaceRestrictedUser`.
-- **EVIDENCE:** `evidence_add GE-5.4 restricted-user-grant E-06 4.1.3 "build-log:ge-baseline/<after>"`.
+- **EVIDENCE:** `evidence_add GE-5.4 restricted-user-grant E-06 4.1.3 "build-log:ge-baseline/<after>" "$(ge_latest "$GE_DIR" GE-5.4-project-iam-after json)"`.
 
 #### GE-5.5 Write the app-level policy, keeping every existing binding
 
@@ -1076,7 +1090,7 @@ date -u +%FT%TZ > "$GE_DIR/app-binding-time.txt"
 ```
 - **VERIFY:** the `diff` shows only added members; no member of any before binding is missing after (`comm -23 <(jq -r '(.bindings // [])[] | .role as $r | .members[] | "\($r) \(.)"' "$cur" | sort) <(jq -r '.bindings[] | .role as $r | .members[] | "\($r) \(.)"' "$(ge_latest "$GE_DIR" GE-5.5-app-iam-after json)" | sort)` prints nothing); the after policy shows `group:<GRP_GE_USERS>` on `roles/discoveryengine.agentspaceUser`; `checkpoint GE-5.5 DONE`.
 - **ROLLBACK:** GET the current policy (new etag), set `bindings` to those of `app-iam-before` with the new etag, and POST `setIamPolicy`.
-- **EVIDENCE:** before, new and after; `evidence_add GE-5.5 app-level-binding E-06 4.1.3 "build-log:ge-baseline/<after>"`.
+- **EVIDENCE:** before, new and after; `evidence_add GE-5.5 app-level-binding E-06 4.1.3 "build-log:ge-baseline/<after>" "$(ge_latest "$GE_DIR" GE-5.5-app-iam-after json)"`.
 
 #### GE-5.6 Wait for propagation and run the non-admin user test
 
@@ -1089,7 +1103,7 @@ echo "elapsed minutes: $(( ( $(date -u +%s) - $(date -u -j -f %Y-%m-%dT%H:%M:%SZ
 ```
 - **VERIFY:** `True`; elapsed ≥ 15; the colleague gets an answer. At this point the colleague may still reach the app through a project-level path only if GI-5.4 shows one for them, which GE-0.2 excluded, so the answer proves the app-level path; `checkpoint GE-5.6 DONE - "$GE_TEST_USER"`.
 - **ROLLBACK:** GE-5.5's rollback if the colleague cannot use the app and nothing has been removed yet (no user has lost anything).
-- **EVIDENCE:** the colleague's written 'answer received, <time>' in `records/19-user-tests.md`; `evidence_add GE-5.6 user-test-app-level E-15 5.2.6 "build-log:records/19-user-tests.md"`.
+- **EVIDENCE:** the colleague's written 'answer received, <time>' in `records/19-user-tests.md`; `evidence_add GE-5.6 user-test-app-level E-15 5.2.6 "build-log:records/19-user-tests.md" "$BUILD_LOG_DIR/records/19-user-tests.md"`.
 
 #### GE-5.7 Grant the viewer role to `ge-readers@`, if it exists
 
@@ -1104,9 +1118,9 @@ gcloud projects add-iam-policy-binding "$GEMINI_PROJECT" --member="group:${GE_RE
 gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE-5.7 done"
 fi
 ```
-- **VERIFY:** either the binding appears in `gcloud projects get-iam-policy`, or `grep GE-5.7 "$BUILD_LOG_DIR/rerun-index.tsv"` shows the PENDING line; `checkpoint GE-5.7 DONE` or `checkpoint GE-5.7 PENDING`.
+- **VERIFY:** either the binding appears in `gcloud projects get-iam-policy`, or `grep GE-5.7 "$BUILD_LOG_DIR/rerun-index.tsv"` shows the PENDING line. The step is done in both branches, because the re-run index, not the checkpoint, carries the grant that waits for the group: `checkpoint GE-5.7 DONE - - "binding made"` or `checkpoint GE-5.7 DONE - - "ge-readers@ PENDING in rerun-index.tsv"`.
 - **ROLLBACK:** `gcloud projects remove-iam-policy-binding "$GEMINI_PROJECT" --member="group:${GE_READERS}" --role=roles/discoveryengine.viewer`.
-- **EVIDENCE:** `evidence_add GE-5.7 readers-grant E-06 4.1.3 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** `evidence_add GE-5.7 readers-grant E-06 4.1.3 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`.
 
 #### GE-5.8 Remove project-level user and basic roles, one binding at a time
 
@@ -1130,21 +1144,41 @@ date -u +%FT%TZ
 Wait 15 minutes; the colleague asks the test question; watch the helpdesk queue for Gemini Enterprise tickets for 30 minutes after a user-role removal (`Assumption:` the helpdesk tags them). Only then the next line.
 - **VERIFY:** after each removal the colleague gets an answer and no ticket reports lost access; after the last, `gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json | jq -r '.bindings[] | select(.role|test("^roles/(discoveryengine\\.(agentspaceUser|user|agentspaceAdmin|admin)|owner|editor)$")) | .members[]' | grep -v 'gserviceaccount.com$'` prints nothing; `gcloud asset analyze-iam-policy --project="$GEMINI_PROJECT" --full-resource-name="//discoveryengine.googleapis.com/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}" --permissions=discoveryengine.engines.setIamPolicy --format=json > "$(ge_file GE-5.8 who-can-set-app-iam json)"` lists no human or group principal except `ge-admins@` members under an active grant and break-glass at the organisation (`Assumption:` the full resource name form; if refused, run with `--full-resource-name=//cloudresourcemanager.googleapis.com/projects/$GEMINI_PROJECT`); `checkpoint GE-5.8 DONE`.
 - **ROLLBACK:** per removal, `gcloud projects add-iam-policy-binding "$GEMINI_PROJECT" --member="$member" --role="$role" --condition=None`, exactly as the saved `project-iam-before-removal` file shows it. The saved files, newest first, are the rollback of the whole step.
-- **EVIDENCE:** the queue, each before file, the analysis; `evidence_add GE-5.8 project-level-removals E-06 4.1.3 "build-log:ge-baseline/<queue>"`; the colleague's lines in `records/19-user-tests.md` (E-15, 5.2.6).
+- **EVIDENCE:** the queue, each before file, the analysis; `evidence_add GE-5.8 project-level-removals E-06 4.1.3 "build-log:ge-baseline/<queue>" "$(ge_latest "$GE_DIR" GE-5.8-removal-queue tsv)"`; the colleague's lines in `records/19-user-tests.md` (E-15, 5.2.6).
 
 #### GE-5.9 Read the final access state against 03 §4 as corrected
 
-- **WHO:** platform owner. Solo.
-- **WHERE:** shell.
+- **WHO:** platform owner; the second operator reviews the spec revision. Two human reviewers merge it.
+- **WHERE:** shell; platform repository.
 - **ACTION:**
 ```bash
 f="$(ge_file GE-5.9 access-final md)"
 { echo "## project"; gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json | jq -r '.bindings[] | .role as $r | .members[] | "- \($r) \(.)"'; echo "## app"; ge_call GET "${GE_APP}:getIamPolicy" | jq -r '.bindings[]? | .role as $r | .members[] | "- \($r) \(.)"'; } > "$f"
 cat "$f"
 ```
-- **VERIFY:** the project holds `agentspaceRestrictedUser` for `ge-users@`, `viewer` for `ge-readers@` (or PENDING), service agents, GE-3.7 re-grants with their review dates, and no standing admin or basic role for a human; the app holds `agentspaceUser` for `ge-users@` (and `ge-builders@` or PENDING) plus the bindings it held before; the CI identity's `roles/discoveryengine.editor` (03 §4) is absent here and listed for file 20 (§8); `checkpoint GE-5.9 DONE`.
-- **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GE-5.9 access-final E-06 4.1.3 "build-log:ge-baseline/<file>" "$f"`; the BD-19-1 row's 'Produced' column is complete for IAM.
+Then the run spec follows the access GE-5 left (17 FM-6.1: GE-5 reduces the human members and revises
+the spec). The human and group members the checker's `iam.no_human_or_basic_role` reads are those on
+the project now, plus `platform-security@`, which GE-7.1 binds on the content view:
+```bash
+need GRP_PLATFORM_SECURITY
+S="$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json"
+h="$(ge_file GE-5.9 human-members txt)"
+{ gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json | jq -r '.bindings[] | .members[] | select(test("^(user|group|domain):"))'; echo "group:${GRP_PLATFORM_SECURITY}"; } | sort -u > "$h"
+jq -r '.allowed_human_members[]' "$S" | sort -u | diff - "$h"
+jq '[.pending[] | select(.check == "iam.no_human_or_basic_role")] | length' "$S"
+```
+If the `diff` prints anything or the count is not `0`, revise the spec by pull request:
+```bash
+git -C "$PLATFORM_REPO_DIR" checkout -b setup-19-tenant-app-humans
+jq --rawfile h "$h" '.allowed_human_members = ($h | split("\n") | map(select(length > 0))) | .pending |= map(select(.check != "iam.no_human_or_basic_role"))' "$S" > "$S.new" && mv "$S.new" "$S"
+git -C "$PLATFORM_REPO_DIR" add factory/runs/gemini-prod.json
+git -C "$PLATFORM_REPO_DIR" commit -m "19 GE-5.9 tenant-app allowed_human_members after GE-5"
+git -C "$PLATFORM_REPO_DIR" push -u origin setup-19-tenant-app-humans
+```
+Merge after both reviews, then `git -C "$PLATFORM_REPO_DIR" pull --ff-only` on main.
+- **VERIFY:** after the merge, the `diff` above prints nothing and the count prints `0`; the project holds `agentspaceRestrictedUser` for `ge-users@`, `viewer` for `ge-readers@` (or PENDING), service agents, GE-3.7 re-grants with their review dates, and no standing admin or basic role for a human; the app holds `agentspaceUser` for `ge-users@` (and `ge-builders@` or PENDING) plus the bindings it held before; the CI identity's `roles/discoveryengine.editor` (03 §4) is absent here and listed for file 20 (§8); `checkpoint GE-5.9 DONE`.
+- **ROLLBACK:** none for the reads; the spec revision is reverted like any merge.
+- **EVIDENCE:** `evidence_add GE-5.9 access-final E-06 4.1.3 "build-log:ge-baseline/<file>" "$f"`; `evidence_add GE-5.9 spec-human-members E-05 1.3.1 "repo:factory/runs/gemini-prod.json@<commit>" "$S"`; the BD-19-1 row's 'Produced' column is complete for IAM.
 
 ### GE-6 Engine and assistant settings, and the CMEK decision
 
@@ -1196,7 +1230,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 If the PATCH returns `INVALID_ARGUMENT` for the sub-field mask, write `{observabilityConfig: {observabilityEnabled: <value from GE-6.1>, sensitiveLoggingEnabled: false}}` and use `updateMask=observabilityConfig`.
 - **VERIFY:** the GET shows `"sensitiveLoggingEnabled": false` (or the field absent, which is false) and `observabilityEnabled` unchanged from GE-6.1; `checkpoint GE-6.3 DONE`.
 - **ROLLBACK:** the same PATCH with the value from GE-6.1's file, only under a superseding DPO record.
-- **EVIDENCE:** `evidence_add GE-6.3 sensitive-logging-off E-12 7.1.2 "build-log:ge-baseline/<engine-after>"`.
+- **EVIDENCE:** `evidence_add GE-6.3 sensitive-logging-off E-12 7.1.2 "build-log:ge-baseline/<engine-after>" "$(ge_latest "$GE_DIR" GE-6.3-engine-after json)"`.
 
 #### GE-6.4 Set the Feature Management toggles from the committed mapping
 
@@ -1230,7 +1264,7 @@ If the PATCH returns `INVALID_ARGUMENT` for the sub-field mask, write `{observab
 Toggles that turn a feature users have today off are listed in the GE-3.8 notice, or in a new notice five business days before this step. Then, in the console, set each toggle to the file's value and save.
 - **VERIFY:** after 5 minutes, `ge_call GET "$GE_APP" | jq -S '.features'` equals the file's expected keys (a script: `yq -c '.toggles | map(select(.key != null)) | map({(.key): .state}) | add' register/gemini-features.yaml | jq -S .`, compared with `diff`); each 'no key' row has a dated screenshot; `checkpoint GE-6.4 DONE`.
 - **ROLLBACK:** set the console toggles back to the values in GE-6.1's `features` map.
-- **EVIDENCE:** the merged file and the GET; `evidence_add GE-6.4 feature-toggles E-05 5.2.1 "repo:register/gemini-features.yaml@<commit>"`.
+- **EVIDENCE:** the merged file and the GET; `evidence_add GE-6.4 feature-toggles E-05 5.2.1 "repo:register/gemini-features.yaml@<commit>" "$PLATFORM_REPO_DIR/register/gemini-features.yaml"`.
 
 #### GE-6.5 Branch on the edition
 
@@ -1243,7 +1277,7 @@ echo "GE_EDITION=$GE_EDITION"
 Open the Assistant tab and note whether the sections **Enable web grounding**, **Banned phrases** and **Chat history retention period** are shown.
 - **VERIFY:** if `GE_EDITION` is `Plus` and the sections show: `checkpoint GE-6.5 DONE - - "Plus: GE-6.6 to GE-6.8 apply"`. Otherwise: `checkpoint GE-6.5 DONE - - "not Plus: GE-6.6 and GE-6.8 N/A; R8 fallback"`, write `decisions/<date>-ge-assistant-settings-unavailable.md` (retention: 08 R8's fallback, Google's default stands; grounding and banned phrases: not configurable on this edition, compensating control Model Armor, which works on all editions) and mark GE-6.6 and GE-6.8 `N/A` (X-GE-18).
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** a dated screenshot of the tab; `evidence_add GE-6.5 edition-branch E-03 1.4.1 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** a dated screenshot of the tab; `evidence_add GE-6.5 edition-branch E-03 1.4.1 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`.
 
 #### GE-6.6 Turn grounding off and keep or raise retention
 
@@ -1258,18 +1292,19 @@ the move window, not like a configuration read.
 need GE_CHANGE_NOTICE_DATE GE_ROLLBACK_OPERATOR GE_WITNESS
 test -n "$GE_CHANGE_NOTICE_DATE" && echo "grounding notice sent $GE_CHANGE_NOTICE_DATE, witness $GE_WITNESS, rollback operator $GE_ROLLBACK_OPERATOR"
 ```
-- **ACTION:** compute the target first. The guard is **terminal** and is the only thing that writes `GE_RETENTION_TARGET`, so the value typed into the console is the value the guard approved, never one read off a printed line:
+- **ACTION:** compute the target first. The guard is the only thing that writes `GE_RETENTION_TARGET`, and the value typed into the console is the one it read back, never one read off another printed line:
 ```bash
 P13_DAYS="<the DPO's signed P13 value for R8, or none>"
 TARGET="$GE_RETENTION_CURRENT_DAYS"
 if [ "$P13_DAYS" != none ] && [ "$P13_DAYS" -gt "$GE_RETENTION_CURRENT_DAYS" ]; then TARGET="$P13_DAYS"; fi
-echo "current $GE_RETENTION_CURRENT_DAYS, P13 $P13_DAYS, candidate $TARGET"
-if [ "$TARGET" -ge "$GE_RETENTION_CURRENT_DAYS" ]; then penv_set GE_RETENTION_TARGET "$TARGET"; echo "keep-or-raise OK"; else penv_set --force GE_RETENTION_TARGET ""; echo "STOP: candidate $TARGET lowers retention below $GE_RETENTION_CURRENT_DAYS; this step does not run (a reduction is GE-6.7, BLOCKED)"; fi
-need GE_RETENTION_TARGET
-echo "type this value into the console and nothing else: $GE_RETENTION_TARGET"
+if [ "$P13_DAYS" != none ] && [ "$P13_DAYS" -lt "$GE_RETENTION_CURRENT_DAYS" ]; then echo "P13 $P13_DAYS is lower than today's $GE_RETENTION_CURRENT_DAYS: this step keeps today's value; a reduction is GE-6.7 (BLOCKED)"; fi
+echo "current $GE_RETENTION_CURRENT_DAYS, P13 $P13_DAYS, target $TARGET"
+if penv_set --force GE_RETENTION_TARGET "$TARGET" && [ "$GE_RETENTION_TARGET" = "$TARGET" ] && [ "$GE_RETENTION_TARGET" -ge "$GE_RETENTION_CURRENT_DAYS" ]; then echo "keep-or-raise OK; type this value into the console and nothing else: $GE_RETENTION_TARGET"; else echo "STOP: GE_RETENTION_TARGET was not written as $TARGET; nothing is changed in the console"; fi
 ```
-`need GE_RETENTION_TARGET` fails and stops the shell when the guard refused, so a mis-read `STOP`
-line cannot be walked past. In the tab: under **Enable web grounding**, switch the toggle off
+The target is never lower than `GE_RETENTION_CURRENT_DAYS`: it is today's value or a larger signed
+P13 value. `--force` lets a re-run with a raised P13 value replace an earlier target (01's `penv_set`
+then writes the change to `variables-changes.tsv`; without it the second write is refused and the old
+value would stand), and the read-back makes the `OK` line depend on what was written. In the tab: under **Enable web grounding**, switch the toggle off
 (Google marks Google Search grounding 'not Data Residency compliant'; 03 §5.3). Under **Chat history
 retention period**, leave the value if `GE_RETENTION_TARGET` equals the current value, or select
 `GE_RETENTION_TARGET` — no other value. The witness reads both settings aloud from the screen and
@@ -1277,7 +1312,7 @@ confirms them against the line the guard printed. Read the whole tab once more: 
 from GE-6.1's state. Then, with the witness watching, click **Save and publish**.
 - **VERIFY:** `GE_RETENTION_TARGET` is set and equals the value on screen; after 5 minutes the console shows grounding off and retention `GE_RETENTION_TARGET`; `ge_call GET "${GE_APP}/assistants/default_assistant" | jq '{googleSearchGroundingEnabled, webGroundingType}'` shows grounding disabled; `ge_call GET "$GE_APP" | jq '.sessionConfig'` is recorded and its retention is not lower than `GE_RETENTION_CURRENT_DAYS` (`Assumption:` it mirrors the console retention); the non-admin colleague asks the test question and gets an answer; `checkpoint GE-6.6 DONE - "$GE_WITNESS" - "retention $GE_RETENTION_TARGET, notice $GE_CHANGE_NOTICE_DATE, rollback operator $GE_ROLLBACK_OPERATOR"`.
 - **ROLLBACK:** grounding: the named rollback operator switches the toggle back in the same tab and publishes; users see the feature return. Retention: raising back to the previous value after a raise loses nothing; **a lower value is never set here** — that is GE-6.7, which is BLOCKED and IRREVERSIBLE.
-- **EVIDENCE:** dated screenshots before and after the save, the notice, and the witness's name and the two values read aloud, written into `records/19-people.md`; `evidence_add GE-6.6 grounding-retention E-12 7.1.2 "build-log:ge-baseline/<png>"`; `evidence_add GE-6.6 grounding-notice E-12 7.1.2 "interim:<notice file>"`. X-GE-01 is closed by the terminal guard, the witness, and this file never lowering the value.
+- **EVIDENCE:** dated screenshots before and after the save, the notice, and the witness's name and the two values read aloud, written into `records/19-people.md`; `evidence_add GE-6.6 grounding-retention E-12 7.1.2 "build-log:ge-baseline/<png>" "<the after screenshot>"`; `evidence_add GE-6.6 grounding-notice E-12 7.1.2 "interim:<notice file>"`. X-GE-01 is closed by the keep-or-raise guard, the witness, and this file never lowering the value.
 
 #### GE-6.7 Reduce retention, only after P13 and a notice
 
@@ -1325,7 +1360,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 ```
 - **VERIFY:** the corpus hit count is `0` for every phrase written; the throwaway app answered the five corpus questions and refused the planted one; `diff <(jq -S '.customerPolicy | del(.bannedPhrases)' "$cur") <(ge_call GET "${GE_APP}/assistants/default_assistant" | jq -S '.customerPolicy | del(.bannedPhrases)')` prints nothing (model armor and data protection policy untouched); the colleague's test question is answered; `checkpoint GE-6.8 DONE`.
 - **ROLLBACK:** GET the assistant, set `bannedPhrases` to the list in `assistant-before`, PATCH with `update_mask=customerPolicy`, carrying the current other two fields.
-- **EVIDENCE:** the hit table (committed), the corpus hash only, before and after; `evidence_add GE-6.8 banned-phrases-tested E-15 5.2.6 "build-log:ge-baseline/<hits>"`.
+- **EVIDENCE:** the hit table (committed), the corpus hash only, before and after; `evidence_add GE-6.8 banned-phrases-tested E-15 5.2.6 "build-log:ge-baseline/<hits>" "$(ge_latest "$GE_DIR" GE-6.8-corpus-hits tsv)"`.
 
 #### GE-6.9 Read the engine and assistant after, and check only intended fields changed
 
@@ -1380,7 +1415,7 @@ ge_call GET "${GE_API}/cmekConfigs" | jq '.cmekConfigs // []'
 If a service agent was PENDING in KV-4.3, create it and re-run KV-4.3's grant now: `gcloud beta services identity create --service=discoveryengine.googleapis.com --project="$GEMINI_PROJECT"` under `ENT_PROJECT_REPAIR_TENANT_APP` (`Assumption:` the Discovery Engine agent can be created this way; file 11 names `gcloud storage service-agent --project` for the Cloud Storage agent), then KV-4.3's two `add-iam-policy-binding` lines by the key's owner. For (c), send the notice: settings and connector authorisations may be reset after the change date only if the default later changes; nothing changes for users on the day (end-user data created before the default isn't migrated). `Assumption:` Google does not say whether existing end-user data becomes inaccessible when a first default is set; the notice asks users to report lost connector authorisations.
 - **VERIFY:** `ENCRYPT_DECRYPT`, `HSM`, empty rotation period, `ENABLED`; both `service-<GEMINI_PROJECT_NUMBER>@gcp-sa-discoveryengine…` and `service-<GEMINI_PROJECT_NUMBER>@gs-project-accounts…` hold the role; the notice (for c) is five business days old; file 11's severity 1 key-state alert (KV-7.1) exists; `checkpoint GE-6.11 DONE`.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GE-6.11 cmek-prechecks - 5.1.1 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** `evidence_add GE-6.11 cmek-prechecks - 5.1.1 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`.
 
 #### GE-6.12 Register the `CmekConfig`
 
@@ -1421,7 +1456,7 @@ ge_call GET "$GE_APP" | jq '.cmekConfig // "absent"'
 The colleague asks the test question and opens one existing chat from their history.
 - **VERIFY:** the config shows `kmsKey` = `KEY_GEMINI_CMEK`, `state` `ACTIVE`, `isDefault` as decided; the CMEK tab shows the key for `eu`; the engine's `cmekConfig` equals GE-6.1's (the imported app is not protected in place); the colleague's answer and old chat both load; `checkpoint GE-6.13 DONE - "$GE_TEST_USER"`.
 - **ROLLBACK:** none (GE-6.12).
-- **EVIDENCE:** `evidence_add GE-6.13 cmek-ready - 5.1.1 "build-log:checkpoints.tsv"`; P50's record is corrected to 'end-user data and apps and data stores created after registration as default are CMEK-protected; the imported app and its chats are not' (§9).
+- **EVIDENCE:** `evidence_add GE-6.13 cmek-ready - 5.1.1 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`; P50's record is corrected to 'end-user data and apps and data stores created after registration as default are CMEK-protected; the imported app and its chats are not' (§9).
 
 ### GE-7 The console Model Armor setting
 
@@ -1442,7 +1477,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 `Assumption:` Google-managed encryption for this bucket, as 08 S8 names no key for the tenant app's content bucket; a key is added if file 03's key table gains one (`gcloud logging buckets update --cmek-kms-key-name` applies only to a new bucket's future writes, so the decision is taken before GE-7.2 if at all).
 - **VERIFY:** `gcloud logging buckets describe ge-content-logs --location="$REGION" --project="$GEMINI_PROJECT" --format='value(retentionDays,lifecycleState)'` prints `30 ACTIVE`; `gcloud logging sinks describe _Default --project="$GEMINI_PROJECT" --format=json | jq '.exclusions[].name'` includes `ex-ge-sanitize`; the sink's destination is the bucket; `gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json | jq -r '.bindings[] | select(.role | IN("roles/logging.viewer", "roles/logging.privateLogViewer", "roles/logging.admin", "roles/owner", "roles/editor", "roles/viewer")) | "\(.role) \(.members | join(","))"'` prints nothing, because the restricted bucket and view protect the content only while nobody holds a project-level role carrying `logging.views.access` or private-log reading on `GEMINI_PROJECT` (BD-19-2); `checkpoint GE-7.1 DONE`.
 - **ROLLBACK:** `gcloud logging sinks delete to-ge-content-logs --project="$GEMINI_PROJECT"`; `gcloud logging sinks update _Default --remove-exclusions=ex-ge-sanitize --project="$GEMINI_PROJECT"`; the bucket is left (a deleted bucket is only recoverable for 7 days and holds nothing yet).
-- **EVIDENCE:** `evidence_add GE-7.1 ge-content-logs E-06 5.2.4 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** `evidence_add GE-7.1 ge-content-logs E-06 5.2.4 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`.
 
 #### GE-7.2 Create the template pair `ge-console-standard` in `eu`
 
@@ -1459,9 +1494,9 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 bd_insert "$(printf '| BD-19-2 | %s | 19 GE-7.1, GE-7.2 | DEV | template sanitize logging on for the Gemini Enterprise pair, against Google advice (enable-model-armor, 2026-09-29: not recommended for Gemini Enterprise apps; exposes content to Private Logs Viewer holders) | %s | 06 section 3.3; 03 section 13 | --template-metadata-log-sanitize-operations on both templates; restricted bucket ge-content-logs, view ge-sanitize-view, viewAccessor for platform-security only | GE-7.1 IAM check: no logging.viewer, privateLogViewer, logging.admin, owner, editor or viewer binding on the project | n/a | second human; DPO informed | a dated decision adopting Google alternative (BigQuery routing or Data Access verdicts) | open |\n' "$(date -u +%F)" "$GEMINI_PROJECT")"
 ```
 Google advises against this logging: "Google does not recommend configuring cloud logging in the Model Armor template for Gemini Enterprise apps", because it can expose content to holders of `roles/logging.privateLogViewer`, and suggests rerouting to BigQuery instead ([enable-model-armor](https://docs.cloud.google.com/gemini/enterprise/docs/enable-model-armor), updated 2026-09-29, read 2026-10-01). The design keeps it for the sanitize verify (GE-7.5) and records the deviation as BD-19-2, inserted into the register's first table with 01's `bd_insert`, with the reason and the compensating control: the restricted bucket and view of GE-7.1 and its project-IAM check. Adopting Google's alternative (BigQuery routing or Data Access verdicts) is a dated decision that closes BD-19-2. `GE_ARMOR_TEMPLATE` names the pair: the prompt template is `${GE_ARMOR_TEMPLATE}-prompt` and the response template `${GE_ARMOR_TEMPLATE}-response` (03 §9 left 'one template or a pair' *tbd*; the assistant takes two fields).
-- **VERIFY:** `ma_eu model-armor templates describe ge-console-standard-prompt --location=eu --project="$GEMINI_PROJECT" --format=json | jq '{name, meta: .templateMetadata, et: (.templateMetadata.enforcementType // "absent"), pi: .filterConfig.piAndJailbreakFilterSettings, uri: .filterConfig.maliciousUriFilterSettings}'` shows `logSanitizeOperations: true`, `et` either `absent` (the default, `INSPECT_AND_BLOCK`, manage-templates page 2026-09-30) or `INSPECT_AND_BLOCK` — never `INSPECT_ONLY`, because "If the enforcement type is Inspect only, Gemini Enterprise does not block" (enable-model-armor, 2026-09-29) — both filters enabled and a name under `locations/eu`; same for the response template; a refusal quoting the floor is recorded and the template raised to the floor, never the floor lowered; `checkpoint GE-7.2 DONE`.
+- **VERIFY:** `ma_eu model-armor templates describe ge-console-standard-prompt --location=eu --project="$GEMINI_PROJECT" --format=json | tee "$(ge_file GE-7.2 ge-console-standard-prompt json)" | jq '{name, meta: .templateMetadata, et: (.templateMetadata.enforcementType // "absent"), pi: .filterConfig.piAndJailbreakFilterSettings, uri: .filterConfig.maliciousUriFilterSettings}'` shows `logSanitizeOperations: true`, `et` either `absent` (the default, `INSPECT_AND_BLOCK`, manage-templates page 2026-09-30) or `INSPECT_AND_BLOCK` — never `INSPECT_ONLY`, because "If the enforcement type is Inspect only, Gemini Enterprise does not block" (enable-model-armor, 2026-09-29) — both filters enabled and a name under `locations/eu`; same for the response template; a refusal quoting the floor is recorded and the template raised to the floor, never the floor lowered; `checkpoint GE-7.2 DONE`.
 - **ROLLBACK:** `ma_eu model-armor templates delete ge-console-standard-prompt --location=eu --project="$GEMINI_PROJECT"` (and `-response`) while no assistant names them.
-- **EVIDENCE:** both describes; `evidence_add GE-7.2 ge-console-templates E-15 5.2.6 "build-log:ge-baseline/<file>"`.
+- **EVIDENCE:** both describes; `evidence_add GE-7.2 ge-console-templates E-15 5.2.6 "build-log:ge-baseline/<prompt describe>" "$(ge_latest "$GE_DIR" GE-7.2-ge-console-standard-prompt json)"`, the response one (saved the same way) beside it.
 
 #### GE-7.3 Turn Model Armor on for the assistant, `FAIL_CLOSED`
 
@@ -1480,7 +1515,7 @@ date -u +%FT%TZ > "$GE_DIR/armor-on-time.txt"
 ```
 - **VERIFY:** `diff <(jq -S '.customerPolicy | del(.modelArmorConfig)' "$cur") <(jq -S '.customerPolicy | del(.modelArmorConfig)' "$(ge_latest "$GE_DIR" GE-7.3-assistant-after json)")` prints nothing (banned phrases and data protection policy untouched, X-GE-17); `checkpoint GE-7.3 DONE`.
 - **ROLLBACK:** the PATCH with `modelArmorConfig` taken from `assistant-before` (today's value) and the current other two fields. A flip to `FAIL_OPEN` is never a rollback: it is a PAM act with an incident reference (06 §3.5).
-- **EVIDENCE:** `evidence_add GE-7.3 model-armor-on E-15 5.2.6 "build-log:ge-baseline/<after>"`.
+- **EVIDENCE:** `evidence_add GE-7.3 model-armor-on E-15 5.2.6 "build-log:ge-baseline/<after>" "$(ge_latest "$GE_DIR" GE-7.3-assistant-after json)"`.
 
 #### GE-7.4 Assert the setting by GET
 
@@ -1492,7 +1527,7 @@ ge_call GET "${GE_APP}/assistants/default_assistant" | jq -e --arg p "${GE_ARMOR
 ```
 - **VERIFY:** `jq -e` prints `true` and exits 0; the console shows the toggle on with **Block all user interactions**; this read is the production verify of fail-closed. The unreachable-template test is not run on this app (X-GE-08); file 20 runs it on `GE_THROWAWAY_APP_ID` with a throwaway template pair; `checkpoint GE-7.4 DONE`.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GE-7.4 fail-closed-asserted E-15 5.2.6 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** `evidence_add GE-7.4 fail-closed-asserted E-15 5.2.6 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`.
 
 #### GE-7.5 Verify on the sanitize log with three injection prompts
 
@@ -1508,7 +1543,7 @@ gcloud logging read "resource.type=\"modelarmor.googleapis.com/SanitizeOperation
 ```
 - **VERIFY:** the colleague saw the three injection prompts refused and the benign question answered; the summary has at least three rows with `MATCH_FOUND` and an `AS|` correlation prefix (the assistant path, correlate-model-armor-logs page) at the prompt times; the last read of `_Default` prints nothing (the exclusion works). SCC is not a verify source for assistant-path matches (X-GE-07); `checkpoint GE-7.5 DONE - "$GE_TEST_USER"`.
 - **ROLLBACK:** if the benign question is refused, GE-7.3's rollback and a template review; the refusal is a finding against the template (06 §3.3).
-- **EVIDENCE:** the summary (committed, no payload) and the restricted entries' hash; `evidence_add GE-7.5 sanitize-log-verify E-15 5.2.6 "build-log:ge-baseline/<summary>"`.
+- **EVIDENCE:** the summary (committed, no payload) and the restricted entries' hash; `evidence_add GE-7.5 sanitize-log-verify E-15 5.2.6 "build-log:ge-baseline/<summary>" "$(ge_latest "$GE_DIR" GE-7.5-sanitize-summary tsv)"`.
 
 #### GE-7.6 Restrict the payload fields after the first real entries
 
@@ -1524,7 +1559,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 ```
 - **VERIFY:** `gcloud logging buckets describe ge-content-logs --location="$REGION" --project="$GEMINI_PROJECT" --format='value(restrictedFields)'` lists the fields; `checkpoint GE-7.6 DONE`.
 - **ROLLBACK:** `gcloud logging buckets update ge-content-logs --location="$REGION" --restricted-fields="" --project="$GEMINI_PROJECT"` (`Assumption:` an empty value clears the list).
-- **EVIDENCE:** `evidence_add GE-7.6 restricted-fields E-06 5.2.4 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** `evidence_add GE-7.6 restricted-fields E-06 5.2.4 "build-log:checkpoints.tsv" "$BUILD_LOG_DIR/checkpoints.tsv"`.
 
 ### GE-8 Quota, usage and close
 
@@ -1561,7 +1596,7 @@ done
 ```
 - **VERIFY:** a peak-per-minute number per quota metric is printed for Model Armor; the ratio peak ÷ the GE-8.1 value is computed and written; above 70 % is a quota-increase request and an alert (HLD §3.4); `checkpoint GE-8.2 DONE - - "peak <n>/<limit>"`.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GE-8.2 quota-usage - 5.2.8 "build-log:ge-baseline/<files>"`.
+- **EVIDENCE:** `evidence_add GE-8.2 quota-usage - 5.2.8 "build-log:ge-baseline/<usage-modelarmor>" "$(ge_latest "$GE_DIR" GE-8.2-usage-modelarmor json)"`, the Gemini Enterprise read beside it.
 
 #### GE-8.3 Write the quota register row and the standing read
 
@@ -1583,7 +1618,7 @@ git -C "$BUILD_LOG_DIR" commit -m "drill calendar: GE baseline quarterly re-read
 ```
 - **VERIFY:** the register row is merged; `grep -c '^| DR-19-1 |' "$DRILL_CALENDAR"` prints `1`; `checkpoint GE-8.3 DONE` (and `checkpoint GE-8.3 BLOCKED - - "drift job"` for the standing part).
 - **ROLLBACK:** revert the commit.
-- **EVIDENCE:** `evidence_add GE-8.3 quota-register-row E-05 5.2.8 "repo:register/quota-register.yaml@<commit>"`.
+- **EVIDENCE:** `evidence_add GE-8.3 quota-register-row E-05 5.2.8 "repo:register/quota-register.yaml@<commit>" "$PLATFORM_REPO_DIR/register/quota-register.yaml"`.
 
 #### GE-8.4 Close the part
 
@@ -1591,7 +1626,10 @@ git -C "$BUILD_LOG_DIR" commit -m "drill calendar: GE baseline quarterly re-read
 - **WHERE:** shell.
 - **ACTION:**
 ```bash
-python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" live "$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json" --report "$(ge_file GE-8.4 zero-diff-final json)" --accept-pending; echo "exit $?"
+z="$(ge_file GE-8.4 zero-diff-final json)"
+python3.12 "$PLATFORM_REPO_DIR/tools/fm-zero-diff.py" live "$PLATFORM_REPO_DIR/factory/runs/gemini-prod.json" --report "$z" --accept-pending; echo "exit $?"
+jq -r '.results[] | select(.status != "PASS") | "\(.status) \(.check) \(.pending.owner // "") \(.pending.rerun_in // "")"' "$z"
+jq -e '.zero_diff == true' "$z" >/dev/null || echo "STOP: a FAIL line above; repair it, then run this block again"
 need GE_ARMOR_TEMPLATE GE_THROWAWAY_APP_ID ENT_PROJECT_REPAIR_TENANT_APP
 m="$(ge_file GE-8.4 manifest sha256)"
 ( cd "$GE_DIR" && find . -type f ! -name '*-GE-8.4-manifest-*' -print0 | sort -z | xargs -0 shasum -a 256 ) > "$m"
@@ -1602,7 +1640,7 @@ checkpoint GE-8.4 DONE
 sitting_end
 ```
 Upload every file under `ge-baseline/restricted/` to `EVIDENCE_INTERIM_LOCATION` by hand, then delete the local operator-questions corpus. Write the zero-diff path for BD-19-1 as a build-log line under GE-8.4: the row itself is never edited, and its "pending GE-2.7" cell is answered by that line. Its closure waits for GE-2.6.
-- **VERIFY:** the final zero-diff output shows no difference except those BLOCKED on GE-2.6; `git -C "$BUILD_LOG_DIR" ls-files ge-baseline | grep -c restricted` prints `0`; `sitting_end` prints `SITTING-END OK`.
+- **VERIFY:** the checker printed `exit 0` and every line the `jq` printed is a `PENDING` with an owner and a re-run file (the budget; a line another file owns). A `FAIL` is a stop before the commit: repair it (or, for an expected difference, add a `pending` line by pull request) and re-run; nothing is accepted by eye. The Terraform import of GE-2.6 is not a checker line: it closes BD-19-1, not this step; `git -C "$BUILD_LOG_DIR" ls-files ge-baseline | grep -c restricted` prints `0`; `sitting_end` prints `SITTING-END OK`.
 - **ROLLBACK:** `git -C "$BUILD_LOG_DIR" reset --soft HEAD~1` before any push if a restricted file was committed.
 - **EVIDENCE:** `evidence_add GE-8.4 part-closed E-05 5.2.1 "build-log:ge-baseline/<manifest>" "$m"`.
 
@@ -1611,6 +1649,7 @@ Upload every file under `ge-baseline/restricted/` to `EVIDENCE_INTERIM_LOCATION`
 ## 7. Verification checklist for the whole part
 
 - [ ] BD-19-1 is in `DEVIATION_REGISTER` with the manifest commit and the zero-diff paths; GE-2.6 is `BLOCKED` and in README's BLOCKED index.
+- [ ] The checker exited `0` with `--accept-pending` at GE-2.7, GE-3.11 and GE-8.4, every non-`PASS` line a `PENDING` with an owner and a re-run file; the spec's `allowed_human_members` was revised in GE-5.9 and holds no `iam.no_human_or_basic_role` pending line.
 - [ ] `ENT_PROJECT_REPAIR_TENANT_APP` exists with five roles, the second human as approver, 1 h, and a successful test grant; **exactly one** `ent-project-repair-*` entitlement exists on `GEMINI_PROJECT` (GE-2.3's precondition and VERIFY), and `ent-project-repair-gemini` is either that one entitlement under a recorded rename or absent.
 - [ ] Every `gcloud org-policies set-policy` in this file wrote a live spec with **no** `--update-mask` flag, or a dry run with `--update-mask=policy.dry_run_spec`; no call passes `spec` or `dryRunSpec` (§4).
 - [ ] Every `ENT_*` variable passed `pam_fq` at GE-0.3; no PAM command silently defaulted its location or parent (§4).
@@ -1644,8 +1683,8 @@ Upload every file under `ge-baseline/restricted/` to `EVIDENCE_INTERIM_LOCATION`
 | `20-gemini-enterprise-gateway-and-tier-c-gate.md` | `GE_THROWAWAY_APP_ID` (with `ge-admins@` on `agentspaceUser`), `GE_ARMOR_TEMPLATE`, the project under `fld-gemini-enterprise`, the union allow-list (add `networkservices`, `networksecurity`, `iap` if GE-3.1 dropped any), `ADMIN_READ` on the project, the CI identity's `roles/discoveryengine.editor` binding not yet made | 20 grants the CI identity when it creates `gemini-registry`; 20 runs the unreachable-template test on the throwaway app with a throwaway template pair and deletes the app at its end; 20 records which audit method an agent share writes (X-GE-11 remainder) |
 | `35-wall-e-engine-registration-and-gateways.md` | `GEMINI_PROJECT_NUMBER`, `GEMINI_APP_ID`, app-level binding pattern of GE-5.5, `ENT_GE_ADMIN` proven | shares are `ge-admins@` acts under PAM with the merge-keep-bindings pattern |
 | `12-privileged-access-catalogue.md` | `ENT_PROJECT_REPAIR_TENANT_APP` added to the catalogue as the tenant-app variant, under the id `ent-project-repair-tenant-app` and no other; `ENT_PROJECT_MOVE_*` deleted | the catalogue records both facts |
-| `17-factory-module-equivalents-and-tier-r-gate.md` | **rename**: FM-6.2's heading and its `penv_set`, and the §"What the next files need" row for 19, read `ENT_PROJECT_REPAIR_GEMINI`, which FM-2.17's own generator (which derives the id from `agent_id`, and this project's row is `agent_id: tenant-app`) would not produce. Change them to `ent-project-repair-tenant-app` / `ENT_PROJECT_REPAIR_TENANT_APP` | one entitlement, one name; GE-2.3's precondition refuses to create a second one whichever file runs first, and reads back what it finds. Owner: platform owner, on file 17 |
-| `20-gemini-enterprise-gateway-and-tier-c-gate.md` (naming) | **remove** the fallback `ENT_REPAIR="${ENT_PROJECT_REPAIR_TENANT_APP:-$ENT_PROJECT_REPAIR_GEMINI}"` and read `ENT_PROJECT_REPAIR_TENANT_APP` directly; **fix** GG-5.7's `--update-mask=dryRunSpec` to `--update-mask=policy.dry_run_spec`, and GG-2.7's `--freshness=2h` beside a `timestamp>=` filter (drop one of the two) | the fallback papered over the split this file now closes; the mask and freshness defects are the same ones fixed here. Owner: platform owner, on file 20 |
+| `17-factory-module-equivalents-and-tier-r-gate.md` | FM-6.2 writes `ENT_PROJECT_REPAIR_TENANT_APP` (id `ent-project-repair-tenant-app`); the run spec `factory/runs/gemini-prod.json` with GE-2.1's `pending` lines and GE-5.9's `allowed_human_members` | one entitlement, one name; GE-2.3's precondition refuses to create a second one whichever file runs first, and reads back what it finds |
+| `20-gemini-enterprise-gateway-and-tier-c-gate.md` (naming) | reads `ENT_PROJECT_REPAIR_TENANT_APP` directly (its fallback to `ENT_PROJECT_REPAIR_GEMINI` is gone); GG-5.7 writes `--update-mask=policy.dry_run_spec`; GG-2.7 has no `--freshness` beside its `timestamp>=` filter | the same rules as this file's §4 |
 | `03-decisions-and-people.md` | the names register records `ent-project-repair-tenant-app` as the id in use and `ent-project-repair-gemini` as not used | so a later reader does not recreate the split |
 | `13-organisation-policies-deny-and-pab.md` | the amended `fld-gemini-enterprise` files for `gcp.restrictServiceUsage`, `allowedDataSources`, `allowedEgressFqdns` | 13's saved predecessors stay; these are the new versions |
 | `16-register-and-shared-registry.md` | `register/gemini-connectors.yaml`, `register/gemini-features.yaml`, `register/gemini-banned-phrases.yaml`, the quota register row; the drift job's read list (GE-8.3) | the drift job reads `Engine.features` keys and marks the 'no key' rows as console checks |
@@ -1653,6 +1692,7 @@ Upload every file under `ge-baseline/restricted/` to `EVIDENCE_INTERIM_LOCATION`
 | `30-wall-e-workspace-side.md` | none from this file beyond file 05's OU reads | — |
 | `42-gates-drills-and-evidence.md` | the evidence rows; the quarterly re-read row; BD-19-1 | consolidated |
 | README re-run index | PENDING lines: GE-5.5 `ge-builders@`, GE-5.7 `ge-readers@`; GE-6.11 service-agent grant if it ran | re-run when the group factory creates the groups |
+| README variable index | the row `ENT_PROJECT_REPAIR_TENANT_APP` (17 FM-6.2, 19 GE-2.3) in place of `ENT_PROJECT_REPAIR_GEMINI`; `GE_TEST_USER` (19 GE-0.2) | the index names the variable the files use |
 
 ## 9. Findings closed and deferred
 
@@ -1676,8 +1716,8 @@ Upload every file under `ge-baseline/restricted/` to `EVIDENCE_INTERIM_LOCATION`
 | X-GE-17 | minor | banned phrases are enforcement; whole-object PATCH | GE-6.8 corpus test, throwaway-app test, word-boundary match, merge of all three `CustomerPolicy` fields; GE-7.3 the same merge | 03 §5.3 wording: design edit, platform owner |
 | X-GE-18 | minor | editions and licence figures | GE-6.5 non-Plus branch with a decision record (file 05 recorded the edition and three figures) | — |
 | X-GE-21 | nit | quota metric unnamed | GE-8.1 Cloud Quotas values; GE-8.2 `quota/rate/net_usage` peak | p99 latency: file 20's probe |
-| R2-19-01 | major | one repair entitlement under two names and two ids (`ENT_PROJECT_REPAIR_GEMINI` in 17 FM-6.2, `ENT_PROJECT_REPAIR_TENANT_APP` here), papered over by a fallback in 20; run in order, both would be created on the same project with overlapping roles | GE-2.3 names `ent-project-repair-tenant-app` as canonical (it is what 17's own FM-2.17 generator derives from `agent_id: tenant-app`), adds a precondition that lists existing `ent-project-repair-*` entitlements and reads back rather than creating a second, and a VERIFY asserting exactly one exists | the rename in 17 FM-6.2 and the removal of 20's fallback are §8 hand-forward rows; owner: platform owner, on those files |
-| R2-19-02 | blocking | every `org-policies set-policy` passed `--update-mask=spec` or `=dryRunSpec`, neither an accepted value; GE-3, GE-4 and 20's GG-5.7 would fail at the first apply, inside an approved time-boxed grant and, for GE-3.5, just before the announced move window | §4 'Organisation-policy writes' states the rule; live writes (GE-3.5, GE-4.2, GE-4.3, GE-4.7 and their rollbacks) drop the flag and rely on the documented `policy.spec` default; the dry run (GE-3.3) uses `--update-mask=policy.dry_run_spec` | 20 GG-5.7 is a §8 hand-forward row; owner: platform owner, on file 20 |
+| R2-19-01 | major | one repair entitlement under two names and two ids (`ENT_PROJECT_REPAIR_GEMINI` in 17 FM-6.2, `ENT_PROJECT_REPAIR_TENANT_APP` here), papered over by a fallback in 20; run in order, both would be created on the same project with overlapping roles | GE-2.3 names `ent-project-repair-tenant-app` as canonical (it is what 17's own FM-2.17 generator derives from `agent_id: tenant-app`), adds a precondition that lists existing `ent-project-repair-*` entitlements and reads back rather than creating a second, and a VERIFY asserting exactly one exists | 17 FM-6.2 and file 20 now use `ENT_PROJECT_REPAIR_TENANT_APP`; README's variable index row is a §8 row |
+| R2-19-02 | blocking | every `org-policies set-policy` passed `--update-mask=spec` or `=dryRunSpec`, neither an accepted value; GE-3, GE-4 and 20's GG-5.7 would fail at the first apply, inside an approved time-boxed grant and, for GE-3.5, just before the announced move window | §4 'Organisation-policy writes' states the rule; live writes (GE-3.5, GE-4.2, GE-4.3, GE-4.7 and their rollbacks) drop the flag and rely on the documented `policy.spec` default; the dry run (GE-3.3) uses `--update-mask=policy.dry_run_spec` | — (20 GG-5.7 uses `policy.dry_run_spec`) |
 | R2-19-03 | major | `pam_grant`, `pam_active`, every `grants revoke`, `entitlements describe` and `entitlements delete` omit `--location` and the parent flag, which the reference lists as required | §4 'Why no `--location`' quotes the reference's alternative — a fully specified name sets location and parent — and GE-0.3 adds `pam_fq`, which refuses a short id, plus a loop that proves all five `ENT_*` variables before the first grant; GE-2.3's short-id calls keep their explicit `--project` and `--location=global` | if a command still complains on the day, the flags are added and the correction recorded (§4); the same guard is worth adding to 20's GG-8.1; owner: platform owner |
 | R2-19-04 | major | the governed-services list was built by scraping a documentation page; an empty scrape would have produced an empty allow-list, committed by GE-3.2 and applied live by GE-3.5 twenty minutes before the move | GE-3.1 asserts more than 100 governed services, `discoveryengine` and `storage` present, a union of more than 5 entries containing `discoveryengine`, and every governed design service in the final list, with a two-human committed fallback file when the scrape fails; GE-3.5 refuses to apply a file with fewer than 20 entries or without `discoveryengine` | — |
 | R2-19-05 | major | the 14-day dry-run gate proved nothing: `length == 0` is also what a wrong `logName`, an exclusion or a never-applied dry run returns | GE-3.4 pins the documented `logName`, adds a positive control read and, when that is empty too, a seeded deliberate violation that must show exactly one `DENIED`/`ALLOWED` pair; both reads are filed as evidence together | — |
@@ -1685,8 +1725,8 @@ Upload every file under `ge-baseline/restricted/` to `EVIDENCE_INTERIM_LOCATION`
 | R2-19-07 | medium | GE-5.1 left an `agentspaceAdmin` grant unrevoked across GE-5.2 and GE-5.3 | the revoke is the last line of the ACTION, the state is read back, and GE-5.2 does not begin while the grant is `ACTIVE` | — |
 | R2-19-08 | minor | GE-4.2 and GE-4.3 redirect into a directory file 13 may not have created | `mkdir -p "$(dirname "$p")"` before both redirects, as file 20's GG-1.1 and GG-2.6 already do | — |
 | R2-19-09 | minor | GE-3.12 asserted `NOT_FOUND` immediately after an async entitlement delete, which a correct deletion fails | the deletes run `--async`, the non-terminal-grant precondition is listed first, `DELETING` is the immediate expectation, `NOT_FOUND` is a later re-read gated on `pam operations describe`, and the step warns against re-running the delete; GE-2.3's rollback says the same | — |
-| R2-19-10 | minor | `--freshness` passed beside a `timestamp>=` filter, where the reference says it is ignored | GE-3.4 drops `--freshness` and says the filter's timestamp bounds the read | 20 GG-2.7's `--freshness=2h` is a §8 hand-forward row; owner: platform owner, on file 20 |
-| R2-19-11 | major | GE-6.6 changed the live assistant for every user — grounding off, **Save and publish** — with one operator, no witness, no announcement, and a retention guard that only printed a line | witness at the screen, an announced grounding change through GE-3.8's channel five business days ahead, a named rollback operator, and a terminal guard that writes `GE_RETENTION_TARGET` only on the keep-or-raise branch, followed by `need GE_RETENTION_TARGET`, so the console value is the guard's and a mis-read `STOP` cannot be walked past | — |
+| R2-19-10 | minor | `--freshness` passed beside a `timestamp>=` filter, where the reference says it is ignored | GE-3.4 drops `--freshness` and says the filter's timestamp bounds the read | — (20 GG-2.7 dropped `--freshness`) |
+| R2-19-11 | major | GE-6.6 changed the live assistant for every user — grounding off, **Save and publish** — with one operator, no witness, no announcement, and a retention guard that only printed a line | witness at the screen, an announced grounding change through GE-3.8's channel five business days ahead, a named rollback operator, and a guard that alone writes `GE_RETENTION_TARGET` (today's value or a larger signed P13 value, with `--force` and a read-back), so the console value is the guard's | — |
 | R2-19-12 | minor | GE-4.1 deleted live data stores from the console with no second pair of eyes at the click | witness added to WHO and to the IRREVERSIBLE block; the name and id are read aloud from the selected row against the GI-7.3 row, one store at a time, and recorded in the evidence line beside the after-list | — |
 
 ## 10. Sources
@@ -1702,7 +1742,9 @@ Read on 2026-09-15; the date after each page is Google's 'last updated'.
 - https://docs.cloud.google.com/resource-manager/docs/organization-policy/using-constraints — policy YAML with `parameters`, `spec` and `dryRunSpec` as the policy's own fields (not as `--update-mask` values); 2026-09-09
 - https://docs.cloud.google.com/sdk/gcloud/reference/org-policies/set-policy — '--update-mask ... can be empty, or have values `policy.spec`, `policy.dry_run_spec` or `*`. If the policy does not contain the dry_run_spec and update-mask flag is not provided, then it defaults to `policy.spec`'; re-read 2026-09-16
 - https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/create, /describe, /revoke, /list and .../pam/entitlements/describe, /delete — for each resource argument, 'To set the location attribute: provide the argument … with a fully specified name; provide the argument --location on the command line' (the same for project, folder, organization); `entitlements delete` supports `--async` and 'can fail … There are non-terminal grants under the entitlement'; re-read 2026-09-16
-- https://docs.cloud.google.com/sdk/gcloud/reference/logging/read — '--freshness … Works only with DESC ordering and filters without a timestamp'; re-read 2026-09-16
+- https://docs.cloud.google.com/sdk/gcloud/reference/logging/read — '--freshness … Works only with DESC ordering and filters without a timestamp'; re-read 2026-09-16; `--bucket` is the 'Id of the log bucket' and `--view` the 'Id of the view' (updated 2026-09-15, read 2026-10-01: GE-3.11, GE-4.5, GE-4.9 take the id from `LOG_BUCKET_EVIDENCE`)
+- https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/list — 'List all Privileged Access Manager (PAM) grants associated with an entitlement'; `--entitlement` takes an id or a fully qualified identifier; `--filter`; updated 2026-05-27, read 2026-10-01 (GE-3.12)
+- https://docs.cloud.google.com/iam/docs/pam-revoke-grants and https://docs.cloud.google.com/iam/docs/pam-withdraw-grants — 'Grants that don't have an active status can't be revoked'; requesters withdraw grants 'pending approval or … scheduled and yet to be activated'; updated 2026-09-24, read 2026-10-01 (GE-3.12)
 - https://docs.cloud.google.com/iam/docs/pam-revoke-grants — a grant stays active until it expires or is revoked (the rule behind GE-5.1's revoke); 2026-09-14
 - https://docs.cloud.google.com/organization-policy/test-policies and https://docs.cloud.google.com/resource-manager/docs/organization-policy/dry-run-policy — dry run supported for 'Restrict service usage'; `protoPayload.metadata.dryRunResult = "DENIED" AND protoPayload.metadata.liveResult = "ALLOWED"`; log name `projects/PROJECT_ID/logs/cloudaudit.googleapis.com%2Fpolicy`, metadata type `OrgPolicyDryRunAuditMetadata` (the `logName` restriction and the positive control of GE-3.4); 2026-09-09, re-read 2026-09-16
 - https://docs.cloud.google.com/resource-manager/docs/organization-policy/restricting-resources — runtime control, `spec.rules.values` list form, excluded IAM, Logging, Monitoring; 2026-09-09

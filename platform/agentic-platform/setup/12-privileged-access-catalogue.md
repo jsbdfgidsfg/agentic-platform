@@ -7,6 +7,7 @@
 - Stage: review §2 stage 11. Runs after files 09, 10 and 11 and before file 13. It is the file that ends the organisation bootstrap: its last two steps remove the creator's Owner from the five core projects and withdraw the dated organisation exception of file 06.
 - 2026-10-01: PA-1.1's `BD-12-01` append made idempotent; PA-1.2 accepts either PAM service-agent role Google publishes; the gates of PA-3.1, PA-4.2 and PA-4.7 now halt the create instead of only printing `STOP`; PA-9.3 edits the roster at `$PLATFORM_REPO_DIR/$ROSTER_FILE` on a branch cut from an updated `main`; Security Admin, 06's fifth exception role, is carried through: PA-0.2 has no amendment branch, `role-columns.txt` sweeps the role, PA-9.1 expects five exception lines, PA-9.3 removes five bindings and closes `BD-06-1` (01's `BD-<file>-<n>` id, formerly `DEV-06-01`).
 - 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (PA-1.1, PA-6.2, PA-6.3, PA-8.1, PA-8.5, PA-9.2, PA-9.3).
+- 2026-10-01: PA-3.5's negative test is a read (`gcloud pam entitlements search --caller-access-type=grant-requester`) instead of a grant request that would activate on acceptance; PA-2.1 reads the no-approval end date with `decision-value.sh` from SD-42's Values table instead of by hand; PA-3.5, PA-4.4, PA-4.9 and PA-7.1 write each re-run line once, and PA-6.2 and PA-6.3 skip a row already in the register, so a repeated block adds nothing; PA-1.1, PA-1.3, PA-3.1, PA-3.5 and PA-6.3 register their evidence with a file and its hash (42 GD-4.1); the Facts row and the checklist accept either PAM service-agent role, as PA-1.2 does.
 - Step prefix: `PA`. Steps: 40 (PA-2.3 and PA-4.0 added on 2026-09-16). BLOCKED: PA-4.7 (the security reviewer is not named, README B-20), PA-8.1 (same person), PA-8.5 (the factory does not exist, README B-01). IRREVERSIBLE: PA-9.3 (the withdrawal leaves the platform owner no standing path back; only break-glass or an approved grant restores it).
 - Replaces: nothing executable. The design is [04 §5.1-§5.2](../04-identity-and-privileged-access.md#5-privileged-access-manager-the-entitlement-catalogue); no runbook ever created an entitlement (S002). It supersedes `wall-e/PREREQUISITES.md` §4.1's standing organisation roles for the builder (S059) and the standing `user:` actAs grants of `eve/07-build-runbook.md` (S143, this file's half).
 - Decisions applied: SD-01 (exception withdrawn here), SD-12 (controller and witness-export entitlements approved by the second human, never the platform owner), SD-18 (`ent-org-sink` with approval), SD-19 (`ent-ge-admin` without approval at Tier C), SD-42 (singleton variants), SD-46 (`ent-bootstrap-module`), all from the signed record `decisions/<date>-platform-model-and-privilege.md` of [03](03-decisions-and-people.md) DC-6.1.
@@ -89,12 +90,12 @@ Each step writes `checkpoint <id> START` before its ACTION and `checkpoint <id> 
 
 | Fact | Source | Consequence here |
 |---|---|---|
-| `gcloud pam entitlements create ENTITLEMENT --organization=… \| --folder=… \| --project=… --location=global --entitlement-file=PATH` is GA; `update`, `describe`, `export`, `list`, `search`, `delete` exist; `gcloud pam check-onboarding-status` exists | gcloud reference, `pam` group and `pam entitlements create` | the create form of X-GE-12's evidence is used verbatim |
+| `gcloud pam entitlements create ENTITLEMENT --organization=… \| --folder=… \| --project=… --location=global --entitlement-file=PATH` is GA; `update`, `describe`, `export`, `list`, `search`, `delete` exist; `gcloud pam check-onboarding-status` exists. `gcloud pam entitlements search --caller-access-type=grant-requester` (GA; the other value is `grant-approver`) searches the entitlements of an `--organization`, `--folder` or `--project` "based on whether you are a requester or approver" (gcloud reference, read 2026-10-01) | gcloud reference, `pam` group, `pam entitlements create` and `pam entitlements search` | the create form of X-GE-12's evidence is used verbatim; PA-3.5's negative test is the search, a read, never a grant request |
 | Update "Requires full YAML file with ETAG"; an update "only applies to grants requested after the update"; an entitlement with active grants cannot be deleted | view, update, delete entitlements page (updated 2026-09-14) | PA-8 re-runs export, edit and update; revoke before delete |
 | "Activate access without approvals" is the absence of `approvalWorkflow`; `requesterJustificationConfig` is required, `unstructured: {}` makes justification mandatory | create-entitlements page; REST `Entitlement` reference | no-approval entitlements omit `approvalWorkflow`; every file carries `unstructured` |
 | v1 REST reference: `steps[]` "Only 1 step is supported"; `approvalsNeeded` "1 is the only supported value". The how-to page: with SCC Premium or Enterprise "up to two levels of sequential approvals … up to five approvals per level", shown with `gcloud alpha pam` | REST reference; create-entitlements page | single-approver files use GA; the two-approver file (PA-4.7) uses the alpha track and proves the read-back |
 | Creating entitlements needs PAM Admin plus, at the organisation, Security Admin; the permissions listed are `resourcemanager.organizations.get`, `resourcemanager.organizations.setIamPolicy`, `privilegedaccessmanager.entitlements.create`; at a folder, Folder IAM Admin (`roles/resourcemanager.folderIamAdmin` in Google's Resource Manager role reference, read 2026-10-01; 01 §14); at a project, Project IAM Admin | create-entitlements and setup pages | 06 OB-3.7 grants Security Admin as the exception's fifth role (01 P-26), so the organisation requirement is met by role, not inferred; Organization Administrator holds `organizations.get`, `organizations.setIamPolicy`, `folders.setIamPolicy` and `projects.setIamPolicy` (resourcemanager roles page); PA-0.2 tests the permissions as well |
-| Service agent `service-org-ORGANIZATION_NUMBER@gcp-sa-pam.iam.gserviceaccount.com` gets `roles/privilegedaccessmanager.serviceAgent`, through Privileged Access Manager, "Set up PAM", "Grant role"; requesters and approvers need no PAM permission; add `pam-noreply@google.com` to mail allow-lists | setup page | PA-1.2, PA-1.4 |
+| Service agent `service-org-ORGANIZATION_NUMBER@gcp-sa-pam.iam.gserviceaccount.com` gets a PAM service-agent role, `roles/privilegedaccessmanager.serviceAgent` or, at the organisation, `roles/privilegedaccessmanager.organizationServiceAgent` (the PAM roles page lists both, with folder and project variants; updated 2026-09-24, read 2026-10-01), through Privileged Access Manager, "Set up PAM", "Grant role"; requesters and approvers need no PAM permission; add `pam-noreply@google.com` to mail allow-lists | setup page | PA-1.2, PA-1.4 |
 | Grants: create with `--entitlement` (id or full name), `--requested-duration` (for example `1800s`), `--justification`; approve and deny in the console under Approve grants, Pending approval, or with `gcloud pam grants approve GRANT --reason`; `revoke GRANT --reason`; requests expire within 24 hours; states include `APPROVAL_AWAITED`, `ACTIVE`, `REVOKED`, `ENDED`; a grant carries `timeline.events` and `externallyModified` | request, approve pages; gcloud `pam grants` reference; REST `Grant` reference | the one-grant test of PA-1.5 |
 | PAM "doesn't support legacy basic roles (Owner, Editor, and Viewer)"; grants are "time-based IAM Conditions subject to standard access change propagation" | PAM overview; request page | `roles/owner` is replaced by bundles; tests wait for the conditional binding |
 | Project Mover "on both the source folder and the destination folder", and `resourcemanager.projects.move` on the organisation when the project is not in a folder | moving projects page (updated 2026-09-09) | the `ent-project-move` pair |
@@ -199,13 +200,13 @@ bd_insert "$(printf '| BD-12-01 | %s | 12 PA-1.1 | DEV | privilegedaccessmanager
 - **VERIFY:**
 
 ```bash
-gcloud services list --enabled --project="$CICD_PROJECT" --filter="config.name=privilegedaccessmanager.googleapis.com" --format="value(config.name)"
-gcloud projects get-iam-policy "$CICD_PROJECT" --flatten="bindings[].members" --filter="bindings.role=roles/serviceusage.serviceUsageConsumer" --format="value(bindings.members)"
+{ gcloud services list --enabled --project="$CICD_PROJECT" --filter="config.name=privilegedaccessmanager.googleapis.com" --format="value(config.name)"
+  gcloud projects get-iam-policy "$CICD_PROJECT" --flatten="bindings[].members" --filter="bindings.role=roles/serviceusage.serviceUsageConsumer" --format="value(bindings.members)"; } | tee "$BUILD_LOG_DIR/evidence/12/PA-1.1-verify.txt"
 ```
 
   The first prints `privilegedaccessmanager.googleapis.com`; the second includes `group:platform-owners@…`. `roles/serviceusage.serviceUsageConsumer` is in no Role column of 04 §5.2, so it is not a standing privileged role. `bd_insert` printed `opened BD-12-01 at line <a> (Closures heading at line <b>)` with `<a>` smaller than `<b>` (06 OB-3.2's check), or `exists: BD-12-01`.
 - **ROLLBACK:** `gcloud projects remove-iam-policy-binding "$CICD_PROJECT" --member="group:$GRP_PLATFORM_OWNERS" --role="roles/serviceusage.serviceUsageConsumer"`; `gcloud services disable privilegedaccessmanager.googleapis.com --project="$CICD_PROJECT"` only while no entitlement exists.
-- **EVIDENCE:** both outputs; the `BD-12-01` row. `evidence_add PA-1.1 pam-api E-05 5.2.1 "build-log:evidence/12"`.
+- **EVIDENCE:** both outputs, in `PA-1.1-verify.txt`; the `BD-12-01` row. `evidence_add PA-1.1 pam-api E-05 5.2.1 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-1.1-verify.txt"`.
 
 ### PA-1.2 Set up PAM at the organisation: the service agent's role
 
@@ -234,19 +235,19 @@ gcloud pam check-onboarding-status --project="$GEMINI_PROJECT" --location=global
 
 ```bash
 checkpoint PA-1.3 START
-gcloud identity groups memberships list --group-email="$GRP_PLATFORM_OWNERS" --format="value(preferredMemberKey.id)"
+gcloud identity groups memberships list --group-email="$GRP_PLATFORM_OWNERS" --format="value(preferredMemberKey.id)" | tee "$BUILD_LOG_DIR/evidence/12/PA-1.3-members.txt"
 gcloud organizations add-iam-policy-binding "$ORG_ID" --member="group:$GRP_PLATFORM_OWNERS" --role="roles/privilegedaccessmanager.admin" --condition=None
 ```
 
 - **VERIFY:** The membership list is exactly `SA_1_ADMIN`, as `CONTROL_GROUPS_FILE` says (a difference is a severity 1 control-group drift: stop). Then:
 
 ```bash
-gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.role=roles/privilegedaccessmanager.admin" --format="table(bindings.members,bindings.condition.title)"
+gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --filter="bindings.role=roles/privilegedaccessmanager.admin" --format="table(bindings.members,bindings.condition.title)" | tee "$BUILD_LOG_DIR/evidence/12/PA-1.3-pam-admin.txt"
 ```
 
   prints `group:platform-owners@…` with no condition, `group:gcp-organization-admins@…` (06 OB-7.1) with no condition, and `user:sa-1-admin@…` with `bootstrap-exception-sd-01`. Nothing else.
 - **ROLLBACK:** `gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="group:$GRP_PLATFORM_OWNERS" --role="roles/privilegedaccessmanager.admin"`.
-- **EVIDENCE:** both outputs. `evidence_add PA-1.3 pam-admin-group E-05 4.2.1 "build-log:evidence/12"`. File 06's roster already lists this binding under `gcp_org_roles_via_group` ("standing PAM Admin from file 12"); PA-9.3 checks it.
+- **EVIDENCE:** both outputs, `PA-1.3-members.txt` and `PA-1.3-pam-admin.txt`. `evidence_add PA-1.3 pam-admin-group E-05 4.2.1 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-1.3-pam-admin.txt"`. File 06's roster already lists this binding under `gcp_org_roles_via_group` ("standing PAM Admin from file 12"); PA-9.3 checks it.
 
 ### PA-1.4 Read the PAM settings and prove mail delivery
 
@@ -448,12 +449,12 @@ Any wait that ends at 2 or 3 is written into the build log with the grant name, 
 
 - **WHO:** Platform owner.
 - **WHERE:** Shell, `~/.platform-env` sourced, in `PLATFORM_REPO_DIR`.
-- **ACTION:** One generator writes the files from the variables, so nothing is typed twice. Files are JSON: JSON is valid YAML, and `--entitlement-file` reads YAML. *Assumption:* gcloud's YAML reader accepts the JSON form; PA-3.1's create and PA-6.1's compare prove it on the first file. The field names are those of the v1 `Entitlement` resource. The expiry date of the no-approval variant is read by hand from the signed SD-42 record and passed as `PSA_NONPROD_NOAPPROVAL_UNTIL` for this command only (not a variable of the file); if the record gives no date, stop and have SD-42 amended.
+- **ACTION:** One generator writes the files from the variables, so nothing is typed twice. Files are JSON: JSON is valid YAML, and `--entitlement-file` reads YAML. *Assumption:* gcloud's YAML reader accepts the JSON form; PA-3.1's create and PA-6.1's compare prove it on the first file. The field names are those of the v1 `Entitlement` resource. The expiry date of the no-approval variant is read with 03's `decision-value.sh` from the Values table of the signed SD-42 record, as `PSA_NONPROD_NOAPPROVAL_UNTIL` (`YYYY-MM-DD`), and given to the generator for this command only (not a variable of the file): a value is read only from a signed record, never typed. If the record carries no such row, `decision-value.sh` exits 1 and prints nothing; the generator then does not run. Stop, and have SD-42 amended by a superseding record that carries the row (03 DC-6.1; records are append-only).
 
 ```bash
 checkpoint PA-2.1 START
 need SECURITY_REVIEWER_EMAIL || echo "SR not named: ent-factory-singleton-psa-prod is written but not created (PA-4.7 BLOCKED)"
-export PSA_NONPROD_NOAPPROVAL_UNTIL="<YYYY-MM-DD from the signed SD-42 record>"
+u="$("$PLATFORM_REPO_DIR/tools/decision-value.sh" SD-42 PSA_NONPROD_NOAPPROVAL_UNTIL)" || echo "STOP: SD-42 gives no PSA_NONPROD_NOAPPROVAL_UNTIL; have it amended (03 DC-6.1); the generator below does not run"
 cat > "$PLATFORM_REPO_DIR/pam/tools/catalogue.py" <<'EOF'
 #!/usr/bin/env python3
 """Writes pam/entitlements/*.json, pam/templates/*.json, pam/index.tsv, pam/role-columns.txt, pam/role-allow.tsv
@@ -559,12 +560,12 @@ noappr = [{"id": eid, "scope": f"{kind}/{ident}", "reason": r, "ends": e} for ei
 w("no-approval.json", {"schema": "pam-no-approval/v1", "entitlements": noappr})
 print(len(rows), "entitlement files;", len(templates), "templates;", len(roles), "roles;", len(allow_rows), "allow rows;", len(noappr), "no-approval")
 EOF
-python3 "$PLATFORM_REPO_DIR/pam/tools/catalogue.py"
+[ -n "$u" ] && PSA_NONPROD_NOAPPROVAL_UNTIL="$u" python3 "$PLATFORM_REPO_DIR/pam/tools/catalogue.py"
 penv_set ENT_PROJECT_REPAIR_TEMPLATE "$PLATFORM_REPO_DIR/pam/templates/ent-project-repair.template.json"
 penv_set ENT_DEPLOY_CREDENTIAL_HOLDER_TEMPLATE "$PLATFORM_REPO_DIR/pam/templates/ent-deploy-credential-holder.template.json"
 ```
 
-- **VERIFY:** The script prints `21 entitlement files; 4 templates; <n> roles; 2 allow rows; 6 no-approval` (22 files once the security reviewer is named). Then:
+- **VERIFY:** No `STOP:` line printed (the date was read from the signed record; its form is checked in the PA-2.2 review). The script prints `21 entitlement files; 4 templates; <n> roles; 2 allow rows; 6 no-approval` (22 files once the security reviewer is named). Then:
 
 ```bash
 jq -r '.entitlements[].id' "$PLATFORM_REPO_DIR/pam/no-approval.json"
@@ -603,7 +604,7 @@ git -C "$PLATFORM_REPO_DIR" commit -m "setup 12: PAM catalogue, templates, tools
 git -C "$PLATFORM_REPO_DIR" push -u origin setup-12-pam-catalogue
 ```
 
-  The second human reads, for every file: the scope, the roles against the table above, the requesters, the approver set, the no-approval list, `role-columns.txt`, `role-allow.tsv`, and the deviation table. They approve only if no approver set contains `sa-1-admin@` or `platform-owners@`, the no-approval list has exactly six entries, `role-columns.txt` carries `roles/owner`, `roles/editor`, `roles/resourcemanager.folderCreator`, `roles/privilegedaccessmanager.admin`, `roles/iam.securityAdmin` and `roles/iam.serviceAccountTokenCreator`, and `role-allow.tsv` has exactly the two PAM Admin rows. `role-allow.tsv` is the file that says which standing privilege is tolerated; every later change to it is a privilege decision and needs the same review (16's drift job reads it daily). Then merge and pull `main`.
+  The second human reads, for every file: the scope, the roles against the table above, the requesters, the approver set, the no-approval list, `role-columns.txt`, `role-allow.tsv`, and the deviation table. They approve only if no approver set contains `sa-1-admin@` or `platform-owners@`, the no-approval list has exactly six entries (the `ends` of `ent-factory-singleton-psa-nonprod` a `YYYY-MM-DD` date later than the review, as SD-42 signed it), `role-columns.txt` carries `roles/owner`, `roles/editor`, `roles/resourcemanager.folderCreator`, `roles/privilegedaccessmanager.admin`, `roles/iam.securityAdmin` and `roles/iam.serviceAccountTokenCreator`, and `role-allow.tsv` has exactly the two PAM Admin rows. `role-allow.tsv` is the file that says which standing privilege is tolerated; every later change to it is a privilege decision and needs the same review (16's drift job reads it daily). Then merge and pull `main`.
 - **VERIFY:** The pull request shows the second human's approval and is merged; `git -C "$PLATFORM_REPO_DIR" log -1 --format=%H origin/main -- pam` prints a commit id, recorded as the catalogue commit; `git -C "$PLATFORM_REPO_DIR" status --porcelain pam` prints nothing.
 - **ROLLBACK:** A revert pull request, reviewed, while no entitlement exists.
 - **EVIDENCE:** the pull request URL and merge commit. `evidence_add PA-2.2 pam-catalogue-merge E-05 5.2.1 "$PLATFORM_REPO_REMOTE"`. TISAX 4.2.1 (approval of access rights).
@@ -652,9 +653,9 @@ penv_set ENT_PLATFORM_POLICY "$(gcloud pam entitlements describe ent-platform-po
 }
 ```
 
-- **VERIFY:** `gcloud pam entitlements describe "$ENT_PLATFORM_POLICY" --billing-project="$CICD_PROJECT" --format="yaml(state,maxRequestDuration,approvalWorkflow,eligibleUsers,privilegedAccess)"` shows `state: AVAILABLE`, `3600s`, one step with `approvalsNeeded: 1` and approver `user:sa-2-admin@…`, requester `group:platform-owners@…`, the three roles on `//cloudresourcemanager.googleapis.com/organizations/<ORG_ID>`. The gate printed `GATE OK: PA-2.3 DONE` and no `STOP:` line; on `STOP:` the create did not run. A parse refusal here after PA-2.3 passed would mean the organisation scope rejects what the folder scope accepted, which no page read documents: stop, convert nothing by hand, record the error and take it back to PA-2.3's recovery (regenerate as YAML by the same generator, one reviewed pull request as in PA-2.2).
+- **VERIFY:** `gcloud pam entitlements describe "$ENT_PLATFORM_POLICY" --billing-project="$CICD_PROJECT" --format="yaml(state,maxRequestDuration,approvalWorkflow,eligibleUsers,privilegedAccess)" | tee "$BUILD_LOG_DIR/evidence/12/PA-3.1-describe.txt"` shows `state: AVAILABLE`, `3600s`, one step with `approvalsNeeded: 1` and approver `user:sa-2-admin@…`, requester `group:platform-owners@…`, the three roles on `//cloudresourcemanager.googleapis.com/organizations/<ORG_ID>`. The gate printed `GATE OK: PA-2.3 DONE` and no `STOP:` line; on `STOP:` the create did not run. A parse refusal here after PA-2.3 succeeded would mean the organisation scope rejects what the folder scope accepted, which no page read documents: stop, convert nothing by hand, record the error and take it back to PA-2.3's recovery (regenerate as YAML by the same generator, one reviewed pull request as in PA-2.2).
 - **ROLLBACK:** `gcloud pam entitlements delete ent-platform-policy --organization="$ORG_ID" --location=global --billing-project="$CICD_PROJECT"` (revoke any active grant first).
-- **EVIDENCE:** the describe output. `evidence_add PA-3.1 ent-platform-policy E-05 4.1.3 "build-log:evidence/12"`.
+- **EVIDENCE:** the describe output, `PA-3.1-describe.txt`. `evidence_add PA-3.1 ent-platform-policy E-05 4.1.3 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-3.1-describe.txt"`.
 
 ### PA-3.2 One-grant test of `ent-platform-policy`, and the first proof of mail delivery
 
@@ -725,18 +726,30 @@ g1="$(pam_request "$ENT_K7_HUMAN" "setup-12 PA-3.4 one-grant test, no incident")
 - **WHERE:** Shell.
 - **ACTION:** The requester is `k7-executor@CORE_PROJECT` (a service account is a documented requester, 04 §5.1). No human can request it, and no human here impersonates the account, so the one-grant test runs from the job in 18 (KS, first dry-run drill), which is BLOCKED on the job image (README B-04). The create is not blocked.
 
+  The negative test (`sa-1-admin@` is not eligible) is a read. A grant request would prove it only by being refused, and these entitlements need no approval: if the requester set were wrong, the request would activate Organization Policy Administrator, Deny Admin and Principal Access Boundary Admin at once. `gcloud pam entitlements search --caller-access-type=grant-requester` lists the entitlements the caller may request on a scope (Facts), so the pair must not be in its output. The re-run line is written only when it is not already in the index, so a repeated block adds nothing.
+
 ```bash
 checkpoint PA-3.5 START
 gcloud pam entitlements create ent-k7-executor --organization="$ORG_ID" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-k7-executor.json" --billing-project="$CICD_PROJECT"
 gcloud pam entitlements create ent-k7-executor-scheduler --folder="$FLD_AGENTIC_PLATFORM" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-k7-executor-scheduler.json" --billing-project="$CICD_PROJECT"
 penv_set ENT_K7_EXECUTOR "$(gcloud pam entitlements describe ent-k7-executor --organization="$ORG_ID" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"
 penv_set ENT_K7_EXECUTOR_SCHEDULER "$(gcloud pam entitlements describe ent-k7-executor-scheduler --folder="$FLD_AGENTIC_PLATFORM" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"
-printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "PA-3.5" "serviceAccount:$SA_K7_EXECUTOR" "one-grant test of ENT_K7_EXECUTOR and ENT_K7_EXECUTOR_SCHEDULER from the k7-executor job (18)" "PENDING" "job image BLOCKED B-04" >> "$BUILD_LOG_DIR/rerun-index.tsv"
+{ gcloud pam entitlements describe ent-k7-executor --organization="$ORG_ID" --location=global --billing-project="$CICD_PROJECT" --format="yaml(state,maxRequestDuration,approvalWorkflow,eligibleUsers)"
+  gcloud pam entitlements describe ent-k7-executor-scheduler --folder="$FLD_AGENTIC_PLATFORM" --location=global --billing-project="$CICD_PROJECT" --format="yaml(state,maxRequestDuration,approvalWorkflow,eligibleUsers)"; } | tee "$BUILD_LOG_DIR/evidence/12/PA-3.5-describe.txt"
+grep -qF "$(printf '\tPA-3.5\tserviceAccount:%s\t' "$SA_K7_EXECUTOR")" "$BUILD_LOG_DIR/rerun-index.tsv" 2>/dev/null || printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "PA-3.5" "serviceAccount:$SA_K7_EXECUTOR" "one-grant test of ENT_K7_EXECUTOR and ENT_K7_EXECUTOR_SCHEDULER from the k7-executor job (18)" "PENDING" "job image BLOCKED B-04" >> "$BUILD_LOG_DIR/rerun-index.tsv"
 ```
 
-- **VERIFY:** Both `describe` outputs show `AVAILABLE`, `1800s`, requester exactly `serviceAccount:k7-executor@…`, no `approvalWorkflow`. `gcloud pam grants create --entitlement="$ENT_K7_EXECUTOR" --requested-duration=1800s --justification="negative test" --billing-project="$CICD_PROJECT"` as `sa-1-admin@` is refused (not eligible). The re-run line is in `rerun-index.tsv`.
+  Five minutes after the creates (propagation, the preamble of this section), as `sa-1-admin@`:
+
+```bash
+gcloud pam entitlements search --caller-access-type=grant-requester --organization="$ORG_ID" --location=global --billing-project="$CICD_PROJECT" --format="value(name)" | tee "$BUILD_LOG_DIR/evidence/12/PA-3.5-requestable-org.txt"
+gcloud pam entitlements search --caller-access-type=grant-requester --folder="$FLD_AGENTIC_PLATFORM" --location=global --billing-project="$CICD_PROJECT" --format="value(name)" | tee "$BUILD_LOG_DIR/evidence/12/PA-3.5-requestable-folder.txt"
+grep -E '/entitlements/ent-k7-executor(-scheduler)?$' "$BUILD_LOG_DIR/evidence/12/PA-3.5-requestable-org.txt" "$BUILD_LOG_DIR/evidence/12/PA-3.5-requestable-folder.txt" && echo "STOP: sa-1-admin@ may request the k7-executor pair" || echo "NOT ELIGIBLE"
+```
+
+- **VERIFY:** Both `describe` outputs show `AVAILABLE`, `1800s`, requester exactly `serviceAccount:k7-executor@…`, no `approvalWorkflow`. Each of the two searches prints at least one name (at the organisation `ent-platform-policy`, which `sa-1-admin@` may request through `platform-owners@`; on the folder `ent-k7-human-scheduler`, through `platform-approvers@`): an empty output means the search did not answer for this caller and proves nothing, so wait and run it again. The last line is `NOT ELIGIBLE`; a `STOP:` line means the requester set is wrong: delete both entitlements, correct the committed file through PA-2.1 and PA-2.2, and create them again. Exactly one `PA-3.5` line is in `rerun-index.tsv`.
 - **ROLLBACK:** delete both entitlements.
-- **EVIDENCE:** both describes and the refusal. `evidence_add PA-3.5 ent-k7-executor E-05 4.1.3 "build-log:evidence/12"`.
+- **EVIDENCE:** `PA-3.5-describe.txt` and the two search outputs. `evidence_add PA-3.5 ent-k7-executor E-05 4.1.3 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-3.5-describe.txt"`; `evidence_add PA-3.5 ent-k7-executor-not-requestable E-05 4.1.3 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-3.5-requestable-org.txt"`; `evidence_add PA-3.5 ent-k7-executor-scheduler-not-requestable E-05 4.1.3 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-3.5-requestable-folder.txt"`.
 
 ### PA-3.6 Create and test `ent-pam-catalogue-org`
 
@@ -862,12 +875,12 @@ g="$(pam_request "$ENT_SECRET_READ" "setup-12 PA-4.4 one-grant test")"; echo "$g
 ```
 
   T2, T3 on `projects "$CORE_PROJECT"` for `roles/secretmanager.secretAccessor`, T4, T5.
-- **VERIFY:** T3 prints an expression that contains both `request.time` and `platform-pager-key` (PAM combines the time condition with the entitlement's condition; *Assumption:* combined in one expression; if two bindings appear, record the form). T4 `NO-BINDING`; T5 `approved`. `rerun-index.tsv` gains the line of PA-8.4.
+- **VERIFY:** T3 prints an expression that contains both `request.time` and `platform-pager-key` (PAM combines the time condition with the entitlement's condition; *Assumption:* combined in one expression; if two bindings appear, record the form). T4 `NO-BINDING`; T5 `approved`. `rerun-index.tsv` holds exactly one `PA-4.4` line, PA-8.4's (the line below is written only when it is not already there).
 - **ROLLBACK:** `pam_revoke "$g"`; delete the entitlement.
 - **EVIDENCE:** `PA-4.4-grant.json`. `evidence_add PA-4.4 ent-secret-read E-08 4.1.3 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-4.4-grant.json"`.
 
 ```bash
-printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "PA-4.4" "secret platform-pager-key" "PA-8.4 condition test of ENT_SECRET_READ once 15 creates the secret" "PENDING" "secret not yet created" >> "$BUILD_LOG_DIR/rerun-index.tsv"
+grep -qF "$(printf '\tPA-4.4\tsecret platform-pager-key\t')" "$BUILD_LOG_DIR/rerun-index.tsv" 2>/dev/null || printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "PA-4.4" "secret platform-pager-key" "PA-8.4 condition test of ENT_SECRET_READ once 15 creates the secret" "PENDING" "secret not yet created" >> "$BUILD_LOG_DIR/rerun-index.tsv"
 ```
 
 ### PA-4.5 Create and test `ent-factory-singleton-psa-nonprod` (dated, no approval)
@@ -972,11 +985,11 @@ checkpoint PA-4.9 START
 gcloud pam entitlements create ent-witness-export-repair --folder="$FLD_CONTROLLERS_PROD" --location=global --entitlement-file="$PLATFORM_REPO_DIR/pam/entitlements/ent-witness-export-repair.json" --billing-project="$CICD_PROJECT"
 penv_set ENT_WITNESS_EXPORT_REPAIR "$(gcloud pam entitlements describe ent-witness-export-repair --folder="$FLD_CONTROLLERS_PROD" --location=global --billing-project="$CICD_PROJECT" --format='value(name)')"
 g="$(pam_request "$ENT_WITNESS_EXPORT_REPAIR" "setup-12 PA-4.9 one-grant test")"; echo "$g"
-printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "PA-4.9" "EVE_PROJECT" "PA-8.3 re-scope ent-witness-export-repair to EVE_PROJECT" "PENDING" "project made in 23" >> "$BUILD_LOG_DIR/rerun-index.tsv"
+grep -qF "$(printf '\tPA-4.9\tEVE_PROJECT\t')" "$BUILD_LOG_DIR/rerun-index.tsv" 2>/dev/null || printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "PA-4.9" "EVE_PROJECT" "PA-8.3 re-scope ent-witness-export-repair to EVE_PROJECT" "PENDING" "project made in 23" >> "$BUILD_LOG_DIR/rerun-index.tsv"
 ```
 
   T2, T3 on `folders "$FLD_CONTROLLERS_PROD"` for `roles/iam.serviceAccountAdmin`, T4, T5.
-- **VERIFY:** approver only `user:sa-2-admin@…`; T3 one condition; T4 `NO-BINDING`; T5 `approved`.
+- **VERIFY:** approver only `user:sa-2-admin@…`; T3 one condition; T4 `NO-BINDING`; T5 `approved`. `rerun-index.tsv` holds exactly one `PA-4.9` line (written only when it is not already there).
 - **ROLLBACK:** `pam_revoke "$g"`; delete the entitlement.
 - **EVIDENCE:** `PA-4.9-grant.json`. `evidence_add PA-4.9 ent-witness-export-repair E-08 4.2.1 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-4.9-grant.json"`.
 
@@ -1043,11 +1056,12 @@ python3 "$PLATFORM_REPO_DIR/pam/tools/compare.py" | tee "$BUILD_LOG_DIR/evidence
 
 - **WHO:** Platform owner; the second human reviews the register pull request.
 - **WHERE:** Shell.
-- **ACTION:** 04 §5.2 requires no-approval entitlements to be "recorded as such in the register". The register of record is 16's; until it exists, `pam/no-approval.json` (merged in PA-2.2) is that record, and each entry also gets a deviation row, inserted into the register's first table with 01's `bd_insert` (never appended to the file end, which would land inside the Closures table). The next id counts first-table rows only, so a Closures line never shifts it. 16 imports the file into the register.
+- **ACTION:** 04 §5.2 requires no-approval entitlements to be "recorded as such in the register". The register of record is 16's; until it exists, `pam/no-approval.json` (merged in PA-2.2) is that record, and each entry also gets a deviation row, inserted into the register's first table with 01's `bd_insert` (never appended to the file end, which would land inside the Closures table). The next id counts first-table rows only, so a Closures line never shifts it. An entitlement that already has its row is skipped (`present: <id>`): `bd_insert` refuses only an existing id, and a block repeated after a partial run would otherwise insert the same entitlement again under the next id. 16 imports the file into the register.
 
 ```bash
 checkpoint PA-6.2 START
 jq -r '.entitlements[] | [.id, .scope, .reason, .ends] | @tsv' "$PLATFORM_REPO_DIR/pam/no-approval.json" | while IFS="$(printf '\t')" read -r id scope reason ends; do
+  grep -qF "| no-approval PAM entitlement $id |" "$DEVIATION_REGISTER" && { echo "present: $id"; continue; }
   n=$(( $(awk -F' *[|] *' '$2 ~ /^BD-12-/ && NF==15' "$DEVIATION_REGISTER" | wc -l) + 1 ))
   row=$(printf '| BD-12-%02d | %s | 12 PA-6.2 | DEV | no-approval PAM entitlement %s | %s | pam/no-approval.json | activation without approver; justification mandatory; platform-security@ notified | n/a | n/a | second human (PA-2.2) | %s | open |\n' "$n" "$(date -u +%F)" "$id" "$scope" "$ends")
   bd_insert "$row"
@@ -1072,7 +1086,7 @@ done | tee "$BUILD_LOG_DIR/evidence/12/PA-6.2-approval-matrix.txt"
 
 - **WHO:** Platform owner; **approver: the second human** reviews the build-log commit.
 - **WHERE:** Shell.
-- **ACTION:** One `BD-12-*` row per deviation of PA-2.1's table (six rows: interim approver, core bundle, unconditioned deploy actAs, factory requesters, witness-export interim scope, `ent-pam-catalogue-org`), each with its end, in 01's column order, inserted into the register's first table with 01's `bd_insert`, which commits each row as `BD-12-<n> opened`. Then commit the re-run index.
+- **ACTION:** One `BD-12-*` row per deviation of PA-2.1's table (six rows: interim approver, core bundle, unconditioned deploy actAs, factory requesters, witness-export interim scope, `ent-pam-catalogue-org`), each with its end, in 01's column order, inserted into the register's first table with 01's `bd_insert`, which commits each row as `BD-12-<n> opened`. A deviation whose row is already in the register is skipped (`present: <what>`), so a block repeated after a partial run inserts nothing twice. Then commit the re-run index.
 
 ```bash
 checkpoint PA-6.3 START
@@ -1084,6 +1098,7 @@ for d in "approver second human where 04 names the security reviewer|all entitle
          "ent-pam-catalogue-org added to 04 section 5.2|organizations/$ORG_ID|04 amendment ratifies"; do
   n=$(( $(awk -F' *[|] *' '$2 ~ /^BD-12-/ && NF==15' "$DEVIATION_REGISTER" | wc -l) + 1 ))
   IFS='|' read -r what scope ends <<< "$d"
+  grep -qF "| 12 PA-6.3 | DEV | $what |" "$DEVIATION_REGISTER" && { echo "present: $what"; continue; }
   row=$(printf '| BD-12-%02d | %s | 12 PA-6.3 | DEV | %s | %s | catalogue commit | see setup/12 PA-2.1 | n/a | n/a | second human (PA-2.2) | %s | open |\n' "$n" "$(date -u +%F)" "$what" "$scope" "$ends")
   bd_insert "$row"
 done
@@ -1091,9 +1106,9 @@ git -C "$BUILD_LOG_DIR" add rerun-index.tsv
 git -C "$BUILD_LOG_DIR" diff --cached --quiet || git -C "$BUILD_LOG_DIR" commit -m "setup 12: re-run index at PA-6.3"
 ```
 
-- **VERIFY:** `grep -c '^| BD-12-' "$DEVIATION_REGISTER"` prints `13` (BD-12-01 of PA-1.1, six no-approval rows, six deviation rows); `awk -F' *[|] *' '$2 ~ /^BD-12-/ && NF==15 {print NR, $2}' "$DEVIATION_REGISTER"` prints the thirteen, each with a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); the second human signs the review record of the `BD-12-<n> opened` commits of PA-6.2 and PA-6.3 (01 convention).
+- **VERIFY:** `grep -c '^| BD-12-' "$DEVIATION_REGISTER"` prints `13` (BD-12-01 of PA-1.1, six no-approval rows, six deviation rows); `awk -F' *[|] *' '$2 ~ /^BD-12-/ && NF==15 {print NR, $2}' "$DEVIATION_REGISTER" | tee "$BUILD_LOG_DIR/evidence/12/PA-6.3-bd12-rows.txt"` prints the thirteen, each with a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); the second human signs the review record of the `BD-12-<n> opened` commits of PA-6.2 and PA-6.3 (01 convention).
 - **ROLLBACK:** Before the second human's review, `git -C "$BUILD_LOG_DIR" revert` the `BD-12-<n> opened` commits of this step, reviewed; after it, a wrong row is closed with `bd_close` and replaced by a new row inserted with `bd_insert`.
-- **EVIDENCE:** the commit. `evidence_add PA-6.3 pam-deviations E-05 1.4.1 "build-log:registers"`.
+- **EVIDENCE:** the commits, and `PA-6.3-bd12-rows.txt` (the thirteen ids with their line numbers). `evidence_add PA-6.3 pam-deviations E-05 1.4.1 "build-log:evidence/12" "$BUILD_LOG_DIR/evidence/12/PA-6.3-bd12-rows.txt"`.
 
 ## 7. Handover to logging and detection
 
@@ -1101,7 +1116,7 @@ git -C "$BUILD_LOG_DIR" diff --cached --quiet || git -C "$BUILD_LOG_DIR" commit 
 
 - **WHO:** Platform owner.
 - **WHERE:** Shell.
-- **ACTION:** Grants and entitlement changes are Admin Activity audit entries under `privilegedaccessmanager.googleapis.com` (04 §5.1: `CreateGrant`, `ApproveGrant`, `DenyGrant`, `RevokeGrant`, `CreateEntitlement`, `UpdateEntitlement`, `DeleteEntitlement`). No sink exists yet, so the grant records of this file are the evidence; files 14, 15, 16 and 25 must pick these up. Write the re-run lines:
+- **ACTION:** Grants and entitlement changes are Admin Activity audit entries under `privilegedaccessmanager.googleapis.com` (04 §5.1: `CreateGrant`, `ApproveGrant`, `DenyGrant`, `RevokeGrant`, `CreateEntitlement`, `UpdateEntitlement`, `DeleteEntitlement`). No sink exists yet, so the grant records of this file are the evidence; files 14, 15, 16 and 25 must pick these up. Write the re-run lines; a line already in the index is not written again, so a repeated block keeps the count at four:
 
 ```bash
 checkpoint PA-7.1 START
@@ -1110,6 +1125,7 @@ for l in "14|S-org carries privilegedaccessmanager.googleapis.com Admin Activity
          "16|drift job runs pam/tools/compare.py and pam/tools/sweep.py daily; register imports pam/no-approval.json" \
          "25|Eve self-integrity: any entitlement change on EVE_PROJECT or fld-controllers-* scopes, and any grant whose externallyModified is true"; do
   IFS='|' read -r f what <<< "$l"
+  grep -qF "$(printf '\tPA-7.1\tfile %s\t' "$f")" "$BUILD_LOG_DIR/rerun-index.tsv" 2>/dev/null && continue
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%F)" "PA-7.1" "file $f" "$what" "PENDING" "file not yet run" >> "$BUILD_LOG_DIR/rerun-index.tsv"
 done
 grep -c $'\tPA-7.1\t' "$BUILD_LOG_DIR/rerun-index.tsv"
@@ -1373,7 +1389,7 @@ checkpoint PA-9.3 DONE "$SA_2_ADMIN" "build-log:evidence/12/PA-9.3-sweep.txt" "o
 - [ ] PA-2.3: `--entitlement-file` proven to accept the committed JSON on a throwaway folder scope, before any organisation-scoped create.
 - [ ] PA-4.0: every role in the catalogue has a recorded launch stage, and no role whose lowest grant level is Project sits in a folder-scoped entitlement.
 - [ ] No gate in this file uses `grep -P`; every checkpoint gate is `awk -F'\t'`, and the two irreversible steps run their commands only inside `gate_pa42`/`gate_pa92`.
-- [ ] PAM API enabled in `CICD_PROJECT`; the organisation's PAM service agent holds `roles/privilegedaccessmanager.serviceAgent`; `platform-owners@` holds PAM Admin standing; Automated approvals disabled (PA-1).
+- [ ] PAM API enabled in `CICD_PROJECT`; the organisation's PAM service agent holds `roles/privilegedaccessmanager.serviceAgent` or `roles/privilegedaccessmanager.organizationServiceAgent`, the one recorded in PA-1.2; `platform-owners@` holds PAM Admin standing; Automated approvals disabled (PA-1).
 - [ ] `pam/` merged with the second human's approval; CODEOWNERS covers `/pam/` (PA-1.5, PA-2.2).
 - [ ] 21 entitlements `AVAILABLE`; `compare.py` prints `CATALOGUE ZERO DIFF` (PA-6.1).
 - [ ] A one-grant test record (`PA-*-grant.json`) with `REVOKED` and the right events for every entitlement except `ent-k7-executor*` (18) and `ent-factory-singleton-psa-prod` (BLOCKED).
@@ -1434,6 +1450,7 @@ Deferred items that are not findings, each with reason and owner: per-tier `ent-
 | The regional form of a Secret Manager resource name in an IAM condition | The resource-attributes page lists only the global form | PA-8.4's condition test in 15 |
 | Whether the Gmail allowlist is needed for `pam-noreply@google.com`, and its console label | Setup page says to add it; tenant mail policy unknown | PA-3.2's mail check |
 | The exact refusal message for a grant request without justification | Not documented | PA-3.4 records it |
+| Whether `gcloud pam entitlements search --caller-access-type=grant-requester` counts eligibility held through a group (added 2026-10-01) | The reference says "based on whether you are a requester or approver" and names no group rule | PA-3.5: each search lists an entitlement `sa-1-admin@` may request only through a group (`ent-platform-policy`, `ent-k7-human-scheduler`) |
 
 ## Sources
 
@@ -1461,6 +1478,10 @@ Re-read on 2026-09-16 for the review corrections:
 - https://docs.cloud.google.com/iam/docs/pam-permissions-and-setup — required roles per scope; PAM permissions are evaluated by the PAM service, so the API must be enabled in the quota project before `testIamPermissions` can report `privilegedaccessmanager.entitlements.create`
 - https://docs.cloud.google.com/sdk/gcloud/reference/iam/roles/describe — a predefined role is described without a scope flag; the output carries the role's launch `stage` (PA-4.0). The lowest grant level is not in that output and is read from the role's page in the roles reference
 - https://docs.cloud.google.com/iam/docs/service-account-permissions — project-level Service Account User and Service Account Token Creator apply to every service account in the project (PA-9.1's project half)
+
+Read on 2026-10-01:
+- https://docs.cloud.google.com/sdk/gcloud/reference/pam/entitlements/search — GA; `--caller-access-type` takes `grant-approver` or `grant-requester`; `--location` with `--organization`, `--folder` or `--project` (PA-3.5's negative test)
+- https://docs.cloud.google.com/iam/docs/roles-permissions/privilegedaccessmanager — `roles/privilegedaccessmanager.serviceAgent`, `organizationServiceAgent`, `folderServiceAgent` and `projectServiceAgent`, each "access to modify IAM policies" on its resource type; updated 2026-09-24 (PA-1.2, PA-9.3, Facts)
 
 ## Related
 

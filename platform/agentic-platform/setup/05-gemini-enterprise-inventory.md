@@ -4,6 +4,7 @@
 - Owner: the platform owner
 - Last reviewed: 2026-10-01
 - Changed on 2026-10-01: GI-0.1 and GI-10.3 use 01's sitting blocks; `gi_done` and `gi_evidence` now call 01's `checkpoint` and `evidence_add`; GI-8.4 uses the GA agent-gateways group only.
+- Changed on 2026-10-01: GI-1.1 saves `GI_CANDIDATE_PROJECT` with `penv_set` (nine variables); GI-7.1 and GI-7.2 read every page through a new `ge_list` helper (GI-0.2), because `dataStores.list` returns 10 by default; GI-8.2 records PENDING or DONE, never both, and treats a failed first page as truncated; GI-8.3 no longer installs the `beta` component (§2 drops it); GI-3.1 reads `enabledTools` instead of `googleSearchGroundingEnabled`, which the v1 Assistant does not have.
 - Stage: review §2 stage 4 (GE-0 and GE-1 of [03 §16](../03-gemini-enterprise-environment.md#16-runbook-bringing-the-environment-to-baseline), extended). Runs any time from week one, in parallel with files 02, 03, 04 and 08.
 - Step prefix: `GI`. 39 steps, none BLOCKED (no code is needed), none IRREVERSIBLE (nothing is written to the cloud or the tenant).
 - Replaces: the GE-0 and GE-1 rows of 03 §16, step 1 of [topology §7.4](../../project-topology.md), and the D8 check of `wall-e/SETUP.md` §1.1. It keeps their intent (record the project, the number, the app and its location before anything regional) and drops 'Standard/Plus' (X-GE-18) and 'eu or global' (X-GE-13).
@@ -15,8 +16,9 @@
 ## 1. What this part builds
 
 Nothing in the cloud. It builds one directory of dated files, `GE_INVENTORY_DIR`, holding the
-facts about the live Gemini Enterprise app that every later write depends on, and eight
-variables in `~/.platform-env`. The review found that the baseline runbook could delete chat
+facts about the live Gemini Enterprise app that every later write depends on, and nine
+variables in `~/.platform-env`: the eight later files read, and `GI_CANDIDATE_PROJECT`, the
+console's answer of GI-1.1, kept so that GI-1.2 finds it in a resumed sitting. The review found that the baseline runbook could delete chat
 history, cut today's users off, refuse services the app uses and bind a gateway blind, because
 nobody had recorded what exists (X-GE-01 to X-GE-03, X-GE-10). This file records it first.
 
@@ -63,7 +65,7 @@ flowchart LR
 - [ ] `DOMAIN`, `ORG_ID`, `GE_LOCATION` (value `eu`), `BUILD_LOG_DIR`, `EVIDENCE_REGISTER`, `EVIDENCE_INTERIM_LOCATION`, `GCLOUD_CONFIG_NAME`, `WORKSPACE_EDITION` are set (01).
 - [ ] The D8 row in the decision tracker of `03-decisions-and-people.md` reads 'eu only; a global or us app stops the build and opens a decision record' (SD-21). The stop rule below applies whether or not the row is signed yet.
 - [ ] The operator's workstation has `gcloud`, `curl` (7.76 or later, for `--fail-with-body`), `jq`, `git` and `shasum`.
-- [ ] gcloud is current and the `beta` component is installed (`gcloud components install beta`; `gcloud components list` shows it Installed). GI-8.3 uses the GA `gcloud agent-registry` group, which ships with gcloud itself, and GI-8.4 the GA `gcloud network-services agent-gateways` group. An outdated gcloud errors with `Invalid choice`, which reads as an absent registry and silently shortens GI-8.5's import list.
+- [ ] gcloud is current, at or above 01 PR-1.1's floor; no extra component is needed. GI-8.3 uses the GA `gcloud agent-registry` group, which ships with gcloud itself, and GI-8.4 the GA `gcloud network-services agent-gateways` group. An outdated gcloud errors with `Invalid choice`, which reads as an absent registry and silently shortens GI-8.5's import list.
 - [ ] The operator's account holds, today, the Gemini Enterprise Admin role (`roles/discoveryengine.agentspaceAdmin`) on the app's project, and Workspace super admin or the Service Settings privilege. `roles/discoveryengine.viewer` alone is not enough: it lacks `discoveryengine.userStores.listUserLicenses` ([03 §4](../03-gemini-enterprise-environment.md#4-administration-who-holds-what-standing-or-elevated)).
 - [ ] No change window is needed and no user is told: nothing here writes.
 
@@ -194,6 +196,23 @@ gi_file() { gi_path "$GE_INVENTORY_DIR" "$@"; }
 gi_rfile() { gi_path "$GE_INVENTORY_DIR/restricted" "$@"; }
 ge_host() { case "$1" in eu) echo https://eu-discoveryengine.googleapis.com;; us) echo https://us-discoveryengine.googleapis.com;; global) echo https://global-discoveryengine.googleapis.com;; esac; }
 ge_get() { curl -sS --fail-with-body -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" "$1"; }
+# ge_list URL KEY SIZE: every page of a paged list as one object {KEY: [...], pagesRead: n}. Returns 0 when complete;
+# 4 when a later page failed (the object then carries "truncated": true and the nextPageToken); 1 when the first
+# page failed, with Google's error body printed instead.
+ge_list() {
+  _lt=""; _ln=0; _lf="$(mktemp)"; _ls='?'; case "$1" in *'?'*) _ls='&';; esac
+  while :; do
+    _lq="pageSize=$3"; [ -n "$_lt" ] && _lq="$_lq&pageToken=$(jq -rn --arg t "$_lt" '$t|@uri')"
+    if ! _lr="$(ge_get "$1$_ls$_lq")"; then
+      [ "$_ln" -eq 0 ] && { printf '%s\n' "$_lr"; rm -f "$_lf"; return 1; }
+      break
+    fi
+    _ln=$((_ln+1)); printf '%s' "$_lr" | jq -c --arg k "$2" '.[$k][]?' >> "$_lf"
+    _lt="$(printf '%s' "$_lr" | jq -r '.nextPageToken // empty')"; [ -z "$_lt" ] && break
+  done
+  jq -s --arg k "$2" --argjson n "$_ln" --arg t "$_lt" '{($k): ., pagesRead: $n} + (if $t == "" then {} else {truncated: true, nextPageToken: $t} end)' "$_lf"
+  rm -f "$_lf"; [ -z "$_lt" ] || return 4
+}
 # gi_done STEP [NOTE]: a checkpoints.tsv line through 01's checkpoint; STOP: notes are BLOCKED, PENDING: notes are PENDING.
 gi_done() { case "${2:-done}" in STOP:*) checkpoint "$1" BLOCKED - - "$2";; PENDING:*) checkpoint "$1" PENDING - - "$2";; *) checkpoint "$1" DONE - - "${2:-done}";; esac; }
 # gi_evidence STEP FILE E_ID "TISAX <id>": one EVIDENCE_REGISTER row through 01's evidence_add (01 PR-4.2 columns).
@@ -211,7 +230,7 @@ EOF
 source "$GE_INVENTORY_DIR/gi-helpers.sh"
 gi_done GI-0.2
 ```
-- **VERIFY:** `type gi_file gi_rfile ge_host ge_get gi_done gi_evidence` names six functions; `git -C "$BUILD_LOG_DIR" check-ignore "$GE_INVENTORY_DIR/restricted/x"` prints the path.
+- **VERIFY:** `type gi_file gi_rfile ge_host ge_get ge_list gi_done gi_evidence` names seven functions; `git -C "$BUILD_LOG_DIR" check-ignore "$GE_INVENTORY_DIR/restricted/x"` prints the path.
 - **ROLLBACK:** none needed. On resume, run only the `source` line.
 - **EVIDENCE:** none. `gi_done` and `gi_evidence` write nothing of their own: they call 01's `checkpoint` and `evidence_add`, so every GI step lands in `checkpoints.tsv` and in the ten-column `EVIDENCE_REGISTER` that 42 reads. A call with several files is made once per file.
 
@@ -223,10 +242,11 @@ gi_done GI-0.2
 - **WHERE:** Google Cloud console → **Gemini Enterprise** page (search 'Gemini Enterprise'), then the project selector.
 - **ACTION:** pick each project the selector offers until the Gemini Enterprise page lists the tenant's app. Note the project id and, for each app shown, its name and location. Do not open **Create app**.
 ```bash
-GI_CANDIDATE_PROJECT="<project id read in the console>"
+penv_set GI_CANDIDATE_PROJECT "<project id read in the console>"
 ```
-- **VERIFY:** the page lists at least one app in that project.
-- **ROLLBACK:** none needed.
+  It is saved, not kept in the shell, so that GI-1.2 finds it after a new shell or a resumed sitting.
+- **VERIFY:** the page lists at least one app in that project; `need GI_CANDIDATE_PROJECT` passes.
+- **ROLLBACK:** none needed. A wrong id is corrected with `penv_set --force GI_CANDIDATE_PROJECT` and a build-log line, before GI-1.2.
 - **EVIDENCE:** a screenshot `screencapture -i "$(gi_file GI-1.1 console-apps png)"`.
 
 #### GI-1.2 Describe the project and record its id and number
@@ -235,6 +255,7 @@ GI_CANDIDATE_PROJECT="<project id read in the console>"
 - **WHERE:** shell.
 - **ACTION:**
 ```bash
+need GI_CANDIDATE_PROJECT
 f="$(gi_file GI-1.2 project json)"
 gcloud projects describe "$GI_CANDIDATE_PROJECT" --format=json > "$f"
 penv_set GEMINI_PROJECT "$(jq -r .projectId "$f")"
@@ -435,10 +456,10 @@ gi_done GI-2.5
 ```bash
 f="$(gi_file GI-3.1 assistant json)"
 ge_get "$(ge_host eu)/v1/projects/$GEMINI_PROJECT/locations/eu/collections/default_collection/engines/$GEMINI_APP_ID/assistants/default_assistant" > "$f"
-jq '{name, googleSearchGroundingEnabled, webGroundingType, defaultWebGroundingToggleOff, modelArmor: .customerPolicy.modelArmorConfig, bannedPhraseCount: (.customerPolicy.bannedPhrases // [] | length), dataProtectionPolicy: .customerPolicy.dataProtectionPolicy}' "$f"
+jq '{name, webGroundingType, defaultWebGroundingToggleOff, enabledTools, modelArmor: .customerPolicy.modelArmorConfig, bannedPhraseCount: (.customerPolicy.bannedPhrases // [] | length), dataProtectionPolicy: .customerPolicy.dataProtectionPolicy}' "$f"
 gi_done GI-3.1
 ```
-- **VERIFY:** the fact sheet records whether `modelArmorConfig` is set, the two template names, and `failureMode` (unspecified means FAIL_CLOSED, REST reference), plus the grounding values. Cross-check in the console: **Gemini Enterprise** → the app → **Configurations** → **Assistant**, the **Enable Model Armor** toggle, without saving.
+- **VERIFY:** the fact sheet records whether `modelArmorConfig` is set, the two template names, and `failureMode` (unspecified means FAIL_CLOSED, REST reference), plus the grounding values (`webGroundingType`, `defaultWebGroundingToggleOff`) and `enabledTools`, which Google's v1 reference marks 'not implemented yet', so null is the expected reading. Cross-check in the console: **Gemini Enterprise** → the app → **Configurations** → **Assistant**, the **Enable Model Armor** toggle, without saving.
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `gi_evidence GI-3.1 "$f" E-11 "TISAX 5.2"`. Any later API write to `customerPolicy` must write `bannedPhrases` and `modelArmorConfig` together (X-GE-17, file 19); this file is what it starts from.
 
@@ -629,11 +650,18 @@ gi_done GI-6.3
 - **WHO:** platform owner. Solo.
 - **WHERE:** shell.
 - **ACTION:**
+`collections.list` is paged (at most 100 per page unless asked for more, and a `nextPageToken` when more exist), so every page is read with `ge_list`:
 ```bash
-for loc in eu us global; do f="$(gi_file GI-7.1 collections-$loc json)"; ge_get "$(ge_host $loc)/v1alpha/projects/$GEMINI_PROJECT/locations/$loc/collections" > "$f" || echo "read failed for $loc"; jq -r --arg l "$loc" '.collections[]? | "\($l)\t\(.name)\t\(.displayName)\t\(.dataConnector.dataSource // "no connector")\t\(.dataConnector.state // "")"' "$f"; done
-gi_done GI-7.1
+GI_SHORT=""
+for loc in eu us global; do
+  f="$(gi_file GI-7.1 collections-$loc json)"
+  ge_list "$(ge_host $loc)/v1alpha/projects/$GEMINI_PROJECT/locations/$loc/collections" collections 100 > "$f"
+  case $? in 0) ;; 4) echo "TRUNCATED: $loc (a later page failed)"; GI_SHORT="$GI_SHORT $loc";; *) echo "read failed for $loc (Google's answer kept in $f)";; esac
+  jq -r --arg l "$loc" '.collections[]? | "\($l)\t\(.name)\t\(.displayName)\t\(.dataConnector.dataSource // "no connector")\t\(.dataConnector.state // "")"' "$f" 2>/dev/null
+done
+if [ -z "$GI_SHORT" ]; then gi_done GI-7.1; else gi_done GI-7.1 "PENDING: collections list truncated in:$GI_SHORT; re-run GI-7.1 before GI-7.2 and GI-7.3"; fi
 ```
-- **VERIFY:** every collection has a row; `dataSource` is Google's identifier for the connector type.
+- **VERIFY:** every collection has a row; `dataSource` is Google's identifier for the connector type. A failed first page is a tolerated 'read failed' for that location (the error is a fact-sheet line); a `TRUNCATED` location is not, and GI-7.2 waits for a clean re-run.
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `gi_evidence GI-7.1 <files> E-11 "TISAX 6.1"`.
 
@@ -642,12 +670,25 @@ gi_done GI-7.1
 - **WHO:** platform owner. Solo.
 - **WHERE:** shell.
 - **ACTION:**
+`dataStores.list` returns 10 data stores per call unless asked for more, and at most 50 (`pageSize`, Discovery Engine API reference), so a single GET silently drops the rest. Every page of every collection is read with `ge_list`, one object per collection:
 ```bash
-for loc in eu us global; do f="$(gi_file GI-7.2 datastores-$loc json)"; echo '[' > "$f"; for c in $(jq -r '.collections[]?.name | split("/") | last' "$(ls -t "$GE_INVENTORY_DIR"/*-GI-7.1-collections-$loc-v*.json | head -1)"); do r="$(ge_get "$(ge_host $loc)/v1/projects/$GEMINI_PROJECT/locations/$loc/collections/$c/dataStores")" || r="$(jq -n --arg c "$c" --arg e "$r" '{collection:$c, readError:$e}')"; printf '%s,\n' "$r"; done >> "$f"; echo '{}]' >> "$f"; jq -r --arg l "$loc" '.[].dataStores[]? | "\($l)\t\(.name)\t\(.displayName)\t\(.industryVertical)\t\(.aclEnabled // false)\t\(.kmsKeyName // "google-managed")"' "$f"; done
-gi_done GI-7.2
+GI_SHORT=""
+for loc in eu us global; do
+  f="$(gi_file GI-7.2 datastores-$loc json)"; tmp="$(mktemp)"
+  c7="$(ls -t "$GE_INVENTORY_DIR"/*-GI-7.1-collections-$loc-v*.json | head -1)"
+  jq -e '.truncated // false' "$c7" >/dev/null 2>&1 && GI_SHORT="$GI_SHORT $loc(GI-7.1)"
+  for c in $(jq -r '.collections[]?.name | split("/") | last' "$c7" 2>/dev/null); do
+    r="$(ge_list "$(ge_host $loc)/v1/projects/$GEMINI_PROJECT/locations/$loc/collections/$c/dataStores" dataStores 50)"
+    case $? in 0) ;; 4) GI_SHORT="$GI_SHORT $loc/$c";; *) r="$(jq -n --arg e "$r" '{readError: $e}')";; esac
+    printf '%s\n' "$r" | jq -c --arg c "$c" '. + {collection: $c}' >> "$tmp"
+  done
+  jq -s . "$tmp" > "$f"; rm -f "$tmp"
+  jq -r --arg l "$loc" '.[].dataStores[]? | "\($l)\t\(.name)\t\(.displayName)\t\(.industryVertical)\t\(.aclEnabled // false)\t\(.kmsKeyName // "google-managed")"' "$f"
+done
+if [ -z "$GI_SHORT" ]; then gi_done GI-7.2; else gi_done GI-7.2 "PENDING: data stores list truncated for:$GI_SHORT; re-run GI-7.2 before GI-7.3"; fi
 ```
 Cross-check in the console: **Gemini Enterprise** → **Data stores**; a data store the API did not list is added by hand to GI-7.3.
-- **VERIFY:** `jq . <file>` parses for each location; any data store outside `eu` is a fact-sheet line (03 §12: data stores in `eu` only).
+- **VERIFY:** `jq . <file>` parses for each location; no PENDING line for GI-7.2; a collection whose object holds `readError` is a fact-sheet line; any data store outside `eu` is a fact-sheet line (03 §12: data stores in `eu` only).
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `gi_evidence GI-7.2 <files> E-11 "TISAX 6.1"`.
 
@@ -683,21 +724,20 @@ Cross-check in the console: **Gemini Enterprise** → **Data stores**; a data st
 - **ACTION:**
 `agents.list` is a paged method: it returns `nextPageToken` when more agents exist. Page it the way GI-2.5 pages the licence list, or a tenant with more agents than one page silently loses the rest and GI-8.5's import list comes out short (X-GE-04).
 ```bash
-f="$(gi_file GI-8.2 agents json)"; tok=""; tmp="$(mktemp)"
+f="$(gi_file GI-8.2 agents json)"; tok=""; failed=""; tmp="$(mktemp)"
 while :; do
   q="pageSize=100"; [ -n "$tok" ] && q="$q&pageToken=$(jq -rn --arg t "$tok" '$t|@uri')"
-  resp="$(ge_get "$(ge_host eu)/v1alpha/projects/$GEMINI_PROJECT/locations/eu/collections/default_collection/engines/$GEMINI_APP_ID/assistants/default_assistant/agents?$q")" || { echo "read failed"; break; }
+  resp="$(ge_get "$(ge_host eu)/v1alpha/projects/$GEMINI_PROJECT/locations/eu/collections/default_collection/engines/$GEMINI_APP_ID/assistants/default_assistant/agents?$q")" || { echo "read failed"; failed=yes; break; }
   printf '%s' "$resp" | jq -c '.agents[]?' >> "$tmp"
   tok="$(printf '%s' "$resp" | jq -r '.nextPageToken // empty')"
   [ -z "$tok" ] && break
 done
 jq -s '{agents: .}' "$tmp" > "$f"; rm -f "$tmp"
 jq -r '.agents[]? | [.name, .displayName, .state, ([keys[] | select(endswith("Definition"))] | join(",")), ([.. | strings | select(test("reasoningEngines/|^https://|dialogflow"))] | unique | join(" "))] | @tsv' "$f"
-echo "agents collected: $(jq -r '.agents | length' "$f"); nextPageToken left: ${tok:-none}"
-[ -n "$tok" ] && gi_done GI-8.2 "PENDING: agents list truncated (nextPageToken still set after a failed page); re-run before GI-8.5"
-gi_done GI-8.2
+echo "agents collected: $(jq -r '.agents | length' "$f"); nextPageToken left: ${tok:-none}; read failed: ${failed:-no}"
+if [ -n "$tok" ] || [ -n "$failed" ]; then gi_done GI-8.2 "PENDING: agents list truncated (a page failed or nextPageToken is still set); re-run before GI-8.5"; else gi_done GI-8.2; fi
 ```
-- **VERIFY:** the last line prints `nextPageToken left: none`. If it prints a token, the loop broke on a read failure, the list is truncated, the PENDING line is in the build log, and GI-8.5 is **not** written until a clean re-run — a truncated list and Google's documented under-reporting must never be confused. Google's `agents.list` returns only the agents 'created by the caller', so a complete API count can still be lower than GI-8.1's; that is expected and is not truncation. The console list is authoritative; every console agent missing from the API is written into GI-8.5 by hand with its type and target read from its console detail page.
+- **VERIFY:** the last line prints `nextPageToken left: none; read failed: no`, and only then is GI-8.2 recorded DONE. Otherwise a page failed (the first one included, which leaves no token but no list either), the list is truncated, the PENDING line is the step's only line in the build log, and GI-8.5 is **not** written until a clean re-run — a truncated list and Google's documented under-reporting must never be confused. Google's `agents.list` returns only the agents 'created by the caller', so a complete API count can still be lower than GI-8.1's; that is expected and is not truncation. The console list is authoritative; every console agent missing from the API is written into GI-8.5 by hand with its type and target read from its console detail page.
 - **ROLLBACK:** none needed.
 - **EVIDENCE:** `gi_evidence GI-8.2 "$f" E-11 "TISAX 6.1"`.
 
@@ -708,7 +748,6 @@ gi_done GI-8.2
 - **PRECONDITION:** gcloud is current (§2). Agent Registry is on the **GA** track (`gcloud agent-registry ...`, reference updated 2026-06-23); an alpha variant also exists and is not used here, because Google says alpha commands may change without notice. On an outdated gcloud, `gcloud agent-registry` errors with `Invalid choice`, which must never be read as 'no registry'.
 - **ACTION:** an `eu` app's gateway accepts registries in `global`, `eu` or `europe-west1` (agent-gateway-ge-deploy page). The four subgroups `agents`, `endpoints`, `mcp-servers` and `services` all exist under the GA `gcloud agent-registry` group.
 ```bash
-gcloud components install beta --quiet
 for loc in global eu europe-west1; do for kind in agents endpoints mcp-servers services; do f="$(gi_file GI-8.3 registry-$kind-$loc json)"; gcloud agent-registry $kind list --location="$loc" --project="$GEMINI_PROJECT" --format=json > "$f" 2>&1 || echo "failed: $kind $loc (see $f)"; done; done
 grep -liE 'Invalid choice|unrecognized arguments|Invalid command|is not a valid' "$GE_INVENTORY_DIR"/*-GI-8.3-registry-*.json && { echo "STOP: command track wrong, re-run GI-8.3"; gi_done GI-8.3 "STOP: command track wrong; registry state unknown"; } || gi_done GI-8.3
 ```
@@ -721,7 +760,7 @@ grep -liE 'Invalid choice|unrecognized arguments|Invalid command|is not a valid'
   | `SERVICE_DISABLED`, `has not been used in project`, or `PERMISSION_DENIED` | the API is off, or this account cannot read it | record 'no registry readable in this project' with the error string, and a PENDING re-run in file 20 before GE-10 |
 
   Only the third row may be read as absence. A registry recorded as absent when it exists drops every registered agent, endpoint and MCP server from GI-8.5, which file 20 imports before binding the gateway (X-GE-04).
-- **ROLLBACK:** none needed; `gcloud components install` changes only the workstation's SDK.
+- **ROLLBACK:** none needed. Nothing is installed here; a `gcloud components update` after a track error changes only the workstation's SDK.
 - **EVIDENCE:** `gi_evidence GI-8.3 <files> E-11 "TISAX 6.1"`; record in the fact sheet which of the three readings each location and kind produced.
 
 #### GI-8.4 List existing agent gateways and the app's binding
@@ -946,6 +985,7 @@ Read on 2026-09-15; the date after each page is Google's 'last updated'.
 - https://docs.cloud.google.com/gemini/enterprise/docs/reference/rest/v1/projects.locations.userStores.userLicenses/list — filter fields `licenseAssignmentState`, `userPrincipal`; permission `discoveryengine.userStores.listUserLicenses`; 2026-07-10
 - https://docs.cloud.google.com/gemini/enterprise/docs/reference/rest/v1/projects.locations.cmekConfigs — `isDefault`, `state`, `kmsKey`; 2025-10-08
 - https://docs.cloud.google.com/gemini/enterprise/docs/reference/rest/v1alpha/projects.locations.collections and .../v1/projects.locations.collections.dataStores/list — collections list with `dataConnector.dataSource`; data stores per collection, `aclEnabled`, `kmsKeyName`; 2026-09-03 and 2026-04-21
+- Discovery Engine API discovery documents v1 and v1alpha (`https://discoveryengine.googleapis.com/$discovery/rest?version=v1`, revision 20260927), read 2026-10-01: `dataStores.list` `pageSize` 'If unspecified, defaults to 10. The maximum allowed value is 50'; `collections.list` 'If unspecified, at most 100 Collections will be returned. The maximum value is 1000'; `engines.list` `pageSize` and `pageToken` 'Not supported'; `agents.list` defaults to 100 per page; the v1 `Assistant` fields are `name`, `displayName`, `description`, `generationConfig`, `customerPolicy`, `webGroundingType`, `defaultWebGroundingToggleOff`, `enabledTools` ('not implemented yet'), `createTime` and `updateTime`, with no `googleSearchGroundingEnabled`
 - https://docs.cloud.google.com/gemini/enterprise/docs/locations — `eu-discoveryengine` host rule; 2026-09-03
 - https://docs.cloud.google.com/gemini/enterprise/docs/licenses — edition note (Standard, Plus, Pay-as-you-go, Frontline; Business separate); procure, distribute, assign; Manage subscriptions; Manage users export columns; `userStores/default_user_store/userLicenses`; `billingAccountLicenseConfigs`; `APP_TYPE_INTRANET`; 2026-09-10
 - https://docs.cloud.google.com/gemini/enterprise/docs/editions — same edition note; 2026-09-14
@@ -959,7 +999,7 @@ Read on 2026-09-15; the date after each page is Google's 'last updated'.
 - https://docs.cloud.google.com/gemini-enterprise-agent-platform/govern/gateways/agent-gateway-ge-deploy — `eu` app → `europe-west1` gateway; registries `global`, `eu`, `europe-west1`; GET of `agentGatewaySetting`; 2026-09-08
 - https://docs.cloud.google.com/iam/docs/roles-permissions/discoveryengine — read permissions by role (`engines.get`, `engines.list`, `assistants.get`, `agents.list` held by `viewer` and `agentspaceAdmin`); 2026-09-14
 - https://docs.cloud.google.com/model-armor/reference/rest/v1/projects.locations.templates/get; https://docs.cloud.google.com/model-armor/data-residency — `modelarmor.LOCATION.rep.googleapis.com`; 2026-08-19, 2026-09-10
-- gcloud reference: `projects describe`, `projects get-iam-policy`, `projects get-ancestors`, `projects get-ancestors-iam-policy --include-deny`, `services list --enabled`, `asset search-all-resources`, `asset search-all-iam-policies`, `org-policies describe --effective`, `org-policies list`, `identity groups memberships list`, `components install`, `config get`, wide flag `--billing-project`; https://docs.cloud.google.com/sdk/gcloud/reference; 2026-05-27 to 2026-09-09
+- gcloud reference: `projects describe`, `projects get-iam-policy`, `projects get-ancestors`, `projects get-ancestors-iam-policy --include-deny`, `services list --enabled`, `asset search-all-resources`, `asset search-all-iam-policies`, `org-policies describe --effective`, `org-policies list`, `identity groups memberships list`, `config get`, wide flag `--billing-project`; https://docs.cloud.google.com/sdk/gcloud/reference; 2026-05-27 to 2026-09-09
 - https://docs.cloud.google.com/sdk/gcloud/reference/agent-registry — the group is **GA**, updated 2026-06-23, read 2026-09-16, with command groups `agents`, `bindings`, `endpoints`, `mcp-servers`, `operations`, `services`; the page notes an alpha variant (`gcloud alpha agent-registry`, which adds `publishers` and `skills`). `list` takes `--location`, which is required.
 - https://docs.cloud.google.com/sdk/gcloud/reference/network-services/agent-gateways/list and https://docs.cloud.google.com/sdk/gcloud/reference/beta/network-services/agent-gateways/list — `agent-gateways list --location=LOCATION` documented on GA, beta and alpha; GI-8.4 takes GA only; GA page updated 2026-06-16, re-read 2026-10-01
 - https://docs.cloud.google.com/asset-inventory/docs/searching-resources — the API must be enabled in the project the command runs from; 2026-09-03

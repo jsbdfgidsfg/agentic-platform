@@ -13,6 +13,7 @@
 - Every command, flag, role, API field and console path was read on Google's pages on 2026-09-15 ("Sources"). Nothing was run against the live organisation while writing.
 - Changed 2026-10-01: KS-2.5 tries Google's documented mixed form first (gcloud flag values, REST-spelled RAI JSON, which `floors.json`'s `gcloud` block now carries) and the all-gcloud form second; KS-3.2 sets `DENY_AGENT_FORM` and `DENY_SA_FORM` in its fence and KS-6.3 builds the agent principal from them; KS-1.5 and KS-3.5 follow Google's same-project registry rule; KS-3.6 grants `iap.googleapis.com/resources.egressViaIAP` through an access policy, not `roles/iap.egressor`; KS-4.1 reads the second human's login with PyYAML and writes it with `@`; KS-3.1 waits for the grant; §6 runs in `/bin/bash`; KS-1.4 survives a resume; the KF-2 deny-support question is closed (all ten listed on 2026-10-01); facts rows on Agent Gateway and the SDK names re-read 2026-10-01; KS-1.5's gateway project and `registries` line are held until P206 is signed, and KS-3.4 and KS-3.5 say what P206 changes; KS-2.8 says which floor its test proves, because Google's floor page (updated 2026-09-30) puts conformance at organisation, folder or project level, and KS-2.10's record carries it.
 - Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (KS-1.3, KS-7.2).
+- Changed 2026-10-01: KS-2.3's jq separates `floor`'s two arguments with `;` (with `,` jq 1.7.1 refuses the program); KS-2.3 and KS-2.10 branch from an up-to-date `main`, and KS-2.10 writes `floors.json` through a file beside it, not `/tmp`; KS-1.4's VERIFY asks for exactly the two entitlements its ACTION lists; KS-2.9, when 17 already ran PF, records `DONE` after its VERIFY instead of `N/A`, and KS-7.3 expects it; KS-2.10's record has seven lines.
 
 ## What this part builds
 
@@ -219,7 +220,7 @@ gcloud pam entitlements list --project="$CANARY_R_PROJECT" --location=global --f
 ```
 
   The `--project` form of `pam entitlements list` is shown in the reference's examples; the list must print exactly the two names `need` read, which 17 FM-2.17 set with `penv_set` (a second `penv_set` here would be refused if the name form differed). Run the checker exactly as 17 committed it, writing `records/<date>-KS-1.4-canary-r-zero-diff-v1.txt`.
-- **VERIFY:** `need CANARY_R_PROJECT CANARY_R_PROJECT_NUMBER ENT_PROJECT_REPAIR_CANARY_R ENT_DEPLOY_CREDENTIAL_HOLDER_CANARY_R` passes; each entitlement variable holds exactly one name; the checker reports zero differences — a difference on the FM-2.15 deny entries or the FM-2.16 PAB binding means `ENT_PLATFORM_POLICY` was missing or had expired during the run (KS-1.2): re-request it and re-run those two FM steps, never accept them as `pending` here, because KS-3.2 reads the entries back and KS-6.3's KF-2 principal list is built from them; `gcloud projects get-iam-policy "$CANARY_R_PROJECT" --flatten="bindings[].members" --filter="bindings.role=roles/owner" --format="value(bindings.members)"` prints nothing; `gcloud services list --enabled --project="$CANARY_R_PROJECT" --filter="config.name=agentregistry.googleapis.com" --format="value(config.name)"` prints nothing.
+- **VERIFY:** `need CANARY_R_PROJECT CANARY_R_PROJECT_NUMBER ENT_PROJECT_REPAIR_CANARY_R ENT_DEPLOY_CREDENTIAL_HOLDER_CANARY_R` passes; each entitlement variable holds exactly one name, and the ACTION's `pam entitlements list` prints exactly two names, the two the variables hold (a third entitlement on `canary-r` is not 17's and is a finding); the checker reports zero differences — a difference on the FM-2.15 deny entries or the FM-2.16 PAB binding means `ENT_PLATFORM_POLICY` was missing or had expired during the run (KS-1.2): re-request it and re-run those two FM steps, never accept them as `pending` here, because KS-3.2 reads the entries back and KS-6.3's KF-2 principal list is built from them; `gcloud projects get-iam-policy "$CANARY_R_PROJECT" --flatten="bindings[].members" --filter="bindings.role=roles/owner" --format="value(bindings.members)"` prints nothing; `gcloud services list --enabled --project="$CANARY_R_PROJECT" --filter="config.name=agentregistry.googleapis.com" --format="value(config.name)"` prints nothing.
 - **ROLLBACK:** Variables: `penv_set --force` with a build-log line. A checker difference is repaired through FM-AGENT, never by hand here.
 - **EVIDENCE:** Checker output and variable names in `<date>-KS-1.4-canary-r-zero-diff-v1`. E-xx: E-05. TISAX: 1.3.1, 4.2.1.
 
@@ -297,6 +298,7 @@ done | tee "$OUT"
 
 ```bash
 need PLATFORM_REPO_DIR FLD_AGENTIC_PLATFORM FLD_AGENTS_W FLD_AGENTS_P FLD_AGENTS_P_SA FLD_CONTROLLERS
+git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
 mkdir -p "$PLATFORM_REPO_DIR/model-armor"
 RAI='[{"filterType":"HATE_SPEECH","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"HARASSMENT","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"DANGEROUS","confidenceLevel":"MEDIUM_AND_ABOVE"},{"filterType":"SEXUALLY_EXPLICIT","confidenceLevel":"MEDIUM_AND_ABOVE"}]'
 jq -n --arg p "$FLD_AGENTIC_PLATFORM" --arg w "$FLD_AGENTS_W" --arg pp "$FLD_AGENTS_P" --arg psa "$FLD_AGENTS_P_SA" --arg c "$FLD_CONTROLLERS" --argjson rai "$RAI" '
@@ -309,11 +311,11 @@ def floor($level; $uri): {level:$level, full_uri:($uri+"/locations/global/floorS
              gcloud: "the form the Google manage-templates page documents for gcloud: flag values enable, high, enabled, RAI JSON in REST spelling (MEDIUM_AND_ABOVE); gcloud-lower is the all-gcloud variant; the accepted one is recorded in FLOOR_RECORD at KS-2.10",
              accepted: "tbd until KS-2.5 runs"},
  floors: [
-  floor("platform",    "folders/"+$p),
-  floor("tier-w",      "folders/"+$w),
-  floor("tier-p",      "folders/"+$pp),
-  floor("tier-p-sa",   "folders/"+$psa) + {signed_by:"security reviewer (tbd until named)"},
-  floor("controllers", "folders/"+$c)
+  floor("platform";    "folders/"+$p),
+  floor("tier-w";      "folders/"+$w),
+  floor("tier-p";      "folders/"+$pp),
+  floor("tier-p-sa";   "folders/"+$psa) + {signed_by:"security reviewer (tbd until named)"},
+  floor("controllers"; "folders/"+$c)
  ],
  project_floor_rule: {applies_to:"every project that calls generateContent", mode:"Custom", integrated_service:"VERTEX_AI", vertex_ai_cloud_logging:true,
    enforcement_type:{R:"INSPECT_ONLY", W:"INSPECT_ONLY until the tier benign-corpus measurement, then INSPECT_AND_BLOCK", P:"as W", controllers:"as W", "P-SA":"INSPECT_AND_BLOCK always"},
@@ -479,7 +481,7 @@ for E in "$ENT_FOLDER_ADMIN" "$ENT_PROJECT_REPAIR_CANARY_R"; do
 done
 ```
 
-- **ACTION:** If FM-AGENT already ran PF in KS-1.3 (KS-2.1's `canary-r` block shows `integratedServices` and filters), run only the VERIFY and write `checkpoint KS-2.9 N/A - - "PF run by 17 in KS-1.3"`. Otherwise:
+- **ACTION:** If FM-AGENT already ran PF in KS-1.3 (KS-2.1's `canary-r` block shows `integratedServices` and filters), run only the VERIFY, keep its output as this step's record, and, when it passes, write `checkpoint KS-2.9 DONE - <record> "PF run by 17 in KS-1.3; VERIFY only"`: the step's outcome (PF holds on `canary-r`) is proven by the read-back, whoever wrote the floor. Otherwise:
 
 ```bash
 PF_PROJECT="$CANARY_R_PROJECT"; PF_PROJECT_NUMBER="$CANARY_R_PROJECT_NUMBER"; PF_TIER=R
@@ -516,7 +518,7 @@ gcloud projects get-iam-policy "$PF_PROJECT" --flatten="bindings[].members" --fi
 - **ACTION:**
 
 ```bash
-need BUILD_LOG_DIR
+need BUILD_LOG_DIR PLATFORM_REPO_DIR
 REC="records/$(date -u +%F)-KS-2.10-floor-record-v1.md"
 {
   echo "# Floor record (setup 18)"
@@ -529,13 +531,15 @@ REC="records/$(date -u +%F)-KS-2.10-floor-record-v1.md"
 } > "$BUILD_LOG_DIR/$REC"
 penv_set FLOOR_RECORD "$REC"
 # commit the proven spelling into the one source the writes and the drift read use
-jq --arg s "<gcloud | gcloud-lower>" '.spellings.accepted = $s' "$PLATFORM_REPO_DIR/model-armor/floors.json" > /tmp/floors.json && mv /tmp/floors.json "$PLATFORM_REPO_DIR/model-armor/floors.json"
-git -C "$PLATFORM_REPO_DIR" switch -c ks-2-10-floor-spelling && git -C "$PLATFORM_REPO_DIR" add model-armor/floors.json && git -C "$PLATFORM_REPO_DIR" commit -m "model-armor: record the accepted gcloud enum spelling (setup 18 KS-2.10)" && git -C "$PLATFORM_REPO_DIR" push -u origin ks-2-10-floor-spelling
+git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only && git -C "$PLATFORM_REPO_DIR" switch -c ks-2-10-floor-spelling
+F="$PLATFORM_REPO_DIR/model-armor/floors.json"
+jq --arg s "<gcloud | gcloud-lower>" '.spellings.accepted = $s' "$F" > "$F.new" && mv "$F.new" "$F"
+git -C "$PLATFORM_REPO_DIR" add model-armor/floors.json && git -C "$PLATFORM_REPO_DIR" commit -m "model-armor: record the accepted gcloud enum spelling (setup 18 KS-2.10)" && git -C "$PLATFORM_REPO_DIR" push -u origin ks-2-10-floor-spelling
 evidence_add KS-2.10 floor-record E-05 5.2.6 "build-log:$REC" "$BUILD_LOG_DIR/$REC"
 ```
 
   Add to README's re-run index, each line naming the grant pair: "34: PF with `PF_TIER=P-SA` on `WALLE_PROJECT`, under `ENT_FOLDER_ADMIN` **and** `ent-project-repair-walle`; read, never write, folder floors; fail when the project floor is looser than `floors.json`'s `rest` block"; "35: live PF proof on the first `generateContent`"; "40: PF on `MO_PROJECT` at S4, under `ENT_FOLDER_ADMIN` and `ent-project-repair-mo`"; "17 FM-AGENT and FM-VERIFIER: PF (`PF_TIER=controllers` for the verifier) needs `ENT_FOLDER_ADMIN` beside the run's own grants — the repair bundle has no Model Armor role"; "15 and 25: floor-write `methodName` from KS-2.7"; "16: the drift job compares `describe` output with `floors.json`'s `rest` block only".
-- **VERIFY:** `FLOOR_RECORD` set; the record holds the eight lines with the placeholders replaced; `jq -r '.spellings.accepted' "$PLATFORM_REPO_DIR/model-armor/floors.json"` prints `gcloud` or `gcloud-lower` and the pull request merges; the README rows exist.
+- **VERIFY:** `FLOOR_RECORD` set; the record holds the seven lines with the placeholders replaced; `jq -r '.spellings.accepted' "$PLATFORM_REPO_DIR/model-armor/floors.json"` prints `gcloud` or `gcloud-lower` and the pull request merges; the README rows exist.
 - **ROLLBACK:** A superseding `-v2` record.
 - **EVIDENCE:** The record itself. E-xx: E-05. TISAX: 5.2.1.
 
@@ -1173,7 +1177,7 @@ checkpoint KS-7.3 DONE - - "file 18 complete except BLOCKED KS-1.5, KS-3.3, KS-3
 sitting_end
 ```
 
-- **VERIFY:** The grant search prints nothing (every grant ended or revoked); `sitting_end` prints `SITTING-END OK`; `checkpoints.tsv` holds a `DONE` (or `N/A` for KS-2.9 if 17 ran PF) for every other step of this file.
+- **VERIFY:** The grant search prints nothing (every grant ended or revoked); `sitting_end` prints `SITTING-END OK`; `checkpoints.tsv` holds a `DONE` for every other step of this file that is not BLOCKED (KS-2.9 included when 17 ran PF: its note says so).
 - **ROLLBACK:** None needed.
 - **EVIDENCE:** The final checkpoint line. E-xx: E-05. TISAX: 4.1.2.
 

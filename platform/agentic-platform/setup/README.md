@@ -2,7 +2,8 @@
 
 ## Status
 - Owner: the platform owner
-- Last reviewed: 2026-10-01
+- Last reviewed: 2026-10-02
+- 2026-10-02: §2 points at [automation/](automation/README.md), the script that runs the platform layer of this set; turning the files into code led to 175 corrections in files 01 to 21 and 42, made in the files themselves.
 - Revised 2026-10-01: §1 quotes the HLD's standing constraints verbatim and lists this set's stricter rules separately; the POV paragraph counts its people correctly and names the three-day set; §3.1 block 9, the 42a row, §3.3 and §7 follow 42 §0.2's three sittings; B-03 lists 03 DC-9.9; §9 carries 09 FS-7.8; §5.2 adds `KMS_KEY_BQ_LOGS`, `KMS_KEY_BQ_VIEWS`, `KMS_KEY_BQ_BILLING`; gendered pronouns for roles replaced with they/them/their and verb agreement fixed; §8 adds row B-23 for 16 RG-7.6 (row 44: entitlement, SDP pricing record, reconcile job), adds 17 FM-7.3 to B-16 and notes on B-04 that 18 KS-1.5's gateway also waits on P206.
 - What this is: the one entry point to the human-executed setup procedures in this folder, files
   [01](01-prerequisites-and-conventions.md) to [42](42-gates-drills-and-evidence.md). It gives
@@ -97,6 +98,12 @@ Rules of this set, stricter than the constraints above and never looser:
 
 ## 2. How to use this page
 
+- **Or let a script type the commands.** [automation/README.md](automation/README.md) (2026-10-01)
+  runs the platform layer of this set (files 01, 03 to 07, 09 to 21, and 42 sections 1 to 4) as
+  code: every step registered with its own id, plan mode by default, the same `~/.platform-env`
+  values, checkpoints and evidence rows as a run by hand, so file 22 onwards continues from either.
+  It stops at every step a person must do, every unsigned decision and every IRREVERSIBLE step.
+  These files stay canonical; the script follows them.
 - **Read before the first sitting.** Find your role in §6. Read §1 to §6 here, then
   [01](01-prerequisites-and-conventions.md), then each file your role appears in.
 - **Work file by file, in the order of §3.** A file starts only when every file it depends on

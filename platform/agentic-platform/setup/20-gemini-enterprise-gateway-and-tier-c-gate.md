@@ -5,15 +5,16 @@
 - Last reviewed: 2026-10-01
 - Last executed: never
 - Stage: review §2 stages 19 and 20: GE-9, GE-10, GE-13 and GE-14 of [03 §16](../03-gemini-enterprise-environment.md#16-runbook-bringing-the-environment-to-baseline), rewritten as executable steps. GE-11 (enforcement of the gateway policy) is **not** in this file: it moves to [39](39-wall-e-stage-0.md), once the first agent row is admitted and 30 days of dry-run log are reviewed. GE-12 (per-agent registration and share) is [35](35-wall-e-engine-registration-and-gateways.md) for Wall-E. Runs after [19](19-gemini-enterprise-import-and-baseline.md), in parallel with files 21 to 29, and closes before 35 and before 38 (gate line G21).
-- Step prefix: `GG`. 54 steps (GG-0.5, GG-5.2b, GG-6.1b and GG-7.2b were added by the 2026-09-16 review pass).
+- Step prefix: `GG`. 54 steps (GG-0.5, GG-5.2b, GG-6.1b and GG-7.2b were added by the 2026-09-16 review).
 - BLOCKED: GG-2.1's Agent Runtime path (the `canary-r` engine is BLOCKED on code in [18](18-model-armor-floor-spikes-and-kill-switch.md) KS-1.5, README B-04; its no-code path runs when 05's import list holds no Agent Runtime or A2A agent) and GG-7.6 (the reconciliation and drift jobs extended to the app: README B-02; GG-7.5 runs its manual interim meanwhile). Conditional stop, not BLOCKED: GG-5.1 refuses to bind unless spike answers Q1, Q6 and Q7 are PASS.
 - IRREVERSIBLE: none. **High consequence: GG-5.3**, the production binding, which Google documents as immediately routing all existing agent traffic and for which Google documents no unbind. It is gated so that it runs only after its undo is proven on the throwaway app (Q7), it carries an approver and a witness at the screen, and it is preceded by GG-5.2b, which confirms the announced window is open and the rollback operator is on the call. GG-6.3 (deleting the throwaway app) and GG-6.1b (deleting the custom-constraint definition) are irreversible in the small and carry their own confirmations.
 - Replaces: the GE-9 to GE-14 rows of 03 §16 and the binding example of 03 §11.1. Kept: the step list, `DRY_RUN` on the authorisation extension (03 §11.1, correct), the three-stage protocol of P57 (spike, dry run, enforce). Not copied: §11.1's global-host PATCH (X-GE-20), GE-10's "with `DRY_RUN`" on the binding and its `Assumption:` unbind (X-GE-04), GE-13's "detections in the SIEM with a CI test each" and GE-14's penetration test as a Tier C condition (S050), 03 §3's "the gateway binding is not a constrainable field" (X-GE-09), 03 §13's "agent sharing" as an Admin Activity entry (X-GE-11).
 - Closes: S050 (the GE-13 and GE-14 half; 15 made the SCC route), X-GE-04, X-GE-08 (the spike half; 19 made the production half), X-GE-09 (test and dry run; enforcement handed to 39), X-GE-11 (the share-source and detection-key half; 19 made the `ADMIN_READ` half), X-GE-16, X-GE-20, X-GE-22 (the platform half; 35 applies it to Wall-E's share). §"Findings" says how.
 - Decisions applied (pending signature in [03](03-decisions-and-people.md)): SD-13, SD-19, SD-20, SD-21; design decisions P6, P53, P57, P59 of [../12-open-decisions.md](../12-open-decisions.md).
-- Every command, flag, field, role, constraint and console path was read on Google's pages on 2026-09-15, and the ones the 2026-09-16 review pass challenged were re-read that day: the Agent Gateway set-up page's required-APIs and constraint-id lists, the `agent-registry services create` flag reference, the custom-constraints page on CREATE-time evaluation, and the organisation-policy constraints reference (§"Sources"). Nothing was run against the tenant while writing. What could not be verified is listed in §"Not verified" and marked `Assumption:` at its step.
+- Every command, flag, field, role, constraint and console path was read on Google's pages on 2026-09-15, and the ones the 2026-09-16 review challenged were re-read that day: the Agent Gateway set-up page's required-APIs and constraint-id lists, the `agent-registry services create` flag reference, the custom-constraints page on CREATE-time evaluation, and the organisation-policy constraints reference (§"Sources"). Nothing was run against the tenant while writing. What could not be verified is listed in §"Not verified" and marked `Assumption:` at its step.
 - Changed 2026-10-01: every PAM call passes `--billing-project="$CICD_PROJECT"`; the `ENT_PROJECT_REPAIR_GEMINI` fallback is gone (17 now writes `ENT_PROJECT_REPAIR_TENANT_APP`) and the entitlement keeps 19 GE-2.3's approver; GG-0.4 tries `iam.managed.disableAccessPolicyBinding` (the constraints reference's id, 2026-09-30) first and records Agent Gateway's launch stage; GG-0.5 uses arrays and handles the observability APIs Google lists; `service-extensions authz-extensions` on the GA track with beta as fallback; GG-2.7 drops `--freshness`; GG-5.7 uses `--update-mask=policy.dry_run_spec`; deviation rows are BD-20-1 to BD-20-4 in 01 PR-4.1's columns, with GG-6.2 closing BD-20-3; portable date arithmetic in GG-5.8 and GG-7.5; the `@file` note says Google's pages disagree.
 - Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (GG-0.3, GG-0.5, GG-2.1, GG-5.3, GG-6.2).
+- Changed 2026-10-01: GG-1.4 and GG-3.3 write their authorisation-policy YAML with their own terminator (`AUTHZ_POLICY`), and GG-3.3 gives its file in full instead of naming three edits to GG-1.4's; every `build-log:` EVIDENCE line registers one named file with its SHA-256, so 42 GD-4.1 finds no row without a hash (the steps keep that file in a variable, and GG-4.3, GG-6.1, GG-6.2 and GG-7.1 now save the read they verify); GG-0.4 writes `constraint-id.txt` itself; GG-6.2 quotes `--flatten='bindings[].members'` for zsh.
 - Elapsed: 1 to 2 weeks to `TIER_C_RECORD` (the spike, a change-window notice of five business days, seven days of dry-run log). The 30-day dry-run review (GG-5.8) continues after the record and is 39's input, not a Tier C condition. Hands-on: 3 days.
 
 ---
@@ -183,7 +184,7 @@ GRANT="$(pam_grant "$ENT_REPAIR" 1800s "setup 20 GG-0.3 one-grant test")"; pam_a
   `Assumption:` `yq` (jq-compatible YAML wrapper) is installed, as 19 assumes; without it, edit the copy by hand and keep the `diff`. The `etag` is kept so a concurrent change fails the update; the gcloud reference does not say which fields `update` accepts, so a refusal naming a field is recorded and that field removed.
 - **VERIFY:** each `roles describe` prints its role; `gcloud pam entitlements describe --billing-project="$CICD_PROJECT" "$ENT_REPAIR" --format=json | jq -r '.privilegedAccess.gcpIamAccess.roleBindings[].role'` lists 19's five roles plus the six; `approvalWorkflow` still names the second human as 19 GE-2.3 set it (the added network, access-policy and registry admin roles make a second person necessary); `pam_active` printed `ACTIVE`. Confirm the set-up page's permissions by `gcloud iam roles describe roles/networkservices.admin --format=json | jq '.includedPermissions | map(select(startswith("networkservices.agentGateways.") or startswith("networkservices.authzExtensions."))) | length'` (non-zero) and the same for `networksecurity.authzPolicies.` on `roles/networksecurity.admin`.
 - **ROLLBACK:** `gcloud pam entitlements update --billing-project="$CICD_PROJECT" ... --entitlement-file="$f"` (the saved before file, without output-only fields).
-- **EVIDENCE:** before and after files; `evidence_add GG-0.3 repair-entitlement-gateway E-05 4.1.3 "build-log:ge-gateway/<after>" "$g"`.
+- **EVIDENCE:** before and after files; `evidence_add GG-0.3 repair-entitlement-gateway E-05 4.1.3 "build-log:ge-gateway/$(basename "$g")" "$g"`.
 
 #### GG-0.4 Read the before state and open the spike record
 
@@ -191,7 +192,8 @@ GRANT="$(pam_grant "$ENT_REPAIR" 1800s "setup 20 GG-0.3 one-grant test")"; pam_a
 - **WHERE:** shell; Google Cloud console → **Gemini Enterprise** → the production app → **Security** → **Configuration** (read only); Google Cloud console → **IAM & Admin** → **Organization policies**, filtered on *Disable binding access policy to resource* (read only, to confirm the constraint id the console shows).
 - **ACTION:**
 ```bash
-gg_engine_view "$GEMINI_APP_ID" | tee "$(gg_file GG-0.4 prod-engine-before json)"
+E0="$(gg_file GG-0.4 prod-engine-before json)"
+gg_engine_view "$GEMINI_APP_ID" | tee "$E0"
 gg_engine_view "$GE_THROWAWAY_APP_ID" | tee "$(gg_file GG-0.4 throwaway-engine-before json)"
 gcloud services list --enabled --project="$GEMINI_PROJECT" --format='value(config.name)' | grep -E '^(networkservices|networksecurity|iap|agentregistry|modelarmor|compute|dns|discoveryengine|logging|monitoring)\.googleapis\.com$' | sort
 gcloud network-services agent-gateways list --location=europe-west1 --project="$GEMINI_PROJECT" --format='table(name,googleManaged.governedAccessPath)'
@@ -201,6 +203,7 @@ for c in iam.managed.disableAccessPolicyBinding iam.managed.disableAccessPolicyB
 done
 test -n "$GE_APB_CONSTRAINT" || echo "STOP: neither spelling resolves; read the console value at IAM & Admin > Organization policies, filter 'Disable binding access policy to resource', and do not start GG-1"
 penv_set GE_APB_CONSTRAINT "$GE_APB_CONSTRAINT"
+printf '%s resolved %s\n' "$GE_APB_CONSTRAINT" "$(date -u +%FT%TZ)" > "$GG_DIR/constraint-id.txt"
 cp "$GG_DIR/apb-${GE_APB_CONSTRAINT}.json" "$(gg_file GG-0.4 access-policy-binding-effective json)"
 gcloud projects get-iam-policy "$GEMINI_PROJECT" --format=json | jq '.auditConfigs'
 # Agent Gateway's launch stage, read on the day from the overview and set-up pages (banner and updated date)
@@ -240,9 +243,9 @@ checkpoint GG-0.4 DONE - "$GG_SPIKE"
   - no gateway exists;
   - `auditConfigs` or the folder's (14) cover `iap.googleapis.com`;
   - `launch-stage.txt` holds the stage read today, with the page and its updated date (the `<…>` replaced); if it says Preview or any Pre-GA stage, GG-2.11's go record carries the authorised signer's acceptance of the Pre-GA terms before GG-5.3;
-  - **the constraint id resolves**: the loop printed `RESOLVED <id>` and no `STOP`, `need GE_APB_CONSTRAINT` returns 0, and `gcloud org-policies describe "$GE_APB_CONSTRAINT" --project="$GEMINI_PROJECT" --effective --format=json | jq -e '.name' ` prints a name rather than `NOT_FOUND`. On 2026-10-01 the constraints reference lists the singular `iam.managed.disableAccessPolicyBinding`, so the loop should resolve on its first try; the plural is kept only because the set-up page still writes it. A `NOT_FOUND` on both spellings means the id in this file and in 13 row B7 is wrong: **GG-1 does not start**; read the id from the console (**IAM & Admin** → **Organization policies**, filter *Disable binding access policy to resource*), record it in the deviation register with the console screenshot reference, `penv_set GE_APB_CONSTRAINT` to it, and correct 13 row B7 and this file's §"Sources" as a wiki edit. Record which spelling won in `$GG_DIR/constraint-id.txt`.
+  - **the constraint id resolves**: the loop printed `RESOLVED <id>` and no `STOP`, `need GE_APB_CONSTRAINT` returns 0, and `gcloud org-policies describe "$GE_APB_CONSTRAINT" --project="$GEMINI_PROJECT" --effective --format=json | jq -e '.name' ` prints a name rather than `NOT_FOUND`. On 2026-10-01 the constraints reference lists the singular `iam.managed.disableAccessPolicyBinding`, so the loop should resolve on its first try; the plural is kept only because the set-up page still writes it. A `NOT_FOUND` on both spellings means the id in this file and in 13 row B7 is wrong: **GG-1 does not start**; read the id from the console (**IAM & Admin** → **Organization policies**, filter *Disable binding access policy to resource*), record it in the deviation register with the console screenshot reference, `penv_set GE_APB_CONSTRAINT` to it, and correct 13 row B7 and this file's §"Sources" as a wiki edit, then write that id to `$GG_DIR/constraint-id.txt` in place of the line the block wrote. `$GG_DIR/constraint-id.txt` names the spelling that won.
 - **ROLLBACK:** none needed (reads and one variable).
-- **EVIDENCE:** the before files and `constraint-id.txt`; `evidence_add GG-0.4 before-state E-05 5.2.7 "build-log:ge-gateway/"`.
+- **EVIDENCE:** the before files and `constraint-id.txt`; `evidence_add GG-0.4 before-state E-05 5.2.7 "build-log:ge-gateway/$(basename "$E0")" "$E0"`.
 
 #### GG-0.5 Enable the Agent Gateway APIs on `GEMINI_PROJECT`
 
@@ -281,7 +284,7 @@ for s in "${GG_SVC[@]}" ${GG_OBS_ON[@]+"${GG_OBS_ON[@]}"} modelarmor.googleapis.
 ```
   prints nothing. A refusal naming `constraints/gcp.restrictServiceUsage` means check (a) was wrong: stop, and take the allow-list amendment through 19 GE-3.5 before returning here.
 - **ROLLBACK:** `gcloud services disable <service> --project="$GEMINI_PROJECT"` for a service **this step** added only (the `comm -13` list), after GG-6 has removed every gateway object and only after `gcloud asset search-all-resources --scope="projects/$GEMINI_PROJECT" --asset-types=<type>` shows nothing was created in it. Never disable a service that was already on in `services-before`.
-- **EVIDENCE:** both service lists and the effective allow-list read; `evidence_add GG-0.5 gateway-apis-enabled E-05 5.2.1 "build-log:ge-gateway/<after>" "$after"`.
+- **EVIDENCE:** both service lists and the effective allow-list read; `evidence_add GG-0.5 gateway-apis-enabled E-05 5.2.1 "build-log:ge-gateway/$(basename "$after")" "$after"`.
 
 ### GG-1 The throwaway gateway chain
 
@@ -328,11 +331,12 @@ registries:
   - //agentregistry.googleapis.com/projects/${GEMINI_PROJECT}/locations/europe-west1
 EOF
 gcloud network-services agent-gateways import gg-spike-egress --source="$W" --location=europe-west1 --project="$GEMINI_PROJECT"
-gcloud network-services agent-gateways describe gg-spike-egress --location=europe-west1 --project="$GEMINI_PROJECT" --format=yaml | tee "$(gg_file GG-1.2 gg-spike-egress-describe yaml)"
+D="$(gg_file GG-1.2 gg-spike-egress-describe yaml)"
+gcloud network-services agent-gateways describe gg-spike-egress --location=europe-west1 --project="$GEMINI_PROJECT" --format=yaml | tee "$D"
 ```
 - **VERIFY:** `describe` shows `governedAccessPath: AGENT_TO_ANYWHERE`, the registry, `protocols: [MCP]`; `checkpoint GG-1.2 DONE`.
 - **ROLLBACK:** `gcloud network-services agent-gateways delete gg-spike-egress --location=europe-west1 --project="$GEMINI_PROJECT"` (GG-6.1 does it).
-- **EVIDENCE:** YAML and describe; `evidence_add GG-1.2 spike-gateway E-05 5.2.7 "build-log:ge-gateway/<describe>"`.
+- **EVIDENCE:** YAML and describe; `evidence_add GG-1.2 spike-gateway E-05 5.2.7 "build-log:ge-gateway/$(basename "$D")" "$D"`.
 
 #### GG-1.3 Import the IAP authorisation extension in `DRY_RUN`
 
@@ -352,11 +356,12 @@ metadata:
 EOF
 gcloud service-extensions authz-extensions import gg-spike-iap-authz --source="$W" --location=europe-west1 --project="$GEMINI_PROJECT" \
   || gcloud beta service-extensions authz-extensions import gg-spike-iap-authz --source="$W" --location=europe-west1 --project="$GEMINI_PROJECT"   # GA group (reference updated 2026-05-27); beta only as fallback
-gcloud service-extensions authz-extensions describe gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT" --format=yaml | tee "$(gg_file GG-1.3 gg-spike-iap-authz-describe yaml)"
+D="$(gg_file GG-1.3 gg-spike-iap-authz-describe yaml)"
+gcloud service-extensions authz-extensions describe gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT" --format=yaml | tee "$D"
 ```
 - **VERIFY:** `describe` shows `metadata.iamEnforcementMode: DRY_RUN` and `failOpen: false`.
 - **ROLLBACK:** `gcloud service-extensions authz-extensions delete gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT"` (after GG-1.4's policy is deleted).
-- **EVIDENCE:** YAML and describe; `evidence_add GG-1.3 spike-authz-extension E-05 5.2.7 "build-log:ge-gateway/<describe>"`.
+- **EVIDENCE:** YAML and describe; `evidence_add GG-1.3 spike-authz-extension E-05 5.2.7 "build-log:ge-gateway/$(basename "$D")" "$D"`.
 
 #### GG-1.4 Import the authorisation policy for the throwaway gateway
 
@@ -365,7 +370,7 @@ gcloud service-extensions authz-extensions describe gg-spike-iap-authz --locatio
 - **ACTION:** Google: "Every Agent Gateway requires an associated authorization policy".
 ```bash
 W="$(gg_file GG-1.4 gg-spike-authz-policy yaml)"
-cat > "$W" <<EOF
+cat > "$W" <<AUTHZ_POLICY
 name: gg-spike-authz-policy
 target:
   resources:
@@ -376,13 +381,14 @@ customProvider:
   authzExtension:
     resources:
       - "projects/${GEMINI_PROJECT}/locations/europe-west1/authzExtensions/gg-spike-iap-authz"
-EOF
+AUTHZ_POLICY
 gcloud network-security authz-policies import gg-spike-authz-policy --source="$W" --location=europe-west1 --project="$GEMINI_PROJECT"
-gcloud network-security authz-policies describe gg-spike-authz-policy --location=europe-west1 --project="$GEMINI_PROJECT" --format=yaml | tee "$(gg_file GG-1.4 gg-spike-authz-policy-describe yaml)"
+D="$(gg_file GG-1.4 gg-spike-authz-policy-describe yaml)"
+gcloud network-security authz-policies describe gg-spike-authz-policy --location=europe-west1 --project="$GEMINI_PROJECT" --format=yaml | tee "$D"
 ```
 - **VERIFY:** `describe` shows `action: CUSTOM`, the gateway target and the extension.
 - **ROLLBACK:** `gcloud network-security authz-policies delete gg-spike-authz-policy --location=europe-west1 --project="$GEMINI_PROJECT"`.
-- **EVIDENCE:** `evidence_add GG-1.4 spike-authz-policy E-05 5.2.7 "build-log:ge-gateway/<describe>"`.
+- **EVIDENCE:** `evidence_add GG-1.4 spike-authz-policy E-05 5.2.7 "build-log:ge-gateway/$(basename "$D")" "$D"`.
 
 #### GG-1.5 A starter IAM access policy naming the throwaway app
 
@@ -395,12 +401,13 @@ W="$(gg_file GG-1.5 gg-spike-access-rules json)"
 jq -n --arg p "$P" '[{description:"setup 20 spike: throwaway app egress, evaluated in DRY_RUN", effect:"ALLOW", principals:[$p], operation:{permissions:["iap.googleapis.com/resources.egressViaIAP"]}}]' > "$W"
 gcloud iam access-policies create gg-spike-access --details-rules="$W" --project="$GEMINI_PROJECT" --location=global
 gcloud iam policy-bindings create gg-spike-access-binding --policy="projects/${GEMINI_PROJECT}/locations/global/accessPolicies/gg-spike-access" --target-resource="//cloudresourcemanager.googleapis.com/projects/${GEMINI_PROJECT}" --project="$GEMINI_PROJECT" --location=global
-gcloud iam access-policies describe gg-spike-access --project="$GEMINI_PROJECT" --location=global --format=json | tee "$(gg_file GG-1.5 gg-spike-access-describe json)"
+D="$(gg_file GG-1.5 gg-spike-access-describe json)"
+gcloud iam access-policies describe gg-spike-access --project="$GEMINI_PROJECT" --location=global --format=json | tee "$D"
 gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-1 chain done"
 ```
 - **VERIFY:** `describe` returns the rule; `gcloud iam policy-bindings describe gg-spike-access-binding --project="$GEMINI_PROJECT" --location=global --format='value(target)'` shows the project; `checkpoint GG-1.5 DONE`.
 - **ROLLBACK:** `gcloud iam policy-bindings delete gg-spike-access-binding --project="$GEMINI_PROJECT" --location=global`, then `gcloud iam access-policies delete gg-spike-access --project="$GEMINI_PROJECT" --location=global`.
-- **EVIDENCE:** `evidence_add GG-1.5 spike-access-policy E-05 4.1.3 "build-log:ge-gateway/<describe>"`.
+- **EVIDENCE:** `evidence_add GG-1.5 spike-access-policy E-05 4.1.3 "build-log:ge-gateway/$(basename "$D")" "$D"`.
 
 ### GG-2 The spike questions
 
@@ -414,7 +421,7 @@ On GG-2.1's no-code path, every later reference to `gg-spike-canary-r` means `gg
 
   > **BLOCKED** (Agent Runtime path): Needs: the `canary-r` engine source and its deployment (18 KS-1.5). Commit it in: `PLATFORM_REPO_REMOTE`, canary engine source (README B-04, as extended by 18). Unblocked by: KS-1.5 `DONE` with the engine listed below. Gate waiting: Q4 and Q6, hence GG-5 when 05's import list holds any Agent Runtime or A2A agent. Until then: `checkpoint GG-2.1 BLOCKED - - "18 KS-1.5 canary engine"`.
 
-  **No-code path** (only when `*-GI-8.5-ge10-import-list-v*.csv` has no `agent-runtime` or `a2a-endpoint` line): in the throwaway app's web app, create one agent with the app's agent builder (`Assumption:` the builder path shown in the web app on the day; record it), named `gg-spike-nocode`, answering from no data store; ask it one question before binding, and time 20 assistant questions for Q5's unbound baseline. Q4 is then recorded "not tested; 35's first engine answers it", and Q6 is answered for the no-code type only. Skip the rest of this ACTION.
+  **No-code path** (only when `*-GI-8.5-ge10-import-list-v*.csv` has no `agent-runtime` or `a2a-endpoint` line): in the throwaway app's web app, create one agent with the app's agent builder (`Assumption:` the builder path shown in the web app on the day; record it), named `gg-spike-nocode`, answering from no data store; ask it one question before binding, and time 20 assistant questions for Q5's unbound baseline. Write the builder path, the agent's name and the time of its first answer to `C="$(gg_file GG-2.1 nocode-agent md)"`, the file the EVIDENCE line registers. Q4 is then recorded "not tested; 35's first engine answers it", and Q6 is answered for the no-code type only. Skip the rest of this ACTION.
 
   Agent Runtime path: Google documents the cross-project grant as `roles/discoveryengine.serviceAgent` on the agent project (cross-project ADK page); the design's engine-scoped `geEngineQuery` is 35's to prove for Wall-E, so the spike uses Google's documented grant as a dated spike exception, removed in GG-6.2. Stop here if 18 has no deployed `canary-r` engine: `checkpoint GG-2.1 BLOCKED - - "needs 18 canary-r engine"`.
 ```bash
@@ -428,12 +435,13 @@ bd_insert "$(printf '| BD-20-3 | %s | 20 GG-2.1 | DEV | spike: roles/discoveryen
 GRANT="$(pam_grant "$ENT_GE_ADMIN" 3600s "setup 20 GG-2.1 register canary-r in the throwaway app before binding")"; pam_active "$GRANT"
 B="$(gg_file GG-2.1 agent-create json)"
 jq -n --arg e "$GG_SPIKE_ENGINE" '{displayName:"gg-spike-canary-r", description:"Setup 20 spike agent. Responses are generated by an AI system.", adkAgentDefinition:{provisionedReasoningEngine:{reasoningEngine:$e}}}' > "$B"
-ge_call POST "${GG_HOST}/v1alpha/projects/${GEMINI_PROJECT}/locations/eu/collections/default_collection/engines/${GE_THROWAWAY_APP_ID}/assistants/default_assistant/agents" "$B" | tee "$(gg_file GG-2.1 agent-created json)"
+C="$(gg_file GG-2.1 agent-created json)"
+ge_call POST "${GG_HOST}/v1alpha/projects/${GEMINI_PROJECT}/locations/eu/collections/default_collection/engines/${GE_THROWAWAY_APP_ID}/assistants/default_assistant/agents" "$B" | tee "$C"
 ```
   Then, in the throwaway app's web URL (console → **Gemini Enterprise** → the throwaway app → **Overview**, the app link), select `gg-spike-canary-r` and ask its test prompt (18's canary prompt), and ask the assistant one question. Time 20 assistant questions with a stopwatch for Q5's unbound baseline.
 - **VERIFY:** the POST returns an agent `name` (or the no-code agent exists); the agent answers; `checkpoint GG-2.1 DONE - - "<runtime|nocode> path"`.
 - **ROLLBACK:** `ge_call DELETE "<agent name>"` on the same host; remove the project binding (GG-6.2).
-- **EVIDENCE:** created agent JSON, the answer time, the baseline timings in `restricted/`; `evidence_add GG-2.1 spike-agent-before-binding E-05 5.2.6 "build-log:ge-gateway/"`.
+- **EVIDENCE:** created agent JSON, the answer time, the baseline timings in `restricted/`; `evidence_add GG-2.1 spike-agent-before-binding E-05 5.2.6 "build-log:ge-gateway/$(basename "$C")" "$C"` (`$C` is the created-agent JSON on the Agent Runtime path, the `nocode-agent` file on the no-code path).
 
 #### GG-2.2 Bind the throwaway app on the `eu` host, then GET
 
@@ -445,7 +453,8 @@ T0="$(date -u +%FT%TZ)"
 B="$(gg_file GG-2.2 bind json)"
 jq -n --arg gw "projects/${GEMINI_PROJECT_NUMBER}/locations/europe-west1/agentGateways/gg-spike-egress" '{agentGatewaySetting:{defaultEgressAgentGateway:{name:$gw}}}' > "$B"
 ge_call PATCH "${GG_ENGINES}/${GE_THROWAWAY_APP_ID}?updateMask=agentGatewaySetting.defaultEgressAgentGateway.name" "$B" | tee "$(gg_file GG-2.2 bind-response json)"
-gg_engine_view "$GE_THROWAWAY_APP_ID" | tee "$(gg_file GG-2.2 throwaway-after json)"
+AF="$(gg_file GG-2.2 throwaway-after json)"
+gg_engine_view "$GE_THROWAWAY_APP_ID" | tee "$AF"
 gg_answer Q8 "GET returns $(gg_engine_view "$GE_THROWAWAY_APP_ID" | jq -r '.agentGatewaySetting.defaultEgressAgentGateway.name'); associatedAgentRegistry $(gg_engine_view "$GE_THROWAWAY_APP_ID" | jq -r '.associatedAgentRegistry')" RECORDED
 echo "$T0" > "$GG_DIR/spike-bind-time.txt"
 ```
@@ -457,7 +466,7 @@ penv_set GE_GW_NAME_RETURNED "$(gg_engine_view "$GE_THROWAWAY_APP_ID" | jq -r '.
 ```
 - **VERIFY:** `jq -e '.agentGatewaySetting.defaultEgressAgentGateway.name | endswith("/agentGateways/gg-spike-egress")'` on the after file prints `true`; the production engine GET is unchanged (`diff` against GG-0.4's file shows nothing); `need GE_GW_NAME_FORM GE_GW_NAME_RETURNED` returns 0 and `GE_GW_NAME_FORM` is exactly `number` or `id`.
 - **ROLLBACK:** GG-2.4 is the rollback under test.
-- **EVIDENCE:** request, response, GET; `evidence_add GG-2.2 spike-bind E-05 5.2.7 "build-log:ge-gateway/<after>"`.
+- **EVIDENCE:** request, response, GET; `evidence_add GG-2.2 spike-bind E-05 5.2.7 "build-log:ge-gateway/$(basename "$AF")" "$AF"`.
 
 #### GG-2.3 Read the dry-run decisions; test the pre-existing agent
 
@@ -491,10 +500,12 @@ gg_answer Q6 "<keeps working | re-import via console proven>" PASS
 - **WHERE:** Google Cloud console → **Gemini Enterprise** → throwaway app → **Security** → **Configuration** tab → **Agent Gateway configuration**; shell.
 - **ACTION:** Attempt A (console): clear the gateway field, **Save**. GET. If still bound, attempt B (PATCH clearing the whole setting):
 ```bash
-gg_engine_view "$GE_THROWAWAY_APP_ID" | jq '.agentGatewaySetting' | tee "$(gg_file GG-2.4 after-console json)"
+U="$(gg_file GG-2.4 after-console json)"
+gg_engine_view "$GE_THROWAWAY_APP_ID" | jq '.agentGatewaySetting' | tee "$U"
 printf '{}' > "$GG_DIR/empty.json"
 ge_call PATCH "${GG_ENGINES}/${GE_THROWAWAY_APP_ID}?updateMask=agentGatewaySetting" "$GG_DIR/empty.json" | tee "$(gg_file GG-2.4 patch-clear-response json)"
-gg_engine_view "$GE_THROWAWAY_APP_ID" | jq '.agentGatewaySetting' | tee "$(gg_file GG-2.4 after-patch json)"
+U="$(gg_file GG-2.4 after-patch json)"
+gg_engine_view "$GE_THROWAWAY_APP_ID" | jq '.agentGatewaySetting' | tee "$U"
 ```
   Then ask one assistant question and the canary prompt (app works unbound). Rebind (GG-2.2's call), GET, then test a direct rebind to a second name while bound (the name is `Immutable`): PATCH with `projects/${GEMINI_PROJECT_NUMBER}/locations/europe-west1/agentGateways/gg-spike-egress-2` (which does not exist) and record the error text. Leave the app bound for GG-2.6.
 ```bash
@@ -502,7 +513,7 @@ gg_answer Q7 "<method that unbound: console|PATCH updateMask=agentGatewaySetting
 ```
 - **VERIFY:** after the working attempt `agentGatewaySetting` is absent or has no `defaultEgressAgentGateway.name`; the unbound app answers; after the rebind the name is back. Q7 FAIL if neither attempt unbinds: the production binding (GG-5) does not run, and GG-2.11 records the compensating control.
 - **ROLLBACK:** rebind by GG-2.2's call.
-- **EVIDENCE:** the GETs and responses; `evidence_add GG-2.4 spike-unbind-proof E-05 5.2.6 "build-log:ge-gateway/"`.
+- **EVIDENCE:** the GETs and responses; `evidence_add GG-2.4 spike-unbind-proof E-05 5.2.6 "build-log:ge-gateway/$(basename "$U")" "$U"` (`$U` is the read after the attempt that unbound: `after-console` when attempt A worked, `after-patch` otherwise).
 
 #### GG-2.5 The unreachable-template test on a throwaway template pair
 
@@ -516,7 +527,8 @@ G3="$(pam_grant "$ENT_GE_ADMIN" 3600s "setup 20 GG-2.5 throwaway assistant FAIL_
 A="${GG_HOST}/v1/projects/${GEMINI_PROJECT}/locations/eu/collections/default_collection/engines/${GE_THROWAWAY_APP_ID}/assistants/default_assistant"
 ge_call GET "$A" > "$(gg_file GG-2.5 assistant-before json)"
 jq --arg p "projects/${GEMINI_PROJECT}/locations/eu/templates/gg-spike-prompt" --arg r "projects/${GEMINI_PROJECT}/locations/eu/templates/gg-spike-response" '{customerPolicy: ((.customerPolicy // {}) + {modelArmorConfig:{userPromptTemplate:$p, responseTemplate:$r, failureMode:"FAIL_CLOSED"}})}' "$(ls -t "$GG_DIR"/*-GG-2.5-assistant-before-v*.json | head -1)" > "$GG_DIR/ma.json"
-ge_call PATCH "${A}?update_mask=customerPolicy" "$GG_DIR/ma.json" | jq '.customerPolicy'
+AA="$(gg_file GG-2.5 assistant-after json)"
+ge_call PATCH "${A}?update_mask=customerPolicy" "$GG_DIR/ma.json" | tee "$AA" | jq '.customerPolicy'
 ```
   Ask one question in the throwaway app (answered). Make the prompt template unreachable: `ma_eu model-armor templates delete gg-spike-prompt --location=eu --project="$GEMINI_PROJECT"`. Wait 10 minutes; ask one question; record block or answer and the message shown. Separately PATCH a `userPromptTemplate` naming `gg-spike-absent` and record whether the write is refused.
 ```bash
@@ -524,7 +536,7 @@ gg_answer Q9 "<runtime: blocked with message X | answered>; write-time: <refused
 ```
 - **VERIFY:** Q9 committed; the production assistant GET (`GE_APP` of 19) still shows `GE_ARMOR_TEMPLATE` and `FAIL_CLOSED`.
 - **ROLLBACK:** PATCH the throwaway assistant with `customerPolicy` from `assistant-before`; delete `gg-spike-response` (GG-6.2).
-- **EVIDENCE:** assistant before and after, answers; `evidence_add GG-2.5 unreachable-template-test E-15 5.2.6 "build-log:ge-gateway/"`.
+- **EVIDENCE:** assistant before and after, answers; `evidence_add GG-2.5 unreachable-template-test E-15 5.2.6 "build-log:ge-gateway/$(basename "$AA")" "$AA"`.
 
 #### GG-2.6 Test the gateway custom constraint: UPDATE name-scoped, CREATE unscoped
 
@@ -616,7 +628,7 @@ gg_answer Q11 "Group share: <methodName|none> <log>; All users: <methodName> req
 ```
 - **VERIFY:** Q11 committed with the exact method names or "none in either stream". The known Google fact stands regardless: no agent `SetIamPolicy` is on the audit page.
 - **ROLLBACK:** the shares are removed in this step; confirm the **User permissions** tab lists only the creator.
-- **EVIDENCE:** `evidence_add GG-2.7 share-audit-source E-06 5.2.4 "build-log:ge-gateway/restricted (hashes)"`.
+- **EVIDENCE:** `evidence_add GG-2.7 share-audit-source E-06 5.2.4 "build-log:ge-gateway/restricted (hashes)" "$(ls -t "$GG_DIR"/restricted/*-GG-2.7-activity-v*.json | head -1)"`.
 
 #### GG-2.8 `agents.create` by a holder of the user role
 
@@ -633,8 +645,9 @@ ge_call GET "${GG_ENGINES}/${GE_THROWAWAY_APP_ID}:getIamPolicy" > "$cur"
 jq --arg u "user:$GE_TEST_USER" '{policy:{etag:.etag, bindings:((.bindings // []) as $bs | ($bs | map(select(.role != "roles/discoveryengine.agentspaceUser"))) + [{role:"roles/discoveryengine.agentspaceUser", members: ((($bs | map(select(.role == "roles/discoveryengine.agentspaceUser")) | .[0].members) // []) + [$u] | unique)}])}}' "$cur" > "$GG_DIR/iam-new.json"
 jq -e '[.policy.bindings[].role] | (length == (unique | length))' "$GG_DIR/iam-new.json"
 diff <(jq -S '.bindings // []' "$cur") <(jq -S '.policy.bindings' "$GG_DIR/iam-new.json")
-ge_call POST "${GG_ENGINES}/${GE_THROWAWAY_APP_ID}:setIamPolicy" "$GG_DIR/iam-new.json" | tee "$(gg_file GG-2.8 iam-after json)" | jq '.bindings'
-jq -e '[.bindings[].role] | (length == (unique | length))' "$(ls -t "$GG_DIR"/*-GG-2.8-iam-after-v*.json | head -1)"
+IA="$(gg_file GG-2.8 iam-after json)"
+ge_call POST "${GG_ENGINES}/${GE_THROWAWAY_APP_ID}:setIamPolicy" "$GG_DIR/iam-new.json" | tee "$IA" | jq '.bindings'
+jq -e '[.bindings[].role] | (length == (unique | length))' "$IA"
 ```
   The colleague, 15 minutes later, runs GG-2.1's create call with `displayName` `gg-spike-user-agent` and no `X-Goog-User-Project` change (it names `GEMINI_PROJECT`). If refused with a quota-project or `serviceusage` error, the platform owner grants `roles/serviceusage.serviceUsageConsumer` to the user under `ENT_PROJECT_REPAIR_TENANT_APP` for the test and removes it immediately after; record both lines. The colleague then clicks **Request review** if offered. The platform owner checks whether the agent appears in the console's **Agents** list and in the `ge-admins@` review queue.
 ```bash
@@ -643,7 +656,7 @@ gg_answer Q12 "<create allowed|refused: text>; visible to: <creator only|admins|
   Remove the binding: GET the policy again for a fresh etag, POST `setIamPolicy` with `iam-before`'s `bindings` and that etag; assert exactly one binding per role in the body before the POST (`jq -e '[.policy.bindings[].role] | (length == (unique | length))'`). Delete the user agent (`ge_call DELETE`).
 - **VERIFY:** Q12 committed; **the policy returned by `setIamPolicy` has exactly one binding per role** (both `jq -e` assertions in the ACTION printed `true`); `getIamPolicy` equals `iam-before` except the etag; the user agent is gone. An `INVALID_ARGUMENT` naming a duplicate role means the merge was skipped: re-read `iam-before` and re-run the `jq`; never retry with an appended binding.
 - **ROLLBACK:** as the last paragraph.
-- **EVIDENCE:** `evidence_add GG-2.8 user-agent-create-test E-05 4.1.3 "build-log:ge-gateway/"`; the colleague's name stays in `records/19-people.md`.
+- **EVIDENCE:** `evidence_add GG-2.8 user-agent-create-test E-05 4.1.3 "build-log:ge-gateway/$(basename "$IA")" "$IA"`; the colleague's name stays in `records/19-people.md`.
 
 #### GG-2.9 Which read returns an agent's sharing
 
@@ -652,7 +665,8 @@ gg_answer Q12 "<create allowed|refused: text>; visible to: <creator only|admins|
 - **ACTION:** Share `gg-spike-canary-r` to `ge-admins@` again (GG-2.7's console path), then try the documented agent GET (the v1alpha Agent carries `sharingConfig`) and, as an undocumented probe clearly recorded as such, the IAM read form used by engines. The probe is a read.
 ```bash
 AG="$(jq -r '.name' "$(ls -t "$GG_DIR"/*-GG-2.1-agent-created-v*.json | head -1)")"
-ge_call GET "${GG_HOST}/v1alpha/${AG}" | jq '{name, sharingConfig, state}' | tee "$(gg_file GG-2.9 agent-get json)"
+AGJ="$(gg_file GG-2.9 agent-get json)"
+ge_call GET "${GG_HOST}/v1alpha/${AG}" | jq '{name, sharingConfig, state}' | tee "$AGJ"
 ge_call GET "${GG_HOST}/v1alpha/${AG}:getIamPolicy" 2>&1 | head -c 600 | tee "$(gg_file GG-2.9 agent-getiampolicy-probe txt)"
 ```
   Remove the share afterwards.
@@ -661,7 +675,7 @@ gg_answer Q13 "agent GET sharingConfig: <value>; :getIamPolicy probe: <policy wi
 ```
 - **VERIFY:** Q13 committed. If the probe returns the group, GG-7.5 and B-02 read by API; if not, sharing to groups is observable only in the console **User permissions** tab, and GG-7.5 is a manual read.
 - **ROLLBACK:** share removed.
-- **EVIDENCE:** `evidence_add GG-2.9 agent-sharing-read E-06 4.2.1 "build-log:ge-gateway/"`.
+- **EVIDENCE:** `evidence_add GG-2.9 agent-sharing-read E-06 4.2.1 "build-log:ge-gateway/$(basename "$AGJ")" "$AGJ"`.
 
 #### GG-2.10 Write the spike answers and carry them into 03
 
@@ -744,13 +758,26 @@ penv_set GE_AUTHZ_EXTENSION "projects/${GEMINI_PROJECT}/locations/europe-west1/a
 
 - **WHO:** platform owner under the same grant.
 - **WHERE:** shell.
-- **ACTION:** GG-1.4's YAML with `name: gemini-egress-authz-policy`, target `projects/${GEMINI_PROJECT}/locations/europe-west1/agentGateways/gemini-egress`, extension `gemini-egress-iap-authz`, committed as `factory/runs/gemini-prod/gemini-egress-authz-policy.yaml`, then:
+- **ACTION:** GG-1.4's YAML with `name: gemini-egress-authz-policy`, target `projects/${GEMINI_PROJECT}/locations/europe-west1/agentGateways/gemini-egress` and extension `gemini-egress-iap-authz`, written as the tenant-app module's input `factory/runs/gemini-prod/gemini-egress-authz-policy.yaml` (GG-3.4 commits the directory), then imported:
 ```bash
-gcloud network-security authz-policies import gemini-egress-authz-policy --source="$PLATFORM_REPO_DIR/factory/runs/gemini-prod/gemini-egress-authz-policy.yaml" --location=europe-west1 --project="$GEMINI_PROJECT"
+Y="$PLATFORM_REPO_DIR/factory/runs/gemini-prod/gemini-egress-authz-policy.yaml"
+cat > "$Y" <<AUTHZ_POLICY
+name: gemini-egress-authz-policy
+target:
+  resources:
+    - "projects/${GEMINI_PROJECT}/locations/europe-west1/agentGateways/gemini-egress"
+policyProfile: REQUEST_AUTHZ
+action: CUSTOM
+customProvider:
+  authzExtension:
+    resources:
+      - "projects/${GEMINI_PROJECT}/locations/europe-west1/authzExtensions/gemini-egress-iap-authz"
+AUTHZ_POLICY
+gcloud network-security authz-policies import gemini-egress-authz-policy --source="$Y" --location=europe-west1 --project="$GEMINI_PROJECT"
 ```
 - **VERIFY:** `gcloud network-security authz-policies describe gemini-egress-authz-policy --location=europe-west1 --project="$GEMINI_PROJECT" --format='value(action,target.resources)'` prints `CUSTOM` and the gateway.
 - **ROLLBACK:** `gcloud network-security authz-policies delete gemini-egress-authz-policy --location=europe-west1 --project="$GEMINI_PROJECT"` (only while unbound).
-- **EVIDENCE:** `evidence_add GG-3.3 gemini-egress-authz-policy E-05 5.2.7 "platform-repo:factory/runs/gemini-prod/"`.
+- **EVIDENCE:** `evidence_add GG-3.3 gemini-egress-authz-policy E-05 5.2.7 "platform-repo:factory/runs/gemini-prod/gemini-egress-authz-policy.yaml" "$Y"`.
 
 #### GG-3.4 The access policy from the import list
 
@@ -786,7 +813,7 @@ ge_call GET "${GG_HOST}/v1alpha/projects/${GEMINI_PROJECT}/locations/eu/collecti
   Write `import-list-today.csv` in GI-8.5's columns: every console agent has a line; new agents since 05 are added and marked `new`.
 - **VERIFY:** line count of today's list ≥ console agent count; each `new` line has a register row or an owner named for a row (a shadow agent is a severity 2 finding to `platform-security@`, 03 §10.1).
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GG-4.1 import-list-today E-11 1.3.1 "build-log:ge-gateway/<csv>"`.
+- **EVIDENCE:** `T="$(ls -t "$GG_DIR"/*-GG-4.1-import-list-today-v*.csv | head -1)"; evidence_add GG-4.1 import-list-today E-11 1.3.1 "build-log:ge-gateway/$(basename "$T")" "$T"`.
 
 #### GG-4.2 Register each destination in `GE_REGISTRY`
 
@@ -821,7 +848,7 @@ done
 ```
   prints no `BAD` line. (`Assumption:` the describe field names `agentSpec.content` and `mcpServerSpec.content`; if the describe output uses other names, read them once from `--format=json` and correct the `jq` here, recording the correction.)
 - **ROLLBACK:** `gcloud agent-registry services delete <name> --project="$GEMINI_PROJECT" --location=europe-west1` per entry.
-- **EVIDENCE:** the completed list; `evidence_add GG-4.2 registry-entries E-11 1.3.1 "build-log:ge-gateway/<csv>"`.
+- **EVIDENCE:** the completed list, with its `registry_service` column; `T="$(ls -t "$GG_DIR"/*-GG-4.1-import-list-today-v*.csv | head -1)"; evidence_add GG-4.2 registry-entries E-11 1.3.1 "build-log:ge-gateway/$(basename "$T")" "$T"`.
 
 #### GG-4.3 Check the list against the registry
 
@@ -832,12 +859,13 @@ done
 T="$(ls -t "$GG_DIR"/*-GG-4.1-import-list-today-v*.csv | head -1)"
 awk -F, 'NR>1 && $1!="connector" {print $NF}' "$T" | sort > "$GG_DIR/want.txt"
 gcloud agent-registry services list --project="$GEMINI_PROJECT" --location=europe-west1 --format='value(name.basename())' | sort > "$GG_DIR/have.txt"
-comm -3 "$GG_DIR/want.txt" "$GG_DIR/have.txt"
+CM="$(gg_file GG-4.3 registry-comm txt)"
+comm -3 "$GG_DIR/want.txt" "$GG_DIR/have.txt" | tee "$CM"
 gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG-4 done"
 ```
-- **VERIFY:** `comm` prints nothing; GG-4.2's spec assertion printed no `BAD` line (name equality alone does not prove the spec landed, because the service is created either way); `checkpoint GG-4.3 DONE`. A line in "have" only is a leftover spike entry: delete it.
+- **VERIFY:** `comm` prints nothing (`$CM` is empty); GG-4.2's spec assertion printed no `BAD` line (name equality alone does not prove the spec landed, because the service is created either way); `checkpoint GG-4.3 DONE`. A line in "have" only is a leftover spike entry: delete it.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GG-4.3 registry-complete E-11 1.3.1 "build-log:ge-gateway/"`.
+- **EVIDENCE:** `evidence_add GG-4.3 registry-complete E-11 1.3.1 "build-log:ge-gateway/$(basename "$CM")" "$CM"`.
 
 #### GG-4.4 Announce the change window
 
@@ -886,12 +914,13 @@ git -C "$PLATFORM_REPO_DIR" add tools/ge-share-precheck.sh && git -C "$PLATFORM_
 ls "$PLATFORM_REPO_DIR"/decisions/*-ge-binding-go.md
 for q in Q1 Q6 Q7; do gg_result "$q" || echo "STOP: $q is not RESULT PASS; the window is cancelled (GG-4.4 rollback)"; done
 grep -E $'\tGG-(3\\.[1-4]|4\\.[1-5])\tDONE' "$BUILD_LOG_DIR/checkpoints.tsv" | cut -f2 | sort -u | wc -l
-gg_engine_view "$GEMINI_APP_ID" | tee "$(gg_file GG-5.1 prod-engine-window-start json)" | jq '.agentGatewaySetting'
+WS="$(gg_file GG-5.1 prod-engine-window-start json)"
+gg_engine_view "$GEMINI_APP_ID" | tee "$WS" | jq '.agentGatewaySetting'
 ge_call GET "${GG_HOST}/v1/projects/${GEMINI_PROJECT}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}/assistants/default_assistant" | jq -r '.customerPolicy.modelArmorConfig | [.userPromptTemplate, .responseTemplate, .failureMode] | @tsv'
 ```
 - **VERIFY:** the go record exists; **no `STOP` line from the three `gg_result` checks** (the single machine-readable `RESULT <Q> PASS` line, not a word found anywhere in an operator's free-text answer); `9` DONE steps; production `agentGatewaySetting` is `null`; the production assistant names `GE_ARMOR_TEMPLATE`'s pair and `FAIL_CLOSED`, never a `gg-spike` template. Any miss: cancel the window (GG-4.4 rollback). Before this step passes, GG-5.3's rollback reads **none documented**.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GG-5.1 window-gate E-05 5.2.1 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** the window-start read, beside the checkpoint lines; `evidence_add GG-5.1 window-gate E-05 5.2.1 "build-log:ge-gateway/$(basename "$WS")" "$WS"`.
 
 #### GG-5.2 User test before the change
 
@@ -900,7 +929,7 @@ ge_call GET "${GG_HOST}/v1/projects/${GEMINI_PROJECT}/locations/eu/collections/d
 - **ACTION:** Three assistant questions (one with web grounding), one question to each shared agent the colleague can see that appears in today's list, one file upload if uploads are on (19 GE-6). Record time and outcome for each.
 - **VERIFY:** every item answered; if not, stop: a failure before the change is not caused by it; open a case and reschedule.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `records/20-user-tests.md` (name, team, times, outcomes); `evidence_add GG-5.2 user-test-before E-15 5.2.6 "build-log:records/20-user-tests.md"`.
+- **EVIDENCE:** `records/20-user-tests.md` (name, team, times, outcomes); `evidence_add GG-5.2 user-test-before E-15 5.2.6 "build-log:records/20-user-tests.md" "$BUILD_LOG_DIR/records/20-user-tests.md"`.
 
 #### GG-5.2b Open the window: announce the cutover and confirm the room
 
@@ -954,14 +983,16 @@ B="$(gg_file GG-5.3 bind json)"
 jq -n --arg gw "$GE_EGRESS_GATEWAY" '{agentGatewaySetting:{defaultEgressAgentGateway:{name:$gw}}}' > "$B"
 cat "$B"   # the witness reads this aloud, with the engine id in the URL below, before the next line runs
 date -u +%FT%TZ > "$GG_DIR/prod-bind-time.txt"
-curl -sS --fail-with-body -X PATCH -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" --data-binary @"$B" "https://eu-discoveryengine.googleapis.com/v1/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}?updateMask=agentGatewaySetting.defaultEgressAgentGateway.name" | tee "$(gg_file GG-5.3 bind-response json)"
+BR="$(gg_file GG-5.3 bind-response json)"
+curl -sS --fail-with-body -X PATCH -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" --data-binary @"$B" "https://eu-discoveryengine.googleapis.com/v1/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}?updateMask=agentGatewaySetting.defaultEgressAgentGateway.name" | tee "$BR"
 ```
   **If the call is refused**, do not improvise inside the window. Spike Q8 settled which body form the service accepts; the URL path stays in the project-number form Google's deploy page uses for the PATCH target. Retry **once**, with the body name in the other form, and record both:
 ```bash
 case "$GE_GW_NAME_FORM" in number) ALT="projects/${GEMINI_PROJECT}/locations/europe-west1/agentGateways/gemini-egress" ;; id) ALT="projects/${GEMINI_PROJECT_NUMBER}/locations/europe-west1/agentGateways/gemini-egress" ;; esac
 B2="$(gg_file GG-5.3 bind-alt json)"
 jq -n --arg gw "$ALT" '{agentGatewaySetting:{defaultEgressAgentGateway:{name:$gw}}}' > "$B2"
-curl -sS --fail-with-body -X PATCH -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" --data-binary @"$B2" "https://eu-discoveryengine.googleapis.com/v1/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}?updateMask=agentGatewaySetting.defaultEgressAgentGateway.name" | tee "$(gg_file GG-5.3 bind-alt-response json)"
+BR="$(gg_file GG-5.3 bind-alt-response json)"
+curl -sS --fail-with-body -X PATCH -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" --data-binary @"$B2" "https://eu-discoveryengine.googleapis.com/v1/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}?updateMask=agentGatewaySetting.defaultEgressAgentGateway.name" | tee "$BR"
 bd_insert "$(printf '| BD-20-4 | %s | 20 GG-5.3 | DEV | production binding: gateway name form %s refused, %s accepted; spike Q8 answer corrected | app %s in project %s | %s | agentGatewaySetting on the production app | n/a | n/a | ENT_GE_ADMIN grant; second human witness at the screen | closed when 03 section 11 records the accepted form | open |\n' "$(date -u +%F)" "$GE_GW_NAME_FORM" "$ALT" "$GEMINI_APP_ID" "$GEMINI_PROJECT" "$GE_SPIKE_RECORD")"
 gg_answer Q8 "production bind accepted the name form: $ALT (spike had recorded the other)" RECORDED
 ```
@@ -972,7 +1003,7 @@ curl -sS -X GET -H "Authorization: Bearer $(gcloud auth print-access-token)" -H 
 ```
   prints `true`, **and** the platform owner asks one question in the production app from their own browser and it is answered. Either failing: roll back now by the ROLLBACK below, then GG-5.4 is not run and the window closes with the failure recorded. The witness countersigns the VERIFY output in `GG_WINDOW_RECORD`.
 - **ROLLBACK:** the unbind method recorded in spike Q7, performed by the platform owner or, on their word, by `GG_ROLLBACK_OPERATOR`, both under `ENT_GE_ADMIN`; if GG-5.7 has applied the gateway constraint in enforce mode (not at Tier C), lift it under `ENT_PLATFORM_POLICY` first. Before Q7 PASS: **none documented**, which is why GG-5.1 refuses to reach this step. The registry entries, access policy and chats are untouched by an unbind. Record the unbind time in `GG_WINDOW_RECORD` and tell the desk.
-- **EVIDENCE:** request, response, time, the witness's countersignature and the VERIFY output; `evidence_add GG-5.3 prod-bind E-05 5.2.7 "build-log:ge-gateway/<response>"`.
+- **EVIDENCE:** request, response, time, the witness's countersignature and the VERIFY output; `evidence_add GG-5.3 prod-bind E-05 5.2.7 "build-log:ge-gateway/$(basename "$BR")" "$BR"` (`$BR` is the response of the call that was accepted).
 
 #### GG-5.4 GET and assert
 
@@ -980,13 +1011,14 @@ curl -sS -X GET -H "Authorization: Bearer $(gcloud auth print-access-token)" -H 
 - **WHERE:** shell.
 - **ACTION:** The deploy page's verify, on the `eu` host.
 ```bash
-curl -sS -X GET -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" "https://eu-discoveryengine.googleapis.com/v1/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}" | jq '{name: .name, displayName: .displayName, agentGatewaySetting: .agentGatewaySetting, associatedAgentRegistry: .associatedAgentRegistry}' | tee "$(gg_file GG-5.4 prod-engine-bound json)"
-jq -e --arg gw "$GE_EGRESS_GATEWAY" '.agentGatewaySetting.defaultEgressAgentGateway.name == $gw' "$(ls -t "$GG_DIR"/*-GG-5.4-prod-engine-bound-v*.json | head -1)"
-diff <(jq -S 'del(.agentGatewaySetting, .associatedAgentRegistry)' "$(ls -t "$GG_DIR"/*-GG-5.1-prod-engine-window-start-v*.json | head -1)") <(jq -S 'del(.agentGatewaySetting, .associatedAgentRegistry)' "$(ls -t "$GG_DIR"/*-GG-5.4-prod-engine-bound-v*.json | head -1)")
+PB="$(gg_file GG-5.4 prod-engine-bound json)"
+curl -sS -X GET -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: ${GEMINI_PROJECT}" "https://eu-discoveryengine.googleapis.com/v1/projects/${GEMINI_PROJECT_NUMBER}/locations/eu/collections/default_collection/engines/${GEMINI_APP_ID}" | jq '{name: .name, displayName: .displayName, agentGatewaySetting: .agentGatewaySetting, associatedAgentRegistry: .associatedAgentRegistry}' | tee "$PB"
+jq -e --arg gw "$GE_EGRESS_GATEWAY" '.agentGatewaySetting.defaultEgressAgentGateway.name == $gw' "$PB"
+diff <(jq -S 'del(.agentGatewaySetting, .associatedAgentRegistry)' "$(ls -t "$GG_DIR"/*-GG-5.1-prod-engine-window-start-v*.json | head -1)") <(jq -S 'del(.agentGatewaySetting, .associatedAgentRegistry)' "$PB")
 ```
 - **VERIFY:** `jq -e` prints `true`; `associatedAgentRegistry` names `GEMINI_PROJECT`'s `europe-west1` registry (`Assumption:` in the `projects/<id or number>/locations/europe-west1` form Q8 recorded); `diff` prints nothing.
 - **ROLLBACK:** GG-5.3's.
-- **EVIDENCE:** `evidence_add GG-5.4 prod-engine-bound E-05 5.2.7 "build-log:ge-gateway/<file>"`.
+- **EVIDENCE:** `evidence_add GG-5.4 prod-engine-bound E-05 5.2.7 "build-log:ge-gateway/$(basename "$PB")" "$PB"`.
 
 #### GG-5.5 Import the agents into the app and run the user test
 
@@ -995,7 +1027,7 @@ diff <(jq -S 'del(.agentGatewaySetting, .associatedAgentRegistry)' "$(ls -t "$GG
 - **ACTION:** Import per spike Q6 (none if "keeps working"). Then the colleague repeats GG-5.2 item for item, 15 minutes after the bind. Any failure of an item that passed in GG-5.2: roll back now (GG-5.3 ROLLBACK), re-test, record, and end the window.
 - **VERIFY:** every item that passed before passes after; `checkpoint GG-5.5 DONE - "$GE_TEST_USER"`.
 - **ROLLBACK:** GG-5.3's.
-- **EVIDENCE:** `records/20-user-tests.md` after-rows; `evidence_add GG-5.5 user-test-after-bind E-15 5.2.6 "build-log:records/20-user-tests.md"`.
+- **EVIDENCE:** `records/20-user-tests.md` after-rows; `evidence_add GG-5.5 user-test-after-bind E-15 5.2.6 "build-log:records/20-user-tests.md" "$BUILD_LOG_DIR/records/20-user-tests.md"`.
 
 #### GG-5.6 First dry-run read and window close
 
@@ -1007,7 +1039,7 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GE
 ```
 - **VERIFY:** `DRY_RUN` entries present with the Q2 principal; no user-reported denial; `checkpoint GG-5.6 DONE`.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** summary (no personal data) `<date>-GG-5.6-dry-run-day0-v1.md`; `evidence_add GG-5.6 dry-run-day0 E-06 5.2.4 "build-log:ge-gateway/"`.
+- **EVIDENCE:** summary (no personal data) `"$GG_DIR/<date>-GG-5.6-dry-run-day0-v1.md"`; `evidence_add GG-5.6 dry-run-day0 E-06 5.2.4 "build-log:ge-gateway/<date>-GG-5.6-dry-run-day0-v1.md" "$GG_DIR/<date>-GG-5.6-dry-run-day0-v1.md"`.
 
 #### GG-5.7 `custom.geEngineGatewayRequired` on the production condition, dry run
 
@@ -1052,9 +1084,9 @@ gcloud pam grants revoke --billing-project="$CICD_PROJECT" "$GRANT" --reason="GG
 printf '| DR-20-1 | gemini-egress dry-run review: destinations vs register | day 7 and day 30 after %s | platform owner | - | 20 | %s | | | TIER_C_RECORD (day 7); 39 GE-11 (day 30) |\n' "$(cat "$GG_DIR/prod-bind-time.txt")" "$(date -u -v+7d +%F 2>/dev/null || date -u -d '+7 days' +%F)" >> "$DRILL_CALENDAR"
 git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit -q -m "GG-5.8 dry-run review rows"
 ```
-- **VERIFY:** day-7 record `<date>-GG-5.8-dry-run-day7-v1.md` with zero unexplained destinations; day-30 record likewise (checked by 39, not by this file's close).
+- **VERIFY:** day-7 record `"$GG_DIR/<date>-GG-5.8-dry-run-day7-v1.md"` with zero unexplained destinations; day-30 record likewise (checked by 39, not by this file's close).
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GG-5.8 dry-run-day7 E-06 5.2.7 "build-log:ge-gateway/"`.
+- **EVIDENCE:** `evidence_add GG-5.8 dry-run-day7 E-06 5.2.7 "build-log:ge-gateway/<date>-GG-5.8-dry-run-day7-v1.md" "$GG_DIR/<date>-GG-5.8-dry-run-day7-v1.md"`.
 
 ### GG-6 Spike teardown
 
@@ -1069,9 +1101,12 @@ gcloud iam access-policies delete gg-spike-access --project="$GEMINI_PROJECT" --
 gcloud network-security authz-policies delete gg-spike-authz-policy --location=europe-west1 --project="$GEMINI_PROJECT"
 gcloud service-extensions authz-extensions delete gg-spike-iap-authz --location=europe-west1 --project="$GEMINI_PROJECT"
 for g in gg-spike-egress gg-spike-egress-2; do gcloud network-services agent-gateways delete "$g" --location=europe-west1 --project="$GEMINI_PROJECT"; done
+TD="$(gg_file GG-6.1 after-teardown txt)"
+{ gcloud network-services agent-gateways list --location=europe-west1 --project="$GEMINI_PROJECT" --format='value(name.basename())'
+  gcloud iam policy-bindings list --project="$GEMINI_PROJECT" --location=global --format='value(name.basename())'; } | tee "$TD"
 ```
   **Nothing about the gateway custom constraint is deleted here.** The two lines that used to close this block deleted the organisation-level constraint definition that GG-5.7's `fld-gemini-enterprise` `dryRunSpec` policy points at, guarded only by a shell comment; pasted after a Q10 PASS they silently remove the Tier C gateway control and the input 39 needs for GE-11. They are now GG-6.1b, conditional and with their own approver.
-- **VERIFY:** `gcloud network-services agent-gateways list --location=europe-west1 --project="$GEMINI_PROJECT" --format='value(name.basename())'` prints only `gemini-egress`; `gcloud iam policy-bindings list --project="$GEMINI_PROJECT" --location=global --format='value(name.basename())'` prints only `gemini-egress-access-binding`; **and the gateway control survived this step** —
+- **VERIFY:** `$TD` holds two lines, `gemini-egress` (the gateway list) and `gemini-egress-access-binding` (the policy-binding list), and nothing else; **and the gateway control survived this step** —
 ```bash
 if grep -qE $'\tGG-5\\.7\tDONE' "$BUILD_LOG_DIR/checkpoints.tsv"; then
   gcloud org-policies describe custom.geEngineGatewayRequired --folder="$FLD_GEMINI_ENTERPRISE" --format='value(dryRunSpec.rules[0].enforce)' | grep -qx True || echo "STOP: GG-5.7's dry-run policy is gone"
@@ -1080,7 +1115,7 @@ fi
 ```
   prints no `STOP`.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GG-6.1 spike-chain-removed E-05 5.2.7 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** `evidence_add GG-6.1 spike-chain-removed E-05 5.2.7 "build-log:ge-gateway/$(basename "$TD")" "$TD"`.
 
 #### GG-6.1b Delete the gateway custom constraint — only when Q10 was FAIL
 
@@ -1117,10 +1152,12 @@ gcloud projects remove-iam-policy-binding "$CANARY_R_PROJECT" --member="serviceA
 ma_eu model-armor templates delete gg-spike-response --location=eu --project="$GEMINI_PROJECT"
 ge_call DELETE "${GG_HOST}/v1alpha/$(jq -r '.name' "$(ls -t "$GG_DIR"/*-GG-2.1-agent-created-v*.json | head -1)")"
 bd_close BD-20-3 "GG-2.1 grant removed ($GE_SPIKE_RECORD)" "GG-6.2"   # a Closures line (01 PR-4.1): the row itself is never edited
+CR="$(gg_file GG-6.2 canary-r-iam-after txt)"
+gcloud projects get-iam-policy "$CANARY_R_PROJECT" --flatten='bindings[].members' --filter="bindings.members:gcp-sa-discoveryengine" --format='value(bindings.role)' | tee "$CR"
 ```
-- **VERIFY:** `gcloud projects get-iam-policy "$CANARY_R_PROJECT" --flatten=bindings[].members --filter="bindings.members:gcp-sa-discoveryengine" --format='value(bindings.role)'` prints nothing; no `gg-spike` template listed.
+- **VERIFY:** `$CR` is empty (the `get-iam-policy` read above printed nothing; `--flatten` is quoted because zsh would otherwise read `[]` as a glob); no `gg-spike` template listed.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `evidence_add GG-6.2 spike-grant-removed E-05 4.1.3 "build-log:checkpoints.tsv"`.
+- **EVIDENCE:** `evidence_add GG-6.2 spike-grant-removed E-05 4.1.3 "build-log:ge-gateway/$(basename "$CR")" "$CR"`.
 
 #### GG-6.3 Delete the throwaway app (after GG-7.3)
 
@@ -1129,11 +1166,12 @@ bd_close BD-20-3 "GG-2.1 grant removed ($GE_SPIKE_RECORD)" "GG-6.2"   # a Closur
 - **ACTION:** Runs only after GG-7.3 has fired every alert on the throwaway app's fixtures (P59: deleted at the end).
 ```bash
 ge_call DELETE "${GG_ENGINES}/${GE_THROWAWAY_APP_ID}" | tee "$(gg_file GG-6.3 delete-op json)"
-ge_call GET "${GG_ENGINES}" | jq -r '.engines[].name' | tee "$(gg_file GG-6.3 engines-after txt)"
+EA="$(gg_file GG-6.3 engines-after txt)"
+ge_call GET "${GG_ENGINES}" | jq -r '.engines[].name' | tee "$EA"
 ```
 - **VERIFY:** after the operation completes, the list contains `GEMINI_APP_ID` only; `checkpoint GG-6.3 DONE`.
 - **ROLLBACK:** **none**: the app held nothing but spike objects, recorded above.
-- **EVIDENCE:** `evidence_add GG-6.3 throwaway-app-deleted E-05 5.2.2 "build-log:ge-gateway/<list>"`.
+- **EVIDENCE:** `evidence_add GG-6.3 throwaway-app-deleted E-05 5.2.2 "build-log:ge-gateway/$(basename "$EA")" "$EA"` (the list read once the operation has completed; re-run the two lines if the first read still shows the throwaway app).
 
 ### GG-7 Tier C detections (GE-13)
 
@@ -1146,7 +1184,8 @@ ge_call GET "${GG_ENGINES}" | jq -r '.engines[].name' | tee "$(gg_file GG-6.3 en
 GRANT="$(pam_grant "$ENT_REPAIR" 3600s "setup 20 GG-7 Tier C detections")"; pam_active "$GRANT"
 gcloud beta monitoring channels create --display-name="agp gemini email platform-security" --type=email --channel-labels=email_address="$GRP_PLATFORM_SECURITY" --description="setup 20 GG-7.1" --project="$GEMINI_PROJECT"
 gcloud beta monitoring channels describe "$NOTIF_CH_PAGER_CORE" --project="$CORE_PROJECT" --format="value(type)"
-gcloud beta monitoring channels list --project="$GEMINI_PROJECT" --format="table(name,displayName,type,verificationStatus)"
+CL="$(gg_file GG-7.1 channels txt)"
+gcloud beta monitoring channels list --project="$GEMINI_PROJECT" --format="table(name,displayName,type,verificationStatus)" | tee "$CL"
 penv_set NOTIF_CH_EMAIL_GEMINI "<email channel name>"
 penv_set NOTIF_CH_PAGER_GEMINI "<paging channel name>"
 ```
@@ -1160,7 +1199,7 @@ done
 ```
 - **VERIFY:** both channels listed; the guard loop above prints no `STOP` and describes both channels; a console test notification reaches `platform-security@` and the paging service; the second human confirms receipt time.
 - **ROLLBACK:** `gcloud beta monitoring channels delete <name> --project="$GEMINI_PROJECT"`.
-- **EVIDENCE:** `evidence_add GG-7.1 gemini-channels E-08 1.6.1 "build-log:ge-gateway/"`.
+- **EVIDENCE:** `evidence_add GG-7.1 gemini-channels E-08 1.6.1 "build-log:ge-gateway/$(basename "$CL")" "$CL"` (the list read after the paging channel exists; re-run the `list` line into a new `$CL` if it was read before).
 
 #### GG-7.2 Log-based alert policies for the PL-10 rows with a documented source
 
@@ -1222,7 +1261,7 @@ date -u +%FT%TZ | tee -a "$GG_DIR/fixture-times.txt"
 ```
 - **VERIFY:** within 10 minutes of each fixture (`Assumption:` log-based alert latency; record measured values) an incident opens for the matching policy and reaches both channels; the second human confirms the page and email; incidents close after `autoClose`. A silent policy is fixed and re-fired before GG-8 — and a policy that is silent because GG-7.1 left a placeholder channel is a configuration error, not a latency one: re-read GG-7.1's guard before touching the filter. When GG-7.2b is `PENDING`, the gateway-write fixture is still run and its activity entry is recorded in `method-names`, which is what unblocks GG-7.2b; the fixture is then re-run once the policy exists.
 - **ROLLBACK:** none needed; the throwaway app is deleted in GG-6.3.
-- **EVIDENCE:** fixture times, incident ids, receipt; `evidence_add GG-7.3 pl10-fixtures-fired E-10 1.6.1 "build-log:ge-gateway/fixture-times.txt"`.
+- **EVIDENCE:** fixture times, incident ids, receipt; `evidence_add GG-7.3 pl10-fixtures-fired E-10 1.6.1 "build-log:ge-gateway/fixture-times.txt" "$GG_DIR/fixture-times.txt"`.
 
 #### GG-7.4 An SCC test finding on `GEMINI_PROJECT` through 15's route
 
@@ -1238,7 +1277,7 @@ gcloud scc findings create "$F" --organization="$ORG_ID" --location=eu --source=
   Platform owner: PS-6.8's pull and ack on `scc-findings-desk` in `CORE_PROJECT`. IT security: `gcloud scc findings update "organizations/${ORG_ID}/sources/${SOURCE_ID}/locations/eu/findings/${F}" --state=INACTIVE`, then `unset CLOUDSDK_API_ENDPOINT_OVERRIDES_SECURITYCENTER`.
 - **VERIFY:** the pulled message names the `GEMINI_PROJECT_NUMBER` resource and `AGP_ROUTE_TEST`; the page reached L1 and the second human within 10 minutes; no second page on INACTIVE.
 - **ROLLBACK:** none needed.
-- **EVIDENCE:** `<date>-GG-7.4-scc-route-gemini-v1`; `evidence_add GG-7.4 scc-route-gemini E-10 5.2.4 "build-log:evidence/20/"`.
+- **EVIDENCE:** the pulled message and the acknowledgement time saved as `"$BUILD_LOG_DIR/evidence/20/<date>-GG-7.4-scc-route-gemini-v1.txt"`; `evidence_add GG-7.4 scc-route-gemini E-10 5.2.4 "build-log:evidence/20/<date>-GG-7.4-scc-route-gemini-v1.txt" "$BUILD_LOG_DIR/evidence/20/<date>-GG-7.4-scc-route-gemini-v1.txt"`.
 
 #### GG-7.5 Share detection by scheduled reads: the manual interim
 
@@ -1249,9 +1288,9 @@ gcloud scc findings create "$F" --organization="$ORG_ID" --location=eu --source=
 printf '| DR-20-2 | Gemini Enterprise share read: members vs audience_groups (manual until B-02) | weekly, Tuesdays | platform owner | second human reads | 20 | %s | | | X-GE-11; PL-10 sev 2 |\n' "$(date -u -v+7d +%F 2>/dev/null || date -u -d '+7 days' +%F)" >> "$DRILL_CALENDAR"
 git -C "$BUILD_LOG_DIR" add "$DRILL_CALENDAR" && git -C "$BUILD_LOG_DIR" commit -q -m "GG-7.5 weekly share read"
 ```
-- **VERIFY:** the first weekly record `<date>-GG-7.5-share-read-v1.md` exists with one line per agent; a week without a record is itself raised by the second human.
+- **VERIFY:** the first weekly record `"$GG_DIR/<date>-GG-7.5-share-read-v1.md"` exists with one line per agent; a week without a record is itself raised by the second human.
 - **ROLLBACK:** the row is removed only when GG-7.6 is live and its first automatic record exists.
-- **EVIDENCE:** `evidence_add GG-7.5 share-read-weekly E-06 4.2.1 "build-log:ge-gateway/"`.
+- **EVIDENCE:** `evidence_add GG-7.5 share-read-weekly E-06 4.2.1 "build-log:ge-gateway/<date>-GG-7.5-share-read-v1.md" "$GG_DIR/<date>-GG-7.5-share-read-v1.md"`.
 
 #### GG-7.6 Reconciliation and drift jobs extended to the app (BLOCKED)
 

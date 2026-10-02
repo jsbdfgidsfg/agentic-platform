@@ -5,6 +5,7 @@
 - Last reviewed: 2026-10-01
 - Changed on 2026-10-01: account id and expiry read from SD-16 with `decision-value.sh`; BA-2.3 expects the Security Admin inheritance while `BD-06-1` is open; BA-3.1's `exists_or_pending` calls corrected; BA-5.1 lists Google's nine billing roles incl. `roles/billing.linkAdmin`; deviation rows `BD-07-1` and `BD-07-2` inserted into the first table; BA-4.2 names the one logging role ever bound on the account, 14 CL-6.4's time-bound `roles/logging.configWriter` for the sink, with the pages read on 2026-10-01; `checkpoint` lines; they/them for roles.
 - Changed on 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (BA-6.2a, BA-6.2c, BA-7.1).
+- Changed on 2026-10-01: BA-6.2a grants Quota Administrator with a `request.time` condition ending twelve hours after the grant, kept in `records/BA-6.2a-quota-admin-condition.yaml`, instead of `--condition=None`; BA-6.2c removes the binding by that condition file; `BD-07-2`'s expiry is the condition's end.
 - Last executed: never
 - Stage: review §2 stage 5, moved after file 06 (decision SD-45) so that the billing roles go to `sa-1-admin@`, never to a daily account.
 - Step prefix: BA. Steps: 18 (BA-6.2 is three: 6.2a grant, 6.2b submit, 6.2c remove). BLOCKED steps: none, because no code is needed. One step is PENDING by design: BA-3.1 waits for `factory-apply@` (file 10) and is a re-run point.
@@ -404,9 +405,19 @@ Preferred path: the organisation's existing holder of `roles/servicemanagement.q
 - **PRECONDITION:** BA-6.1's total is written in the build log, and file 04's purchase row for the billing account is settled (a quota request can attract a payment, and BA-6.2b must not be submitted before finance can answer one).
 - **ACTION:**
 
+  The binding carries its own `request.time` condition, ending twelve hours after the grant, as 06 OB-3.5a does for its simulator roles, so that 'never left to the next sitting' is enforced by Google and not only by BA-6.2c. IAM's date/time attribute 'is supported for all Google Cloud services and resource types' (IAM conditions attribute reference, updated 2026-09-24, read 2026-10-01). The condition file is kept, because BA-6.2c removes the binding by the same condition.
+
 ```bash
-need ORG_ID SA_1_ADMIN
-gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:${SA_1_ADMIN}" --role="roles/servicemanagement.quotaAdmin" --condition=None
+need ORG_ID SA_1_ADMIN BUILD_LOG_DIR
+mkdir -p "$BUILD_LOG_DIR/records"
+c="$BUILD_LOG_DIR/records/BA-6.2a-quota-admin-condition.yaml"
+if [ -e "$c" ]; then
+  echo "STOP: $c exists from an earlier grant; run BA-6.2c's removal with it, then move it aside"
+else
+  qa_expiry="$(date -u -v+12H +%Y-%m-%dT%H:%M:%SZ)"
+  printf 'expression: request.time < timestamp("%s")\ntitle: ba-6-2a-quota-request\ndescription: Quota Administrator for the BA-6.2b project-quota request; removed by BA-6.2c, BD-07-2\n' "$qa_expiry" > "$c"
+  gcloud organizations add-iam-policy-binding "$ORG_ID" --member="user:${SA_1_ADMIN}" --role="roles/servicemanagement.quotaAdmin" --condition-from-file="$c"
+fi
 ```
 
 - **VERIFY:** Both permissions echo back, which is what proves the role is live before anything is submitted. `gcloud organizations` has no `test-iam-permissions` subcommand, so this goes through the Resource Manager v3 API, as BA-2.3 does for the billing account:
@@ -416,8 +427,8 @@ curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H
 ```
 
   Both `serviceusage.quotas.update` and `cloudquotas.quotas.update` are listed in the response. If either is missing, **stop** and do not go on to BA-6.2b: the console request would fail with a permission error after the form has been filled.
-- **ROLLBACK:** BA-6.2c, which is not optional. Until it runs, the platform owner holds an organisation-level role that BA-4.3's source A read will show.
-- **EVIDENCE:** Row `BD-07-2` inserted into the first table of `DEVIATION_REGISTER` with 01's `bd_insert`, the insertion BA-2.1 performs (kind `DEV`; what: `roles/servicemanagement.quotaAdmin` to `SA_1_ADMIN` at organisation level for the BA-6.2b quota request; expiry: the end of this sitting; approver: the second human, told the same day), and closed by a Closures line naming BA-6.2c and the removal date, written with `bd_close` (BA-6.2c). The `testIamPermissions` response as `<date>-BA-6.2a-quota-admin-granted-v1`. TISAX 4.1.3, 4.2.1.
+- **ROLLBACK:** BA-6.2c, which is not optional. The condition stops the role from granting anything after `qa_expiry`, but the binding stays in the organisation's policy, and BA-4.3's source A read shows it, until BA-6.2c removes it.
+- **EVIDENCE:** Row `BD-07-2` inserted into the first table of `DEVIATION_REGISTER` with 01's `bd_insert`, the insertion BA-2.1 performs (kind `DEV`; what: `roles/servicemanagement.quotaAdmin` to `SA_1_ADMIN` at organisation level for the BA-6.2b quota request; expiry: `qa_expiry`, twelve hours after the grant, enforced by the binding's condition; approver: the second human, told the same day), and closed by a Closures line naming BA-6.2c and the removal date, written with `bd_close` (BA-6.2c). The `testIamPermissions` response as `<date>-BA-6.2a-quota-admin-granted-v1`, with the condition file `records/BA-6.2a-quota-admin-condition.yaml`. TISAX 4.1.3, 4.2.1.
 
 ### BA-6.2b File the increase
 
@@ -430,12 +441,16 @@ curl -sS -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H
 
 ### BA-6.2c Remove Quota Administrator (self-grant path only)
 
-- **WHO:** Platform owner, in the same sitting as BA-6.2a. Never left to the next sitting.
+- **WHO:** Platform owner, in the same sitting as BA-6.2a. Never left to the next sitting; if it was, the condition has already ended the role's effect, and this step still removes the binding.
 - **WHERE:** Shell with `~/.platform-env` sourced.
 - **ACTION:** Run as soon as BA-6.2b's acknowledgement is in hand. The answer of BA-6.3 arrives by email and needs no role.
 
+  The binding is removed by the condition it was granted with: `--condition-from-file` names exactly that binding, where `--condition=None` would match only an unconditional one and `--all` would take every binding of the role and principal (gcloud `organizations remove-iam-policy-binding` reference, updated 2026-05-27, read 2026-10-01).
+
 ```bash
-gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:${SA_1_ADMIN}" --role="roles/servicemanagement.quotaAdmin" --condition=None
+need ORG_ID SA_1_ADMIN BUILD_LOG_DIR
+c="$BUILD_LOG_DIR/records/BA-6.2a-quota-admin-condition.yaml"
+gcloud organizations remove-iam-policy-binding "$ORG_ID" --member="user:${SA_1_ADMIN}" --role="roles/servicemanagement.quotaAdmin" --condition-from-file="$c"
 ```
 
 - **VERIFY:** The read below returns nothing at all:
@@ -446,7 +461,7 @@ gcloud organizations get-iam-policy "$ORG_ID" --flatten="bindings[].members" --f
 
   From the next week on, BA-4.3's source A read no longer shows `roles/servicemanagement.quotaAdmin` for `SA_1_ADMIN` either.
 - **ROLLBACK:** Re-grant through BA-6.2a, only for a new quota request with its own deviation line.
-- **EVIDENCE:** The empty read as `<date>-BA-6.2c-quota-admin-removed-v1`; `BD-07-2` closed by a Closures line with the removal date, appended to the register's Closures table once VERIFY passes with 01's `bd_close BD-07-2 "withdrawal: 07 BA-6.2c, quotaAdmin removed from sa-1-admin@" "07 BA-6.2c VERIFY"`. TISAX 4.1.3 (revocation).
+- **EVIDENCE:** The empty read as `<date>-BA-6.2c-quota-admin-removed-v1`, beside the condition file BA-6.2a kept (a later grant moves that file aside first, as BA-6.2a's guard says); `BD-07-2` closed by a Closures line with the removal date, appended to the register's Closures table once VERIFY passes with 01's `bd_close BD-07-2 "withdrawal: 07 BA-6.2c, quotaAdmin removed from sa-1-admin@" "07 BA-6.2c VERIFY"`. TISAX 4.1.3 (revocation).
 
 ### BA-6.3 Record the answer
 
@@ -529,6 +544,8 @@ Rules:
 Read on 2026-09-15: [gcloud billing accounts describe](https://docs.cloud.google.com/sdk/gcloud/reference/billing/accounts/describe); [BillingAccount resource](https://docs.cloud.google.com/billing/docs/reference/rest/v1/billingAccounts); [gcloud billing accounts add-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/billing/accounts/add-iam-policy-binding); [get-iam-policy](https://docs.cloud.google.com/sdk/gcloud/reference/billing/accounts/get-iam-policy); [gcloud billing accounts list](https://docs.cloud.google.com/sdk/gcloud/reference/billing/accounts/list); [Cloud Billing access control](https://docs.cloud.google.com/billing/docs/how-to/billing-access); [IAM billing roles](https://docs.cloud.google.com/iam/docs/roles-permissions/billing); [IAM Resource Manager roles](https://docs.cloud.google.com/iam/docs/roles-permissions/resourcemanager); [Manage access to billing accounts](https://docs.cloud.google.com/billing/docs/how-to/grant-access-to-billing); [Close or reopen a billing account](https://docs.cloud.google.com/billing/docs/how-to/close-or-reopen-billing-account); [Cloud Billing concepts](https://docs.cloud.google.com/billing/docs/concepts); [Create a self-serve billing account](https://docs.cloud.google.com/billing/docs/how-to/create-billing-account); [Enable, disable or change billing for a project](https://docs.cloud.google.com/billing/docs/how-to/modify-project); [Cloud Billing audit logging](https://docs.cloud.google.com/billing/docs/audit-logging); [Cloud Billing quotas](https://docs.cloud.google.com/billing/quotas); [gcloud logging read](https://docs.cloud.google.com/sdk/gcloud/reference/logging/read); [gcloud logging sinks create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/sinks/create); [Understanding audit logs](https://docs.cloud.google.com/logging/docs/audit/understanding-audit-logs); [Sensitive Actions overview](https://docs.cloud.google.com/security-command-center/docs/concepts-sensitive-actions-overview); [Create projects](https://docs.cloud.google.com/resource-manager/docs/creating-managing-projects); [Project quota requests](https://support.google.com/cloud/answer/6330231); [View and manage quotas](https://docs.cloud.google.com/docs/quotas/view-manage); [gcloud billing budgets create](https://docs.cloud.google.com/sdk/gcloud/reference/billing/budgets/create); [gcloud configurations](https://docs.cloud.google.com/sdk/gcloud/reference/topic/configurations).
 
 Re-read or newly read on 2026-09-16, for the corrections of BA-1.3, BA-2.2, BA-4.2, BA-5.1, BA-6.2 and §8: [Cloud Audit Logs overview](https://docs.cloud.google.com/logging/docs/audit) ("for audit logs related to billing, you can only use the Google Cloud CLI or the Logging API"; Logs Viewer `roles/logging.viewer` for Admin Activity on a project); [Access control for Cloud Billing APIs](https://docs.cloud.google.com/billing/docs/access-control) (`roles/billing.admin` carries `logging.logEntries.list`); [Cloud Billing access control and permissions](https://docs.cloud.google.com/billing/docs/how-to/billing-access) (the six predefined roles; `roles/billing.user` carries `billing.accounts.get` and `billing.resourceAssociations.create`); [Secure the link between a project and its billing account](https://docs.cloud.google.com/billing/docs/how-to/secure-project-billing-account-link) (the project-side and account-side permission pair); [View and manage quotas](https://docs.cloud.google.com/docs/quotas/view-manage) (`roles/servicemanagement.quotaAdmin`, `serviceusage.quotas.update`, `cloudquotas.quotas.update`); [Set the quota project](https://docs.cloud.google.com/docs/quotas/set-quota-project) (`serviceusage.services.use`, `roles/serviceusage.serviceUsageConsumer`); [organizations.testIamPermissions](https://docs.cloud.google.com/resource-manager/reference/rest/v3/organizations/testIamPermissions).
+
+Read on 2026-10-01, for BA-6.2a's condition: [IAM conditions attribute reference](https://docs.cloud.google.com/iam/docs/conditions-attribute-reference) (updated 2026-09-24: the date/time attribute "is supported for all Google Cloud services and resource types"); [gcloud organizations remove-iam-policy-binding](https://docs.cloud.google.com/sdk/gcloud/reference/organizations/remove-iam-policy-binding) (updated 2026-05-27: `--condition-from-file` names the binding to remove).
 
 ## Related
 

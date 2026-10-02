@@ -13,6 +13,7 @@
 - Closes: S159, S094 and S157 (for the platform sinks), S048 (rows 40 and 41), the central-logging part of S001, the export and billing-account-sink parts of X-RQB-05. See "Findings" at the end.
 - Hands-on: about two days. Elapsed: three to five days, because Workspace logs can take up to 24 hours to appear after sharing is turned on, and the authorised view needs the first rows; the locks wait for P13.
 - 2026-10-01: CL-11.1 searches grants per entitlement (`--entitlement` is required); every PAM call passes `--billing-project`; CL-4.1 expects branch (a), because 11 KV-6.3 configures `fld-platform-core`, and its reads pass `--billing-project`; CL-4.3 and CL-9.1 run branch (a) as code, not as a comment; `bq query` lines pass `--project_id`; CL-6.2 reads its filter from the committed file; CL-6.4 stops on a refused role binding; Log Analytics named Observability Analytics at first use; pronouns made neutral; CL-6.4 cites the billing-access and configure-export pages read 2026-10-01 and names `roles/logging.configWriter` as the sink's role, as 07 BA-4.2 does; CL-2.2 says no later file adds a member to `KEY_PLATFORM_LOGS` (42 GD-3.1's evidence bucket has its own Autokey key).
+- 2026-10-01: deviation rows `BD-14-01` (CL-4.1 branch (b)) and `BD-14-02` (CL-9.2) inserted with 01's `bd_insert` in PR-4.1's thirteen cells and `BD-14-02` closed with `bd_close` in CL-9.4; CL-9.4 split into the 48-hour check, the removal with its recorded time, and a later read of appends after the removal (`export_time`), on a named grant; a paragraph on re-requesting grants across sittings; `logging/sinks-expected.yaml` and CL-8.1's two JSON files written by quoted here-documents, and CL-5.1 and CL-8.1 register a hashed merge record; CL-2.5's delete without `--quiet`; KMS and IAM reads in CL-2.2, CL-4.1 and CL-8.4 name `--project`; CL-11.2 writes CL-10.1's PENDING line when P13 kept CL-10 from running.
 
 ## What this part builds
 
@@ -34,7 +35,7 @@ What the old text got wrong, and must not come back:
 | Sharing turned on only in Wall-E's Phase 5, after the platform (S159) | S-org and Eve's sink would be created with nothing to route; their verifies pass on empty or fail without naming the cause | CL-1 is the precondition of every sink; SETUP Phase 5 and Eve Phase 7 become verifications (files 30, 24) |
 | "If admin events appear and login events do not, the edition is not sharing the login log" (SETUP Phase 5 verify, S181) | Login and SAML are Data Access entries; a reader without `roles/logging.privateLogViewer` sees none and draws the wrong conclusion | CL-1.5 reads them with `privateLogViewer` before concluding anything |
 | `walle deploy` creating `walle-workspace-audit` and `walle-audit-bq` at the organisation; the interim fallback of SETUP 11.3 (S094, S157) | A second publisher into `walle-triggers` doubles every trigger; retired rows 23 and the logs half of row 6 are rebuilt; organisation `configWriter` in an agent runbook | No organisation sink but `S-org` (and Eve's in 24, and the billing-account sink); `to-triggers-<agent>` is made in `LOGGING_PROJECT` by FM-AGENT; CL-6.6's census fails on the retired names |
-| 08 §3.2 identity filter on `token.googleapis.com` and `saml.googleapis.com` | Google's Workspace audit page names `login.googleapis.com` for both Login and SAML, and `oauth2.googleapis.com` for OAuth token (read 2026-09-15). The old filter matches nothing, so the identity bucket would be empty and every sign-in would land in the evidence bucket and BigQuery | CL-5.3's filter uses the documented names; 08 §3.2 is corrected in the same pass |
+| 08 §3.2 identity filter on `token.googleapis.com` and `saml.googleapis.com` | Google's Workspace audit page names `login.googleapis.com` for both Login and SAML, and `oauth2.googleapis.com` for OAuth token (read 2026-09-15). The old filter matches nothing, so the identity bucket would be empty and every sign-in would land in the evidence bucket and BigQuery | CL-5.3's filter uses the documented names; 08 §3.2 is corrected to match |
 | 08 §3.3 view filters on `protoPayload.serviceName` and on the robot's `principalEmail` (`ge-requests`, `verifier-<agent>`) | A log view filter supports only `source()`, `log_id()`, `resource.type`, resource labels and labels (logs-views page, read 2026-09-15) | `ge-requests` is `SOURCE` plus `LOG_ID`; per-agent verifier views are file 17's, re-shaped there to a `SOURCE` filter plus the BigQuery view for actor filtering |
 | "`platform-core` module" as maker of rows 40 and 41 (S048) | No such module exists | CL-6.2, CL-6.3 (row 41) and CL-7.1 to CL-7.3 (row 40) are named steps with commands and verifies |
 | Eve Phase 7: dataset, then expiry, then sink, with `/tmp/ewl.json` | The order is right; the fixed `/tmp` path and a missing read-back are not | CL-4.2 sets the partition expiry at creation, before CL-5.4 creates the sink; access arrays are edited through `mktemp`, read back and diffed |
@@ -87,7 +88,9 @@ need ORG_ID DOMAIN DIRECTORY_CUSTOMER_ID REGION BQ_LOCATION GEMINI_PROJECT LOGGI
 | Billing administrator (finance) | Creates nothing in GCP but the export: enables standard and detailed usage cost export; creates the billing-account sink | CL-6.4, CL-9.2, CL-9.3 |
 | Approver of `ENT_FOLDER_ADMIN` and `ENT_PROJECT_REPAIR_CORE` | As file 12 recorded (the second human until the security reviewer is appointed, `Assumption:`) | CL-2.1 |
 
-Sittings that cannot start without two people: CL-6 (the second human approves `S-org` and the enabling of the intercepting `S-folder`, and reads the proofs) and CL-10 (the locks). Steps whose run order is not their numeric order: **CL-2.5 runs before CL-2.3 and CL-2.4** (it probes CMEK with Log Analytics, and locking, on a throwaway bucket). Every step writes `checkpoint <id> START` before its ACTION and `checkpoint <id> DONE` when its VERIFY passes (01 §1). Temporary files hold IAM policies and filters, never a secret, and are removed at the end of each step.
+Sittings that cannot start without two people: CL-6 (the second human approves `S-org` and the enabling of the intercepting `S-folder`, and reads the proofs) and CL-10 (the locks). Steps whose run order is not their numeric order: **CL-2.5 runs before CL-2.3 and CL-2.4** (it probes CMEK with Log Analytics, and locking, on a throwaway bucket). Every step writes `checkpoint <id> START` before its ACTION and `checkpoint <id> DONE` when its VERIFY passes (01 §1).
+
+**Grants across sittings.** This file runs over several sittings (CL-1's 24-hour waits, CL-6.5's seeds, CL-9.4 48 hours after CL-9.3, CL-10 on P13), and the grants of CL-2.1 last one hour (`ENT_FOLDER_ADMIN`) and two hours (`ENT_PROJECT_REPAIR_CORE`). Each step's WHO names the grant it runs under; when that grant is no longer `ACTIVE` (`gcloud pam grants describe <grant name> --billing-project="$CICD_PROJECT" --format="value(state)"`), the step does not start until it is requested again with CL-2.1's `pam_req` (redefined in the new shell), with a justification naming the step, and approved as file 12 recorded. Sections 7 to 9 and CL-10 usually run in later sittings, each on a fresh grant. No step below runs on a standing role, and CL-11.1 reads every grant this file requested. Temporary files hold IAM policies and filters, never a secret, and are removed at the end of each step.
 
 ## 1. Workspace audit-log sharing
 
@@ -211,14 +214,16 @@ gcloud billing projects describe "$LOGGING_PROJECT" --format="value(billingAccou
 need LOGGING_PROJECT KEY_PLATFORM_LOGS KMS_PROJECT
 LOG_KMS_SA="$(gcloud logging settings describe --project="$LOGGING_PROJECT" --format='value(kmsServiceAccountId)')"
 printf '%s\n' "$LOG_KMS_SA"
-gcloud kms keys describe "$KEY_PLATFORM_LOGS" --format="yaml(name,primary.state,primary.protectionLevel)"
-gcloud kms keys get-iam-policy "$KEY_PLATFORM_LOGS" --flatten="bindings[].members" --format="table(bindings.role,bindings.members)"
+gcloud kms keys describe "$KEY_PLATFORM_LOGS" --project="$KMS_PROJECT" --format="yaml(name,primary.state,primary.protectionLevel)"
+gcloud kms keys get-iam-policy "$KEY_PLATFORM_LOGS" --project="$KMS_PROJECT" --flatten="bindings[].members" --format="table(bindings.role,bindings.members)"
 ```
+
+  `KEY_PLATFORM_LOGS` is the key's full resource name, which already names its project; `--project` repeats it so that every gcloud command in this file names its scope.
 
 - **VERIFY:** The key name contains `locations/europe-west1/keyRings/logging`, state `ENABLED`, protection level `HSM`. The policy table shows `serviceAccount:<LOG_KMS_SA>` under `roles/cloudkms.cryptoKeyEncrypterDecrypter` and no other member under any role that can encrypt or decrypt. If the binding is missing, it is made by the holder of key IAM on `KMS_PROJECT` under the key table (file 11's re-run, recorded in the re-run index); the command is Google's:
 
 ```bash
-gcloud kms keys add-iam-policy-binding "$KEY_PLATFORM_LOGS" --member="serviceAccount:${LOG_KMS_SA}" --role="roles/cloudkms.cryptoKeyEncrypterDecrypter"
+gcloud kms keys add-iam-policy-binding "$KEY_PLATFORM_LOGS" --project="$KMS_PROJECT" --member="serviceAccount:${LOG_KMS_SA}" --role="roles/cloudkms.cryptoKeyEncrypterDecrypter"
 ```
 
   and it is proven by repeating the policy table. CL-2.3 does not start until it is present. The rule holds after this file too: no later file adds a member to `KEY_PLATFORM_LOGS`. The one later store beside these buckets, 42 GD-3.1's platform evidence bucket in `LOGGING_PROJECT`, takes its own Autokey key (handle `kh-platform-evidence`) and re-reads this table in its VERIFY, so a re-run of this step still passes.
@@ -245,9 +250,10 @@ gcloud logging buckets describe "$T" --location="$REGION" --project="$LOGGING_PR
 gcloud logging buckets update "$T" --location="$REGION" --locked --project="$LOGGING_PROJECT"; echo "lock exit $?"
 gcloud logging views create probe --bucket="$T" --location="$REGION" --log-filter='LOG_ID("cloudaudit.googleapis.com/activity")' --project="$LOGGING_PROJECT"; echo "view create exit $?"
 gcloud logging buckets update "$T" --location="$REGION" --retention-days=2 --project="$LOGGING_PROJECT"; echo "retention increase exit $?"
-gcloud logging buckets delete "$T" --location="$REGION" --project="$LOGGING_PROJECT" --quiet; echo "delete exit $?"
+gcloud logging buckets delete "$T" --location="$REGION" --project="$LOGGING_PROJECT"; echo "delete exit $?"
 ```
 
+  The delete carries no `--quiet`: no command in this file suppresses a prompt. If gcloud asks for confirmation, the operator reads the bucket name in the prompt and answers it.
 - **VERIFY:** Record the five exit codes and the describe output.
   - **Before CL-2.3 may run:** `create exit 0`, and the describe shows `analyticsEnabled: true` **and** `cmekSettings.kmsKeyName` equal to `KEY_PLATFORM_LOGS`. If the create is refused, or either field is missing, CL-2.3 does not run as written: record which of the two the tenant refuses, raise it with the second human, and take the CMEK-only bucket (drop `--enable-analytics`, with a `DEVIATION_REGISTER` line against 08 S12) or the analytics-only bucket (never: SK-7 and 08 §5 require the key) as the signed choice.
   - **For CL-10:** the delete of the empty bucket succeeds. If the view create fails, CL-3.1 must create every view the platform will ever need on these buckets before CL-10, and file 17's per-agent views move to per-tier buckets created unlocked (08 §3.3's cap rule) — write that into the re-run index before going on. The retention result tells CL-10 whether a later P13 increase is possible after the lock.
@@ -442,10 +448,17 @@ curl -sS -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog
 ```
 
     `Assumption:` the key-handle location for an `EU` dataset is `europe` ("a dataset in region `EU` should be protected with a key ring from region `europe`", BigQuery CMEK page, read 2026-09-15); the key name must contain `locations/europe/`, which the loop asserts, else the step stops and no dataset is created.
-  - **(b) No Autokey configuration applies.** The datasets use Google-managed encryption. `DEVIATION_REGISTER` gets: "platform_logs, platform_logs_views and BILLING_EXPORT_DS Google-managed, against 09 §2.2; reason: no Autokey on fld-platform-core and the default key must exist before the sink's tables; owner platform owner; closed by recreating under a signed change only if the key table is amended". This does not breach SK-7, which requires CMEK in W+ folders only. Branch (b) is not expected: it means 11 KV-6.3 did not configure `fld-platform-core`, and that is recorded with the deviation.
-- **VERIFY (branch (a) only):** `printenv KMS_KEY_BQ_LOGS` is non-empty and contains `locations/europe/`; `gcloud kms keys describe "$KMS_KEY_BQ_LOGS" --format="yaml(name,primary.state)"` shows `ENABLED`. CL-4.2 does not run until this holds, and the same is repeated per dataset for CL-4.3 and CL-9.1.
+  - **(b) No Autokey configuration applies.** The datasets use Google-managed encryption. The deviation is row `BD-14-01` of `DEVIATION_REGISTER`, inserted with 01's `bd_insert` in PR-4.1's thirteen cells (a re-run prints `exists: BD-14-01`):
+
+```bash
+need LOGGING_PROJECT DEVIATION_REGISTER
+bd_insert "$(printf '| BD-14-01 | %s | 14 CL-4.1 | DEV | platform_logs, platform_logs_views and BILLING_EXPORT_DS Google-managed, against 09 §2.2; reason: no Autokey on fld-platform-core, and the default key must exist before the sink creates its tables; owner platform owner | %s | CL-4.1 record (both autokey-config describe outputs) | three datasets with Google-managed encryption (CL-4.2, CL-4.3, CL-9.1) | n/a | n/a | platform owner; raised with the second human before CL-4.2 (11 KV-6.3 not run) | closed by recreating under a signed change only if the key table is amended | open |' "$(date -u +%F)" "projects/$LOGGING_PROJECT")"
+```
+
+    This does not breach SK-7, which requires CMEK in W+ folders only. Branch (b) is not expected: it means 11 KV-6.3 did not configure `fld-platform-core`, and that is recorded with the deviation. If Google-managed datasets are not wanted, CL-4.2 is not confirmed and 11 KV-6.3 is raised with the second human before any dataset exists.
+- **VERIFY (branch (a) only):** `printenv KMS_KEY_BQ_LOGS` is non-empty and contains `locations/europe/`; `gcloud kms keys describe "$KMS_KEY_BQ_LOGS" --project="$KMS_PROJECT" --format="yaml(name,primary.state)"` shows `ENABLED`. CL-4.2 does not run until this holds, and the same is repeated per dataset for CL-4.3 and CL-9.1.
 - **ROLLBACK:** Read only in branch (b). In branch (a) a key handle is not deletable and an unused Autokey key is recorded, not removed; it is harmless (no dataset points at it) and its name is written in the build log so 11's key table stays complete.
-- **EVIDENCE:** Both `autokey-config describe` outputs, the branch, and in branch (a) the key names of every handle made, as `<date>-CL-4.1-dataset-encryption-v1`; the deviation row in branch (b). TISAX 5.1. EU AI Act E-05.
+- **EVIDENCE:** Both `autokey-config describe` outputs, the branch, and in branch (a) the key names of every handle made, as `<date>-CL-4.1-dataset-encryption-v1`; the `BD-14-01` row in branch (b). TISAX 5.1. EU AI Act E-05.
 
 ### CL-4.2 Create `platform_logs` with its 400-day partition expiry, before any sink
 
@@ -538,9 +551,10 @@ sed -e "s/ORG_ID/${ORG_ID}/g" -e "s/BILLING_ACCOUNT_ID/${BILLING_ACCOUNT_ID}/g" 
 
   `tr '\n' ' '` (not `tr -d '\n'`), so a filter later split over several lines still substitutes into one valid filter instead of running its words together; the trailing space is harmless.
 
-  Then write the inventory, `logging/sinks-expected.yaml`, whose `filter:` and `exclusion:` values name the files just written — it is the authoritative expected state that CL-6.6's census, 16's drift job and Eve (25) compare against:
+  Then write the inventory, `logging/sinks-expected.yaml`, whose `filter:` and `exclusion:` values name the files just written — it is the authoritative expected state that CL-6.6's census, 16's drift job and Eve (25) compare against. It is written by the same kind of quoted here-document, never by hand, so the placeholders `LOGGING_PROJECT` and `EVE_PROJECT` stay as they are:
 
-```yaml
+```bash
+cat > "$PLATFORM_REPO_DIR/logging/sinks-expected.yaml" <<'EOF'
 # logging/sinks-expected.yaml: any sink not listed is a finding (CL-6.6, drift job 16, Eve 25)
 organization:
   S-org: {destination: "logging.googleapis.com/projects/LOGGING_PROJECT", includeChildren: false, filter: s-org.txt, maker: "14 CL-6.2"}
@@ -560,6 +574,7 @@ never:
   - walle-workspace-audit   # retired, S094
   - walle-audit-bq          # retired, S157
   - any organisation or folder sink whose destination is an agent project
+EOF
 ```
 
 ```bash
@@ -582,7 +597,15 @@ grep -rn 'tr -d' "$PLATFORM_REPO_DIR/logging" || echo "no tr -d in committed hel
 
   Then `git -C "$PLATFORM_REPO_DIR" log --oneline origin/main -- logging/sinks-expected.yaml` shows the merge; the pull request shows the second human's approval; `grep -n 'logging/' "$PLATFORM_REPO_DIR/CODEOWNERS"` names them.
 - **ROLLBACK:** A revert pull request under the same review.
-- **EVIDENCE:** Merge commit and pull request URL in `EVIDENCE_REGISTER` as `<date>-CL-5.1-sink-inventory-v1`. TISAX 5.2.1 (change management), 5.2.4. EU AI Act E-05.
+- **EVIDENCE:** A record of the merge, registered with its hash, so the evidence row points at a file (42 GD-4.1):
+
+```bash
+R="$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-CL-5.1-sink-inventory-v1.txt"
+{ echo "merge: $(git -C "$PLATFORM_REPO_DIR" log -1 --format='%H %cI' origin/main -- logging/sinks-expected.yaml)"; echo "pull request: <URL>"; git -C "$PLATFORM_REPO_DIR" ls-tree -r origin/main -- logging/filters logging/sinks-expected.yaml; } > "$R"
+evidence_add CL-5.1 sink-inventory E-05 "5.2.1, 5.2.4" "build-log:records/${R##*/}" "$R"
+```
+
+  The operator replaces `<URL>` in the file with the pull request's address before the `evidence_add` line. TISAX 5.2.1 (change management), 5.2.4. EU AI Act E-05.
 
 ### CL-5.2 Create `to-evidence-bucket`
 
@@ -911,9 +934,14 @@ The configuration of 08 §4.1, applied on the IAM policy of `fld-agentic-platfor
 
 - **WHO:** Platform owner writes; the second human reviews (CODEOWNERS `logging/`).
 - **WHERE:** `PLATFORM_REPO_DIR`, branch `cl-audit-config`.
-- **ACTION:** Write `logging/audit-config-fld-agentic-platform.json` and `logging/audit-config-projects.json`:
+- **ACTION:** Write `logging/audit-config-fld-agentic-platform.json` and `logging/audit-config-projects.json` with these quoted here-documents, never by hand (the project keys `LOGGING_PROJECT` and `CORE_PROJECT` are variable names that CL-8.3 resolves, not values):
 
-```json
+```bash
+need PLATFORM_REPO_DIR
+mkdir -p "$PLATFORM_REPO_DIR/logging"
+git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only   # CL-5.1 merged: cut the branch from it
+git -C "$PLATFORM_REPO_DIR" switch -c cl-audit-config
+cat > "$PLATFORM_REPO_DIR/logging/audit-config-fld-agentic-platform.json" <<'EOF'
 {"auditConfigs": [
   {"service": "secretmanager.googleapis.com", "auditLogConfigs": [{"logType": "DATA_READ"}, {"logType": "DATA_WRITE"}]},
   {"service": "cloudkms.googleapis.com", "auditLogConfigs": [{"logType": "DATA_READ"}, {"logType": "DATA_WRITE"}]},
@@ -927,18 +955,21 @@ The configuration of 08 §4.1, applied on the IAM policy of `fld-agentic-platfor
   {"service": "iam.googleapis.com", "auditLogConfigs": [{"logType": "ADMIN_READ"}]},
   {"service": "orgpolicy.googleapis.com", "auditLogConfigs": [{"logType": "ADMIN_READ"}]}
 ]}
-```
-
-```json
+EOF
+cat > "$PLATFORM_REPO_DIR/logging/audit-config-projects.json" <<'EOF'
 {"LOGGING_PROJECT": [{"service": "storage.googleapis.com", "auditLogConfigs": [{"logType": "DATA_READ"}, {"logType": "DATA_WRITE"}]}],
  "CORE_PROJECT": [{"service": "storage.googleapis.com", "auditLogConfigs": [{"logType": "DATA_READ"}, {"logType": "DATA_WRITE"}]},
                   {"service": "agentregistry.googleapis.com", "auditLogConfigs": [{"logType": "ADMIN_READ"}]}]}
+EOF
+git -C "$PLATFORM_REPO_DIR" add logging/audit-config-fld-agentic-platform.json logging/audit-config-projects.json
+git -C "$PLATFORM_REPO_DIR" commit -m "logging: Data Access audit configuration (setup 14 CL-8.1)"
+git -C "$PLATFORM_REPO_DIR" push -u origin cl-audit-config
 ```
 
-  `EVE_PROJECT`'s `storage` configuration is file 23's; `discoveryengine`'s `ADMIN_READ` on `GEMINI_PROJECT` is file 19's. Commit, push, pull request, merge after the second human's review, as CL-5.1.
+  `EVE_PROJECT`'s `storage` configuration is file 23's; `discoveryengine`'s `ADMIN_READ` on `GEMINI_PROJECT` is file 19's. Open the pull request; merge after the second human's review, as CL-5.1.
 - **VERIFY:** The merge commit exists; `jq -e '[.auditConfigs[].auditLogConfigs[] | select(has("exemptedMembers"))] | length == 0' "$PLATFORM_REPO_DIR/logging/audit-config-fld-agentic-platform.json"` prints `true`.
 - **ROLLBACK:** Revert pull request.
-- **EVIDENCE:** Merge commit as `<date>-CL-8.1-audit-config-committed-v1`. TISAX 5.2.1, 5.2.4. EU AI Act E-05.
+- **EVIDENCE:** A record of the merge, registered with its hash as CL-5.1's: `R="$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-CL-8.1-audit-config-committed-v1.txt"`, holding `git -C "$PLATFORM_REPO_DIR" log -1 --format='%H %cI' origin/main -- logging/audit-config-fld-agentic-platform.json`, the pull request's address and `git -C "$PLATFORM_REPO_DIR" ls-tree origin/main -- logging/audit-config-fld-agentic-platform.json logging/audit-config-projects.json`; then `evidence_add CL-8.1 audit-config-committed E-05 "5.2.1, 5.2.4" "build-log:records/${R##*/}" "$R"`. TISAX 5.2.1, 5.2.4. EU AI Act E-05.
 
 ### CL-8.2 Merge the configuration into the folder policy with its etag and a diff
 
@@ -1000,7 +1031,7 @@ done
 
 ```bash
 gcloud logging buckets list --project="$CORE_PROJECT" --location="$REGION" --format="value(name)"
-gcloud iam service-accounts get-iam-policy "k7-executor@${CORE_PROJECT}.iam.gserviceaccount.com" --format="value(etag)"
+gcloud iam service-accounts get-iam-policy "k7-executor@${CORE_PROJECT}.iam.gserviceaccount.com" --project="$CORE_PROJECT" --format="value(etag)"
 ```
 
   After 15 minutes, the second human:
@@ -1060,11 +1091,12 @@ penv_set BILLING_EXPORT_DS "$BDS"
 - **ACTION:**
 
 ```bash
-need LOGGING_PROJECT BILLING_ADMIN_EMAIL
+need LOGGING_PROJECT BILLING_ADMIN_EMAIL DEVIATION_REGISTER
 gcloud projects add-iam-policy-binding "$LOGGING_PROJECT" --member="user:${BILLING_ADMIN_EMAIL}" --role="roles/bigquery.user" --condition=None
+bd_insert "$(printf '| BD-14-02 | %s | 14 CL-9.2 | DEV | temporary bigquery.user to billing administrator on LOGGING_PROJECT, removed in CL-9.4 | %s | setup/14 CL-9.2 | roles/bigquery.user to user:%s, unconditioned | n/a | n/a | SD-16 (signed record) | removed in 14 CL-9.4 | open |' "$(date -u +%F)" "projects/$LOGGING_PROJECT" "$BILLING_ADMIN_EMAIL")"
 ```
 
-- **VERIFY:** `gcloud projects get-iam-policy "$LOGGING_PROJECT" --flatten="bindings[].members" --filter="bindings.members:${BILLING_ADMIN_EMAIL}" --format="table(bindings.role)"` shows only `roles/bigquery.user`. A line in `DEVIATION_REGISTER`: "temporary bigquery.user to billing administrator on LOGGING_PROJECT, removed in CL-9.4".
+- **VERIFY:** `gcloud projects get-iam-policy "$LOGGING_PROJECT" --flatten="bindings[].members" --filter="bindings.members:${BILLING_ADMIN_EMAIL}" --format="table(bindings.role)"` shows only `roles/bigquery.user`. `bd_insert` printed `opened BD-14-02 …` (or `exists: BD-14-02` on a re-run): the deviation row of 01 PR-4.1, closed by CL-9.4 with `bd_close`.
 - **ROLLBACK:** `gcloud projects remove-iam-policy-binding "$LOGGING_PROJECT" --member="user:${BILLING_ADMIN_EMAIL}" --role="roles/bigquery.user" --condition=None`.
 - **EVIDENCE:** `<date>-CL-9.2-billing-admin-bq-user-v1`. TISAX 4.1.3. EU AI Act E-05.
 
@@ -1079,20 +1111,43 @@ gcloud projects add-iam-policy-binding "$LOGGING_PROJECT" --member="user:${BILLI
 
 ### CL-9.4 Remove the temporary role, prove the export keeps running, and read the SCC SKUs
 
-- **WHO:** Platform owner; the billing administrator confirms.
-- **WHERE:** Shell, 48 hours or more after CL-9.3.
-- **ACTION:**
+- **WHO:** Platform owner under a fresh `ENT_PROJECT_REPAIR_CORE` grant (CL-2.1's request: the removal needs project IAM on `LOGGING_PROJECT`); the billing administrator confirms.
+- **WHERE:** Shell, 48 hours or more after CL-9.3; the last read again later the same day or the next.
+- **ACTION:** Three parts, because "the export keeps running without the role" can only be read after rows have been exported since the removal. `export_time` is "a processing time associated with an append of Cloud Billing data", which "will always increase with each new export" (standard usage cost schema page, updated 2026-09-24, read 2026-10-01).
+  1. **The export has run for 48 hours.** The first block's opening query returns a row only if an append was made 48 hours ago or more; if it returns none, the block prints `STOP`, changes nothing, and is run again later (cost details are typically available "within a day, but can sometimes take more than 24 hours", same page).
+  2. **Remove the role and write down when**, in a record the later read uses, then read the rows per day and the SCC SKUs.
+  3. **Rows after the removal.** The second block looks for an append made after the removal. It is run when the first two parts are done and repeated later (the same day or the next) until it finds one; only then is the deviation of CL-9.2 closed and the step `DONE`.
 
 ```bash
-need LOGGING_PROJECT BQ_LOCATION BILLING_ADMIN_EMAIL BILLING_EXPORT_DS
-gcloud projects remove-iam-policy-binding "$LOGGING_PROJECT" --member="user:${BILLING_ADMIN_EMAIL}" --role="roles/bigquery.user" --condition=None
-bq --location="$BQ_LOCATION" --project_id="$LOGGING_PROJECT" query --use_legacy_sql=false --format=pretty 'SELECT DATE(usage_start_time) AS d, COUNT(*) AS n FROM `'"$LOGGING_PROJECT"'.'"$BILLING_EXPORT_DS"'.gcp_billing_export_v1_*` WHERE usage_start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 DAY) GROUP BY d ORDER BY d'
-bq --location="$BQ_LOCATION" --project_id="$LOGGING_PROJECT" query --use_legacy_sql=false --format=pretty 'SELECT service.description AS service, sku.description AS sku, ROUND(SUM(cost),2) AS cost FROM `'"$LOGGING_PROJECT"'.'"$BILLING_EXPORT_DS"'.gcp_billing_export_v1_*` WHERE service.description LIKE "%Security Command Center%" AND usage_start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 35 DAY) GROUP BY 1,2 ORDER BY cost DESC'
+need LOGGING_PROJECT BQ_LOCATION BILLING_ADMIN_EMAIL BILLING_EXPORT_DS BUILD_LOG_DIR DEVIATION_REGISTER
+X="\`${LOGGING_PROJECT}.${BILLING_EXPORT_DS}.gcp_billing_export_v1_*\`"
+if bq --location="$BQ_LOCATION" --project_id="$LOGGING_PROJECT" query --use_legacy_sql=false --format=csv "SELECT 1 AS running FROM $X WHERE export_time < TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 48 HOUR) LIMIT 1" | grep -qx 1; then
+  gcloud projects remove-iam-policy-binding "$LOGGING_PROJECT" --member="user:${BILLING_ADMIN_EMAIL}" --role="roles/bigquery.user" --condition=None
+  RM="$BUILD_LOG_DIR/records/$(date -u +%Y-%m-%d)-CL-9.4-role-removed.txt"
+  date -u +%Y-%m-%dT%H:%M:%SZ > "$RM"; cat "$RM"
+  bq --location="$BQ_LOCATION" --project_id="$LOGGING_PROJECT" query --use_legacy_sql=false --format=pretty "SELECT DATE(usage_start_time) AS d, COUNT(*) AS n FROM $X WHERE usage_start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 3 DAY) GROUP BY d ORDER BY d"
+  bq --location="$BQ_LOCATION" --project_id="$LOGGING_PROJECT" query --use_legacy_sql=false --format=pretty "SELECT service.description AS service, sku.description AS sku, ROUND(SUM(cost),2) AS cost FROM $X WHERE service.description LIKE '%Security Command Center%' AND usage_start_time > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 35 DAY) GROUP BY 1,2 ORDER BY cost DESC"
+else
+  echo "STOP: no append is 48 hours old yet; CL-9.3 was less than 48 hours ago (or its export has not started): resume later"
+fi
 ```
 
-- **VERIFY:** The role is gone (CL-9.2's policy read is empty). Rows for the last two days keep arriving after the removal (`Assumption:` the export does not need the enabling user's BigQuery role to continue; if rows stop, the role is restored under a signed SD-16 note and the finding recorded). The SCC query result (possibly empty if SCC is billed to another account under P11's subscription branch) is recorded for SD-15. **Shared account (07 BA-1.2 branch b):** create an authorised view `platform_logs_views.billing_platform` selecting only rows whose `project.id` is one of the platform's projects from the register, authorise it on `BILLING_EXPORT_DS` with the CL-7.2 pattern, and grant readers only on the view; nobody but the export service account and PAM-granted repair holds anything on the raw dataset.
+  Later, in any shell with `~/.platform-env` sourced:
+
+```bash
+need LOGGING_PROJECT BQ_LOCATION BILLING_EXPORT_DS BUILD_LOG_DIR DEVIATION_REGISTER
+X="\`${LOGGING_PROJECT}.${BILLING_EXPORT_DS}.gcp_billing_export_v1_*\`"
+REMOVED_AT="$(cat "$BUILD_LOG_DIR"/records/*-CL-9.4-role-removed.txt | tail -n 1)"; printf 'removed at %s\n' "$REMOVED_AT"
+if bq --location="$BQ_LOCATION" --project_id="$LOGGING_PROJECT" query --use_legacy_sql=false --format=csv "SELECT 1 AS arrived FROM $X WHERE export_time > TIMESTAMP('$REMOVED_AT') LIMIT 1" | grep -qx 1; then
+  bd_close BD-14-02 "roles/bigquery.user removed by 14 CL-9.4; export rows arriving after the removal" "14 CL-9.4"
+else
+  echo "no append since the removal yet: run this block again later"
+fi
+```
+
+- **VERIFY:** The first block did not print `STOP` (else nothing in it ran). The role is gone (CL-9.2's policy read is empty). The second block found an append after the removal (`Assumption:` the export does not need the enabling user's BigQuery role to continue; if no row has arrived 48 hours after the removal, the role is restored under a signed SD-16 note, `BD-14-02` stays open and the finding is recorded). `bd_close` printed the closure of `BD-14-02`. The SCC query result (possibly empty if SCC is billed to another account under P11's subscription branch) is recorded for SD-15. **Shared account (07 BA-1.2 branch b):** create an authorised view `platform_logs_views.billing_platform` selecting only rows whose `project.id` is one of the platform's projects from the register, authorise it on `BILLING_EXPORT_DS` with the CL-7.2 pattern, and grant readers only on the view; nobody but the export service account and PAM-granted repair holds anything on the raw dataset.
 - **ROLLBACK:** Re-grant as CL-9.2 under a signed note.
-- **EVIDENCE:** The two query outputs (aggregates, no personal data) as `<date>-CL-9.4-billing-export-running-v1`; the deviation line of CL-9.2 closed. TISAX 4.1.3, 6.1. EU AI Act E-05.
+- **EVIDENCE:** The removal record, the query outputs (aggregates, no personal data) and the second block's result as `<date>-CL-9.4-billing-export-running-v1`; the closure of `BD-14-02`. TISAX 4.1.3, 6.1. EU AI Act E-05.
 
 ## 10. The locks
 
@@ -1192,7 +1247,7 @@ sitting_end
 | Billing export disabled or moved | Billing account audit log through `billing-account-audit` (`Assumption:`, CL-9.3) | 15 part A (SG-BILL-01 of 07) |
 | Key state change on `KEY_PLATFORM_LOGS` | Cloud KMS Admin Activity in `KMS_PROJECT` | 15 part A severity 1 |
 
-  Re-run rows to add or confirm in `rerun-index.tsv`: CL-3.3 (`eve-verifier@`, SIEM principal), CL-3.4 (security reviewer), CL-7.3 (`mo-metrics@`, `eve-verifier@`), CL-6.1 before 19's move, CL-10.1 to CL-10.3 on P13, CL-8.5 on B-02, CL-6.6 weekly until 25.
+  Re-run rows to add or confirm in `rerun-index.tsv`: CL-3.3 (`eve-verifier@`, SIEM principal), CL-3.4 (security reviewer), CL-7.3 (`mo-metrics@`, `eve-verifier@`), CL-6.1 before 19's move, CL-10.1 to CL-10.3 on P13, CL-8.5 on B-02, CL-6.6 weekly until 25. If P13 was unsigned when this sitting reached CL-10.1, so that CL-10.1 to CL-10.3 did not run, the PENDING line CL-10.1's ACTION names is written here if it is not already in `checkpoints.tsv`: `checkpoint CL-10.1 PENDING - - "P13 unsigned"`, with the re-run row "P13 signed → 14 CL-10.1 to CL-10.3".
 - **VERIFY:** The record commits; the second human's co-signature is on the watch list; `grep -c 'CL-' "$BUILD_LOG_DIR/rerun-index.tsv"` counts every row named above that is still open.
 - **ROLLBACK:** A superseding record.
 - **EVIDENCE:** The record as `<date>-CL-11.2-tier-r-central-logging-v1`, cited by 17's `TIER_R_RECORD`. TISAX 1.5, 5.2.4. EU AI Act E-05.
@@ -1206,14 +1261,14 @@ sitting_end
 - [ ] `platform-evidence-logs` and `platform-identity-logs` in `europe-west1`, CMEK, unlocked at the floor or the signed value, each created only after its confirmation list was ticked (CL-2.3, CL-2.4).
 - [ ] Views `security`, `siem`, `ge-requests`, `identity`; conditioned readers bound; PENDING readers indexed; no standing project-level log reader, and the folder and organisation policies read the same way and signed by the second human (CL-3, three files from CL-3.5).
 - [ ] Encryption branch recorded; `platform_logs` in `EU` with a 400-day default partition expiry set before any sink; `platform_logs_views` created (CL-4).
-- [ ] Filters written by the committed `cat > ... <<'EOF'` commands, each file holding exactly one filter, and `logging/sinks-expected.yaml` merged with the second human's review and CODEOWNERS on `logging/`; every sink and exclusion below built by substituting a file, never by retyping a filter (CL-5.1).
+- [ ] Filters and `logging/sinks-expected.yaml` written by the page's `cat > ... <<'EOF'` commands, each filter file holding exactly one filter, and both merged with the second human's review and CODEOWNERS on `logging/`; every sink and exclusion below built by substituting a file, never by retyping a filter (CL-5.1).
 - [ ] `to-evidence-bucket`, `to-identity-bucket` (documented service names), `to-bigquery` (partitioned, writer `WRITER` on the dataset only), and the `_Default` exclusion (CL-5.2 to CL-5.5).
 - [ ] Child-project sinks checked; `S-org` (no children) approved by the second human under `ENT_ORG_SINK`, and `S-folder` (children, intercepting) created disabled, its confirmation table ticked and its enabling approved by the second human with the UTC minute recorded; both writers on `LOGGING_PROJECT`; `billing-account-audit` enabled, temporary role removed (CL-6.1 to CL-6.4).
 - [ ] End-to-end proof read and signed by the second human, including "no identity row in the evidence bucket or BigQuery" (CL-6.5).
 - [ ] Sink census clean, no retired sink, weekly run scheduled (CL-6.6).
 - [ ] `walle_workspace_logs` authorised view created and authorised; row 40 readers granted or PENDING (CL-7).
 - [ ] Folder and project Data Access configurations merged with etag and diff, read back; hand canary proven; canary job BLOCKED with its README row (CL-8).
-- [ ] `BILLING_EXPORT_DS` in `EU` with no expiry; standard and detailed exports enabled; rows arriving after the temporary role is removed; SCC SKU query recorded; shared-account view if branch (b) (CL-9).
+- [ ] `BILLING_EXPORT_DS` in `EU` with no expiry; standard and detailed exports enabled; rows arriving after the temporary role is removed; SCC SKU query recorded; `BD-14-02` closed; shared-account view if branch (b) (CL-9).
 - [ ] Locks done with the second human present, or PENDING on P13 with the re-run row (CL-10).
 - [ ] Grants ended, `SITTING-END OK`, Tier R central-logging record and watch list co-signed (CL-11).
 - [ ] Every EVIDENCE line listed in `EVIDENCE_REGISTER`.
@@ -1248,11 +1303,11 @@ Not produced here, and unowned at 2026-09-15: `CORE_PROJECT`'s project-level `gc
 | S001 | Closed for central logging | Buckets, aggregated and fan-out sinks, views, `platform_logs` and `platform_logs_views`, the Data Access configuration and the billing export now have executable steps with verify, rollback and evidence, and CL-11.2 is the Tier R "central logging" evidence. The rest of S001 is closed by files 09, 10, 13, 16 and 17. The canary job's code is README B-02 (owner: platform owner). |
 | X-RQB-05 | Closed for this file's scope | The standard and detailed export to an EU dataset in `LOGGING_PROJECT` by the billing administrator (CL-9.3), with no table expiry (CL-9.1), the project's billing link checked, the shared-account label-filtered view (CL-9.4), and the billing-account sink that 07's detection needs (CL-6.4). The account, roles, currency and quota halves were closed by file 07; `billing_project` on Terraform is file 17's. |
 
-Design corrections this file makes, for the same pass on the design pages: 08 §3.2's identity services (`login.googleapis.com` and `oauth2.googleapis.com`, not `token.googleapis.com` and `saml.googleapis.com`); 08 §3.3's view filters (no `protoPayload` fields; `ge-requests` re-shaped, `verifier-<agent>` to be re-shaped in 17); 09 §2.2's Autokey scope against file 11 (CL-4.1); README §9's "log view viewAccessor" on `mo-metrics@` (row 40 is BigQuery-only; `mo-metrics@` gets no log view).
+Design corrections this file makes, to be carried into the design pages: 08 §3.2's identity services (`login.googleapis.com` and `oauth2.googleapis.com`, not `token.googleapis.com` and `saml.googleapis.com`); 08 §3.3's view filters (no `protoPayload` fields; `ge-requests` re-shaped, `verifier-<agent>` to be re-shaped in 17); 09 §2.2's Autokey scope against file 11 (CL-4.1); README §9's "log view viewAccessor" on `mo-metrics@` (row 40 is BigQuery-only; `mo-metrics@` gets no log view).
 
 ## Sources
 
-Read on 2026-09-15: [Workspace audit logs in Cloud Logging](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging); [Share data with Google Cloud services](https://knowledge.workspace.google.com/admin/getting-started/share-data-with-google-cloud-services); [Route logs to supported destinations](https://docs.cloud.google.com/logging/docs/export/configure_export_v2); [Routing overview](https://docs.cloud.google.com/logging/docs/routing/overview); [Aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks); [gcloud logging sinks create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/sinks/create); [gcloud logging sinks update](https://docs.cloud.google.com/sdk/gcloud/reference/logging/sinks/update); [gcloud logging buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/buckets/create); [gcloud logging buckets update](https://docs.cloud.google.com/sdk/gcloud/reference/logging/buckets/update); [Configure log buckets](https://docs.cloud.google.com/logging/docs/buckets); [CMEK for log buckets](https://docs.cloud.google.com/logging/docs/routing/managed-encryption-storage); [Configure log views](https://docs.cloud.google.com/logging/docs/logs-views); [gcloud logging read](https://docs.cloud.google.com/sdk/gcloud/reference/logging/read); [Cloud Logging access control](https://docs.cloud.google.com/logging/docs/access-control); [Route logs to BigQuery](https://docs.cloud.google.com/logging/docs/export/bigquery); [Configure Data Access audit logs](https://docs.cloud.google.com/logging/docs/audit/configure-data-access); [Request temporary elevated access (PAM)](https://docs.cloud.google.com/iam/docs/pam-request-temporary-elevated-access); [gcloud pam grants](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants); [gcloud pam grants approve](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/approve); [Set up Cloud Billing data export to BigQuery](https://docs.cloud.google.com/billing/docs/how-to/export-data-bigquery-setup); [Cloud Billing access control](https://docs.cloud.google.com/billing/docs/how-to/billing-access); [BigQuery authorised views](https://docs.cloud.google.com/bigquery/docs/authorized-views); [Control access to BigQuery resources with IAM](https://docs.cloud.google.com/bigquery/docs/control-access-to-resources-iam); [bq command-line reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference); [BigQuery customer-managed keys](https://docs.cloud.google.com/bigquery/docs/customer-managed-encryption); [Create protected resources using Autokey](https://docs.cloud.google.com/kms/docs/create-resource-with-autokey); [gcloud kms autokey-config describe](https://docs.cloud.google.com/sdk/gcloud/reference/kms/autokey-config/describe).
+Read on 2026-09-15: [Workspace audit logs in Cloud Logging](https://docs.cloud.google.com/logging/docs/audit/gsuite-audit-logging); [Share data with Google Cloud services](https://knowledge.workspace.google.com/admin/getting-started/share-data-with-google-cloud-services); [Route logs to supported destinations](https://docs.cloud.google.com/logging/docs/export/configure_export_v2); [Routing overview](https://docs.cloud.google.com/logging/docs/routing/overview); [Aggregated sinks](https://docs.cloud.google.com/logging/docs/export/aggregated_sinks); [gcloud logging sinks create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/sinks/create); [gcloud logging sinks update](https://docs.cloud.google.com/sdk/gcloud/reference/logging/sinks/update); [gcloud logging buckets create](https://docs.cloud.google.com/sdk/gcloud/reference/logging/buckets/create); [gcloud logging buckets update](https://docs.cloud.google.com/sdk/gcloud/reference/logging/buckets/update); [Configure log buckets](https://docs.cloud.google.com/logging/docs/buckets); [CMEK for log buckets](https://docs.cloud.google.com/logging/docs/routing/managed-encryption-storage); [Configure log views](https://docs.cloud.google.com/logging/docs/logs-views); [gcloud logging read](https://docs.cloud.google.com/sdk/gcloud/reference/logging/read); [Cloud Logging access control](https://docs.cloud.google.com/logging/docs/access-control); [Route logs to BigQuery](https://docs.cloud.google.com/logging/docs/export/bigquery); [Configure Data Access audit logs](https://docs.cloud.google.com/logging/docs/audit/configure-data-access); [Request temporary elevated access (PAM)](https://docs.cloud.google.com/iam/docs/pam-request-temporary-elevated-access); [gcloud pam grants](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants); [gcloud pam grants approve](https://docs.cloud.google.com/sdk/gcloud/reference/pam/grants/approve); [Set up Cloud Billing data export to BigQuery](https://docs.cloud.google.com/billing/docs/how-to/export-data-bigquery-setup); [Cloud Billing access control](https://docs.cloud.google.com/billing/docs/how-to/billing-access); [BigQuery authorised views](https://docs.cloud.google.com/bigquery/docs/authorized-views); [Control access to BigQuery resources with IAM](https://docs.cloud.google.com/bigquery/docs/control-access-to-resources-iam); [bq command-line reference](https://docs.cloud.google.com/bigquery/docs/reference/bq-cli-reference); [BigQuery customer-managed keys](https://docs.cloud.google.com/bigquery/docs/customer-managed-encryption); [Create protected resources using Autokey](https://docs.cloud.google.com/kms/docs/create-resource-with-autokey); [gcloud kms autokey-config describe](https://docs.cloud.google.com/sdk/gcloud/reference/kms/autokey-config/describe). Read on 2026-10-01: [Structure of the standard usage cost export](https://docs.cloud.google.com/billing/docs/how-to/export-data-bigquery-tables/standard-usage) (`export_time`, updated 2026-09-24).
 
 ## Related
 

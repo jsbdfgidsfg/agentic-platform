@@ -10,6 +10,7 @@
 - Applies decisions: SD-01 (hand work as a deviation), SD-02 (gate split; PSA1 counts `env=prod` rows only), SD-09 (model pin, 90-day retirement refusal), SD-14 (the repository exists from 03), SD-18 (row 36 made here), SD-34 (the ladder publisher), SD-36 (G1-G21; the enforceable gate; manual parse fallback), SD-44 (`exists_or_pending`), SD-48 (no machine approves).
 - Changed 2026-10-01: every PAM call passes `--billing-project="$CICD_PROJECT"`, and RG-5.2, RG-5.7 and RG-7.2 request through 12's `pam.sh` and wait for `ACTIVE` before any privileged command; RG-5.2's rollback names `gcloud alpha pam grants withdraw`; RG-7.5 and RG-8.1 carry their branch, commit and pull-request commands; RG-10.1's deviation appends are guarded against duplicates on resume; they/them in the separation rules; RG-8.1's job contract carries 13 OP-2.5's assertion that the PAM service agent stays out of every denied set and `exceptionPrincipals` list; RG-7.6's VERIFY and RG-10.1 read RG-7.6 in README §8 row B-23.
 - Changed 2026-10-01: deviation rows inserted with 01's bd_insert, closed with bd_close (RG-10.1).
+- Changed 2026-10-01 (second revision): RG-0.1 checks 03 DC-9.2's `PLATFORM_REPO_SLUG` against the remote instead of setting it again, and only reads (RG-10.1 now writes the securitycenter re-run line); RG-4.1, RG-5.4 and RG-7.4 register their files with a hash, RG-4.1 as `folders-committed` and `folders-live`; RG-5.7's registry delete drops `--quiet`; RG-10.1's README re-run and BLOCKED index edits move to RG-10.2, as hand edits.
 - Closes: S001 (registry and register half), S008 (CI half), S048 (rows 36 and 41 half), S057 (register-before-project half), S085 (CI and gate-line half), X-ORG-13. See "Findings".
 
 ## What this part builds
@@ -58,7 +59,7 @@ flowchart TD
 - [ ] File 03: `PLATFORM_REPO_REMOTE` exists with DC-9.6's protection (two approvals, code owners, last-push approval, administrators included) and DC-9.4's CODEOWNERS; `GIT_HOST` is GitHub (if P22 chose GitLab, §12.1 of 03 applies and this file is re-issued as a dated revision before execution); SD-02, SD-09, SD-18, SD-34, SD-36 and NAMES are signed (`tools/decision-need.sh`); `SECOND_HUMAN_EMAIL` is set; `SECURITY_REVIEWER_EMAIL` is set or `*tbd*` (RG-1.2 and RG-3.6 say what changes).
 - [ ] File 06: `ROSTER_FILE`, `CONTROL_GROUPS_FILE`, `GRP_PLATFORM_READERS`, `GRP_EVE_OWNERS`, `GRP_PLATFORM_SECURITY` are set and merged.
 - [ ] File 09: every `FLD_*` is set and `register/folders.yaml` is merged (FS-4.2).
-- [ ] File 10 (CP-1.6, row 2): `CORE_PROJECT` with `agentregistry`, `apphub`, `bigquery`, `run`, `cloudscheduler`, `cloudasset`, `policyanalyzer` and `monitoring` enabled — RG-0.1 checks all eight and stops on any missing one. `securitycenter.googleapis.com` in `CORE_PROJECT` is needed only from RG-8.2 (the drift job's S4 source); RG-0.1 checks it and writes a re-run line on 10 CP-1.6 if absent, which must be closed before B-02 is unblocked. `SA_FACTORY_APPLY`, `SA_PLATFORM_DRIFT`, `SA_WALLE_DEPLOYER` exist with no bindings.
+- [ ] File 10 (CP-1.6, row 2): `CORE_PROJECT` with `agentregistry`, `apphub`, `bigquery`, `run`, `cloudscheduler`, `cloudasset`, `policyanalyzer` and `monitoring` enabled — RG-0.1 checks all eight and stops on any missing one. `securitycenter.googleapis.com` in `CORE_PROJECT` is needed only from RG-8.2 (the drift job's S4 source); RG-0.1 checks it and, if it is absent, RG-10.1 writes a re-run line on 10 CP-1.6, which must be closed before B-02 is unblocked. `SA_FACTORY_APPLY`, `SA_PLATFORM_DRIFT`, `SA_WALLE_DEPLOYER` exist with no bindings.
 - [ ] File 12 is complete: the creator's Owner is removed from the core projects; `ENT_PROJECT_REPAIR_CORE` (PA-4.2, folder-scoped at `fld-platform-core`, carrying `agentregistry.admin` and `monitoring.admin`), `ENT_FOLDER_ADMIN` (PA-4.1) and `ENT_DEPLOY_CREDENTIAL_HOLDER_CORE` (PA-4.3, `run.developer` and `iam.serviceAccountUser` on `CORE_PROJECT`) exist and their one-grant tests passed; `FLD_PLATFORM_CORE` is set (09). (Not in the plan's consume list for 16; needed because every IAM change here is a PAM act after 12, and because RG-5.7, RG-8.2 and RG-8.3 name these three entitlements exactly.)
 - [ ] File 14 is complete: the Data Access configuration at `fld-agentic-platform` is merged; `SINK_S_ORG`, `SINK_S_FOLDER` exist.
 - [ ] File 15 part A: `NOTIF_CH_PAGER_CORE` and `NOTIF_CH_EMAIL_CORE` exist, or RG-5.6 records PENDING and 15 re-runs it.
@@ -75,7 +76,7 @@ flowchart TD
 
 Separation rules: the platform owner never approves their own grant (PAM refuses it: "You can't approve your own request", PAM approve-grants page, read 2026-09-15) and never counts as a reviewer of their own pull request. Hands-on about 2 days; elapsed 3 to 5 days (reviews and the drill).
 
-Conventions of [01](01-prerequisites-and-conventions.md) apply to every step: `checkpoint <id> START` before the action, `checkpoint <id> DONE [witness] [evidence]` after the verify; `evidence_add` for every record; records named `<date>-<step>-<slug>-v<n>`; deviation rows `BD-16-<n>` in 01 PR-4.1's table. Every pull request below is opened with `gh pr create --repo "$PLATFORM_REPO_SLUG"` from a branch named after the step. `PLATFORM_REPO_SLUG` (the `owner/name` of 03 §12) is **persisted with `penv_set` in RG-0.1**, not held in the shell: this part runs over 3 to 5 days across pull-request reviews and a drill, and a step resumed in a fresh shell must not build `repos//…`. Every fence that uses it begins with `source ~/.platform-env` or follows one in the same shell, and `need PLATFORM_REPO_SLUG` fails loudly if it is unset.
+Conventions of [01](01-prerequisites-and-conventions.md) apply to every step: `checkpoint <id> START` before the action, `checkpoint <id> DONE [witness] [evidence]` after the verify; `evidence_add` for every record; records named `<date>-<step>-<slug>-v<n>`; deviation rows `BD-16-<n>` in 01 PR-4.1's table. Every pull request below is opened with `gh pr create --repo "$PLATFORM_REPO_SLUG"` from a branch named after the step. `PLATFORM_REPO_SLUG` (the `owner/name` of 03 §12) is **persisted by 03 DC-9.2 with `penv_set`**, and RG-0.1 only checks it against `PLATFORM_REPO_REMOTE`; it is not held in the shell: this part runs over 3 to 5 days across pull-request reviews and a drill, and a step resumed in a fresh shell must not build `repos//…`. Every fence that uses it begins with `source ~/.platform-env` or follows one in the same shell, and `need PLATFORM_REPO_SLUG` fails loudly if it is unset.
 
 ## 0. The sitting
 
@@ -92,21 +93,21 @@ penv_guard
 "$PLATFORM_REPO_DIR/tools/decision-need.sh" SD-02 SD-09 SD-14 SD-18 SD-34 SD-36 NAMES
 need SA_1_ADMIN GIT_HOST PLATFORM_REPO_REMOTE PLATFORM_REPO_DIR BUILD_LOG_DIR EVIDENCE_REGISTER DEVIATION_REGISTER DRILL_CALENDAR SECOND_HUMAN_EMAIL ORG_ID REGION BQ_LOCATION DOMAIN
 need CORE_PROJECT CORE_PROJECT_NUMBER CICD_PROJECT SA_FACTORY_APPLY SA_PLATFORM_DRIFT SA_WALLE_DEPLOYER FLD_AGENTIC_PLATFORM FLD_PLATFORM_CORE ROSTER_FILE CONTROL_GROUPS_FILE GRP_PLATFORM_READERS GRP_EVE_OWNERS ENT_PROJECT_REPAIR_CORE ENT_FOLDER_ADMIN ENT_DEPLOY_CREDENTIAL_HOLDER_CORE
-penv_set PLATFORM_REPO_SLUG "$(printf '%s' "$PLATFORM_REPO_REMOTE" | sed -E 's#^https://github.com/##; s#\.git$##')"
 need PLATFORM_REPO_SLUG
-case "$PLATFORM_REPO_SLUG" in */*) : ;; *) echo "PLATFORM_REPO_SLUG is not owner/name: stop"; false;; esac
+case "$PLATFORM_REPO_SLUG" in */*) : ;; *) echo "PLATFORM_REPO_SLUG is not owner/name: stop, re-read 03 DC-9.2"; false;; esac
+test "$PLATFORM_REPO_REMOTE" = "https://github.com/${PLATFORM_REPO_SLUG}.git" || { echo "PLATFORM_REPO_REMOTE is not https://github.com/${PLATFORM_REPO_SLUG}.git (03 DC-9.5's form): stop, settle which is right in 03"; false; }
 test "$GIT_HOST" = "github.com" || { echo "git host is not GitHub: stop, 03 section 12.1 re-issue"; false; }
 test "$(gcloud config get account 2>/dev/null)" = "$SA_1_ADMIN" || { echo "not sa-1-admin@: stop"; false; }
 git -C "$PLATFORM_REPO_DIR" switch main && git -C "$PLATFORM_REPO_DIR" pull --ff-only
 test -s "$PLATFORM_REPO_DIR/register/folders.yaml" || { echo "folders.yaml missing: 09 FS-4.2 first"; false; }
 gcloud services list --enabled --project="$CORE_PROJECT" --format="value(config.name)" | grep -E '^(agentregistry|apphub|bigquery|run|cloudscheduler|cloudasset|policyanalyzer|monitoring)\.googleapis\.com$' | sort | tee "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-0.1-core-apis-v1.txt" | wc -l
-gcloud services list --enabled --project="$CORE_PROJECT" --format="value(config.name)" | grep -qx 'securitycenter.googleapis.com' || printf '%s\tRG-0.1\tsecuritycenter.googleapis.com on CORE_PROJECT\t10 CP-1.6 enables it (row 2): re-run before 16 RG-8.2\tPENDING\t-\n' "$(date -u +%F)" >> "$BUILD_LOG_DIR/rerun-index.tsv"
+gcloud services list --enabled --project="$CORE_PROJECT" --format="value(config.name)" | grep -qx 'securitycenter.googleapis.com' || echo "NOTE: securitycenter.googleapis.com is not enabled on CORE_PROJECT: RG-10.1 writes the re-run line on 10 CP-1.6"
 gcloud projects get-iam-policy "$CORE_PROJECT" --flatten="bindings[].members" --filter="bindings.members:user:" --format="table(bindings.role,bindings.members)"
 printf 'SECURITY_REVIEWER_EMAIL=%s\n' "${SECURITY_REVIEWER_EMAIL:-*tbd*}"
 ```
 
-  `GIT_HOST`'s value form is 03's; if 03 recorded it differently (for example `GitHub`), compare against that record, not this literal. Eight services are required in this sitting: the seven the register and registry work uses, and `monitoring.googleapis.com`, which RG-5.6's alert policy needs (10 CP-1.6 enables it on every core row). `securitycenter.googleapis.com` is needed only from RG-8.2, when the drift job reads findings through the SCC API as source S4 with `CORE_PROJECT` as its quota project (RG-7.3's `serviceusage.serviceUsageConsumer`); it is not enabled here — if the check above wrote the re-run line, 10 CP-1.6 must enable it in `CORE_PROJECT` before B-02 is unblocked.
-- **VERIFY:** `penv_guard` prints nothing; `decision-need.sh` exits 0; every `need` passes; `PLATFORM_REPO_SLUG` is persisted (`grep PLATFORM_REPO_SLUG ~/.platform-env`); the services count prints `8` and the recorded file holds the eight names; a missing name is a stop, not a workaround (re-run 10 CP-1.6 for that project); the user-member listing on `CORE_PROJECT` is empty (12 removed the creator's Owner). Whether the security reviewer is appointed is written in the checkpoint note; it decides the reviewer column of RG-1.2 and RG-3.6.
+  `GIT_HOST`'s value form is 03's; if 03 recorded it differently (for example `GitHub`), compare against that record, not this literal. Eight services are required in this sitting: the seven the register and registry work uses, and `monitoring.googleapis.com`, which RG-5.6's alert policy needs (10 CP-1.6 enables it on every core row). `securitycenter.googleapis.com` is needed only from RG-8.2, when the drift job reads findings through the SCC API as source S4 with `CORE_PROJECT` as its quota project (RG-7.3's `serviceusage.serviceUsageConsumer`); it is not enabled here — if the check above printed the `NOTE`, RG-10.1 writes the re-run line in `rerun-index.tsv` (this step only reads), and 10 CP-1.6 must enable it in `CORE_PROJECT` before B-02 is unblocked. `PLATFORM_REPO_SLUG` is 03 DC-9.2's value and is not set again here: DC-9.5 built the remote from it, so the two must agree, and a disagreement (an SSH remote, a renamed repository) is settled in 03, never by re-deriving the slug from the remote.
+- **VERIFY:** `penv_guard` prints nothing; `decision-need.sh` exits 0; every `need` passes; `PLATFORM_REPO_SLUG` is `owner/name` and the remote is `https://github.com/<PLATFORM_REPO_SLUG>.git`; the services count prints `8` and the recorded file holds the eight names; a missing name is a stop, not a workaround (re-run 10 CP-1.6 for that project); the user-member listing on `CORE_PROJECT` is empty (12 removed the creator's Owner). Whether the security reviewer is appointed is written in the checkpoint note; it decides the reviewer column of RG-1.2 and RG-3.6.
 - **ROLLBACK:** Read only.
 - **EVIDENCE:** Output as `<date>-RG-0.1-gates-v1` in `BUILD_LOG_DIR/records/`. E-xx: E-05. TISAX 5.2.1.
 
@@ -712,7 +713,7 @@ diff <(sort "$BUILD_LOG_DIR/records/$(date -u +%F)-RG-4.1-folders-committed-v1.t
   `gcloud resource-manager folders list` takes exactly one of `--organization` or `--folder` and lists direct children (gcloud reference, as used by 09). The `parent` field prints as `organizations/N` or `folders/N`, the form 09 wrote. If the form differs on the day, normalise both files the same way and record it.
 - **VERIFY:** `FOLDERS MATCH`, 22 lines in each file.
 - **ROLLBACK:** Read only. A difference is fixed in 09 (live side) or by a pull request regenerating the file with FS-4.1 (committed side), never by editing ids.
-- **EVIDENCE:** Both files, registered with `evidence_add RG-4.1 folders-match E-05 1.3.1 "build-log:records/..."`. TISAX 1.3.1.
+- **EVIDENCE:** Both files, each registered with its hash: `evidence_add RG-4.1 folders-committed E-05 1.3.1 "build-log:records/<date>-RG-4.1-folders-committed-v1.tsv" "$BUILD_LOG_DIR/records/<date>-RG-4.1-folders-committed-v1.tsv"` and the same line for `folders-live` with its file. TISAX 1.3.1.
 
 ### RG-4.2 Place the operators convention
 
@@ -829,7 +830,7 @@ gcloud projects get-iam-policy "$CORE_PROJECT" --flatten="bindings[].members" --
 
 - **VERIFY:** The first table has exactly four rows: `roles/agentregistry.admin` → `serviceAccount:factory-apply@…`; `roles/agentregistry.viewer` → `platform-drift@…`, `platform-readers@…`, `eve-owners@…`. No `roles/agentregistry.editor` or `roles/agentregistry.user` row. The second table is empty (a basic role would carry `agentregistry.*`). The only other principal that can write the registry is a human holding an active `ENT_PROJECT_REPAIR_CORE` grant: 12 PA-4.2 lists `roles/agentregistry.admin` in that bundle, folder-scoped at `fld-platform-core`, which contains `CORE_PROJECT`. `ENT_FOLDER_ADMIN` does **not** carry it (12's `ent-folder-admin` is `resourcemanager.folderAdmin`, `logging.configWriter`, `modelarmor.floorSettingsAdmin`, `cloudscheduler.admin`). RG-5.7 proves that this one lawful human write is alerted.
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** The file above, `evidence_add RG-5.4 registry-iam E-06 4.2.1 ...`. TISAX 4.2.1. Closes S001's "shared Agent Registry in CORE_PROJECT" item.
+- **EVIDENCE:** The file above, with its hash: `evidence_add RG-5.4 registry-iam E-06 4.2.1 "build-log:records/<date>-RG-5.4-registry-iam-v1.txt" "$BUILD_LOG_DIR/records/<date>-RG-5.4-registry-iam-v1.txt"`. TISAX 4.2.1. Closes S001's "shared Agent Registry in CORE_PROJECT" item.
 
 ### RG-5.5 Confirm registry reads are logged (P80)
 
@@ -905,10 +906,10 @@ gcloud agent-registry services create "$D" --location="$REGION" --display-name="
 date -u +%Y-%m-%dT%H:%M:%SZ
 ```
 
-  The `services create` flags (`--location`, `--display-name`, `--description` up to 2,048 characters, `--interfaces=[protocolBinding=…],[url=…]`, `--endpoint-spec-type=no-spec`) are the GA reference's (read 2026-09-15); `protocolBinding=http-json` is the value of the reference's example (*Assumption:* accepted for an endpoint; if refused, read the error's allowed values). The second human times the page. Then:
+  The `services create` flags (`--location`, `--display-name`, `--description` up to 2,048 characters, `--interfaces=[protocolBinding=…],[url=…]`, `--endpoint-spec-type=no-spec`) are the GA reference's (read 2026-09-15); `protocolBinding=http-json` is the value of the reference's example (*Assumption:* accepted for an endpoint; if refused, read the error's allowed values). The second human times the page. Then, answering the delete's confirmation prompt by hand (no `--quiet`: a person confirms every deletion):
 
 ```bash
-gcloud agent-registry services delete "$D" --location="$REGION" --project="$CORE_PROJECT" --quiet
+gcloud agent-registry services delete "$D" --location="$REGION" --project="$CORE_PROJECT"
 gcloud agent-registry services list --location="$REGION" --project="$CORE_PROJECT" --format="value(name)"
 gcloud logging read "protoPayload.serviceName=\"agentregistry.googleapis.com\" AND logName:\"cloudaudit.googleapis.com%2Factivity\"" --project="$CORE_PROJECT" --freshness=1h --format="table(timestamp,protoPayload.methodName,protoPayload.authenticationInfo.principalEmail)"
 ```
@@ -1045,7 +1046,7 @@ need FLD_AGENTIC_PLATFORM CORE_PROJECT ORG_ID SA_PLATFORM_DRIFT
 
 - **VERIFY:** Folder: exactly `roles/cloudasset.viewer`, `roles/iam.securityReviewer`, `roles/securitycenter.findingsViewer` — plus the export custom role only if `ROW36-EXC` signed `cai_access: export` (RG-7.1). `CORE_PROJECT`: exactly `roles/agentregistry.viewer`, `roles/bigquery.jobUser`, `roles/serviceusage.serviceUsageConsumer`. Organisation: nothing. No user-managed key. **No binding on the account itself**, and this is the end state that holds for the life of the platform: nobody standing can impersonate `platform-drift@`, and its jobs run as it through Cloud Run's attachment (RG-8.2). The `iam.serviceAccounts.actAs` that deploying such a job and creating its scheduler job need is **not** an exception to this line: it arrives as a **project-level `roles/iam.serviceAccountUser` on `CORE_PROJECT` inside a PAM grant** (`ENT_DEPLOY_CREDENTIAL_HOLDER_CORE`, 12 PA-4.3: `roles/run.developer` and `roles/iam.serviceAccountUser`), held by a human for an hour and never by a binding on this account. Before RG-8.2 is unblocked, confirm that entitlement still carries `iam.serviceAccountUser` (`gcloud pam entitlements describe "$ENT_DEPLOY_CREDENTIAL_HOLDER_CORE" --billing-project="$CICD_PROJECT" --format="yaml(privilegedAccess.gcpIamAccess.roleBindings)"`); if a binding on `platform-drift@` itself is ever found here instead, it is a drift finding and is removed. The set equals `ROW36-EXC`; `WRITER` on `platform_registry` was proven in RG-6.2. No write role on any registry (05 §6.3).
 - **ROLLBACK:** Read only.
-- **EVIDENCE:** The file, `evidence_add RG-7.4 platform-drift-roles E-06 4.2.1 ...`. TISAX 4.2.1. Closes S048 for row 36.
+- **EVIDENCE:** The file, with its hash: `evidence_add RG-7.4 platform-drift-roles E-06 4.2.1 "build-log:records/<date>-RG-7.4-platform-drift-roles-v1.txt" "$BUILD_LOG_DIR/records/<date>-RG-7.4-platform-drift-roles-v1.txt"`. TISAX 4.2.1. Closes S048 for row 36.
 
 ### RG-7.5 Read row 41 back into the drift job's expected set
 
@@ -1238,7 +1239,7 @@ gh api "repos/$PLATFORM_REPO_SLUG/actions/permissions/workflow" --jq '.can_appro
 ### RG-10.1 Deviation rows, the re-run index and the BLOCKED index
 
 - **WHO:** Platform owner writes; the second human reads `BD-16-2` (the manual parse) and initials the build-log line.
-- **WHERE:** Shell; `DEVIATION_REGISTER`; README.
+- **WHERE:** Shell; `DEVIATION_REGISTER`; `BUILD_LOG_DIR/rerun-index.tsv`.
 - **ACTION:** Insert the five rows into the register's first table with 01's `bd_insert`, which commits each as `BD-16-<n> opened` and prints `exists: BD-16-<n>` on a re-run (never appended to the file end, which would land inside the Closures table).
 
 ```bash
@@ -1249,18 +1250,24 @@ bd_insert "$(printf '| BD-16-2 | %s | 16 RG-3.6 | DEV | register CI rules R-01 t
 bd_insert "$(printf '| BD-16-3 | %s | 16 RG-5.6 | DEV | registry write alert in CORE_PROJECT, not LOGGING_PROJECT as 05 section 4 writes; pipeline_run_id half missing | project %s | log-based alert page read 2026-09-15 | one policy | n/a | n/a | none: SD-01 | 17 adds the CI half; 05 section 4 corrected | open |\n' "$d" "$CORE_PROJECT")"
 bd_insert "$(printf '| BD-16-4 | %s | 16 RG-6.2, RG-7.1 | DEV | open limits: WRITER on platform_registry can delete rows and NOTHING mitigates it yet (the daily export to the evidence lake is inside B-02, BLOCKED: this row closes only when that export runs); platform-drift@ reads folder resources by searchAllResources, not by export, because cloudasset.viewer does not carry cloudasset.assets.exportResource (ROW36-EXC cai_access); findingsViewer at folder not organisation; CAI feed created by a human under ENT_FOLDER_ADMIN, not by platform-drift@ | %s | ROW36-EXC | as RG-7.4 | n/a | n/a | ROW36-EXC signatories | B-02 export live, then security reviewer ratification (RATIFY-SR) | open |\n' "$d" "$FLD_AGENTIC_PLATFORM")"
 bd_insert "$(printf '| BD-16-5 | %s | 16 RG-1.2 | DEV | CODEOWNERS for /ci/, /contract/, /register/schema/ name the second human until the security reviewer is appointed | platform repository | RG-1.2 merge | CODEOWNERS lines | n/a | n/a | second human | security reviewer appointed: CODEOWNERS pull request | open |\n' "$d")"
+if ! gcloud services list --enabled --project="$CORE_PROJECT" --format="value(config.name)" | grep -qx 'securitycenter.googleapis.com'; then
+  grep -qF $'\tRG-0.1\tsecuritycenter.googleapis.com on CORE_PROJECT\t' "$BUILD_LOG_DIR/rerun-index.tsv" 2>/dev/null \
+    || printf '%s\tRG-0.1\tsecuritycenter.googleapis.com on CORE_PROJECT\t10 CP-1.6 enables it (row 2): re-run before 16 RG-8.2\tPENDING\t-\n' "$d" >> "$BUILD_LOG_DIR/rerun-index.tsv"
+fi
 ```
 
-  Then add to README's re-run index, if absent: "Security reviewer appointed (03) → 16 RG-1.2 CODEOWNERS to the security reviewer; RG-3.6 parses need both signatures; RATIFY-SR covers ROW36-EXC and BD-16-4"; "15 part A channels → 16 RG-5.6 and RG-5.7"; "Mo ingestion bot login (40) and `MO_PROJECT` identities (22) → 16 RG-1.4 `identity/git-humans.yaml`"; "Each Tier W+ agent (17 FM-AGENT) → `run.invoker` for `platform-drift@` on the action service (RG-7.3)"; "SIEM detection desk principal (15 part B) and `gemini-egress` generator (20) → `agentregistry.viewer` on `CORE_PROJECT` (RG-5.3)"; "`REGISTER_CI_COMMIT` (B-03) → 16 RG-3.4, RG-3.5, RG-9.2; 03 DC-9.9"; "B-02 → 16 RG-8.2, RG-8.3". And check README's BLOCKED index rows B-02 and B-03 name 16 (they do on 2026-09-15), and that row B-23, "Row 44 SDP discovery: entitlement, pricing record, reconcile job", names RG-7.6 (added to README §8 on 2026-10-01).
-- **VERIFY:** `grep -c '^| BD-16-' "$DEVIATION_REGISTER"` prints `5` (before any Closures line for them); `awk -F' *[|] *' '$2 ~ /^BD-16-/ && NF==15 {print NR, $2}' "$DEVIATION_REGISTER"` prints the five, each with a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); README §8 row B-23 lists 16 RG-7.6; `grep -c $'\tRG-' "$BUILD_LOG_DIR/rerun-index.tsv"` counts the PENDING lines RG-5.3 and RG-7.3 wrote; README holds the lines above.
+  The last block writes RG-0.1's re-run line, once, when `securitycenter.googleapis.com` is still not enabled on `CORE_PROJECT` (RG-0.1 only reads). The README edits that close this part are hand edits to the wiki, not shell work, and are RG-10.2's first action.
+- **VERIFY:** `grep -c '^| BD-16-' "$DEVIATION_REGISTER"` prints `5` (before any Closures line for them); `awk -F' *[|] *' '$2 ~ /^BD-16-/ && NF==15 {print NR, $2}' "$DEVIATION_REGISTER"` prints the five, each with a line number smaller than `awk '/^## Closures$/{print NR; exit}' "$DEVIATION_REGISTER"` (06 OB-3.2's check); `grep -c $'\tRG-' "$BUILD_LOG_DIR/rerun-index.tsv"` counts the PENDING lines RG-5.3 and RG-7.3 wrote, plus RG-0.1's securitycenter line while that API is not enabled.
 - **ROLLBACK:** Append-only: a `bd_close` line naming the superseding row, and that row inserted with `bd_insert`.
 - **EVIDENCE:** The five `BD-16-<n> opened` commits. E-xx: E-05. TISAX 1.4.1, 5.2.1.
 
 ### RG-10.2 End the sitting
 
 - **WHO:** Platform owner.
-- **WHERE:** Shell.
+- **WHERE:** README of this set (an editor), then the shell.
 - **ACTION:**
+  1. Add to README's re-run index, if absent: "Security reviewer appointed (03) → 16 RG-1.2 CODEOWNERS to the security reviewer; RG-3.6 parses need both signatures; RATIFY-SR covers ROW36-EXC and BD-16-4"; "15 part A channels → 16 RG-5.6 and RG-5.7"; "Mo ingestion bot login (40) and `MO_PROJECT` identities (22) → 16 RG-1.4 `identity/git-humans.yaml`"; "Each Tier W+ agent (17 FM-AGENT) → `run.invoker` for `platform-drift@` on the action service (RG-7.3)"; "SIEM detection desk principal (15 part B) and `gemini-egress` generator (20) → `agentregistry.viewer` on `CORE_PROJECT` (RG-5.3)"; "`REGISTER_CI_COMMIT` (B-03) → 16 RG-3.4, RG-3.5, RG-9.2; 03 DC-9.9"; "B-02 → 16 RG-8.2, RG-8.3". And check README's BLOCKED index rows B-02 and B-03 name 16 (they do on 2026-09-15), and that row B-23, "Row 44 SDP discovery: entitlement, pricing record, reconcile job", names RG-7.6 (added to README §8 on 2026-10-01).
+  2. End the sitting:
 
 ```bash
 penv_guard
@@ -1268,7 +1275,7 @@ checkpoint RG-10.2 DONE - - "file 16 complete except RG-3.3, RG-3.4, RG-3.5, RG-
 sitting_end
 ```
 
-- **VERIFY:** `sitting_end` prints `SITTING-END OK`; `checkpoints.tsv` holds `DONE` for every other RG step (RG-5.6 and RG-5.7 may be `PENDING` on 15).
+- **VERIFY:** README holds the seven re-run lines above and §8 rows B-02, B-03 and B-23 name 16 (B-23 lists RG-7.6); `sitting_end` prints `SITTING-END OK`; `checkpoints.tsv` holds `DONE` for every other RG step (RG-5.6 and RG-5.7 may be `PENDING` on 15).
 - **ROLLBACK:** None.
 - **EVIDENCE:** The final checkpoint line. E-xx: E-05. TISAX 4.1.2.
 
